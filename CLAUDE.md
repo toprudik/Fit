@@ -5,7 +5,7 @@
 - **Hosting**: Vercel, team `rudiks-projects-1924b04c`. Project not created yet — create it and link `toprudik/Fit` once the app scaffold exists.
 - **Backend**: Supabase project `fit` (ref `zxwabddqqtitybtsdeqp`, `us-east-1`). See `docs/adr/0001-supabase-backend.md`.
 - **Telegram bot**: `@fitconnection_bot`. Token is server-only (`TELEGRAM_BOT_TOKEN`), never in the repo or client code.
-- **Env**: variable names in `.env.example`. Never read or commit `.env*.local`; the Supabase secret key is server-only.
+- **Env & secrets**: build as production from day one — see `docs/adr/0002-secrets-handling.md`. Every variable is listed in `.env.example` (public vs server-only); `NEXT_PUBLIC_*` only for browser-safe values; server-only vars are read solely via `src/env/server.ts` (`server-only` + zod validation, errors name the variable, never the value); separate keys per environment (local / preview / production). Never read or commit `.env*.local`, never print secret values.
 - **Database rules**: RLS on every exposed table; schema changes only via migrations in `supabase/migrations/`; run Supabase security advisors after DDL changes.
 
 ## Agent skills
