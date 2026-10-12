@@ -1,0 +1,38 @@
+# Production-style stack for self-hosting (e.g. a VPS behind a TLS reverse proxy).
+# Secrets are passed at runtime via --env-file; never baked into images.
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+name: fit-prod
+
+services:
+  web:
+    build:
+      context: ./apps/web
+      target: runner
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:?}
+    environment:
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:?}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?}
+      TELEGRAM_LOGIN_CLIENT_ID: ${TELEGRAM_LOGIN_CLIENT_ID:?}
+      TELEGRAM_LOGIN_CLIENT_SECRET: ${TELEGRAM_LOGIN_CLIENT_SECRET:?}
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+    read_only: true
+    tmpfs: ["/tmp", "/app/.next/cache"]
+
+  bot:
+    build:
+      context: ./apps/bot
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?}
+      WEBAPP_URL: ${WEBAPP_URL:?}
+      BOT_MODE: webhook
+      BOT_WEBHOOK_URL: ${BOT_WEBHOOK_URL:?}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:?}
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+    read_only: true

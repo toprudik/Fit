@@ -1,4 +1,23 @@
+# env & secrets
 .env
 .env*.local
-.vercel
+.env.production
+!.env.example
+
+# node / next
 node_modules
+.next
+out
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+
+# python
+__pycache__
+.venv
+.pytest_cache
+.ruff_cache
+
+# os / editors
+.DS_Store
+Thumbs.db

@@ -1,0 +1,38 @@
+# Local development. All config comes from .env.local at the repo root (copy .env.example).
+#   docker compose up                    — web (http://localhost:3000) + bot (polling)
+#   docker compose --profile tunnel up   — also a public HTTPS tunnel, needed to open the Mini App in Telegram
+name: fit
+
+services:
+  web:
+    build:
+      context: ./apps/web
+      target: dev
+    env_file:
+      - path: .env.local
+        required: true
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      WATCHPACK_POLLING: "true" # reliable file watching on Windows/macOS bind mounts
+
+  bot:
+    build:
+      context: ./apps/bot
+    env_file:
+      - path: .env.local
+        required: true
+    environment:
+      BOT_MODE: polling
+    restart: unless-stopped
+
+  tunnel:
+    profiles: ["tunnel"]
+    image: cloudflare/cloudflared:latest # dev-only helper
+    command: tunnel --no-autoupdate --url http://web:3000
+    depends_on:
+      - web
