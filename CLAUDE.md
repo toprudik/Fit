@@ -1,5 +1,12 @@
 # Fit
 
+## Infrastructure
+
+- **Hosting**: Vercel, team `rudiks-projects-1924b04c`. Project not created yet — create it and link `toprudik/Fit` once the app scaffold exists.
+- **Backend**: Supabase project `fit` (ref `zxwabddqqtitybtsdeqp`, `us-east-1`). See `docs/adr/0001-supabase-backend.md`.
+- **Env**: variable names in `.env.example`. Never read or commit `.env*.local`; the Supabase secret key is server-only.
+- **Database rules**: RLS on every exposed table; schema changes only via migrations in `supabase/migrations/`; run Supabase security advisors after DDL changes.
+
 ## Agent skills
 
 ### Issue tracker
