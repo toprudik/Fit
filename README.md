@@ -1,6 +1,6 @@
-# Fit
+# DaFit
 
-Web app + Telegram Mini App + Telegram bot [@fitconnection_bot](https://t.me/fitconnection_bot).
+Working name DaFit (repo `fit`). Web app + Telegram Mini App + Telegram bot [@fitconnection_bot](https://t.me/fitconnection_bot).
 Sign-in with Telegram only; backend on Supabase.
 
 ```
@@ -28,6 +28,10 @@ Telegram needs a public HTTPS URL:
 In @BotFather → your bot → **Login Widget**: add the site origin and `<origin>/auth/telegram/callback`
 to Allowed URLs, then put the shown Client ID / Client Secret into `.env.local`.
 
+## Deployed environments
+
+Web on Vercel; the bot runs serverless on Vercel in webhook mode, and notifications are sent from a database outbox processed by Supabase pg_cron (ADR 0006). Docker is for local development; `docker-compose.prod.yml` is the post-beta self-hosting option.
+
 ## Checks
 
 ```bash
@@ -40,4 +44,6 @@ CI runs the same plus a gitleaks secret scan and Docker image builds.
 ## Docs
 
 - `CLAUDE.md` — rules for coding agents
-- `docs/adr/` — decisions (Supabase, secrets, stack, Telegram auth)
+- `docs/decisions.md` — product decisions; `CONTEXT.md` — domain glossary
+- `docs/prd/` — what to build per wave; `docs/architecture/` — data model and screens; `docs/plan.md` — plan to the 24.11.2026 beta
+- `docs/adr/` — architectural decisions
