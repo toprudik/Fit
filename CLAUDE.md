@@ -8,11 +8,12 @@ Working name DaFit (repo `fit`). Web app + Telegram Mini App (`apps/web`, Next.j
 - `docs/prd/` — what to build per wave + `quality.md` (Definition of Done); `docs/architecture/data-model.md` (schema, ledger, RLS) and `screens.md` (routes, app shell).
 - `docs/adr/` — architectural decisions; don't contradict an ADR silently.
 - `docs/plan.md` — delivery plan to the 24.11.2026 beta.
+- `docs/design.md` — design system and mockups; follow its rules (voice, color roles, selection = inverse, Da-moment) when building UI.
 
 ## Working in this repo
 
 - **apps/web**: Next.js 16 differs from older versions — read `apps/web/AGENTS.md` and the bundled docs in `apps/web/node_modules/next/dist/docs/` before writing Next.js code. Cache Components are on: anything reading cookies/headers/searchParams sits behind `<Suspense>`; middleware is `src/proxy.ts`.
-- **UI**: shadcn/ui components in `src/components/ui` (add with `npx shadcn@latest add <name>`), Tailwind v4 tokens in `src/app/globals.css`, animations with `motion/react`. DaFit's own brand theme everywhere, inside Telegram too (only light/dark comes from Telegram) — ADR 0010.
+- **UI**: shadcn/ui components in `src/components/ui` (add with `npx shadcn@latest add <name>`), Tailwind v4 tokens in `src/app/globals.css`, animations with `motion/react`. DaFit's own brand theme everywhere, inside Telegram too (only light/dark comes from Telegram) — ADR 0010. Design system, mockups and token snapshot: `docs/design.md` (token names in `docs/design/tokens.json` are the contract for CSS variables).
 - **Auth**: Telegram only (Mini App initData or OIDC on the web) → Supabase session. Never trust `initDataUnsafe` or client-sent user ids. See `docs/adr/0004-telegram-auth.md`.
 - **Supabase clients**: `lib/supabase/server.ts` (user, RLS) for reads/writes on behalf of a user; `lib/supabase/admin.ts` (secret key) only where RLS must be bypassed, never to serve user data.
 - **apps/bot**: thin — answers commands and opens the Mini App; no business logic. Outgoing notifications are sent from the notification outbox, not by bot code (ADR 0006). Polling locally, webhook + secret token when deployed.
