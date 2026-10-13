@@ -276,7 +276,6 @@ create table public.trainer_profiles (
   works_offline               boolean not null default true,
   works_online                boolean not null default false,
   is_public                   boolean not null default true,      -- витрина доступна по ссылке/QR (не отдаётся при verification_status = 'rejected', Q15)
-  approval_status             text not null default 'approved' check (approval_status in ('pending', 'approved', 'rejected')),  -- 'pending' — пришёл по реферальной ссылке тренера, ждёт одобрения админа (Q15)
   referred_by_trainer_id      uuid references public.profiles(id) on delete set null,
   verification_status         public.verification_status not null default 'pending',
   verified_at                 timestamptz,
@@ -1157,6 +1156,74 @@ create index on public.break_glass_grants (admin_id, target_user_id) where revok
 
 ---
 
+### 2.1a. Тарифы и права на функции (волна 1; Q55–Q59, ADR 0014)
+
+Тарифы работают с первого дня; в бете выдачи создаёт только админ, покупок нет.
+
+```sql
+create type public.plan_side as enum ('trainer', 'client');
+create table public.plans (
+  code        text primary key,               -- 'trainer_free', 'trainer_pro', 'client_free', 'client_premium'
+  side        public.plan_side not null,
+  rank        smallint not null,              -- 0 = free, 1 = платный; выше ранг — шире права
+  title       jsonb not null,                 -- {ru, en}
+  limits      jsonb not null default '{}',    -- trainer_free: {"max_active_clients": 3}; client_free: {"progress_photo_sets_per_month": 1}
+  features    text[] not null default '{}',   -- коды функций, см. ниже
+  price_minor bigint,                         -- null в бете
+  currency    public.currency_code
+);
+
+create type public.plan_grant_source as enum ('admin', 'purchase', 'referral_bonus');
+create table public.plan_grants (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references public.profiles(id) on delete cascade,
+  plan_code   text not null references public.plans(code),
+  source      public.plan_grant_source not null default 'admin',
+  granted_by  uuid references public.profiles(id) on delete set null,   -- админ
+  reason      text not null check (length(reason) between 3 and 500),
+  starts_at   timestamptz not null default now(),
+  expires_at  timestamptz,                                              -- null = бессрочно
+  revoked_at  timestamptz,
+  revoked_by  uuid references public.profiles(id) on delete set null,
+  revoke_reason text,
+  created_at  timestamptz not null default now()
+);
+create index plan_grants_active_idx on public.plan_grants (user_id, plan_code) where revoked_at is null;
+
+create table public.access_requests (               -- «Запросить доступ»
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references public.profiles(id) on delete cascade,
+  plan_code   text not null references public.plans(code),
+  feature     text,
+  status      text not null default 'open' check (status in ('open', 'granted', 'declined')),
+  created_at  timestamptz not null default now(),
+  decided_by  uuid references public.profiles(id) on delete set null,
+  decided_at  timestamptz
+);
+create unique index access_requests_one_open_per_day on public.access_requests (user_id, plan_code, (created_at::date)) where status = 'open';
+```
+
+**Коды функций** (фиксированный справочник в коде и в `plans.features`):
+- тренер Pro: `trainer.unlimited_clients`, `trainer.analytics`, `trainer.finance`, `trainer.groups`, `trainer.broadcasts`, `trainer.client_nutrition`, `trainer.delegation`, `trainer.referral_offers`, `trainer.showcase_custom`, `trainer.export`;
+- клиент Premium: `client.trends`, `client.nutrition_advanced`, `client.progress_photos_unlimited`, `client.self_training`, позже `client.ai`, `client.community_perks`.
+
+**Проверка прав** — одна функция, используется в RLS/RPC и сервером для интерфейса:
+
+```sql
+-- SECURITY DEFINER, search_path = ''. true, если:
+--  1) у пользователя действует выдача тарифа (не отозвана, starts_at <= now() < coalesce(expires_at, 'infinity')),
+--     в features которого есть p_feature; или
+--  2) p_pair задан, функция наследуемая (client.nutrition_advanced, client.progress_photos_unlimited, client.trends),
+--     пара активна, тренер пары имеет действующий trainer_pro и (для питания) ведёт питание клиента (Q58).
+create function public.has_entitlement(p_user uuid, p_feature text, p_pair uuid default null) returns boolean ...;
+create function public.effective_plan(p_user uuid, p_side public.plan_side) returns text ...;   -- для «Мой тариф»
+```
+
+- **Лимит Free-тренера** проверяется внутри `redeem_client_invite`, `create_managed_client`, `accept_trial_booking` и любых функций, создающих активную пару: если `effective_plan(trainer,'trainer') = 'trainer_free'` и активных пар ≥ `limits.max_active_clients` — ошибка `plan_limit_reached`. Запись в `coachings` напрямую через RLS запрещена.
+- **Понижение тарифа:** данные не удаляются; функции Pro проверяют `has_entitlement` на запись, чтение ранее созданных данных остаётся (группы, отчёты — «только чтение»).
+- **RLS:** `plans` — читают все аутентифицированные; `plan_grants` — пользователь видит свои, админ — все через `admin_grant_plan()` / `admin_revoke_plan()` (SECURITY DEFINER, проверка `is_admin()`, запись в `admin_audit_log`, постановка уведомления в outbox); `access_requests` — пользователь создаёт и видит свои, админ решает через RPC.
+- Истечение — по времени в `has_entitlement`, без cron; уведомление «тариф заканчивается через 3 дня» ставит ежедневный cron в outbox.
+
 ### 2.2. Волна 2 — «Питание и аналитика»
 
 ```sql
@@ -1644,8 +1711,8 @@ create table public.referral_offers (              -- акция тренера 
 );
 
 create type public.referral_kind as enum ('client_to_client', 'trainer_to_trainer');
--- trainer_to_trainer (Q15): приглашённый по реферальной ссылке тренера получает trainer_profiles
--- с trainer_profiles.approval_status = 'pending'; зона «Тренер» открывается после admin_approve_trainer() (журнал действий).
+-- trainer_to_trainer (Q15, Q55): приглашённый по реферальной ссылке тренера сразу получает trainer_profiles
+-- и зону «Тренер» на тарифе trainer_free; верификация — отдельно.
 create type public.referral_status as enum ('pending', 'qualified', 'void');
 create table public.referrals (
   id                    uuid primary key default gen_random_uuid(),
@@ -1794,18 +1861,10 @@ create table public.studio_members (
 -- при запуске: add column studio_id uuid null references studios(id) в trainer_profiles, coachings,
 -- packages, locations, sessions; private.is_coaching_trainer() дополняется ролью manager.
 
--- Тарифы тренера (Q10)
-create table public.plans (
-  code        text primary key,               -- 'free', 'pro'
-  title       jsonb not null,
-  limits      jsonb not null,                 -- {max_clients: 10, …}
-  price_minor bigint not null,
-  currency    public.currency_code not null,
-  interval    text not null check (interval in ('month', 'year'))
-);
+-- Покупки тарифов (после беты, Q59): ещё один источник выдач — plan_grants.source = 'purchase'.
 create table public.plan_subscriptions (
   id                  uuid primary key default gen_random_uuid(),
-  trainer_id          uuid not null references public.trainer_profiles(user_id) on delete cascade,
+  user_id             uuid not null references public.profiles(id) on delete cascade,
   plan_code           text not null references public.plans(code),
   status              text not null check (status in ('trialing', 'active', 'past_due', 'cancelled')),
   current_period_end  timestamptz not null,
@@ -1971,7 +2030,7 @@ create policy "coaching_notes: client sees flagged" on public.coaching_notes for
 | `consents` | сам; A (факт, без содержания пользователя) | сам (только `accepted_at = now()`) | сам: только `revoked_at` | — |
 | `account_deletions` | сам; A | S-RPC `request_account_deletion` | S-RPC `cancel_account_deletion` | S |
 | `data_exports` | сам | S-RPC `request_data_export` | S | S |
-| `trainer_profiles` | сам; клиенты (любые пары); D; A; anon/прочие — **pub** `get_trainer_showcase(slug)` (не отдаёт витрину при `verification_status = 'rejected'` или `approval_status <> 'approved'`, Q15); зона «Тренер» и `is_trainer()` — только при `approval_status = 'approved'` | S-RPC `redeem_trainer_invite` | сам (кроме `verification_status`, `verified_at`, `trainer_invite_id` — колоночные гранты); A через `admin_decide_verification` | — |
+| `trainer_profiles` | сам; клиенты (любые пары); D; A; anon/прочие — **pub** `get_trainer_showcase(slug)` (не отдаёт витрину при `verification_status = 'rejected'`, Q15/Q55); зона «Тренер» и `is_trainer()` — при наличии `trainer_profiles` (доступ не зависит от верификации и тарифа, Q55) | S-RPC `redeem_trainer_invite` | сам (кроме `verification_status`, `verified_at`, `trainer_invite_id` — колоночные гранты); A через `admin_decide_verification` | — |
 | `trainer_certificates` | сам; A | сам | сам | сам |
 | `trainer_verifications` | сам; A | A через RPC; сам — повторная подача (`decision = 'pending'`) через RPC | — | — |
 | `trainer_invites` | A | A через `admin_create_trainer_invite` | A (отзыв), S-RPC (погашение) | — |
@@ -2201,7 +2260,7 @@ erDiagram
 28. **Продуктовая телеметрия** (`product_events`) нужна для метрик беты «открытия из напоминаний» и «использование функций»; хранится 180 дней, без значений пользовательских данных.
 29. **Метрика «ведёт всё расписание 2 недели»**: тренер провёл занятия в каждой из двух последних недель, и у всех его занятий за 14 дней есть итог (`completed`/`cancelled`) — приближение, уточнить с Давидом.
 30. **Календарный фид**: токен на зону (тренер/клиент), показывается один раз, перевыпуск отзывает старый; в событиях нет заметок и данных тела.
-31. **Рефералка**: бонус клиенту — бонусный абонемент на N занятий с ценой 0; аннулирование квалифицирующей оплаты в течение 14 дней отзывает бонус, если он ещё не использован, иначе бонус сохраняется (решение, как в wave-3). Тренер за тренера (Q15): реферал создаётся при переходе по реферальной ссылке тренера, зона приглашённого открывается после одобрения админа; бонус `pending` до оплаты тарифа (`plan_subscriptions`).
+31. **Рефералка**: бонус клиенту — бонусный абонемент на N занятий с ценой 0; аннулирование квалифицирующей оплаты в течение 14 дней отзывает бонус, если он ещё не использован, иначе бонус сохраняется (решение, как в wave-3). Тренер за тренера (Q15): реферал создаётся при переходе по реферальной ссылке тренера, зона приглашённого открывается сразу (Q55); бонус `pending` до покупки тарифа (после беты, `plan_subscriptions`).
 32. **Лидерборд** показывает только агрегированный счёт участников, явно включивших показ; согласие на лидерборд — и глобальное (`user_settings`), и на челлендж.
 33. **Чек-ин по QR** — ротируемый HMAC-токен без хранения; чек-ин досрочно отмечает посещение.
 34. **Месячный отчёт и карточки для сторис** строятся на лету, без таблиц (кеш по необходимости).
