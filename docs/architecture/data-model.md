@@ -138,7 +138,7 @@ create type public.app_locale as enum ('ru', 'en');
 create type public.app_theme as enum ('system', 'light', 'dark');
 create type public.unit_system as enum ('metric', 'imperial');
 create type public.app_zone as enum ('trainer', 'client');
-create type public.share_category as enum ('nutrition', 'measurements', 'photos', 'steps', 'intake', 'workouts'); -- intake — O3, workouts — O7
+create type public.share_category as enum ('nutrition', 'measurements', 'photos', 'steps', 'intake', 'workouts');
 ```
 
 Остальные enum определены рядом с таблицами. Новые значения добавляются `alter type ... add value` (не переписывает данные).
@@ -275,7 +275,9 @@ create table public.trainer_profiles (
   city                        text,
   works_offline               boolean not null default true,
   works_online                boolean not null default false,
-  is_public                   boolean not null default true,      -- витрина доступна по ссылке/QR
+  is_public                   boolean not null default true,      -- витрина доступна по ссылке/QR (не отдаётся при verification_status = 'rejected', Q15)
+  approval_status             text not null default 'approved' check (approval_status in ('pending', 'approved', 'rejected')),  -- 'pending' — пришёл по реферальной ссылке тренера, ждёт одобрения админа (Q15)
+  referred_by_trainer_id      uuid references public.profiles(id) on delete set null,
   verification_status         public.verification_status not null default 'pending',
   verified_at                 timestamptz,
   default_currency            public.currency_code not null default 'RUB',
@@ -373,7 +375,7 @@ create index on public.trial_links (trainer_id);
 
 ```sql
 create type public.coaching_status as enum ('trial', 'active', 'ended');
-create type public.coaching_source as enum ('client_invite', 'trainer_code', 'trial_link', 'referral', 'manual'); -- 'manual' зарезервирован: карточки клиентов без входа — открытый вопрос O1
+create type public.coaching_source as enum ('client_invite', 'trainer_code', 'trial_link', 'referral', 'manual'); -- 'manual' = карточка клиента без аккаунта (managed_client), см. ниже
 
 create table public.coachings (
   id                        uuid primary key default gen_random_uuid(),
@@ -389,8 +391,8 @@ create table public.coachings (
   end_reason                text,
   client_alias              text,          -- как тренер подписал клиента у себя; клиенту не видно
   cancellation_deadline_hours smallint check (cancellation_deadline_hours between 0 and 168), -- null = из trainer_profiles
-  debt_allowed              boolean not null default false,       -- «долг (включает тренер)», Q22
-  debt_limit_sessions       smallint check (debt_limit_sessions > 0),  -- null = без лимита при debt_allowed
+  self_book_on_debt         boolean not null default false,       -- «Разрешить запись в долг» этому клиенту (Q22); долг при списании возникает всегда
+  debt_limit_sessions       smallint check (debt_limit_sessions > 0),  -- null = без лимита при self_book_on_debt
   client_reminder_offsets   smallint[] not null,                  -- копия default_client_reminder_offsets при создании; меняет клиент
   broadcasts_muted          boolean not null default false,       -- W2: клиент отключил рассылки этого тренера
   primary_nutrition_group_id uuid,                                -- W2, FK добавляется с groups
@@ -411,6 +413,32 @@ create unique index coachings_trainer_client_uniq on public.coachings (trainer_i
 
 Повторное присоединение к тому же тренеру после `ended` реактивирует ту же строку (`coachings_trainer_client_uniq`), история сохраняется.
 
+**Карточка клиента без аккаунта** (`managed_client`, журнал решений §4, было O1). Чтобы не делать `client_id` nullable в десятке таблиц (`bookings`, `passes`, `ledger_entries`, `payments`, `measurements`, `workout_logs` …), карточка — это обычная строка `profiles` без возможности входа:
+
+```sql
+alter table public.profiles
+  add column managed_by_trainer_id uuid references public.trainer_profiles(user_id) on delete cascade,  -- не null = карточка без аккаунта
+  add column claimed_by            uuid references public.profiles(id) on delete set null;              -- в кого слита карточка (до удаления)
+
+create table public.managed_client_claims (       -- запрос тренеру «Это <Имя>?» при приходе человека по ссылке
+  id                uuid primary key default gen_random_uuid(),
+  trainer_id        uuid not null references public.trainer_profiles(user_id) on delete cascade,
+  claimant_id       uuid not null references public.profiles(id) on delete cascade,   -- реальный пользователь
+  new_coaching_id   uuid not null references public.coachings(id) on delete cascade,  -- его новая пара
+  managed_client_id uuid references public.profiles(id) on delete cascade,            -- выбранная тренером карточка
+  status            text not null default 'pending' check (status in ('pending', 'merged', 'rejected')),
+  decided_at        timestamptz,
+  created_at        timestamptz not null default now()
+);
+create index on public.managed_client_claims (trainer_id) where status = 'pending';
+```
+
+- Создание: RPC `create_managed_client(display_name, note)` (тренер) — серверный код создаёт пользователя Supabase Auth **без** `telegram_id` (синтетический email `managed-<uuid>@users.fit.invalid`, `banned_until = 'infinity'`), строку `profiles` с `managed_by_trainer_id = uid`, пару `coachings(source = 'manual')` и `data_shares` со всеми категориями `true` (данные вносит тренер; разрешения клиента не применимы, пока клиента нет). Войти под карточкой невозможно: `signInWithTelegram()` ищет только по `app_metadata.telegram_id` (ADR 0004).
+- Уведомления: `private.enqueue_notification()` пропускает получателей с `managed_by_trainer_id is not null`; запись на слоты и напоминания для пары-карточки недоступны.
+- RLS: карточку видят только её тренер и его делегаты (политика `profiles` через `managed_by_trainer_id = uid` / `is_coaching_trainer`); в остальном работают обычные политики пары.
+- Переход (claim): `join_by_invite` / `join_by_code` создают пару как обычно и, если у тренера есть карточки без аккаунта, — строку `managed_client_claims (pending)` и уведомление тренеру. RPC `resolve_managed_client_claim(claim_id, managed_client_id | null)` (тренер) в одной транзакции: переносит все строки карточки на `claimant_id` (`update … set client_id = claimant` в `coachings`, `sessions`/`bookings`, `passes`, `ledger_entries`, `payments`, `coaching_notes`, `measurements`, `workout_logs`, `personal_records` …), объединяет пару карточки с новой парой (история переносится в пару карточки, новая пара удаляется, `coachings.source` остаётся `manual`, сохраняется `started_at` карточки), сбрасывает `data_shares` на умолчания клиента (`intake = false`, `intake_decided_at = null` → клиенту показывается шаг согласия), ставит `profiles.claimed_by`, пишет `booking_events`/журнал пары и удаляет пользователя Auth карточки. `null` → `rejected`, карточка остаётся. Слияние необратимо.
+
+
 ```sql
 create table public.data_shares (              -- одна строка на пару, создаётся вместе с парой
   coaching_id  uuid primary key references public.coachings(id) on delete cascade,
@@ -418,8 +446,9 @@ create table public.data_shares (              -- одна строка на п�
   measurements boolean not null default true,  -- вес и замеры
   photos       boolean not null default false, -- фото прогресса — только явным разрешением (Q38)
   steps        boolean not null default true,  -- шаги и сон
-  intake       boolean not null default true,  -- анкета (O3)
-  workouts     boolean not null default true,  -- самостоятельные тренировки клиента (O7)
+  intake       boolean not null default false, -- анкета: только по явному согласию при создании пары (Q38)
+  intake_decided_at timestamptz,               -- когда клиент ответил на шаг согласия; null = ещё не ответил (анкета скрыта)
+  workouts     boolean not null default true,  -- самостоятельные тренировки клиента (Q38)
   updated_at   timestamptz not null default now()
 );
 
@@ -1441,6 +1470,8 @@ create table public.reviews (
   rating            smallint not null check (rating between 1 and 5),
   body              text check (char_length(body) <= 2000),
   status            public.review_status not null default 'published',
+  publish_consent   boolean,                 -- W4: согласие автора на публичный показ; null = ещё не спрошен (отзывы W2), false = отказ (Q53)
+  publish_asked_at  timestamptz,             -- вопрос задаётся один раз
   hidden_reason     text,
   trainer_reply     text check (char_length(trainer_reply) <= 2000),
   trainer_replied_at timestamptz,
@@ -1613,6 +1644,8 @@ create table public.referral_offers (              -- акция тренера 
 );
 
 create type public.referral_kind as enum ('client_to_client', 'trainer_to_trainer');
+-- trainer_to_trainer (Q15): приглашённый по реферальной ссылке тренера получает trainer_profiles
+-- с trainer_profiles.approval_status = 'pending'; зона «Тренер» открывается после admin_approve_trainer() (журнал действий).
 create type public.referral_status as enum ('pending', 'qualified', 'void');
 create table public.referrals (
   id                    uuid primary key default gen_random_uuid(),
@@ -1861,7 +1894,7 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
 
 1. Кандидаты: абонементы пары с `status = 'active'` (производный — не исчерпан, не истёк на момент **начала занятия**, не заморожен в дату занятия), `applies_to` совпадает с `sessions.kind` (`any` подходит всем; `trial` считается `personal`).
 2. Сначала `bookings.reserved_pass_id`, если он ещё подходит; иначе — ближайший `effective_expires_at` (бессрочные последними), затем самый ранний `starts_on`.
-3. Нашёлся — `charge` с этим `pass_id`. Нет — **долговое** `charge` с `pass_id = null`. Так при включённом долге (`debt_allowed`); что делать при **выключенном** долге — **открытый вопрос O2** ([`decisions.md` §10](../decisions.md#10-открытые-вопросы)). Временное допущение wave-1 §2.8-10 — разовое «не оплачено» (абонемент `is_drop_in` + `grant +1` + `charge`); схема поддерживает оба варианта.
+3. Нашёлся — `charge` с этим `pass_id`. Нет — **долговое** `charge` с `pass_id = null` — **всегда** (Q22, было O2); автоматического превращения в разовое «не оплачено» нет.
 
 `amount_minor` для charge по абонементу — справедливая доля с распределением остатка копеек: для k-го нетто-списания абонемента (k = 1 + число непрощённых charge/settlement этого абонемента) `amount = floor(price·k/N) − floor(price·(k−1)/N)`; сумма по всем N занятиям ровно равна цене. Для долгового charge — цена разового занятия тренера в валюте пары (пакет `sessions_count = 1`, `applies_to` по типу занятия); нет такого пакета — `amount_minor = 0` и долг показывается только в занятиях.
 
@@ -1872,8 +1905,10 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
 При записи клиента на слот или занятие (`book_slot`, `book_session`) RPC решает статус:
 
 - `confirmed`, если у пары есть подходящий абонемент с `available ≥ 1` (ставится `reserved_pass_id`);
-- иначе `confirmed`, если `coachings.debt_allowed` и `debt_sessions < coalesce(debt_limit_sessions, ∞)`;
-- иначе `requested` — тренер подтверждает (как есть, оформив разовое или абонемент) или отклоняет.
+- иначе `confirmed`, если тренер разрешил этому клиенту запись в долг (`coachings.self_book_on_debt`) и `debt_sessions < coalesce(debt_limit_sessions, ∞)`;
+- иначе `requested` — тренер подтверждает (занятие при списании уйдёт в долг, либо тренер сразу оформляет разовое или абонемент) или отклоняет.
+
+Для пары-карточки без аккаунта самостоятельной записи нет — занятия создаёт тренер.
 
 Тренер, назначающий занятие сам, всегда создаёт `confirmed` (Q20) — наличие абонемента ему лишь показывается.
 
@@ -1936,16 +1971,17 @@ create policy "coaching_notes: client sees flagged" on public.coaching_notes for
 | `consents` | сам; A (факт, без содержания пользователя) | сам (только `accepted_at = now()`) | сам: только `revoked_at` | — |
 | `account_deletions` | сам; A | S-RPC `request_account_deletion` | S-RPC `cancel_account_deletion` | S |
 | `data_exports` | сам | S-RPC `request_data_export` | S | S |
-| `trainer_profiles` | сам; клиенты (любые пары); D; A; anon/прочие — **pub** `get_trainer_showcase(slug)` (не отдаёт витрину при `verification_status = 'rejected'` — O6) | S-RPC `redeem_trainer_invite` | сам (кроме `verification_status`, `verified_at`, `trainer_invite_id` — колоночные гранты); A через `admin_decide_verification` | — |
+| `trainer_profiles` | сам; клиенты (любые пары); D; A; anon/прочие — **pub** `get_trainer_showcase(slug)` (не отдаёт витрину при `verification_status = 'rejected'` или `approval_status <> 'approved'`, Q15); зона «Тренер» и `is_trainer()` — только при `approval_status = 'approved'` | S-RPC `redeem_trainer_invite` | сам (кроме `verification_status`, `verified_at`, `trainer_invite_id` — колоночные гранты); A через `admin_decide_verification` | — |
 | `trainer_certificates` | сам; A | сам | сам | сам |
 | `trainer_verifications` | сам; A | A через RPC; сам — повторная подача (`decision = 'pending'`) через RPC | — | — |
 | `trainer_invites` | A | A через `admin_create_trainer_invite` | A (отзыв), S-RPC (погашение) | — |
 | `client_invites` | T; **pub** по токену/коду (`resolve_client_invite`) | T | T | — (архив) |
 | `trial_links` | T; **pub** `get_trial_link(token)` | T | T | — (архив) |
-| `coachings` | C; T; D (покрытые); — A (только агрегаты) | S-RPC `join_by_invite`, `join_by_code`, `book_trial` | T: `client_alias`, `cancellation_deadline_hours`, `debt_*`, `churn_hidden_until`, `primary_nutrition_group_id`; C: `client_reminder_offsets`, `broadcasts_muted`; завершение — RPC `end_coaching` (любая сторона) | — |
-| `data_shares` | C; T; D | S (вместе с парой) | **только C** | — |
+| `coachings` | C; T; D (покрытые); — A (только агрегаты) | S-RPC `join_by_invite`, `join_by_code`, `book_trial`, `create_managed_client` | T: `client_alias`, `cancellation_deadline_hours`, `self_book_on_debt`, `debt_limit_sessions`, `churn_hidden_until`, `primary_nutrition_group_id`; C: `client_reminder_offsets`, `broadcasts_muted`; завершение — RPC `end_coaching` (любая сторона) | — |
+| `data_shares` | C; T; D | S (вместе с парой) | **только C** (у карточки без аккаунта — никто, все `true`) | — |
+| `managed_client_claims` | T (свои) | S-RPC `join_by_invite`/`join_by_code` | T через `resolve_managed_client_claim` | — |
 | `coaching_notes` | T; D[notes]; C — только `visible_to_client` | T; D[notes] (`author_id = uid`) | автор | автор |
-| `intakes` | C; T/D[notes] share:intake; BG | C | — (новая версия) | C |
+| `intakes` | C; T/D[notes] только при share:intake (по умолчанию `false`, ставит клиент шагом согласия); BG | C | — (новая версия) | C |
 | `contact_requests` | requester; recipient | S-RPC `request_contact` (участник пары) | recipient через RPC (принять/отклонить) | — |
 | `locations` | T; D[schedule]; клиенты тренера | T | T | — (архив) |
 | `week_templates`, `week_template_items` | T; D[schedule] | T; D[schedule] | T; D[schedule] | T; D[schedule] |
@@ -1965,7 +2001,7 @@ create policy "coaching_notes: client sees flagged" on public.coaching_notes for
 | `exercises` | wger — все authenticated; custom — владелец, его клиенты, его делегаты | custom — тренер (`owner_id = uid`); wger — S | владелец; wger — S | — (архив) |
 | `exercise_translations` | как `exercises` | владелец (custom); S (wger) | то же | то же |
 | `workout_templates`, `workout_template_items` | владелец; D[workouts]; клиенты владельца — шаблоны, привязанные к их домашним заданиям | владелец | владелец | владелец |
-| `workout_logs`, `workout_log_exercises`, `workout_sets` | C; T/D[workouts] пары лога; для `coaching_id is null` — T активных пар клиента с share:workouts (O7) | C (свои); T/D[workouts] (с `coaching_id` своей пары) | автор лога; C | автор лога; C |
+| `workout_logs`, `workout_log_exercises`, `workout_sets` | C; T/D[workouts] пары лога; для `coaching_id is null` — T активных пар клиента с share:workouts (Q38) | C (свои); T/D[workouts] (с `coaching_id` своей пары) | автор лога; C | автор лога; C |
 | `personal_records` | C; T/D[workouts] (`is_trainer_of`) | S (триггер) | S | S |
 | `measurements` | share:measurements (`can_view`); BG | C; T/D[progress] share:measurements (`entered_by = uid`) | автор записи | автор записи; C |
 | `progress_photos` (+ Storage) | share:photos (по умолчанию **выкл**); BG | **только C** | C (`note`, `angle`) | C |
@@ -1990,7 +2026,7 @@ create policy "coaching_notes: client sees flagged" on public.coaching_notes for
 | `waitlist_entries` | C (свои + позиция через RPC); T; D[schedule] | S-RPC `join_waitlist` | S-RPC (`leave`, `accept`, `decline`, офферы cron) | — |
 | `homework`, `homework_exercises` | C; T; D[homework] | T; D[homework] | T; D[homework] | — (архив) |
 | `homework_occurrences` | C; T; D[homework] | S (развёртка повтора) | C: `done_at`, `comment`, `workout_log_id` (снятие ≤ 24 ч — RPC) | — |
-| `reviews` | автор; тренер; A (W4: публично `published`; публикуются ли отзывы W2 автоматически — O5) | C при `attended_count ≥ 3` (`with check`) | C: `rating`, `body`, `deleted_at`; T: `trainer_reply*`; A: `status`, `hidden_reason` через RPC | — (soft) |
+| `reviews` | автор; тренер; A (W4: публично только `published` и `publish_consent = true`, Q53) | C при `attended_count ≥ 3` (`with check`) | C: `rating`, `body`, `deleted_at`, `publish_consent`; T: `trainer_reply*`; A: `status`, `hidden_reason` через RPC | — (soft) |
 | `review_revisions` | A | S (триггер) | — | — |
 | `churn_flags` | T | S (cron) | S | S |
 | `product_events` | — (только агрегаты A) | S | — | S (retention) |
@@ -2143,7 +2179,7 @@ erDiagram
 6. **Диспетчер уведомлений** (ADR 0006): бот — serverless-функция на Vercel (webhook), Docker — только локальная разработка; Vercel Hobby не даёт поминутный cron, поэтому outbox разгребается вызовом из `pg_cron` + `pg_net` раз в минуту.
 7. **Код инвайта тренера хранится хешем** и показывается админу один раз; токены ссылок клиента/пробного хранятся открыто (это адреса, а не секреты). У ссылки клиента есть короткий код из 6 символов для экрана «Введите код тренера».
 8. **Статусы пары**: `trial` (пришёл по ссылке на пробное) → `active` автоматически после проведённого пробного или оформления абонемента; `ended` — любой стороной. Повторное присоединение реактивирует ту же строку.
-9. **Анкета** — одна на пользователя (версионируется), видна тренерам; пятый флаг разрешения `data_shares.intake` (по умолчанию включён, как в ADR 0007) заложен в схему, но даст ли продукт клиенту скрывать анкету от конкретного тренера — **открытый вопрос O3** ([`decisions.md` §10](../decisions.md#10-открытые-вопросы)); в интерфейсе волны 1 переключателя нет. PAR-Q хранится отдельно с флагом `parq_flagged`.
+9. **Анкета** — одна на пользователя (версионируется). Видимость — решение Q38 (было O3): `data_shares.intake` по умолчанию `false`, ставится клиентом на шаге согласия при создании пары, меняется позже. PAR-Q хранится отдельно с флагом `parq_flagged`; без разрешения тренер не видит и флаг.
 10. **После завершения пары** тренер теряет доступ к персональным данным клиента, но видит историю занятий, абонементов и оплат этой пары.
 11. **Слот = одно окно на одно персональное занятие** (вместимость 1). Групповые занятия создаются тренером как `sessions` с `open_for_booking`. Слоты не пересекаются (exclusion); занятия могут, с предупреждением.
 12. **Автозавершение**: в `ends_at` cron переводит `confirmed` → `attended` и пишет списания (иначе «80% занятий без ручных правок» недостижимо); тренер исправляет на `no_show` в любое время, это не меняет журнал.
@@ -2155,7 +2191,7 @@ erDiagram
 18. **Распределение копеек**: доля k-го занятия — `floor(P·k/N) − floor(P·(k−1)/N)`, чтобы сумма по абонементу точно равнялась цене.
 19. **Заморозка** только останавливает срок и делает абонемент неподходящим для списаний в эти даты; ставит её тренер; лимитов нет.
 20. **Оплата «я оплатил»**: клиент может создать `payments.status = 'reported'`, тренер подтверждает; в выручку («поступления») идут только `confirmed`. Отмена оплаты — `voided`, без удаления.
-21. **Свои упражнения** может создавать только тренер (`owner_id` указывает на profiles, чтобы позже разрешить клиентам без миграции). Самостоятельные тренировки клиента (без пары) видны тренеру по `data_shares.workouts` (по умолчанию включено) — временно до решения **O7** ([`decisions.md` §10](../decisions.md#10-открытые-вопросы)).
+21. **Свои упражнения** может создавать только тренер (`owner_id` указывает на profiles, чтобы позже разрешить клиентам без миграции). Самостоятельные тренировки клиента (без пары) видны тренеру по `data_shares.workouts` (по умолчанию включено, Q38).
 22. **Рекорды**: разминочные подходы не учитываются; `est_1rm` по Эпли для ≤ 12 повторов.
 23. **Фото прогресса загружает только клиент**; сервер не может проверить размытие, поэтому клиент подтверждает его флагом `face_blurred` (обязателен) и `blur_method`. Signed URL живёт 5 минут (решение).
 24. **Вехи** фиксируются один раз и не отзываются при исправлении посещаемости; добавлена веха `first_session`.
@@ -2165,7 +2201,7 @@ erDiagram
 28. **Продуктовая телеметрия** (`product_events`) нужна для метрик беты «открытия из напоминаний» и «использование функций»; хранится 180 дней, без значений пользовательских данных.
 29. **Метрика «ведёт всё расписание 2 недели»**: тренер провёл занятия в каждой из двух последних недель, и у всех его занятий за 14 дней есть итог (`completed`/`cancelled`) — приближение, уточнить с Давидом.
 30. **Календарный фид**: токен на зону (тренер/клиент), показывается один раз, перевыпуск отзывает старый; в событиях нет заметок и данных тела.
-31. **Рефералка**: бонус клиенту — бонусный абонемент на N занятий с ценой 0; аннулирование квалифицирующей оплаты в течение 14 дней отзывает бонус, если он ещё не использован, иначе бонус сохраняется (решение, как в wave-3). Бонусы тренерам ждут тарифов (later): реферал хранится, бонус `pending` до оплаты тарифа (`plan_subscriptions`). Как создаётся реферал `trainer_to_trainer` — открытый вопрос O4 ([`decisions.md` §10](../decisions.md#10-открытые-вопросы)): до решения тренер приходит только по инвайту админа (Q15), реферал записывает админ.
+31. **Рефералка**: бонус клиенту — бонусный абонемент на N занятий с ценой 0; аннулирование квалифицирующей оплаты в течение 14 дней отзывает бонус, если он ещё не использован, иначе бонус сохраняется (решение, как в wave-3). Тренер за тренера (Q15): реферал создаётся при переходе по реферальной ссылке тренера, зона приглашённого открывается после одобрения админа; бонус `pending` до оплаты тарифа (`plan_subscriptions`).
 32. **Лидерборд** показывает только агрегированный счёт участников, явно включивших показ; согласие на лидерборд — и глобальное (`user_settings`), и на челлендж.
 33. **Чек-ин по QR** — ротируемый HMAC-токен без хранения; чек-ин досрочно отмечает посещение.
 34. **Месячный отчёт и карточки для сторис** строятся на лету, без таблиц (кеш по необходимости).
@@ -2173,3 +2209,4 @@ erDiagram
 36. **Студии**: столбцы `studio_id` не создаются заранее (добавление nullable-столбца в Postgres мгновенно и ничего не переписывает), но владение везде выражено через `trainer_id`, а проверки — через `is_coaching_trainer`, которую достаточно расширить.
 37. **Поиск по названиям** упражнений и продуктов — `pg_trgm` (расширение нужно включить вместе с первой миграцией тренировок).
 38. **Хранение outbox** — 90 дней для обработанных строк; экспорт — 7 дней.
+39. **Карточка клиента без аккаунта** — профиль без входа (пользователь Auth без `telegram_id`, заблокирован), а не nullable `client_id`; так все политики и журнал работают без изменений, а слияние — один перенос `client_id`. Подсказка совпадения при переходе — по имени; слияние необратимо.

@@ -6,7 +6,7 @@
 A client can train with several trainers, a trainer can be someone's client, and admins run the platform. To keep this safe by construction, everything personal lives inside a **pair** (`coaching`) and is enforced in Postgres RLS, not only in the UI:
 
 - A trainer sees only their own pairs. Delegated trainers (assistant/substitute) see only what the delegation scope allows.
-- Per pair the client controls **data shares**: nutrition, measurements, steps/activity, intake (default on; whether the product exposes an intake toggle is open question O3 in `docs/decisions.md`) and **progress photos (default off)**.
+- Per pair the client controls **data shares**: nutrition, measurements, steps/activity, self-logged workouts (default on), **progress photos (default off)** and **intake (default off)**. Intake is health data: a trainer never sees the intake of someone who is not their client, and within a pair only after the client explicitly allows it in a consent step shown when the pair is created (no pre-selected answer); the client can change it per trainer later.
 - Trainer notes are hidden from the client unless the trainer marks them visible.
 - **Admins cannot read client personal data** (nutrition, measurements, photos, intake). Admin analytics read only aggregates. Emergency access is a time-limited, reason-required, audit-logged "break-glass" function that also notifies the user; it has no UI in the beta.
 
