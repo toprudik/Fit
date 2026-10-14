@@ -21,3 +21,6 @@ __pycache__
 # os / editors
 .DS_Store
 Thumbs.db
+
+# claude code: personal settings stay local, .claude/settings.json is shared
+.claude/settings.local.json
