@@ -15,10 +15,11 @@ Working name DaFit (repo `fit`). Web app + Telegram Mini App (`apps/web`, Next.j
 - **apps/web**: Next.js 16 differs from older versions, so read `apps/web/AGENTS.md` and the bundled docs in `apps/web/node_modules/next/dist/docs/` before writing Next.js code. Cache Components are on: anything reading cookies/headers/searchParams sits behind `<Suspense>`; middleware is `src/proxy.ts`.
 - **UI**: shadcn/ui components in `src/components/ui` (add with `npx shadcn@latest add <name>`), Tailwind v4 tokens in `src/app/globals.css`, animations with `motion/react`. DaFit's own brand theme everywhere, inside Telegram too (only light/dark comes from Telegram), see ADR 0010. Design system, mockups and token snapshot: `docs/design.md` (token names in `docs/design/tokens.json` are the contract for CSS variables).
 - **Texts**: every UI string (RU and EN), bot message and doc reads as plain human writing; proofread it against `docs/writing.md` before finishing, using the `humanizer` skill when the session has it.
+- **i18n and preferences**: UI strings live only in `src/i18n/dictionaries/{ru,en}.ts` (`getDictionary()` in Server Components, `useI18n()` in Client Components). Pages sit under `app/[lang]/`; the proxy rewrites URLs to the user's locale, so never put the locale in links and never render from `usePathname()` during hydration (ADR 0015). Theme and language preferences: `src/lib/theme`, `src/i18n/client.tsx`.
 - **Auth**: Telegram only (Mini App initData or OIDC on the web) → Supabase session. Never trust `initDataUnsafe` or client-sent user ids. See `docs/adr/0004-telegram-auth.md`.
 - **Supabase clients**: `lib/supabase/server.ts` (user, RLS) for reads/writes on behalf of a user; `lib/supabase/admin.ts` (secret key) only where RLS must be bypassed, never to serve user data.
 - **apps/bot**: thin; it answers commands and opens the Mini App; no business logic. Outgoing notifications are sent from the notification outbox, not by bot code (ADR 0006). Polling locally, webhook + secret token when deployed.
-- **Checks before committing**: web `npm run lint && npm run typecheck && npm test && npm run build`; bot `uv run ruff check . && uv run ruff format --check . && uv run pytest`.
+- **Checks before committing**: web `npm run lint && npm run typecheck && npm test && npm run build` (UI changes: also `npm run e2e`, Playwright + axe at 390 and 1280 px in both themes); bot `uv run ruff check . && uv run ruff format --check . && uv run pytest`.
 
 ## Infrastructure
 

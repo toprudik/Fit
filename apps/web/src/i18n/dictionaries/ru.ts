@@ -132,6 +132,10 @@ export const ru = {
     text: "Возможно, ссылка устарела.",
     action: "На главный экран",
   },
+  toast: {
+    /** Screen reader name of the area where toasts appear. */
+    region: "Уведомления",
+  },
 };
 
 export type Dictionary = typeof ru;

@@ -130,4 +130,7 @@ export const en: Dictionary = {
     text: "The link may be out of date.",
     action: "Go to the main screen",
   },
+  toast: {
+    region: "Notifications",
+  },
 };

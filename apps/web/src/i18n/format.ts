@@ -2,7 +2,7 @@ import { INTL_LOCALE, type Locale } from "./config";
 
 /** Replaces {name} placeholders. Unknown placeholders stay as they are, so a missing value is visible. */
 export function interpolate(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? String(values[key]) : match));
+  return template.replace(/\{(\w+)\}/g, (match, key: string) => (Object.hasOwn(values, key) ? String(values[key]) : match));
 }
 
 /** Plural forms by Intl.PluralRules category. Russian needs one/few/many, English one/other. */
