@@ -18,7 +18,7 @@ describe("safeNext", () => {
   );
 
   it("falls back when empty", () => {
-    expect(safeNext(null, APP)).toBe("/me");
+    expect(safeNext(null, APP)).toBe("/");
   });
 });
 

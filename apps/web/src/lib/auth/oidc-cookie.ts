@@ -33,7 +33,8 @@ export const oidcCookieOptions = {
 
 /** Only allow redirects back to our own origin after login (prevents open redirects). */
 export function safeNext(value: string | null | undefined, appUrl: string): string {
-  const fallback = "/me";
+  // "/" opens the last zone (see src/lib/navigation/routing.ts).
+  const fallback = "/";
   if (!value) return fallback;
   try {
     const app = new URL(appUrl);

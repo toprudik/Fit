@@ -18,7 +18,7 @@ Monorepo with two apps, each with its own toolchain and Dockerfile:
 - **Database**: hosted Supabase project (no local Supabase stack yet). Schema changes are files in `supabase/migrations/`, applied to the dev project, then to production.
 - **Bot ↔ web**: the bot only opens the Mini App and sends messages; business logic and data access live in the web app / database, not in the bot.
 - **shadcn/ui**: components live in `apps/web/src/components/ui` and are added with `npx shadcn@latest add <name>` from `apps/web`.
-- **Fonts**: Geist via the `geist` npm package (self-hosted, no build-time Google Fonts fetch).
+- **Fonts**: self-hosted, no build-time Google Fonts fetch. Since 2026-10-14 the design system fonts Onest and Tektur Narrow are loaded from `apps/web/src/fonts` with `next/font/local` (`docs/design.md`); they replaced Geist.
 
 ## Consequences
 

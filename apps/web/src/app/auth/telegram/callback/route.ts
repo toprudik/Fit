@@ -2,9 +2,11 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { clientEnv } from "@/env/client";
 import { serverEnv } from "@/env/server";
+import { isLocale, LOCALE_COOKIE, negotiateLocale } from "@/i18n/config";
 import { signInWithTelegram } from "@/lib/auth/sign-in-with-telegram";
 import { OIDC_COOKIE, oidcCookieOptions, parseOidcCookie, redirectUri, safeNext } from "@/lib/auth/oidc-cookie";
-import { botIdFromToken } from "@/lib/telegram/identity";
+import { preferenceCookieOptions } from "@/lib/preferences";
+import { botIdFromToken, type TelegramIdentity } from "@/lib/telegram/identity";
 import { exchangeCodeForIdToken, verifyIdToken } from "@/lib/telegram/oidc";
 
 const sameString = (a: string, b: string) =>
@@ -29,6 +31,7 @@ export async function GET(request: NextRequest) {
   if (!code || !state || !sameString(state, saved.state)) return fail("state");
 
   const env = serverEnv();
+  let identity: TelegramIdentity;
   try {
     const idToken = await exchangeCodeForIdToken({
       code,
@@ -37,7 +40,7 @@ export async function GET(request: NextRequest) {
       clientId: env.TELEGRAM_LOGIN_CLIENT_ID,
       clientSecret: env.TELEGRAM_LOGIN_CLIENT_SECRET,
     });
-    const identity = await verifyIdToken(idToken, {
+    identity = await verifyIdToken(idToken, {
       audiences: [botIdFromToken(env.TELEGRAM_BOT_TOKEN), env.TELEGRAM_LOGIN_CLIENT_ID],
       nonce: saved.nonce,
     });
@@ -49,5 +52,10 @@ export async function GET(request: NextRequest) {
 
   const res = NextResponse.redirect(new URL(safeNext(saved.next, appUrl), appUrl));
   res.cookies.delete({ name: OIDC_COOKIE, path: oidcCookieOptions.path });
+  // First sign-in without a saved language: Telegram's language_code, then the browser (ADR 0013).
+  if (!isLocale(request.cookies.get(LOCALE_COOKIE)?.value)) {
+    const locale = negotiateLocale({ languageCode: identity.languageCode, acceptLanguage: request.headers.get("accept-language") });
+    res.cookies.set(LOCALE_COOKIE, locale, preferenceCookieOptions);
+  }
   return res;
 }
