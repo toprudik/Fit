@@ -43,8 +43,9 @@ CI runs the same plus a gitleaks secret scan and Docker image builds.
 
 ## Docs
 
-- `CLAUDE.md` — rules for coding agents
-- `docs/decisions.md` — product decisions; `CONTEXT.md` — domain glossary
-- `docs/prd/` — what to build per wave; `docs/architecture/` — data model and screens; `docs/plan.md` — plan to the 24.11.2026 beta
-- `docs/adr/` — architectural decisions
-- `docs/design.md` — design system and key-screen mockups (links), design decisions; `docs/design/` — token snapshot and fonts
+- `CLAUDE.md`: rules for coding agents
+- `docs/decisions.md`: product decisions; `CONTEXT.md`: domain glossary
+- `docs/prd/`: what to build per wave; `docs/architecture/`: data model and screens; `docs/plan.md`: plan to the 24.11.2026 beta
+- `docs/adr/`: architectural decisions
+- `docs/design.md`: design system and key-screen mockups (links), design decisions; `docs/design/`: token snapshot and fonts
+- `docs/writing.md`: how DaFit texts are written and proofread (UI copy, bot, docs)
