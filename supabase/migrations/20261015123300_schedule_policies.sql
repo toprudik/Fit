@@ -178,7 +178,7 @@ grant update (
 -- meeting_url is not granted for SELECT (R25): the column grant is per role, not per row, so it would show
 -- the link to every client who sees an open session. public.session_meeting_url() returns it to the trainer
 -- and to confirmed or attended participants. Clients must list columns: select=* fails with 42501.
-create policy "sessions: trainer, participants and live clients of open sessions read"
+create policy "sessions: trainer, participants and live clients read"
   on public.sessions for select
   to authenticated
   using (
@@ -204,7 +204,7 @@ create policy "sessions: trainer updates"
   using (private.acts_for_trainer(trainer_id, 'schedule'))
   with check (private.acts_for_trainer(trainer_id, 'schedule'));
 
-comment on policy "sessions: trainer, participants and live clients of open sessions read" on public.sessions is
+comment on policy "sessions: trainer, participants and live clients read" on public.sessions is
   'The trainer; clients with any booking on the session (R80); clients of a live pair for open scheduled sessions.';
 comment on policy "sessions: trainer inserts scheduled personal or group" on public.sessions is
   'The trainer creates scheduled personal or group sessions; trial sessions come from book_trial.';

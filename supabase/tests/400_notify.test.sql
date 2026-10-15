@@ -43,9 +43,13 @@ insert into public.calendar_feeds (user_id, zone, token_hash, revoked_at) values
 -- =========================================================================================================
 -- notification_outbox: server only
 
-select is(
-  (select count(*)::integer from pg_policy where polrelid = 'public.notification_outbox'::regclass), 0,
-  'notification_outbox: has no policy at all'
+select ok(
+  (select count(*) = 1
+          and bool_and(not p.polpermissive and p.polcmd = '*'
+                       and pg_get_expr(p.polqual, p.polrelid) = 'false'
+                       and pg_get_expr(p.polwithcheck, p.polrelid) = 'false')
+   from pg_policy p where p.polrelid = 'public.notification_outbox'::regclass),
+  'notification_outbox: its only policy is a restrictive deny-all for every command'
 );
 select ok(
   (select relrowsecurity from pg_class where oid = 'public.notification_outbox'::regclass),
