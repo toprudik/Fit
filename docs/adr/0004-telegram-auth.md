@@ -28,6 +28,18 @@ Two ways to **prove** a Telegram identity, one way to **create a session**:
 `app_metadata.telegram_id` is the stable identity key (users can't edit `app_metadata`).
 `proxy.ts` refreshes the session on each request; protected pages also check on the server.
 
+## Inside the Mini App (added 2026-10-15)
+
+Inside Telegram the account is the Telegram account the Mini App was opened with. The client signs in from
+`initData` on every page load: after a full page load the URL no longer has the launch hash, and tma.js reads the
+launch params it saved in `sessionStorage` (`tapps/launchParams`) on the first load. So the Mini App has no
+sign-out: the next page load would sign the user in again.
+
+The OIDC page on `oauth.telegram.org` does not load inside Telegram, so the Mini App never links to it. `/login`
+inside Telegram signs in from `initData` and opens `next`. If the request fails, the button sends it again. If there
+is no `initData`, or the server rejects it (older than `TELEGRAM_INIT_DATA_MAX_AGE`), the page asks to close the
+app and open it again: only a new launch brings fresh `initData`. The website keeps sign-out and the OIDC button.
+
 ## Required Supabase settings
 
 - Authentication → Sign In / Providers: **Allow new users to sign up = off** (admin `createUser` still works); no password or social providers enabled.

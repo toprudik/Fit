@@ -4,10 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   hapticImpact,
   markMiniAppReady,
+  type MiniAppSignInResult,
   resetMiniAppForTests,
   safely,
   safelyAsync,
+  setMiniAppSignIn,
+  signInToMiniApp,
   useInTelegram,
+  useMiniAppSignIn,
   useTelegramBackButton,
   useTelegramVerticalSwipeLock,
 } from "./mini-app";
@@ -169,5 +173,60 @@ describe("inside Telegram", () => {
 
     expect(() => renderHook(() => useTelegramVerticalSwipeLock(true))).not.toThrow();
     expect(() => hapticImpact()).not.toThrow();
+  });
+});
+
+describe("sign-in from initData", () => {
+  /** A stand-in for the provider's request: resolve it with the server's answer. */
+  function sender() {
+    const answers: ((result: MiniAppSignInResult) => void)[] = [];
+    const send = vi.fn(() => new Promise<MiniAppSignInResult>((resolve) => answers.push(resolve)));
+    return { send, answer: (result: MiniAppSignInResult) => answers.shift()?.(result) };
+  }
+
+  it("is null on the website", () => {
+    expect(renderHook(() => useMiniAppSignIn()).result.current).toBeNull();
+  });
+
+  it("is pending while the request is on its way, then tells how it went", async () => {
+    const { send, answer } = sender();
+    const { result } = renderHook(() => useMiniAppSignIn());
+    act(() => setMiniAppSignIn(send));
+
+    let signIn: Promise<MiniAppSignInResult> | undefined;
+    act(() => {
+      signIn = signInToMiniApp();
+    });
+    expect(result.current).toBe("pending");
+
+    await act(async () => answer("signed-in"));
+    expect(await signIn).toBe("signed-in");
+    expect(result.current).toBe("signed-in");
+  });
+
+  it("joins the sign-in on its way instead of sending initData twice, and sends again once it settled", async () => {
+    const { send, answer } = sender();
+    setMiniAppSignIn(send);
+
+    const first = signInToMiniApp();
+    const joined = signInToMiniApp();
+    expect(send).toHaveBeenCalledOnce();
+    answer("failed");
+    expect(await first).toBe("failed");
+    expect(await joined).toBe("failed");
+
+    const retry = signInToMiniApp();
+    expect(send).toHaveBeenCalledTimes(2);
+    answer("signed-in");
+    expect(await retry).toBe("signed-in");
+  });
+
+  it("asks to reopen the app when there is no initData to send", async () => {
+    const { result } = renderHook(() => useMiniAppSignIn());
+    act(() => setMiniAppSignIn(null));
+
+    expect(result.current).toBe("reopen");
+    expect(await signInToMiniApp()).toBe("reopen");
+    expect(result.current).toBe("reopen");
   });
 });

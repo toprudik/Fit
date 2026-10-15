@@ -13,6 +13,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n/client";
 import { DEFAULT_ZONE, ZONES, type Zone } from "@/lib/navigation/zones";
+import { useMiniAppSignIn } from "@/lib/telegram/mini-app";
 
 function SignedOut({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useI18n();
@@ -70,13 +71,16 @@ type ProfilePanelProps = {
 
 /**
  * Profile content shared by the sheet behind the avatar and the /profile page
- * (docs/architecture/screens.md §2.3): who is signed in, the zone switch, settings and sign-out.
- * The zone switch shows the zone the shell shows.
+ * (docs/architecture/screens.md §2.3): who is signed in, the zone switch, settings and, on the
+ * website, sign-out. The zone switch shows the zone the shell shows.
  */
 export function ProfilePanel({ onNavigate, groupSurface = "default" }: ProfilePanelProps) {
   const { t } = useI18n();
   const router = useRouter();
   const account = useAccount();
+  // Inside Telegram the account is the Telegram account the Mini App was opened with, and the next
+  // page load would sign it in again from initData: no sign-out there (ADR 0004).
+  const inTelegram = useMiniAppSignIn() !== null;
   const known = useOptionalShell()?.zone ?? null;
   const signOutForm = useRef<HTMLFormElement>(null);
   // The zone just picked: the thumb moves right away, before the new zone's screen arrives.
@@ -108,7 +112,7 @@ export function ProfilePanel({ onNavigate, groupSurface = "default" }: ProfilePa
       />
       <ListGroup surface={groupSurface}>
         <ListRow icon={Settings} title={t.profile.settings} href="/settings" onClick={onNavigate} />
-        {account.status === "signed-in" ? (
+        {account.status === "signed-in" && !inTelegram ? (
           // A plain POST, like the auth routes expect (same-origin check, then a redirect to /login).
           <form ref={signOutForm} method="post" action="/auth/sign-out">
             <ListRow

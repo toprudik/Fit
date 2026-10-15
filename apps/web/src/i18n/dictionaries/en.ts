@@ -124,6 +124,7 @@ export const en: Dictionary = {
   },
   telegram: {
     signInFailed: "Couldn't log you in. Reopen the app.",
+    signInExpired: "The login data from Telegram has expired or never arrived. Close the app and open it again.",
   },
   notFound: {
     title: "This page doesn't exist",

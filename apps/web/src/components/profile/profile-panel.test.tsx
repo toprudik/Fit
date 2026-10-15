@@ -5,6 +5,7 @@ import { resetAccountStoreForTests, setAccount } from "@/components/account/acco
 import { ShellContext } from "@/components/shell/shell-context";
 import type { Locale } from "@/i18n/config";
 import type { Zone } from "@/lib/navigation/zones";
+import { resetMiniAppForTests, setMiniAppSignIn, signInToMiniApp } from "@/lib/telegram/mini-app";
 import { renderWithProviders } from "@/test/render";
 import { ProfilePanel } from "./profile-panel";
 
@@ -47,10 +48,12 @@ const checkedZone = () =>
 beforeEach(() => {
   router.push.mockReset();
   resetAccountStoreForTests();
+  resetMiniAppForTests();
 });
 
 afterEach(() => {
   resetAccountStoreForTests();
+  resetMiniAppForTests();
 });
 
 describe("account", () => {
@@ -74,6 +77,22 @@ describe("account", () => {
     form?.addEventListener("submit", submit);
     fireEvent.click(signOut);
     expect(submit).toHaveBeenCalledOnce();
+  });
+
+  it("has no sign-out inside Telegram, where the account is the one the Mini App was opened with", async () => {
+    renderPanel();
+    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null }));
+    expect(screen.getByRole("button", { name: "Выйти" })).toBeTruthy();
+
+    // What the Telegram provider does on every page load.
+    await act(async () => {
+      setMiniAppSignIn(async () => "signed-in");
+      await signInToMiniApp();
+    });
+
+    expect(screen.getByText("Анна Смирнова")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Выйти" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Настройки" })).toBeTruthy();
   });
 
   it("offers to sign in when signed out, coming back to the same screen", () => {

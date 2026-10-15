@@ -2,7 +2,7 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resetMiniAppForTests, useInTelegram } from "@/lib/telegram/mini-app";
+import { resetMiniAppForTests, signInToMiniApp, useInTelegram, useMiniAppSignIn } from "@/lib/telegram/mini-app";
 import { THEME_BG } from "@/lib/theme/colors";
 import { resetThemeStoreForTests, setThemePreference } from "@/lib/theme/store";
 import { ThemeSync } from "@/lib/theme/theme-sync";
@@ -83,15 +83,23 @@ function launch({ bg = DARK_TELEGRAM }: { bg?: string } = {}) {
   return initData;
 }
 
-function signInResponse(body: unknown, ok = true) {
-  const fetch = vi.fn(async () => ({ ok, status: ok ? 200 : 401, json: async () => body }));
+function signInResponse(body: unknown, ok = true, status = ok ? 200 : 401) {
+  const fetch = vi.fn(async () => ({ ok, status, json: async () => body }));
   vi.stubGlobal("fetch", fetch);
   return fetch;
 }
 
 function Probe() {
-  return <p>{useInTelegram() ? "telegram" : "website"}</p>;
+  const signIn = useMiniAppSignIn();
+  return (
+    <>
+      <p>{useInTelegram() ? "telegram" : "website"}</p>
+      <p>sign-in: {signIn ?? "none"}</p>
+    </>
+  );
 }
+
+const signInStatus = () => screen.getByText(/^sign-in: /).textContent?.replace("sign-in: ", "");
 
 /** As in the root layout: ThemeSync sits next to the provider and starts the theme store first. */
 function renderApp(options: { strict?: boolean } = {}) {
@@ -128,12 +136,13 @@ describe("outside Telegram", () => {
     renderApp();
 
     expect(screen.getByText("website")).toBeTruthy();
+    expect(signInStatus()).toBe("none");
     expect(sdk.init).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
     sdk.isTMA.mockReturnValue(true);
   });
 
-  it("stays the website when the SDK can't read the launch params", () => {
+  it("stays the website when the SDK can't read the launch params, with no initData to sign in with", () => {
     launch();
     sdk.init.mockImplementationOnce(() => {
       throw new Error("Unable to retrieve launch parameters");
@@ -141,6 +150,7 @@ describe("outside Telegram", () => {
     renderApp();
 
     expect(screen.getByText("website")).toBeTruthy();
+    expect(signInStatus()).toBe("reopen");
     expect(sdk.miniApp.mount).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -278,5 +288,55 @@ describe("sign-in", () => {
     renderApp();
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledExactlyOnceWith("Не удалось войти, открой приложение заново"));
+  });
+
+  it("reports signed-in once the server set the session", async () => {
+    launch();
+    renderApp();
+
+    expect(signInStatus()).toBe("pending");
+    await waitFor(() => expect(signInStatus()).toBe("signed-in"));
+  });
+
+  it("asks to reopen the app when the server rejects initData as too old", async () => {
+    launch();
+    signInResponse({ error: "invalid_init_data" }, false, 401);
+    renderApp();
+
+    await waitFor(() => expect(signInStatus()).toBe("reopen"));
+  });
+
+  it("sends the same initData again when asked after a server error", async () => {
+    const initData = launch();
+    signInResponse({ error: "sign_in_failed" }, false, 500);
+    renderApp();
+    await waitFor(() => expect(signInStatus()).toBe("failed"));
+
+    const retry = signInResponse({ ok: true, fresh: true });
+    await act(() => signInToMiniApp());
+
+    expect(retry).toHaveBeenCalledExactlyOnceWith("/api/auth/telegram/mini-app", expect.objectContaining({ body: JSON.stringify({ initData }) }));
+    expect(signInStatus()).toBe("signed-in");
+    expect(router.refresh).toHaveBeenCalledOnce();
+  });
+
+  it("asks to reopen the app when the launch has no initData, and sends nothing", () => {
+    launch();
+    sdk.retrieveRawInitData.mockReturnValue(undefined);
+    renderApp();
+
+    expect(screen.getByText("telegram")).toBeTruthy();
+    expect(signInStatus()).toBe("reopen");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("leaves the toast out on /login, which shows the outcome on the page", async () => {
+    window.history.replaceState(null, "", "/login");
+    launch();
+    signInResponse({ error: "sign_in_failed" }, false, 500);
+    renderApp();
+
+    await waitFor(() => expect(signInStatus()).toBe("failed"));
+    expect(toast.error).not.toHaveBeenCalled();
   });
 });

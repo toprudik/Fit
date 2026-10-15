@@ -23,6 +23,60 @@ export function useInTelegram(): boolean {
   return useSyncExternalStore(subscribeReady, () => ready, () => false);
 }
 
+/**
+ * The sign-in from initData (ADR 0004): `pending` while the request is on its way, `signed-in` once
+ * the server set the session, `failed` when the request or the server failed (another try may
+ * work), `reopen` when there is no initData or the server rejected it as too old (only a new launch
+ * of the Mini App brings fresh initData).
+ */
+export type MiniAppSignInStatus = "pending" | "signed-in" | "failed" | "reopen";
+export type MiniAppSignInResult = Exclude<MiniAppSignInStatus, "pending">;
+
+let signInStatus: MiniAppSignInStatus | null = null;
+let sendInitData: (() => Promise<MiniAppSignInResult>) | null = null;
+let pendingSignIn: Promise<MiniAppSignInResult> | null = null;
+const signInListeners = new Set<() => void>();
+
+function setSignInStatus(status: MiniAppSignInStatus) {
+  signInStatus = status;
+  for (const listener of signInListeners) listener();
+}
+
+function subscribeSignIn(listener: () => void) {
+  signInListeners.add(listener);
+  return () => signInListeners.delete(listener);
+}
+
+/**
+ * Called by the Telegram provider inside Telegram, on every page load: `send` posts this launch's
+ * initData and resolves with how it went; null when there is no initData to post.
+ */
+export function setMiniAppSignIn(send: (() => Promise<MiniAppSignInResult>) | null) {
+  sendInitData = send;
+  if (!send) setSignInStatus("reopen");
+}
+
+/** Signs in from initData, or joins the sign-in already on its way, and resolves with how it went. */
+export function signInToMiniApp(): Promise<MiniAppSignInResult> {
+  if (pendingSignIn) return pendingSignIn;
+  if (!sendInitData) return Promise.resolve("reopen");
+  setSignInStatus("pending");
+  pendingSignIn = sendInitData().then((result) => {
+    pendingSignIn = null;
+    setSignInStatus(result);
+    return result;
+  });
+  return pendingSignIn;
+}
+
+/**
+ * Where the sign-in from initData stands; null on the website and on the server. Not null means the
+ * app runs inside Telegram, and the account is the Telegram account the Mini App was opened with.
+ */
+export function useMiniAppSignIn(): MiniAppSignInStatus | null {
+  return useSyncExternalStore(subscribeSignIn, () => signInStatus, () => null);
+}
+
 function report(error: unknown) {
   // Production stays quiet: the app keeps working without the feature, as it does on the website.
   if (process.env.NODE_ENV === "development") console.warn("[telegram]", error);
@@ -141,4 +195,7 @@ export function resetMiniAppForTests() {
   ready = false;
   detachClick?.();
   detachClick = null;
+  signInStatus = null;
+  sendInitData = null;
+  pendingSignIn = null;
 }

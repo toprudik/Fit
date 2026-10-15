@@ -183,6 +183,110 @@ test.describe("sign-in inside Telegram", () => {
     expect(box && box.y).toBeLessThan((page.viewportSize()?.height ?? 0) / 2);
     expect(errors()).toEqual([]);
   });
+
+  test("sends initData again after a full page load, when the launch hash is gone", async ({ page }) => {
+    const signIns = await openInTelegram(page, "/client");
+    await expect.poll(() => signIns.length).toBe(1);
+
+    await page.goto("/trainer");
+    await expectMiniAppReady(page);
+    await expect.poll(() => signIns.length).toBe(2);
+    expect(signIns[1]).toBe(signIns[0]);
+  });
+});
+
+/*
+ * Telegram's login page for websites (OIDC on oauth.telegram.org) does not load inside the Mini App.
+ * There /login signs in from initData instead, and the app has no sign-out that would lead there.
+ */
+test.describe("/login inside Telegram", () => {
+  const SIGN_IN = "Войти через Telegram";
+  const websiteLogin = (page: Page) => page.locator('a[href^="/auth/telegram/login"]');
+  const signInButton = (page: Page) => page.getByRole("button", { name: SIGN_IN, exact: true });
+  const reopen = (page: Page) => page.getByText("Данные для входа от Telegram устарели или не пришли. Закрой приложение и открой его снова.");
+
+  test("where sign-out used to land, signs in from initData and opens the app", async ({ page }) => {
+    const errors = collectErrors(page);
+    const signIns = await openInTelegram(page, "/client");
+    await expect.poll(() => signIns.length).toBe(1);
+
+    // Sign-out ended with a redirect to /login: a full page load, without the launch hash.
+    await page.goto("/login");
+    await expect.poll(() => pathname(page)).toBe("/client");
+    await expect(page.getByRole("heading", { level: 1, name: "Главная" }).first()).toBeVisible();
+    expect(signIns).toHaveLength(2);
+    expect(errors()).toEqual([]);
+  });
+
+  test("a failed sign-in says so, and the button tries again, then goes on to `next`", async ({ page }) => {
+    const errors = collectErrors(page, [/Failed to load resource.*500/]);
+    const signIns = await openInTelegram(page, "/login?next=%2Fclient%2Fprogress", {
+      signIn: [
+        { status: 500, body: { error: "sign_in_failed" } },
+        { status: 200, body: { ok: true, fresh: true } },
+      ],
+    });
+
+    await expect(page.getByText("Не удалось войти через Telegram, попробуй ещё раз.")).toBeVisible();
+    await expect(websiteLogin(page)).toHaveCount(0);
+    // The page says it itself, so no toast repeats it.
+    await expect(page.getByText("Не удалось войти, открой приложение заново")).toHaveCount(0);
+
+    await signInButton(page).click();
+    await expect.poll(() => pathname(page)).toBe("/client/progress");
+    expect(signIns).toHaveLength(2);
+    expect(errors()).toEqual([]);
+  });
+
+  test("initData the server no longer accepts asks to reopen the app, with nothing to press", async ({ page }) => {
+    const errors = collectErrors(page, [/Failed to load resource.*401/]);
+    await openInTelegram(page, "/login", { signIn: { status: 401, body: { error: "invalid_init_data" } } });
+
+    await expect(reopen(page)).toBeVisible();
+    await expect(signInButton(page)).toHaveCount(0);
+    await expect(websiteLogin(page)).toHaveCount(0);
+    expect(pathname(page)).toBe("/login");
+    expect(errors()).toEqual([]);
+  });
+
+  test("launch params tma.js can't read ask to reopen the app", async ({ page }) => {
+    const errors = collectErrors(page);
+    const signIns = await openInTelegram(page, "/login", { unsigned: true });
+
+    await expect(reopen(page)).toBeVisible();
+    await expect(signInButton(page)).toHaveCount(0);
+    await expect(websiteLogin(page)).toHaveCount(0);
+    expect(signIns).toEqual([]);
+    expect(errors()).toEqual([]);
+  });
+
+  test("after a failed sign-in, the profile's sign-in tries initData again and comes back to the screen", async ({ page }) => {
+    const errors = collectErrors(page, [/Failed to load resource.*500/]);
+    const signIns = await openInTelegram(page, "/trainer", {
+      signIn: [
+        { status: 500, body: { error: "sign_in_failed" } },
+        { status: 200, body: { ok: true, fresh: true } },
+      ],
+    });
+    await expect(page.getByText("Не удалось войти, открой приложение заново")).toBeVisible();
+
+    await page.getByRole("button", { name: "Профиль", exact: true }).click();
+    await page.getByRole("dialog", { name: "Профиль" }).getByRole("link", { name: SIGN_IN }).click();
+    await expect.poll(() => pathname(page)).toBe("/login");
+    await expect(page.getByText("Не удалось войти через Telegram, попробуй ещё раз.")).toBeVisible();
+    await expect(websiteLogin(page)).toHaveCount(0);
+
+    await signInButton(page).click();
+    await expect.poll(() => pathname(page)).toBe("/trainer");
+    await expect(page.getByRole("heading", { level: 1, name: "Сегодня" })).toBeVisible();
+    expect(signIns).toHaveLength(2);
+    expect(errors()).toEqual([]);
+  });
+
+  test("on the website /login keeps Telegram's website login", async ({ page }) => {
+    await page.goto("/login?next=%2Fclient");
+    await expect(page.getByRole("link", { name: SIGN_IN, exact: true })).toHaveAttribute("href", "/auth/telegram/login?next=%2Fclient");
+  });
 });
 
 test("launch params tma.js can't read leave the plain website, without errors", async ({ page }, testInfo) => {

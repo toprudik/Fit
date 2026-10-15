@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { DaMark } from "@/components/brand/da-mark";
+import { MiniAppLogin } from "@/components/telegram/mini-app-login";
 import { Button } from "@/components/ui/button";
+import { clientEnv } from "@/env/client";
 import { getDictionary } from "@/i18n/server";
+import { safeNext } from "@/lib/auth/oidc-cookie";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
@@ -15,10 +18,12 @@ const isErrorKey = (value: unknown): value is ErrorKey => typeof value === "stri
 
 async function LoginAction({ searchParams }: { searchParams: PageProps<"/[lang]/login">["searchParams"] }) {
   const [t, { error, next }] = await Promise.all([getDictionary(), searchParams]);
-  const href = `/auth/telegram/login${typeof next === "string" ? `?next=${encodeURIComponent(next)}` : ""}`;
+  const nextPath = typeof next === "string" ? next : null;
+  const href = `/auth/telegram/login${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`;
 
   return (
-    <>
+    // Inside Telegram the OIDC page does not load: the Mini App signs in from initData instead.
+    <MiniAppLogin next={safeNext(nextPath, clientEnv.NEXT_PUBLIC_APP_URL)}>
       {isErrorKey(error) ? (
         <p role="alert" className="text-subhead text-danger">
           {t.login.errors[error]}
@@ -28,7 +33,7 @@ async function LoginAction({ searchParams }: { searchParams: PageProps<"/[lang]/
       <Button asChild size="lg" block>
         <a href={href}>{t.login.action}</a>
       </Button>
-    </>
+    </MiniAppLogin>
   );
 }
 

@@ -16,12 +16,20 @@ import { useEffect, useEffectEvent } from "react";
 import { toast } from "@/components/ui/sonner";
 import { useI18n } from "@/i18n/client";
 import { isLocale } from "@/i18n/config";
-import { markMiniAppReady, safely, safelyAsync } from "@/lib/telegram/mini-app";
+import {
+  markMiniAppReady,
+  type MiniAppSignInResult,
+  safely,
+  safelyAsync,
+  setMiniAppSignIn,
+  signInToMiniApp,
+} from "@/lib/telegram/mini-app";
 import { THEME_BG } from "@/lib/theme/colors";
 import { setTelegramScheme } from "@/lib/theme/store";
 import { isColorDark } from "@/lib/theme/theme";
 
 const SETTINGS_HREF = "/settings";
+const LOGIN_HREF = "/login";
 
 /**
  * initData already sent this page load. React runs effects twice in development, and a second
@@ -77,7 +85,10 @@ function launchMiniApp() {
  * Inside Telegram: mounts the Mini App SDK, takes the light/dark scheme and safe areas from
  * Telegram (never its colors), keeps Telegram's chrome in DaFit's background color, routes the
  * Settings item of Telegram's menu to /settings and signs the user in from initData (verified on
- * the server). Outside Telegram, or when the SDK can't start, it does nothing.
+ * the server) on every page load. After a full page load the URL has no launch hash; the SDK then
+ * reads the launch params it saved in sessionStorage (tapps/launchParams) on the first load.
+ * Outside Telegram it does nothing; when the SDK can't start, the app stays the website, and
+ * /login asks to reopen it.
  */
 export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -87,28 +98,40 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     if (window.location.pathname !== SETTINGS_HREF) router.push(SETTINGS_HREF);
   });
 
-  const signIn = useEffectEvent(async (initData: string) => {
+  const signIn = useEffectEvent(async (initData: string): Promise<MiniAppSignInResult> => {
+    let result: MiniAppSignInResult = "failed";
     try {
       const res = await fetch("/api/auth/telegram/mini-app", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ initData }),
       });
-      if (!res.ok) throw new Error(String(res.status));
-      // Session cookies are httpOnly, so the server decides whether this was a new sign-in.
-      const { fresh, locale: detected } = (await res.json()) as { fresh?: boolean; locale?: string };
-      // First launch: the server picked the language from Telegram; re-render in it if it differs.
-      if (isLocale(detected) && detected !== locale) window.location.reload();
-      else if (fresh) router.refresh();
+      if (res.ok) {
+        // Session cookies are httpOnly, so the server decides whether this was a new sign-in.
+        const { fresh, locale: detected } = (await res.json()) as { fresh?: boolean; locale?: string };
+        // First launch: the server picked the language from Telegram; re-render in it if it differs.
+        if (isLocale(detected) && detected !== locale) window.location.reload();
+        else if (fresh) router.refresh();
+        return "signed-in";
+      }
+      // 401: initData too old or not genuine. Sending it again won't help, only a new launch will.
+      if (res.status === 401) result = "reopen";
     } catch {
-      toast.error(t.telegram.signInFailed);
+      // Network or a malformed answer: another try may work.
     }
+    // /login shows how the sign-in went on the page itself.
+    if (window.location.pathname !== LOGIN_HREF) toast.error(t.telegram.signInFailed);
+    return result;
   });
 
   useEffect(() => {
     if (!safely(() => isTMA())) return;
     const launch = launchMiniApp();
-    if (!launch) return;
+    if (!launch) {
+      // Inside Telegram, but without launch params there is no initData to sign in with.
+      setMiniAppSignIn(null);
+      return;
+    }
     const disposers: (() => void)[] = [launch.cleanup];
     const keep = (dispose: (() => void) | undefined) => {
       if (dispose) disposers.push(dispose);
@@ -142,9 +165,11 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     keep(() => cancelAnimationFrame(frame));
 
     const { rawInitData } = launch;
+    // Screens can ask to sign in again (/login after a failure); the provider signs in once per page load.
+    setMiniAppSignIn(rawInitData ? () => signIn(rawInitData) : null);
     if (rawInitData && !sentInitData.has(rawInitData)) {
       sentInitData.add(rawInitData);
-      void signIn(rawInitData);
+      void signInToMiniApp();
     }
 
     return () => {

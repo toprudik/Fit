@@ -74,12 +74,16 @@ export type SignInAnswer = { status: number; body: Record<string, unknown> };
 
 /**
  * Opens `path` as the Mini App. Every event the app posts to Telegram lands in window.__tg; the
- * sign-in endpoint answers `signIn` (an existing session by default). Returns the sign-in requests.
+ * sign-in endpoint answers `signIn` (an existing session by default), or the answers of a list in
+ * turn, the last one for every request after. Returns the sign-in requests.
  */
 export async function openInTelegram(
   page: Page,
   path: string,
-  { signIn = { status: 200, body: { ok: true, fresh: false } }, ...launch }: LaunchOptions & { signIn?: SignInAnswer } = {},
+  {
+    signIn = { status: 200, body: { ok: true, fresh: false } },
+    ...launch
+  }: LaunchOptions & { signIn?: SignInAnswer | readonly SignInAnswer[] } = {},
 ) {
   await page.addInitScript(() => {
     const w = window as TelegramWindow;
@@ -89,10 +93,12 @@ export async function openInTelegram(
       },
     };
   });
+  const answers: readonly SignInAnswer[] = "status" in signIn ? [signIn] : signIn;
   const signIns: string[] = [];
   await page.route("**/api/auth/telegram/mini-app", async (route) => {
     signIns.push(route.request().postData() ?? "");
-    await route.fulfill({ status: signIn.status, json: signIn.body });
+    const answer = answers[Math.min(signIns.length, answers.length) - 1];
+    await route.fulfill({ status: answer.status, json: answer.body });
   });
   await page.goto(path + launchHash(launch));
   return signIns;
