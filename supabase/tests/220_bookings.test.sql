@@ -3,7 +3,7 @@
 -- keys, seat capacity (R18), the status machine (R93), booking_events and moving pairs to the stub.
 begin;
 \ir _helpers.psql
-select plan(70);
+select plan(154);
 
 -- Fixtures: C has live pairs to A and B; D and F live pairs to A; E an ended pair to A; M is A's card;
 -- N is a real user without a pair; Z is a user who acted on a booking and later deletes the account.
@@ -451,6 +451,114 @@ select tests.authenticate_as('trainer_a');
 select ok(
   (select count(*) from public.bookings where id in (tests.i('bk_c_anon'), tests.i('bk_d_anon'))) = 2,
   'anonymization: A keeps reading the bookings of the anonymized pairs'
+);
+
+-- =========================================================================================================
+-- The whole status machine (R93), as the server: every transition between two statuses, and every status a
+-- booking may be created with. Each case gets its own session and booking of a fresh pair.
+
+select tests.clear_authentication();
+select tests.create_user('client_sm');
+select tests.create_pair('trainer_a', 'client_sm');
+create table tests.allowed_transitions (from_status public.booking_status, to_status public.booking_status);
+insert into tests.allowed_transitions values
+  ('requested', 'confirmed'), ('requested', 'declined'), ('requested', 'expired'), ('requested', 'cancelled'),
+  ('confirmed', 'cancelled'), ('confirmed', 'late_cancelled'), ('confirmed', 'rescheduled'), ('confirmed', 'attended'),
+  ('confirmed', 'no_show'),
+  ('attended', 'no_show'), ('attended', 'cancelled'),
+  ('no_show', 'attended'), ('no_show', 'cancelled');
+
+-- Sets a booking's status with the columns its checks need (a client cancels; confirmed keeps its time).
+create function tests.set_booking_status(p_booking uuid, p_status public.booking_status) returns void
+language plpgsql set search_path = '' as $$
+begin
+  update public.bookings
+  set status = p_status,
+      requested_at = coalesce(requested_at, now()),
+      confirmed_at = case when p_status in ('confirmed', 'late_cancelled', 'rescheduled', 'attended', 'no_show')
+                          then coalesce(confirmed_at, now()) else confirmed_at end,
+      cancelled_at = case when p_status in ('cancelled', 'late_cancelled') then now() else cancelled_at end,
+      cancelled_by_role = case when p_status in ('cancelled', 'late_cancelled') then 'client' else cancelled_by_role end,
+      attendance_marked_at = case when p_status in ('attended', 'no_show') then now() else attendance_marked_at end
+  where id = p_booking;
+end $$;
+
+-- A booking of the pair in the given status, reached through allowed steps.
+create function tests.booking_in(p_status public.booking_status) returns uuid language plpgsql set search_path = '' as $$
+declare
+  v_session uuid := tests.create_session('trainer_a', now() + random() * interval '300 days' + interval '1 day');
+  v_start public.booking_status := case
+    when p_status in ('requested', 'declined', 'expired', 'cancelled') then 'requested'
+    when p_status = 'attended' then 'attended'
+    else 'confirmed' end;
+  v_id uuid := tests.create_booking(v_session, 'trainer_a', 'client_sm', v_start, 'trainer');
+begin
+  if p_status <> v_start then
+    perform tests.set_booking_status(v_id, p_status);
+  end if;
+  return v_id;
+end $$;
+
+-- 'ok' when the move passes, else the error message.
+create function tests.try_transition(p_from public.booking_status, p_to public.booking_status) returns text
+language plpgsql set search_path = '' as $$
+declare
+  v_id uuid := tests.booking_in(p_from);
+begin
+  perform tests.set_booking_status(v_id, p_to);
+  return 'ok';
+exception when others then
+  return sqlerrm;
+end $$;
+
+select is(
+  tests.try_transition(f, t),
+  case when exists (select 1 from tests.allowed_transitions a where a.from_status = f and a.to_status = t)
+       then 'ok' else 'invalid_transition' end,
+  format('status machine: %s -> %s', f, t)
+)
+from unnest(enum_range(null::public.booking_status)) f, unnest(enum_range(null::public.booking_status)) t
+where f <> t
+order by f, t;
+
+-- 'ok' when a booking may be created in the status, else the error message.
+create function tests.try_insert(p_status public.booking_status) returns text language plpgsql set search_path = '' as $$
+begin
+  perform tests.create_booking(tests.create_session('trainer_a', now() + interval '400 days'), 'trainer_a', 'client_sm', p_status);
+  return 'ok';
+exception when others then
+  return sqlerrm;
+end $$;
+select is(
+  tests.try_insert(s),
+  case when s in ('requested', 'confirmed', 'attended') then 'ok' else 'invalid_transition' end,
+  format('status machine: a booking created as %s', s)
+)
+from unnest(enum_range(null::public.booking_status)) s
+order by s;
+
+-- Seats (R18): attended and no_show hold a seat like requested and confirmed.
+select tests.create_user('client_s1');
+select tests.create_user('client_s2');
+select tests.create_pair('trainer_a', 'client_s1');
+select tests.create_pair('trainer_a', 'client_s2');
+insert into tests.ids values ('cap_full', tests.create_session('trainer_a', now() - interval '20 days', 'group', 2));
+select tests.create_booking(tests.i('cap_full'), 'trainer_a', 'client_s1', 'attended');
+insert into tests.ids values ('bk_noshow', tests.create_booking(tests.i('cap_full'), 'trainer_a', 'client_s2', 'confirmed'));
+select tests.set_booking_status(tests.i('bk_noshow'), 'no_show');
+select throws_ok(
+  $$ select tests.create_booking(tests.i('cap_full'), 'trainer_a', 'client_sm', 'attended') $$,
+  'P0001', 'session_full', 'capacity: attended and no_show bookings fill a session of 2; a third raises session_full'
+);
+select throws_ok(
+  $$ update public.sessions set capacity = 1 where id = tests.i('cap_full') $$,
+  'P0001', 'capacity_below_occupied', 'capacity: shrinking below the attended and no_show seats raises capacity_below_occupied'
+);
+insert into tests.ids values ('cap_other', tests.create_session('trainer_a', now() - interval '21 days', 'group', 5));
+insert into tests.ids values ('bk_move', tests.create_booking(tests.i('cap_other'), 'trainer_a', 'client_sm', 'confirmed'));
+select throws_ok(
+  $$ update public.bookings set session_id = tests.i('cap_full') where id = tests.i('bk_move') $$,
+  'P0001', 'session_full', 'capacity: moving a booking into a full session raises session_full'
 );
 
 select * from finish();

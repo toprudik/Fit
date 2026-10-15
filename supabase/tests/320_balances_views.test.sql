@@ -5,7 +5,7 @@
 -- Ledger rows, bookings and payments are written as postgres, the way the RPCs and jobs write them.
 begin;
 \ir _helpers.psql
-select plan(67);
+select plan(71);
 
 -- Fixtures: C has live pairs to A and B, D a live pair to A, E an ended pair to A, F a live pair to A
 -- (no bookings), M is A's card.
@@ -411,6 +411,7 @@ values
   (tests.u('trainer_a'), 'Pack 2 half', 2, 3001, 'RUB', 'any', null),
   (tests.u('trainer_a'), 'Pack 2 almost', 2, 3990, 'RUB', 'any', null),
   (tests.u('trainer_a'), 'Old 30', 30, 30000, 'RUB', 'any', now()),
+  (tests.u('trainer_a'), 'Old drop-in', 1, 1500, 'RUB', 'any', now()),
   (tests.u('trainer_a'), 'Personal drop-in', 1, 1000, 'RUB', 'personal', null),
   (tests.u('trainer_a'), 'Personal 4', 4, 3600, 'RUB', 'personal', null),
   (tests.u('trainer_a'), 'Personal 8', 8, 7200, 'RUB', 'personal', null),
@@ -468,6 +469,25 @@ select is(
   (select count(*) from public.price_grid where is_best_value),
   3::bigint,
   'price_grid: one badge per trainer, currency and session type that has a saving (none for B or USD)'
+);
+-- The trainer reads archived packages (the client does not), so the archive filter of the view is checked
+-- as the trainer.
+select tests.authenticate_as('trainer_a');
+select is(
+  (select count(*) from public.packages where archived_at is not null), 2::bigint,
+  'price_grid: A reads both archived packages in packages'
+);
+select is(
+  (select count(*) from public.price_grid where title in ('Old 30', 'Old drop-in')), 0::bigint,
+  'price_grid: as A, archived packages are not in the grid'
+);
+select is(
+  (select count(*) from public.price_grid where is_best_value), 3::bigint,
+  'price_grid: as A, one badge per currency and session type with a saving'
+);
+select is_empty(
+  $$ select 1 from public.price_grid g join public.packages d on d.id = g.drop_in_package_id where d.archived_at is not null $$,
+  'price_grid: a cheaper archived drop-in is never the price the savings compare with'
 );
 select tests.authenticate_as('trainer_b');
 select set_eq($$ select title from public.price_grid $$, array['B pack'], 'price_grid: B reads only own grid');

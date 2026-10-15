@@ -198,36 +198,24 @@ select is_empty($$ select 1 from public.user_settings where user_id = tests.u('c
   'the admin reads 0 rows of C''s settings, even with a live break-glass grant');
 
 -- ---------------------------------------------------------------------------------------------------------
--- public_profiles (created by the views migration, 20261015125000_views.sql; skipped until it exists)
+-- public_profiles (created by the views migration, 20261015125000_views.sql)
 
 select tests.authenticate_as('client_c');
-select case when to_regclass('public.public_profiles') is null
-  then skip('public_profiles comes with the views migration')
-  else results_eq(
-    $$ select display_name from public.public_profiles where id = tests.u('trainer_a') $$, $$ values ('Anna Coach'::text) $$,
-    'a pair partner sees the display name set in settings')
-  end;
+select results_eq(
+  $$ select display_name from public.public_profiles where id = tests.u('trainer_a') $$, $$ values ('Anna Coach'::text) $$,
+  'a pair partner sees the display name set in settings');
 
 select tests.authenticate_as('trainer_a');
-select case when to_regclass('public.public_profiles') is null
-  then skip('public_profiles comes with the views migration')
-  else results_eq(
-    $$ select display_name from public.public_profiles where id = tests.u('client_d') $$, $$ values ('client_d'::text) $$,
-    'with no display name and no last name the first name alone is shown')
-  end;
+select results_eq(
+  $$ select display_name from public.public_profiles where id = tests.u('client_d') $$, $$ values ('client_d'::text) $$,
+  'with no display name and no last name the first name alone is shown');
 
 select tests.authenticate_as('stranger_s');
-select case when to_regclass('public.public_profiles') is null
-  then skip('public_profiles comes with the views migration')
-  else is_empty($$ select 1 from public.public_profiles where id = tests.u('trainer_a') $$,
-    'a stranger reads 0 rows of public_profiles')
-  end;
+select is_empty($$ select 1 from public.public_profiles where id = tests.u('trainer_a') $$,
+  'a stranger reads 0 rows of public_profiles');
 
 select tests.clear_authentication();
-select case when to_regclass('public.public_profiles') is null
-  then skip('public_profiles comes with the views migration')
-  else hasnt_column('public', 'public_profiles', 'telegram_id', 'public_profiles has no telegram_id column')
-  end;
+select hasnt_column('public', 'public_profiles', 'telegram_id', 'public_profiles has no telegram_id column');
 
 -- ---------------------------------------------------------------------------------------------------------
 -- notification_preferences

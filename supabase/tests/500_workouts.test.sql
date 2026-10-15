@@ -3,7 +3,7 @@
 -- their exercises and sets, and personal records (WORK-4, R43).
 begin;
 \ir _helpers.psql
-select plan(161);
+select plan(163);
 
 -- Fixtures: C has live pairs to A, B and F; D a live pair to A; E an ended pair to A. S is a plain user.
 -- admin_x gets break-glass grants on C; admin_y never has one.
@@ -223,6 +223,11 @@ select throws_ok(
   'workout_template_items: an item with B''s custom exercise fails RLS'
 );
 select throws_ok(
+  $$ update public.workout_template_items set exercise_id = tests.i('ex_b') where id = tests.i('item_1') $$,
+  '42501', 'new row violates row-level security policy for table "workout_template_items"',
+  'workout_template_items: pointing an own item at B''s custom exercise fails RLS'
+);
+select throws_ok(
   $$ insert into public.workout_template_items (template_id, position, exercise_id) values (tests.i('tpl_b'), 1, tests.i('squat')) $$,
   '42501', 'new row violates row-level security policy for table "workout_template_items"',
   'workout_template_items: A cannot add an item to B''s template'
@@ -400,6 +405,11 @@ select throws_ok(
   $$ insert into public.workout_log_exercises (log_id, position, exercise_id) values (tests.i('log_ac'), 2, tests.i('ex_b')) $$,
   '42501', 'new row violates row-level security policy for table "workout_log_exercises"',
   'workout_log_exercises: A cannot log B''s custom exercise'
+);
+select throws_ok(
+  $$ update public.workout_log_exercises set exercise_id = tests.i('ex_b') where id = tests.i('le_ac') $$,
+  '42501', 'new row violates row-level security policy for table "workout_log_exercises"',
+  'workout_log_exercises: pointing an own log exercise at B''s custom exercise fails RLS'
 );
 
 select tests.authenticate_as('client_c');

@@ -1,9 +1,7 @@
 -- Sessions policies of migration 20261015123300_schedule_policies.sql (contract §1.4 file 17, §6 210_sessions):
 -- who creates, reads and edits sessions, the hidden meeting_url (R25, SCHED-21), the composite keys to slots,
 -- repeats and trial links, and the status machine.
--- public.session_meeting_url() and public.session_occupancy() come with 20261015125000_views.sql; until that
--- file is applied their cases are reported as skipped, and they are called through dynamic SQL so this file
--- parses without them.
+-- public.session_meeting_url() and public.session_occupancy() come with 20261015125000_views.sql.
 begin;
 \ir _helpers.psql
 select plan(55);
@@ -27,10 +25,6 @@ create function tests.i(p_name text) returns uuid language sql stable set search
 $$;
 create function tests.u(p_handle text) returns uuid language sql stable set search_path = '' as $$
   select tests.user_id(p_handle)
-$$;
--- True when the views migration has created the function, so its cases run instead of being skipped.
-create function tests.has_fn(p_signature text) returns boolean language sql stable set search_path = '' as $$
-  select pg_catalog.to_regprocedure(p_signature) is not null
 $$;
 
 -- Sessions of A: personal with C confirmed, personal with C requested, personal with C's booking cancelled,
@@ -242,50 +236,50 @@ select throws_ok(
   $$ update public.sessions set meeting_url = 'https://meet.example.com/new' where id = tests.i('s_conf') $$,
   '42501', null, 'meeting_url: not writable after insert (an RPC changes it with notifications)'
 );
-select case when tests.has_fn('public.session_meeting_url(uuid)') then results_eq(
+select results_eq(
   $$ select public.session_meeting_url(tests.i('s_conf')) $$, $$ values ('https://meet.example.com/conf'::text) $$,
-  'session_meeting_url: A gets the link') else skip('needs 20261015125000_views.sql') end;
+  'session_meeting_url: A gets the link');
 select tests.authenticate_as('client_c');
 select throws_ok($$ select meeting_url from public.sessions $$, '42501', null, 'meeting_url: C cannot select the column');
-select case when tests.has_fn('public.session_meeting_url(uuid)') then results_eq(
+select results_eq(
   $$ select public.session_meeting_url(tests.i('s_conf')) $$, $$ values ('https://meet.example.com/conf'::text) $$,
-  'session_meeting_url: C with a confirmed booking gets the link') else skip('needs 20261015125000_views.sql') end;
-select case when tests.has_fn('public.session_meeting_url(uuid)') then results_eq(
+  'session_meeting_url: C with a confirmed booking gets the link');
+select results_eq(
   $$ select public.session_meeting_url(tests.i('s_req')) $$, $$ values (null::text) $$,
-  'session_meeting_url: C with only a requested booking gets NULL') else skip('needs 20261015125000_views.sql') end;
+  'session_meeting_url: C with only a requested booking gets NULL');
 select tests.authenticate_as('client_d');
 select throws_ok($$ select meeting_url from public.sessions $$, '42501', null, 'meeting_url: D cannot select the column');
-select case when tests.has_fn('public.session_meeting_url(uuid)') then results_eq(
+select results_eq(
   $$ select public.session_meeting_url(tests.i('s_open')) $$, $$ values (null::text) $$,
-  'session_meeting_url: D gets NULL on an open session without a booking') else skip('needs 20261015125000_views.sql') end;
+  'session_meeting_url: D gets NULL on an open session without a booking');
 select tests.authenticate_as('stranger_s');
 select throws_ok($$ select meeting_url from public.sessions $$, '42501', null, 'meeting_url: a stranger cannot select the column');
-select case when tests.has_fn('public.session_meeting_url(uuid)') then results_eq(
+select results_eq(
   $$ select public.session_meeting_url(tests.i('s_conf')) $$, $$ values (null::text) $$,
-  'session_meeting_url: a stranger gets NULL') else skip('needs 20261015125000_views.sql') end;
+  'session_meeting_url: a stranger gets NULL');
 
 -- =========================================================================================================
 -- session_occupancy: seat counts without the names of other clients.
 
 select tests.authenticate_as('trainer_a');
-select case when tests.has_fn('public.session_occupancy(uuid)') then results_eq(
+select results_eq(
   $$ select occupied, capacity from public.session_occupancy(tests.i('s_conf')) $$, $$ values (1, 1::smallint) $$,
-  'session_occupancy: A gets the counts') else skip('needs 20261015125000_views.sql') end;
+  'session_occupancy: A gets the counts');
 select tests.authenticate_as('client_c');
-select case when tests.has_fn('public.session_occupancy(uuid)') then results_eq(
+select results_eq(
   $$ select occupied, capacity from public.session_occupancy(tests.i('s_conf')) $$, $$ values (1, 1::smallint) $$,
-  'session_occupancy: a participant gets the counts') else skip('needs 20261015125000_views.sql') end;
+  'session_occupancy: a participant gets the counts');
 select tests.authenticate_as('client_d');
-select case when tests.has_fn('public.session_occupancy(uuid)') then results_eq(
+select results_eq(
   $$ select occupied, capacity from public.session_occupancy(tests.i('s_open')) $$, $$ values (0, 5::smallint) $$,
-  'session_occupancy: D gets the counts of an open session') else skip('needs 20261015125000_views.sql') end;
-select case when tests.has_fn('public.session_occupancy(uuid)') then is_empty(
+  'session_occupancy: D gets the counts of an open session');
+select is_empty(
   $$ select occupied from public.session_occupancy(tests.i('s_conf')) $$,
-  'session_occupancy: D gets no row for C''s personal session') else skip('needs 20261015125000_views.sql') end;
+  'session_occupancy: D gets no row for C''s personal session');
 select tests.authenticate_as('stranger_s');
-select case when tests.has_fn('public.session_occupancy(uuid)') then is_empty(
+select is_empty(
   $$ select occupied from public.session_occupancy(tests.i('s_open')) $$,
-  'session_occupancy: a stranger gets no row') else skip('needs 20261015125000_views.sql') end;
+  'session_occupancy: a stranger gets no row');
 
 -- =========================================================================================================
 -- Update
