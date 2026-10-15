@@ -66,6 +66,8 @@ export async function signInWithTelegram(identity: TelegramIdentity): Promise<{ 
       photo_url: identity.photoUrl,
       language_code: identity.languageCode,
       last_seen_at: new Date().toISOString(),
+      // Telegram refused a message earlier; signing in is the sign of life that makes the dispatcher try again.
+      bot_blocked_at: null,
     },
     { onConflict: "id" },
   );

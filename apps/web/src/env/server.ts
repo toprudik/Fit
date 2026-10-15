@@ -8,6 +8,9 @@ import { z } from "zod";
  * Parsed lazily (first call) so `next build` works without secrets;
  * `instrumentation.ts` calls it at server boot to fail fast.
  */
+/** Unset and empty are the same: .env.example lists optional names with empty values. */
+const optional = <T extends z.ZodType>(type: T) => z.preprocess((value) => (value === "" ? undefined : value), type.optional());
+
 const schema = z.object({
   SUPABASE_SECRET_KEY: z.string().min(1),
   TELEGRAM_BOT_TOKEN: z.string().regex(/^\d+:[\w-]+$/, "must look like <id>:<secret>"),
@@ -15,6 +18,13 @@ const schema = z.object({
   TELEGRAM_LOGIN_CLIENT_SECRET: z.string().min(1),
   /** Max age of Mini App initData that may start a new session, seconds. */
   TELEGRAM_INIT_DATA_MAX_AGE: z.coerce.number().int().positive().default(3600),
+  /**
+   * Bearer secret of POST /api/cron/notifications, the same value as in Supabase Vault (ADR 0006). Optional so a
+   * deployment without it still serves the app; the route answers 503 until it is set.
+   */
+  CRON_SECRET: optional(z.string().regex(/^[A-Za-z0-9_-]{32,256}$/, "must be 32-256 characters [A-Za-z0-9_-]")),
+  /** Telegram group that gets the team messages (PRD §3 А1, А2). Optional until those messages exist. */
+  TELEGRAM_ADMIN_CHAT_ID: optional(z.coerce.number().int()),
 });
 
 export type ServerEnv = z.infer<typeof schema>;

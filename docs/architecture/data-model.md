@@ -93,7 +93,7 @@
 2. **Доменные RPC**: `security definer` функции в `public` с `set search_path = ''`, `revoke execute ... from public, anon`, `grant execute ... to authenticated`. Первая строка тела определяет `v_uid := auth.uid()` и проверяет права явно. Используются, когда операция трогает несколько таблиц или требует блокировок: запись на занятие, отмена/перенос, отметка посещения, списание/прощение, создание абонемента, присоединение по ссылке, лист ожидания, выпуск токенов, все `admin_*`. Таблицы, в которые пишут только RPC (`bookings`, `ledger_entries`, `booking_events`), не имеют политик insert/update/delete вовсе.
 3. **Сервер с секретным ключом** (`lib/supabase/admin.ts`) применяется только там, где нет пользовательской сессии или нужно обойти RLS ради системной работы (ADR 0002 п. 6):
    - вход через Telegram: upsert `profiles`, создание `auth.users`;
-   - диспетчер уведомлений (outbox → Telegram). Бот к базе не обращается и ключей Supabase не получает (ADR 0006). Как нажатие кнопки в уведомлении (wave-1 §3: Т2, Т7a, С1) доходит до базы, решается вместе с outbox;
+   - диспетчер уведомлений (outbox → Telegram, маршрут `POST /api/cron/notifications`). Бот к базе не обращается и ключей Supabase не получает (ADR 0006). Как нажатие кнопки действия в уведомлении (wave-1 §3: Т2, Т7a, С1) доходит до базы, решается вместе с запросами на запись;
    - cron-задачи: материализация повторов и шаблонов недели, автозавершение занятий, утренняя сводка, дневные сводки питания, флаги оттока, обновление MV, очистка удалённых аккаунтов;
    - приём шагов от iOS Shortcuts (личный токен → пользователь);
    - отдача ICS-ленты календаря (токен → пользователь);
@@ -236,7 +236,7 @@ create type public.share_category as enum ('nutrition', 'measurements', 'photos'
 | R73 | Грант для цели | Целевой пользователь видит весь грант | |
 | R74 | Детали вех | `achieved_at` = начало занятия; пробные и вставка сразу как `attended` считаются | PRD 2.6.2-7 |
 | R75 | Дедупликация outbox | Глобальный уникальный ключ с моментом цели | перенос занятия ставит новые напоминания |
-| R76 | Выборка outbox | Позже публичные definer-функции только для `service_role` | `private` недоступна через PostgREST |
+| R76 | Выборка outbox | Публичные definer-функции `claim_outbox` и `record_outbox_result` только для `service_role` (ADR 0006) | `private` недоступна через PostgREST |
 | R77 | Ссылка онлайн-слота | Только в `week_template_items.meeting_url` (видит тренер); RPC записи копирует её в занятие | слоты видны клиентам до записи |
 | R78 | Слоты и занятия внахлёст | Проверяет функция записи позже; RLS показывает только открытые будущие слоты | клиент не видит чужие занятия |
 | R79 | Минимум до записи | `trainer_profiles.min_booking_notice_minutes default 120` | PRD 2.6.1-6 |
@@ -277,8 +277,8 @@ create type public.share_category as enum ('nutrition', 'measurements', 'photos'
 ```sql
 alter table public.profiles
   add column last_seen_at   timestamptz,          -- обновляет сервер при входе; админка читает через definer-функции
-  add column bot_started_at timestamptz,          -- пользователь нажал /start; кто пишет поле, решается вместе с outbox
-  add column bot_blocked_at timestamptz,          -- Telegram вернул 403 при отправке; сброс при /start
+  add column bot_started_at timestamptz,          -- в волне 1 не пишется: бот к базе не обращается (ADR 0006)
+  add column bot_blocked_at timestamptz,          -- Telegram вернул 403 при отправке; сброс при входе
   add column blocked_at     timestamptz,          -- админ заблокировал аккаунт (ADM-7), пишет только админская RPC
   add column blocked_reason text check (char_length(blocked_reason) <= 500),
   add column display_name   text,                 -- зеркало user_settings.display_name (триггер)
@@ -294,7 +294,7 @@ grant select (id, username, first_name, last_name, photo_url, language_code, dis
   on public.profiles to authenticated;
 ```
 
-Кто заполняет `bot_started_at` и сбрасывает `bot_blocked_at`, решается вместе с outbox: бот к базе не обращается (ADR 0006). Писать человеку бот может и после разрешения в Mini App (`requestWriteAccess`). В применённой миграции комментарий к `bot_started_at` ещё говорит, что без `/start` бот писать не может. Применённые миграции не меняются, поэтому комментарий поправит следующая миграция через `comment on column`.
+`bot_started_at` в волне 1 никто не пишет: бот к базе не обращается (ADR 0006), а писать человеку бот может и после разрешения в Mini App (`requestWriteAccess`). `bot_blocked_at` ставит диспетчер, когда Telegram отвечает 403 или «chat not found», и сбрасывает вход в приложение: другого признака жизни веб не видит. Комментарии к обоим столбцам поправлены миграцией `notification_dispatch`.
 
 Зеркальные столбцы нужны вью `public_profiles`: она `security_invoker` и читает только `profiles`, поэтому видит ровно тех, кого пускает политика `profiles` (сам, партнёры по парам в любом статусе, свои карточки тренера, админ без карточек и заглушки).
 
@@ -1178,8 +1178,8 @@ create index on public.notification_outbox (created_at) where status in ('sent',
 
 - Постановка в очередь происходит внутри доменных RPC и триггеров, в той же транзакции, что и изменение (transactional outbox): подтверждение записи создаёт строки напоминаний по `client_reminder_offsets`; отмена или перенос переводит их в `cancelled` (по `booking_id`) и ставит новые.
 - `notification_preferences` и `profiles.bot_blocked_at` проверяются при отправке (строка уходит в `skipped`), чтобы смена настроек действовала и на уже запланированное.
-- Тихие часы (ADR 0006): если `scheduled_for` попадает в тихие часы получателя, напоминание о занятии (`session_reminder`) уходит **в своё время** (`deliver_after = scheduled_for`), но беззвучно: диспетчер при отправке передаёт `disable_notification = true`; для остальных (несрочных) типов `deliver_after` = конец тихих часов.
-- Диспетчер: `pg_cron` раз в минуту вызывает через `pg_net` защищённый маршрут Vercel `POST /api/cron/notifications` (секрет в заголовке; секрет хранится в Supabase Vault и в env Vercel). Маршрут с секретным ключом забирает пачку `private.claim_outbox(limit 50)` (`for update skip locked`, ставит `processing` и `locked_until`), отправляет через Bot API с учётом лимитов Telegram, фиксирует результат. Ошибка 403 → `profiles.bot_blocked_at`, `skipped`. Повтор с экспоненциальной задержкой до 5 попыток, затем `failed`.
+- Тихие часы (ADR 0006): если `scheduled_for` попадает в тихие часы получателя, напоминание о занятии (`session_reminder`) и тестовое сообщение `bot_test` уходят **в своё время** (`deliver_after = scheduled_for`), но беззвучно: диспетчер при отправке передаёт `disable_notification = true`; для остальных (несрочных) типов `deliver_after` = конец тихих часов. Если тихие часы изменились после постановки, выборка переносит несрочную строку на их новый конец.
+- Диспетчер: `pg_cron` раз в минуту вызывает `private.dispatch_notifications()`, и если есть что отправить, она через `pg_net` вызывает защищённый маршрут Vercel `POST /api/cron/notifications` (секрет в заголовке; секрет хранится в Supabase Vault и в env Vercel как `CRON_SECRET`). Маршрут с секретным ключом забирает пачку `public.claim_outbox(50)` (`for update skip locked`, ставит `processing` и `locked_until` на 5 минут), отправляет через Bot API с учётом лимитов Telegram и сразу фиксирует каждый результат через `public.record_outbox_result`. Ошибка 403 → `profiles.bot_blocked_at`, `skipped`. Повтор с экспоненциальной задержкой (30 с, 1, 2, 4 мин) до 5 попыток, затем `failed`; 429 возвращает остаток пачки в очередь без траты попыток. Ставят строки в очередь через `private.enqueue_notification`, она же применяет тихие часы. Подробности и настройка окружения: ADR 0006.
 - Утренняя сводка: cron раз в 15 минут ставит строки `daily_digest` тренерам, у которых `user_settings.daily_digest_time` в их поясе попадает в текущее окно (`dedupe_key` по дате защищает от дублей; имя по R31).
 - Хранение: `sent/skipped/cancelled` старше 90 дней удаляются cron-задачей.
 
