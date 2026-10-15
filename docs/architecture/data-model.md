@@ -1,10 +1,12 @@
 # DaFit: модель данных
 
-- Статус: проект (до первой миграции схемы домена)
-- Дата: 2026-10-13
+- Статус: волна 1 реализована миграциями `supabase/migrations/20261015120000_base.sql` … `20261015125200_storage.sql`; волны 2–4 остаются проектом
+- Дата: 2026-10-13, сверка со схемой волны 1: 2026-10-15
 - Источники: [`docs/decisions.md`](../decisions.md) (первоисточник), [`CONTEXT.md`](../../CONTEXT.md) (словарь и имена в коде), [`docs/prd/README.md`](../prd/README.md) (волны), [`docs/prd/wave-2.md`](../prd/wave-2.md), ADR [0001](../adr/0001-supabase-backend.md), [0002](../adr/0002-secrets-handling.md), [0004](../adr/0004-telegram-auth.md), миграция `supabase/migrations/20261012204303_profiles.sql`.
 
 По этому документу пишутся миграции. Блоки SQL ниже задают **спецификацию** и готовыми миграциями не считаются. Порядок создания, `comment on`, триггеры `set_updated_at` и гранты дописываются при переносе в `supabase/migrations/`. Если документ расходится с `decisions.md`, прав журнал. Решения, которых в журнале нет, собраны в разделе «Допущения» в конце.
+
+Для волны 1 источник истины теперь миграции. Блоки §2.1 и §2.1a приведены к ним, а все отступления от первого проекта собраны в §2.1.0 с причинами. Где SQL здесь короче миграции (комментарии, гранты, триггеры, составные ключи), права миграция.
 
 Имена таблиц английские, во множественном числе, от имён из `CONTEXT.md`: `coaching` → `coachings`, `pass` → `passes`, `set` → `workout_sets` (`set` занято как ключевое слово SQL), `charge`/`waiver` → строки `ledger_entries`.
 
@@ -20,14 +22,16 @@
 - **RLS включён на каждой таблице в `public`**, политики явные; по умолчанию запрещено всё. Если у таблицы нет политик на запись, писать в неё может только серверный код или SECURITY DEFINER-функция (так уже сделано для `profiles`).
 - В политиках `auth.uid()` всегда пишется как `(select auth.uid())`, а функции-помощники как `(select private.fn(...))`, где это возможно: Postgres вычисляет их один раз на запрос (initPlan), а не на каждую строку.
 - Каждый столбец, на который ссылается политика (`trainer_id`, `client_id`, `coaching_id`, `session_id`, `user_id`), проиндексирован.
-- Анонимной роли (`anon`) доступны только SECURITY DEFINER-функции витрины (`get_trainer_showcase`, `get_trial_link`), не таблицы.
+- Политики чтения больших таблиц (`coachings`, `bookings`, `ledger_entries`, `passes`, `payments`, `money_events`, `sessions`, `measurements`, `progress_photos`) не вызывают помощник со столбцом строки: такой вызов идёт на каждую строку и не даёт планировщику взять индекс, и чтение без фильтра просматривало строки всех тренеров. Они сравнивают столбец с массивом, который помощник считает один раз: `coaching_id = any ((select private.trainer_coaching_ids('{passes}'))::uuid[])`. Тест `000_schema_invariants` это проверяет.
+- Новые функции по умолчанию не исполняются ролью `PUBLIC` (базовая миграция меняет default privileges), поэтому каждая RPC выдаёт права явно, а забытый `revoke` не открывает её для `anon`.
+- Анонимной роли (`anon`) доступны только SECURITY DEFINER-функции витрины (`get_trainer_showcase`, `get_trial_link`), не таблицы. В волне 1 у `anon` нет ничего: функции витрины появятся позже.
 - После каждой DDL-миграции запускаются Supabase security advisors (CLAUDE.md).
 
 ### 1.2. Идентификаторы и общие столбцы
 
 - Первичный ключ: `uuid default gen_random_uuid()`. Исключение: объёмные журналы, где нужен только порядок (`admin_audit_log`, `notification_outbox`, `booking_events`, `product_events`), там `bigint generated always as identity`.
 - `created_at timestamptz not null default now()`; изменяемым таблицам добавляется `updated_at timestamptz not null default now()` + триггер `public.set_updated_at()` (уже есть в миграции profiles).
-- Внешние ключи на пользователя указывают на `public.profiles(id)` (а `profiles` ссылается на `auth.users(id) on delete cascade`). Поэтому удаление пользователя из `auth.users` каскадно удаляет его личные данные; учётные таблицы тренера (`coachings`, `bookings`, `passes`, `ledger_entries`, `payments`) ссылаются на клиента с `on delete restrict` и до удаления переназначаются на «Удалённого клиента» (см. 1.6).
+- Внешние ключи на пользователя указывают на `public.profiles(id)` (а `profiles` ссылается на `auth.users(id) on delete cascade`). Поэтому удаление пользователя из `auth.users` каскадно удаляет его личные данные; учётные таблицы тренера (`coachings`, `bookings`, `passes`, `ledger_entries`, `payments`, `money_events`) ссылаются на клиента внешним ключом без каскада (`no action`) и до удаления переназначаются на «Удалённого клиента» (см. 1.6).
 
 ### 1.3. Время
 
@@ -36,7 +40,7 @@
   - у пользователя: `user_settings.time_zone` (отображение, «день» клиента для дневника и активности, тихие часы, время утренней сводки, напоминания домашних заданий);
   - у правил расписания: `week_templates.time_zone`, `recurrences.time_zone` (копируется из пояса тренера при создании), чтобы разворачивание «пн/ср/пт 8:00» давало 8:00 местного времени и через переход на летнее/зимнее время;
   - аналитика тренера считает календарные периоды в поясе тренера (`user_settings.time_zone` тренера).
-- Валидация пояса: домен `public.iana_tz` (`text`, проверка через `private.is_valid_tz(text)`, которая ищет имя в `pg_timezone_names`; функция объявлена `immutable` осознанно, потому что список поясов меняется только при обновлении Postgres).
+- Валидация пояса: домен `public.iana_tz` (`text`, проверка через `private.is_valid_tz(text)`). Список имён копируется из `pg_timezone_names` в тело функции при миграции, и проверка сверяет имя с этим массивом: само чтение `pg_timezone_names` сканирует файлы поясов на диске, около 17 мс на вызов, а домен проверяется при каждом входе и записи профиля. Таблицу для списка не заводим: проверка домена, которая читает таблицу, ломает восстановление дампа. Функция объявлена `immutable` осознанно; после обновления Postgres, которое добавит пояса, миграция пересоздаёт её тем же блоком.
 - «Дни» (дневник питания, активность, замеры, домашние задания) хранятся как `date`: дата **в поясе клиента на момент записи** (wave-2). Где нужно, рядом хранится точный момент `timestamptz`.
 - Длительности хранятся как `integer` в минутах/секундах с суффиксом (`duration_min`, `duration_s`), без `interval`: так проще для API и типов.
 
@@ -51,7 +55,7 @@
 | Класс данных | Политика | Почему |
 |---|---|---|
 | Личные данные клиента (замеры, фото, дневник, активность, анкета, цель, свои продукты) | **Hard delete** владельцем в любой момент | Данные принадлежат клиенту; история не нужна никому, кроме него |
-| Деньги и учёт: `ledger_entries`, `payments`, `bookings`, `booking_events`, `sessions` | **Никогда не удаляются** пользователем. Отмена делается статусом (`cancelled`, `voided`), исправление новой строкой (сторно) | Журнал, на котором держатся остаток, долг и выручка; «История с причинами» (Q21) |
+| Деньги и учёт: `ledger_entries`, `payments`, `bookings`, `booking_events`, `sessions`, `money_events` | **Никогда не удаляются** пользователем. Отмена делается статусом (`cancelled`, `voided`), исправление новой строкой (сторно). Триггеры запрещают прямое удаление `bookings`, журналов и занятий с записями любой роли, включая сервер: строки уходят только каскадом при удалении пары или тренера. Занятие без записей удалить можно | Журнал, на котором держатся остаток, долг и выручка; «История с причинами» (Q21) |
 | Справочники, на которые ссылается история: `packages`, `locations`, `exercises` (свои), `workout_templates`, `groups`, `payment_links`, `client_invites`, `trial_links`, `referral_offers` | **Soft delete**: `archived_at timestamptz` | Старые абонементы/занятия/логи должны продолжать показывать название пакета, локации, упражнения |
 | Пара `coachings` | Не удаляется; `status = 'ended'` | История занятий и оплат остаётся видна обеим сторонам |
 | Модерируемый контент (`reviews`, W4 `posts`) | Soft delete (`deleted_at`), окончательно стирается при удалении аккаунта автора | Нужен для разбора споров админом |
@@ -64,8 +68,9 @@
 3. В течение 30 дней вход разрешён только для отмены удаления (`cancel_account_deletion()`); экспорт данных доступен.
 4. Через 30 дней cron (серверный код с секретным ключом) выполняет **обезличивание** вместо полного каскада (решение владельца продукта):
    - удаляются объекты Storage пользователя и все личные данные: `user_settings`, `body_profiles`, `client_goals`, `intakes`, `measurements`, `progress_photos`, `food_diary_entries`, свои продукты, `activity_entries`, `nutrition_targets`, свои `workout_logs` (без `coaching_id`), `coaching_notes` о нём, `data_shares`, токены, `calendar_feeds`, `reviews`, участие в W3/W4;
-   - учётные строки, принадлежащие тренеру, **сохраняются**: `coachings` (статус `ended`), `sessions`, `bookings`, `booking_events`, `passes`, `ledger_entries`, `payments`. Ссылка на клиента переводится на системный профиль-заглушку «Удалённый клиент» (`private.deleted_client_id()`, один на всю БД; `coachings.client_alias` обнуляется). Поскольку на заглушку может указывать несколько пар одного тренера, `unique (trainer_id, client_id)` у `coachings` проверяется только для `client_id <> deleted_client_id()` (частичный уникальный индекс вместо ограничения);
-   - затем `auth.admin.deleteUser(id)`; у сохраняемых учётных таблиц FK на `profiles` объявлен с `on delete restrict`, поэтому удаление без предварительного переназначения падает с ошибкой и не стирает учёт тренера.
+   - учётные строки, принадлежащие тренеру, **сохраняются**: `coachings` (статус `ended`), `sessions`, `bookings`, `booking_events`, `passes`, `ledger_entries`, `payments`. Ссылка на клиента переводится на системный профиль-заглушку «Удалённый клиент» (`private.deleted_client_id()`, один на всю БД; `coaching_trainer_meta.client_alias` и `contact` обнуляются). Личные строки удаляются **до** переноса пар: иначе `on update cascade` перенесёт логи пар на заглушку. Поскольку на заглушку может указывать несколько пар одного тренера, `unique (trainer_id, client_id)` у `coachings` проверяется только для `client_id <> deleted_client_id()` (частичный уникальный индекс вместо ограничения);
+   - затем `auth.admin.deleteUser(id)`; у сохраняемых учётных таблиц FK на `profiles` объявлен без каскада, поэтому удаление без предварительного переназначения падает с ошибкой и не стирает учёт тренера.
+   - Аккаунт **тренера** удаляется так же, через GoTrue, в своей транзакции. Если задача удаления в той же транзакции уже писала строки этого тренера (заметки, заморозки, логи пар), она сначала удаляет `trainer_profiles` (каскадом уходят пары, абонементы, заморозки, заметки), а потом пользователя Auth. Иначе Postgres перепроверяет внешние ключи строк, записанных в текущей транзакции, после того как каскад уже удалил их пару, и удаление падает с 23503 (так делает и `tests.delete_trainer`). Снятие статуса тренера админом `trainer_profiles` не удаляет никогда: это стёрло бы пары, абонементы, оплаты и журнал всех его клиентов.
    Аналитика тренера продолжает учитывать эти занятия и деньги как «Удалённый клиент».
 5. В `admin_audit_log` остаётся запись о факте удаления (идентификатор без FK, без персональных данных).
 
@@ -102,10 +107,10 @@
 |---|---|---|---|
 | `avatars` | public read (неугадываемый путь) | `{user_id}/{uuid}.webp` | Запись/удаление: только владелец (`(storage.foldername(name))[1] = auth.uid()::text`). ≤ 2 МБ, `image/webp`, `image/jpeg`, `image/png` |
 | `certificates` | private | `{trainer_id}/{certificate_id}.{ext}` | Запись: владелец-тренер; чтение: владелец и админ (через signed URL). ≤ 10 МБ, изображения и PDF |
-| `progress-photos` | private | `{client_id}/{photo_id}.webp` | Загружается **только уже размытая** на устройстве версия (Q24/Q30); оригинал не покидает устройство. Запись/удаление: только клиент-владелец. Чтение: политика `storage.objects` через `private.can_view(owner, 'photos')`; клиент приложения получает **signed URL на 5 минут**. ≤ 5 МБ, `image/webp`, `image/jpeg` |
+| `progress-photos` | private | `{client_id}/{photo_id}.webp` или `.jpg` | Загружается **только уже размытая** на устройстве версия (Q24/Q30); оригинал не покидает устройство. Запись/удаление: только клиент-владелец. Чтение: владелец и тот, кому видна строка `progress_photos` с этим `storage_path` (её политика `can_view(client_id, 'photos')`); объект без строки видит только владелец. Клиент приложения получает **signed URL на 5 минут**. ≤ 5 МБ, `image/webp`, `image/jpeg` |
 | `exercise-media` | public read | `wger/{wger_id}/…`, `custom/{owner_id}/{uuid}.webp` | Запись wger: сервер; custom: владелец |
 | `feedback` | private | `{user_id}/{feedback_id}/{n}.webp` | Запись: автор; чтение: автор и админ |
-| `exports` | private | `{user_id}/{export_id}.zip` | Запись: сервер; чтение: владелец, signed URL на 15 мин; объект удаляется через 7 дней |
+| `exports` | private | `{user_id}/{export_id}.zip`; архив больше лимита объекта 50 МБ делится на части `{user_id}/{export_id}/part-N.zip`, тогда `data_exports.storage_path` хранит префикс папки | Запись: сервер; чтение: владелец, signed URL на 15 мин на каждую часть; объекты удаляются через 7 дней |
 | W4 `post-media` | public read | `{user_id}/{post_id}/{n}.webp` | Запись: автор; модерация: админ |
 
 ---
@@ -122,15 +127,17 @@ create schema if not exists analytics;
 create extension if not exists btree_gist with schema extensions;   -- exclusion по времени
 create extension if not exists pg_trgm with schema extensions;      -- поиск упражнений и продуктов
 -- Порядок в миграциях: enum (session_mode и др.) создаются до таблиц, которые на них ссылаются.
+-- Не в волне 1: pg_cron и pg_net подключаются вместе с диспетчером уведомлений.
 create extension if not exists pg_cron;                              -- планировщик (Supabase)
 create extension if not exists pg_net with schema extensions;        -- HTTP-вызов диспетчера
 -- W4: create extension if not exists postgis with schema extensions;
 
+-- Тело функции собирается блоком DO при миграции: массив имён из pg_timezone_names (§1.3).
 create function private.is_valid_tz(tz text) returns boolean
   language sql immutable set search_path = '' as
-  $$ select exists (select 1 from pg_catalog.pg_timezone_names where name = tz) $$;
+  $$ select coalesce(tz = any ('{Africa/Abidjan,…,Zulu}'::text[]), false) $$;
 
-create domain public.iana_tz as text check (private.is_valid_tz(value));
+create domain public.iana_tz as text check (value is null or private.is_valid_tz(value));
 create domain public.currency_code as char(3) check (value ~ '^[A-Z]{3}$');
 
 create type public.app_role as enum ('admin');
@@ -141,11 +148,127 @@ create type public.app_zone as enum ('trainer', 'client');
 create type public.share_category as enum ('nutrition', 'measurements', 'photos', 'steps', 'intake', 'workouts');
 ```
 
-Остальные enum определены рядом с таблицами. Новые значения добавляются `alter type ... add value` (не переписывает данные).
+Все enum волны 1 и уже известные значения волн 2–3 создаются в базовой миграции `20261015120000_base.sql`, чтобы файлы таблиц не ждали друг друга; ниже они показаны рядом с таблицами. Новые значения добавляются `alter type ... add value` (не переписывает данные).
 
 ---
 
 ### 2.1. Волна 1: «Тренер ведёт клиентов» (полностью)
+
+#### 2.1.0. Отступления от первого проекта
+
+Миграции волны 1 писались по контракту, в котором каждое расхождение первого проекта этого документа с `decisions.md`, PRD и между разделами решено отдельной строкой R1–R93. Блоки ниже уже приведены к этим решениям; таблица объясняет, откуда взялась каждая разница. Пометка «ждёт владельца» значит, что принято самое осторожное прочтение и владелец продукта может его поменять.
+
+| № | Что | Решение | Почему |
+|---|---|---|---|
+| R1 | Статус верификации | Новое значение `not_submitted`, оно же по умолчанию; `pending` после подачи документов. Зона и `is_trainer()` от него не зависят | Q55 называет «не подана» |
+| R2 | Делегаты в волне 1 | Тип `delegation_scope` и подписи функций с `scope` создаются сейчас; добавлена `acts_for_trainer` | в волне 3 функции меняются через `create or replace` |
+| R3 | Тарифы в волне 1 | `plans`, `plan_grants`, `access_requests` и проверка прав уже есть; покупки и `plan_subscriptions` позже | Q59 |
+| R4 | Тихие часы по умолчанию | `22:00`–`08:00`, оба поля nullable | PRD 2.9-7 |
+| R5 | Админ и карточки | Админ не видит карточки тренеров и заглушку | PRD PAIR-10 |
+| R6 | `public_profiles` | Имя, аватар и пояс зеркалятся триггером в `profiles`; вью только над `profiles` | вью над двумя таблицами показывала бы пустые имена и ломала встраивание PostgREST |
+| R7 | `telegram_id` | Nullable, с проверкой идентичности; скрыт колоночным грантом | у карточек и заглушки нет Telegram |
+| R8 | Запросы на слияние | `new_coaching_id` и `managed_client_id` с `set null` | иначе слияние удаляет собственный запрос |
+| R9 | `client_alias` | Перенесён в `coaching_trainer_meta`, которую видит только тренер; там же `archived_at`, `intake_seen_at`, `contact` | колоночный грант не может скрыть столбец от клиента и показать тренеру |
+| R10 | Метка удаления для партнёров | `account_deletions` видят партнёры по паре | PRD С6; в строке только даты |
+| R11 | Типы уведомлений | Недостающие типы добавлены сразу в enum | PRD §3 |
+| R12 | Заметки после конца пары | Тренер-владелец читает и правит их дальше | PRD 2.12-5 не называет заметки среди потерянного |
+| R13 | Запись админа в инвайты и роли | Политик записи нет, позже `admin_*` RPC | §1.7: все действия админа через журнал |
+| R14 | Смещения напоминаний | Не больше 3, от 5 до 10080 минут, без повторов и NULL | NOTIF-1 |
+| R15 | Срок инвайта тренера | По умолчанию 14 дней | PRD 2.2-1 |
+| R16 | Витрина отклонённого тренера | Доступна без значка (ждёт владельца) | Q15, Q55 против PRD 2.2-5 |
+| R17 | Цена разового | Живой пакет на 1 занятие, без столбца в профиле | сетка Q22 «1/5/10/20» |
+| R18 | Места и запросы | Место занимают `requested`, `confirmed`, `attended`, `no_show` | PRD 2.6.3-2 |
+| R19 | Снимок дедлайна отмены | Удалён из `bookings`; RPC считает по текущему правилу тренера и пишет часы в `booking_events` | PRD 2.6.5-1 |
+| R20 | Дедлайн на пару | `coachings.cancellation_deadline_hours` удалён | PRD 2.6.5-1: правило общее для всех клиентов тренера |
+| R21 | Сетка цен | Формулы PRD: цена за занятие с округлением половины вверх, выгода вниз, при равенстве значок у большего пакета, без значка при выгоде меньше 1 % | PRD 2.8-2, MONEY-1/2 |
+| R22 | Элементы шаблона недели | Окно `start_time`–`end_time` режется на слоты по `duration_min`; `buffer_min` в шаблоне; без `kind` и `capacity` | PRD 2.6.1-1, SCHED-1 |
+| R23 | Пробные слоты | `allow_trial default true` у элементов и слотов | PRD 2.3-4 |
+| R24 | Тренер меняет пояс | Шаблоны и открытые повторы переходят на новый пояс; занятия и слоты не трогаются | PRD 2.6.7-5 |
+| R25 | Онлайн-ссылка | `sessions.meeting_url` не выдаётся; `session_meeting_url()` отдаёт её тренеру и участникам `confirmed`/`attended` | PRD 2.6.2-3, SCHED-21 |
+| R26 | Исправление платежа | Аннулирование и новая строка; удаления нет | §1.5, ADR 0008 |
+| R27 | Удаление абонемента | Тренер может удалить абонемент, пока в журнале только его `grant` и нет платежей; `grant` уходит каскадом | PRD 2.8-16, MONEY-10 |
+| R28 | Неизменность журнала | Только добавление; `client_id` и `coaching_id` переезжают с парой, `created_by` только очищается, удаление только каскадом | Q44 и O1 требуют переноса строк |
+| R29 | Уникальность живой записи | Ключ по `coaching_id` | обезличенные клиенты одной группы совпали бы на заглушке |
+| R30 | «Не состоялось» | Обычный `waiver`; отличается по отмене тренером | PRD 2.6.6-5 |
+| R31 | Утренняя сводка | Имя `daily_digest` (`user_settings.daily_digest_time`) | CONTEXT.md, quality.md |
+| R32 | Перенос тренером | Меняется занятие, запись остаётся `confirmed`; `rescheduled` только для переносов клиента | PRD 2.6.5-5 |
+| R33 | Списание без абонемента | Всегда долговой charge | Q22 |
+| R34 | Покрытие после отката | Одно покрытие и один откат на charge | откат бывает только после окончательного прощения |
+| R35 | Напоминания тренеру себе | `own_reminder_offsets` удалён | Q23 их не называет |
+| R36 | Погашение долга без абонемента | Разовые абонементы, гасящие долговые charge; схема без изменений | screens.md |
+| R37 | Вехи | Только `sessions_10/25/50/100`, без `first_session`, без сообщения бота; тип `milestone` удалён | Q24, Q35, CONTEXT, PRD 2.11-9 |
+| R38 | Валюта цены долга | `default_currency` тренера | у пары валюты нет |
+| R39 | Пробное на пару | Частичный уникальный индекс по живым пробным записям; «никогда дважды» проверяет `book_trial` | PRD 2.3-6, SHOP-6 |
+| R40 | Виды замеров | `weight, neck, chest, waist, abdomen, hips, thigh, upper_arm, calf`, без `custom` | PRD 2.11-1 |
+| R41 | Ракурсы фото | `front, side, back` | PRD 2.11-3, screens.md |
+| R41b | Кто правит замеры | Правит и удаляет только автор; тренеру-автору нужен ещё доступ | PRD 2.11-1, PROG-1 |
+| R42 | Правка записи тренировки | Правит только автор; удаляет автор (в паре) или клиент | PRD 2.10-10 |
+| R43 | Рекорды | `max_weight, max_reps, max_duration` по правилам PRD; таблицу читает только клиент, тренер видит рекорды по видимым ему подходам | PRD 2.10-6; старое правило через `is_trainer_of` показывало подходы других пар |
+| R44 | Свои тренировки на Free | Без ограничения в волне 1 (ждёт владельца) | Q57 против PRD 2.10-4 |
+| R45 | Автор в журнале админа | `admin_audit_log.actor_id` без FK | `set null` был бы запрещённым UPDATE |
+| R46 | Обратная связь | Виды `bug, idea, other`; статусы `new, in_progress, closed`; `locale`, `theme`; не больше 3 скриншотов | PRD 2.13, ADM-9 |
+| R47 | Прямые правки админа | UPDATE на `feedback` и `break_glass_grants.revoked_at` остаются; триггеры пишут `admin_audit_log` в той же транзакции | §1.7, ADM-11 |
+| R48 | Текстовые статусы | `managed_client_claims.status` и `access_requests.status` стали enum | единообразие, типы в TS |
+| R49 | Issue на GitHub | Создаёт сервер автоматически, схема без изменений | PRD FDBK-1 |
+| R50 | Ссылка календаря | Хранится только хеш, ссылка показывается один раз (ждёт владельца) | screens.md |
+| R51 | Удаление шаблонов тренировок | Владелец может удалить, ссылки обнуляются; интерфейс по умолчанию архивирует | §1.5 |
+| R52 | Путь фото | Имя объекта без бакета, `.webp` или `.jpg` | расхождение внутри документа |
+| R53 | Файлы сертификатов | 10 МБ, JPG/PNG/PDF, не больше 5 на тренера | PRD 2.2-4 |
+| R54 | Ссылка на экспорт | Маршрут приложения выдаёт подписанную ссылку на 15 минут, объект живёт 7 дней | PRD 2.12-6 |
+| R55 | `reports` | Таблица есть, пути записи в волне 1 нет | |
+| R56 | Срок запроса контакта | Правила в БД нет; RPC и диспетчер считают `pending` старше 7 дней истёкшим | |
+| R57 | Индекс `access_requests` | Один открытый запрос на пользователя и тариф | старый индекс с приведением даты не компилировался |
+| R58 | `has_entitlement` | Публичная обёртка не отвечает о чужих пользователях (кроме админа); наследование требует клиента пары, живую пару и платный тариф тренера; `nutrition_advanced` наследуется с волны 2. Живая пара включает `trial` (ждёт владельца) | старая версия позволяла узнать чужой тариф |
+| R59 | Админ и выдачи тарифов | `plan_grants` читают сам пользователь и админ | админке нужна история |
+| R60 | Столбцы поздних волн | Не созданы: `coachings.broadcasts_muted`, `primary_nutrition_group_id`, `churn_hidden_until`, `user_settings.leaderboard_opt_in`, `trainer_profiles.referred_by_trainer_id`, `locations.club_id`, `sessions.conducted_by`, `passes.is_bonus`, `notification_outbox.broadcast_id`, `workout_logs.homework_occurrence_id` | nullable-столбец добавляется мгновенно |
+| R61 | Свои упражнения ушедшего тренера | `owner_id on delete set null`; такое упражнение видно только через записи клиента | каскад блокировал удаление аккаунта |
+| R62 | Свои тренировки | `coaching_id is null and created_by = client_id`; записи удалённой пары видит только клиент | иначе записи старой пары видны другим тренерам |
+| R63 | Блокировка админом | `profiles.blocked_at`, `blocked_reason`, не выданы пользователям | ADM-7 |
+| R64 | Создание `user_settings` | Триггер после вставки в `profiles` и заполнение существующих | триггер покрывает и карточки |
+| R65 | Целостность между арендаторами | Составные FK вместо доверия денормализованным `trainer_id`/`client_id`; `client_id` NO ACTION; ключи пары отложенные для слияния | нельзя сослаться на чужую пару |
+| R66 | Токены и коды ссылок | Значения по умолчанию в БД, вставить свои нельзя | тренер вставляет ссылки напрямую |
+| R67 | Согласия | Одна действующая строка на пользователя, вид и версию | |
+| R68 | Настройка витрины | В волне 1 без ограничения тарифом | Q56 не уточняет |
+| R69 | Замороженный аккаунт | Проверяют приложение и proxy, не RLS | §1.6 |
+| R70 | Возврат в завершённую пару | RPC сбрасывает `data_shares` и поля завершения | PRD 2.3 |
+| R71 | Обратная связь без входа | В волне 1 нет | RLS рассчитан на вошедших |
+| R72 | Ответ на обратную связь | Значение `feedback_reply` зарезервировано | ADM-10 |
+| R73 | Грант для цели | Целевой пользователь видит весь грант | |
+| R74 | Детали вех | `achieved_at` = начало занятия; пробные и вставка сразу как `attended` считаются | PRD 2.6.2-7 |
+| R75 | Дедупликация outbox | Глобальный уникальный ключ с моментом цели | перенос занятия ставит новые напоминания |
+| R76 | Выборка outbox | Позже публичные definer-функции только для `service_role` | `private` недоступна через PostgREST |
+| R77 | Ссылка онлайн-слота | Только в `week_template_items.meeting_url` (видит тренер); RPC записи копирует её в занятие | слоты видны клиентам до записи |
+| R78 | Слоты и занятия внахлёст | Проверяет функция записи позже; RLS показывает только открытые будущие слоты | клиент не видит чужие занятия |
+| R79 | Минимум до записи | `trainer_profiles.min_booking_notice_minutes default 120` | PRD 2.6.1-6 |
+| R80 | Какие занятия видит клиент | Любые, где у него есть запись в любом статусе | история, экспорт, SCHED-22 |
+| R81 | Расписание и справочники | Открытые слоты и занятия: только живые пары; локации, пакеты, ссылки на оплату, свои упражнения: пары в любом статусе | |
+| R82 | Лимит фото на Free | Проверяется политикой вставки; «комплект» это фото одной даты (ждёт владельца) | Q57, Q58, PRD 2.14-6, PLAN-3 |
+| R83 | Удаление объектов Storage | Удаляет приложение; политика чтения фото требует живую строку | триггер БД не удаляет объекты |
+| R84 | Суммы в журнале | reversal = минус settlement; refund и adjustment без денег; adjustment только по абонементу; повторный долг: `charge` с причиной `manual` и комментарием | |
+| R85 | Счёт для лимита Free | Пары `trial` и `active`, карточки считаются, заглушка нет; под блокировкой строки | Q56, гонки |
+| R86 | История абонементов и платежей | Решено после проверки: таблица `money_events`, её пишут триггеры | PRD строка 27, Q21 |
+| R87 | Права по умолчанию | Базовая миграция отключает автоматическую выдачу прав `anon`/`authenticated` и EXECUTE для `public` | страховка |
+| R88 | Форма политик | Одна разрешающая политика на команду | советник Supabase, quality.md |
+| R89 | Профиль тренера для клиентов | Клиенты в любом статусе пары видят своих тренеров через `trainer_ids_visible` | |
+| R90 | Буфер шаблона | `week_templates.buffer_min default 0` | PRD 2.6.1-1 |
+| R91 | Лимит Free и карточки | Решено как вариант (а), без изменения схемы: при непривязанной карточке присоединение не упирается в лимит и всегда создаёт запрос на слияние; ответ «новый клиент» проверяет лимит снова (ждёт владельца) | O1 |
+| R92 | Закрытые периоды | Слоты `status = 'closed'`, генератор их обходит | PRD 2.6.1-5 |
+| R93 | Статусы и места | Переходы статусов занятий, записей и платежей, места и уменьшение вместимости держат триггеры для всех ролей | ошибка в одной RPC не должна портить историю |
+
+После независимой проверки схемы добавлены ещё правила, которых не было ни в первом проекте, ни в контракте:
+
+- проверки мест, остатка абонемента, лимита сертификатов и лимита Free берут родительскую строку `for no key update` и отказывают в транзакции `repeatable read` (`unsupported_isolation`);
+- занятие с записями и сама запись не удаляются напрямую (`session_in_use`, только каскад);
+- у абонемента ровно один `grant`, равный `sessions_total`; прощённый charge нельзя покрыть;
+- аннулированный платёж больше не меняется; причину тренер пишет только при аннулировании;
+- отозванный грант break-glass и отозванная выдача тарифа не возвращаются и не переписываются;
+- запрос доступа можно создать только на платный тариф своей стороны;
+- клиенты видят только живые ссылки на оплату;
+- сообщения в чат команды (`verification_submitted`, `feedback_received`) тоже строки outbox, с `chat_target` вместо `user_id`;
+- у пробной ссылки есть выключатель `is_enabled`, у пары для тренера поле `contact`;
+- `profiles.last_seen_at` пользователям не выдан;
+- большие таблицы читаются через функции-массивы (§4.1), чтобы условие шло по индексу.
+
 
 #### Люди и доступ
 
@@ -153,16 +276,27 @@ create type public.share_category as enum ('nutrition', 'measurements', 'photos'
 
 ```sql
 alter table public.profiles
-  add column last_seen_at   timestamptz,          -- обновляет сервер при входе; для админки «последний вход»
+  add column last_seen_at   timestamptz,          -- обновляет сервер при входе; админка читает через definer-функции
   add column bot_started_at timestamptz,          -- пользователь нажал /start; без этого бот не может писать
-  add column bot_blocked_at timestamptz;          -- Telegram вернул 403 при отправке; сброс при /start
--- Столбец telegram_id скрывается от всех клиентов: колоночные гранты
-revoke select on public.profiles from authenticated;
-grant select (id, username, first_name, last_name, photo_url, language_code, created_at, updated_at, last_seen_at)
+  add column bot_blocked_at timestamptz,          -- Telegram вернул 403 при отправке; сброс при /start
+  add column blocked_at     timestamptz,          -- админ заблокировал аккаунт (ADM-7), пишет только админская RPC
+  add column blocked_reason text check (char_length(blocked_reason) <= 500),
+  add column display_name   text,                 -- зеркало user_settings.display_name (триггер)
+  add column avatar_path    text,                 -- зеркало user_settings.avatar_path (триггер)
+  add column time_zone      public.iana_tz not null default 'Europe/Moscow',  -- зеркало user_settings.time_zone
+  alter column telegram_id drop not null,         -- null только у карточек и у заглушки «Удалённый клиент»
+  add constraint profiles_blocked_check check ((blocked_at is null) = (blocked_reason is null));
+-- Колоночный грант: telegram_id, bot_*, blocked_*, claimed_by и last_seen_at видит только сервер.
+-- Другим пользователям незачем знать, когда человек был в сети. select * поэтому падает с 42501.
+revoke all on public.profiles from anon, authenticated;
+grant select (id, username, first_name, last_name, photo_url, language_code, display_name, avatar_path, time_zone,
+              managed_by_trainer_id, created_at, updated_at)
   on public.profiles to authenticated;
 ```
 
-**`user_settings`**: всё, что пользователь меняет сам (1:1, создаётся сервером при первом входе).
+Зеркальные столбцы нужны вью `public_profiles`: она `security_invoker` и читает только `profiles`, поэтому видит ровно тех, кого пускает политика `profiles` (сам, партнёры по парам в любом статусе, свои карточки тренера, админ без карточек и заглушки).
+
+**`user_settings`**: всё, что пользователь меняет сам (1:1). Строку создаёт триггер при вставке `profiles`, в том числе для карточек; профили, созданные до миграции, получили её при миграции.
 
 ```sql
 create table public.user_settings (
@@ -174,10 +308,10 @@ create table public.user_settings (
   unit_system          public.unit_system,         -- null = по локали (en-US → imperial)
   time_zone            public.iana_tz not null default 'Europe/Moscow',  -- уточняется клиентом при первом входе
   last_zone            public.app_zone not null default 'client',
-  quiet_hours_start    time,                       -- оба null = тихие часы выключены
-  quiet_hours_end      time,
-  morning_summary_time time not null default '08:00',  -- используется, если пользователь — тренер
-  leaderboard_opt_in   boolean not null default false,  -- W3, глобальное согласие на лидерборды
+  quiet_hours_start    time default '22:00',       -- оба null = тихие часы выключены (PRD 2.9-7)
+  quiet_hours_end      time default '08:00',
+  daily_digest_time    time not null default '08:00',  -- время утренней сводки (daily digest), если пользователь тренер
+  -- W3: leaderboard_opt_in boolean not null default false добавляется вместе с лидербордами
   updated_at           timestamptz not null default now(),
   check ((quiet_hours_start is null) = (quiet_hours_end is null))
 );
@@ -186,25 +320,35 @@ create table public.user_settings (
 **`notification_preferences`**: только переопределения; если строки нет, действует значение по умолчанию из кода.
 
 ```sql
+-- Одно значение на каждое сообщение PRD §3, поэтому каждое отключается отдельно (PRD 2.9-8). Тренер, который
+-- сам у кого-то клиент, получает обе стороны пары сообщений, поэтому версии тренера и клиента разные:
+-- booking_assigned (К1) / booking_created (Т1), booking_cancelled_by_trainer (К5) / booking_cancelled_by_client (Т3),
+-- pass_ending (К10) / client_pass_ending (Т6). Вех в уведомлениях нет (R37).
 create type public.notification_type as enum (
-  'booking_created','booking_requested','booking_confirmed','booking_declined',
-  'booking_cancelled','booking_rescheduled','session_reminder','session_changed',
-  'pass_ending','pass_expired','debt','payment_reported','morning_summary',
-  'contact_request','verification_result','milestone',
+  'booking_assigned', 'booking_created', 'booking_requested', 'booking_confirmed', 'booking_declined',
+  'booking_expired', 'booking_cancelled_by_trainer', 'booking_cancelled_by_client', 'booking_rescheduled',
+  'session_reminder', 'session_changed',
+  'charge_posted', 'charge_waived', 'pass_ending', 'client_pass_ending', 'pass_expired', 'debt', 'payment_reported',
+  'daily_digest', 'coaching_created', 'coaching_ended', 'managed_client_claim', 'intake_submitted', 'intake_reminder',
+  'contact_request', 'contact_response', 'verification_result', 'export_ready', 'account_deletion',
+  'counterpart_deleting', 'plan_granted', 'plan_revoked', 'plan_expiring', 'feedback_reply',
+  'break_glass', 'report_resolution',
+  'bot_test',                                      -- тестовое сообщение после включения бота (AUTH-7)
+  'verification_submitted', 'feedback_received',  -- А1, А2: в закрытую группу (notification_outbox.chat_target)
   -- W2
-  'trainer_comment','trainer_broadcast','homework_reminder','homework_done',
-  'waitlist_offer','waitlist_closed','review_prompt','review_reply','goal_changed',
+  'trainer_comment', 'trainer_broadcast', 'homework_reminder', 'homework_done', 'waitlist_offer',
+  'waitlist_closed', 'review_prompt', 'review_reply', 'goal_changed',
   -- W3
-  'delegation','challenge','badge','referral_bonus',
-  -- служебные
-  'report_resolution','account_deletion','break_glass'
+  'delegation', 'challenge', 'badge', 'referral_bonus'
 );
 
 create table public.notification_preferences (
   user_id  uuid references public.profiles(id) on delete cascade,
   type     public.notification_type,
   enabled  boolean not null,
-  primary key (user_id, type)
+  primary key (user_id, type),
+  -- служебные и аккаунтные типы, тестовое сообщение и сообщения группе отключить нельзя (PRD 2.9-8)
+  check (enabled or private.notification_type_is_optional(type))
 );
 ```
 
@@ -232,9 +376,10 @@ create table public.consents (
   kind        public.consent_kind not null,
   version     text not null,                 -- версия текста, например '2026-11-beta'
   accepted_at timestamptz not null default now(),
-  revoked_at  timestamptz
+  revoked_at  timestamptz                    -- отзыв один раз; время ставит guard-триггер, не клиент
 );
 create index on public.consents (user_id, kind);
+create unique index consents_one_active_uniq on public.consents (user_id, kind, version) where revoked_at is null;
 ```
 
 **`account_deletions`**, **`data_exports`**
@@ -253,7 +398,7 @@ create table public.data_exports (
   id           uuid primary key default gen_random_uuid(),
   user_id      uuid not null references public.profiles(id) on delete cascade,
   status       public.export_status not null default 'queued',
-  storage_path text,
+  storage_path text,                          -- объект в bucket exports или префикс папки с частями (§1.10)
   requested_at timestamptz not null default now(),
   ready_at     timestamptz,
   expires_at   timestamptz
@@ -264,7 +409,7 @@ create index on public.data_exports (user_id, requested_at desc);
 #### Тренер, инвайты, верификация
 
 ```sql
-create type public.verification_status as enum ('pending', 'verified', 'rejected');
+create type public.verification_status as enum ('not_submitted', 'pending', 'verified', 'rejected');  -- «не подана» (Q55)
 
 create table public.trainer_profiles (
   user_id                     uuid primary key references public.profiles(id) on delete cascade,
@@ -275,21 +420,19 @@ create table public.trainer_profiles (
   city                        text,
   works_offline               boolean not null default true,
   works_online                boolean not null default false,
-  is_public                   boolean not null default true,      -- витрина доступна по ссылке/QR (не отдаётся при verification_status = 'rejected', Q15)
-  referred_by_trainer_id      uuid references public.profiles(id) on delete set null,
-  verification_status         public.verification_status not null default 'pending',
+  is_public                   boolean not null default true,      -- витрина доступна по ссылке/QR; верификация на это не влияет (Q55, R16: владелец подтверждает для rejected)
+  -- W3: referred_by_trainer_id добавляется вместе с рефералкой
+  verification_status         public.verification_status not null default 'not_submitted',
   verified_at                 timestamptz,
   default_currency            public.currency_code not null default 'RUB',
   cancellation_deadline_hours smallint not null default 24 check (cancellation_deadline_hours between 0 and 168),
-  default_client_reminder_offsets smallint[] not null default '{1440,60}',  -- минуты до занятия; для новых пар
-  own_reminder_offsets        smallint[] not null default '{60}',           -- напоминания самому тренеру
+  default_client_reminder_offsets smallint[] not null default '{1440,60}'   -- минуты до занятия; для новых пар
+                              check (private.valid_reminder_offsets(default_client_reminder_offsets)),  -- ≤ 3, 5..10080, без NULL и повторов
+  min_booking_notice_minutes  smallint not null default 120 check (min_booking_notice_minutes between 0 and 10080),  -- PRD 2.6.1-6
   trainer_invite_id           uuid unique,                                  -- FK ниже; каким инвайтом пришёл
   -- зарезервировано (later): studio_id uuid — добавляется со студиями
-  updated_at                  timestamptz not null default now(),
-  check (cardinality(default_client_reminder_offsets) <= 3
-         and 5 <= all(default_client_reminder_offsets) and 10080 >= all(default_client_reminder_offsets)),
-  check (cardinality(own_reminder_offsets) <= 3
-         and 5 <= all(own_reminder_offsets) and 10080 >= all(own_reminder_offsets))
+  -- Напоминаний самому тренеру нет (Q23 их не перечисляет), own_reminder_offsets не создаётся.
+  updated_at                  timestamptz not null default now()
 );
 
 create table public.trainer_certificates (
@@ -298,10 +441,11 @@ create table public.trainer_certificates (
   title        text not null,
   issuer       text,
   issued_on    date,
-  storage_path text not null,                 -- bucket certificates
+  storage_path text not null,                 -- bucket certificates, папка {trainer_id}/
   created_at   timestamptz not null default now()
 );
 create index on public.trainer_certificates (trainer_id);
+-- Не больше 5 файлов на тренера (PRD 2.2-4): триггер trainer_certificates_limit под блокировкой профиля.
 
 create table public.trainer_verifications (    -- история решений; текущий статус — в trainer_profiles
   id          uuid primary key default gen_random_uuid(),
@@ -320,12 +464,14 @@ create table public.trainer_invites (
   code_hint   text not null,                   -- последние 4 символа для поиска в админке
   note        text,                            -- кому выдан
   created_by  uuid references public.profiles(id) on delete set null,
-  expires_at  timestamptz,
+  expires_at  timestamptz default now() + interval '14 days',   -- PRD 2.2-1
   redeemed_by uuid unique references public.profiles(id) on delete set null,
   redeemed_at timestamptz,
   revoked_at  timestamptz,
   created_at  timestamptz not null default now(),
-  check ((redeemed_by is null) = (redeemed_at is null))
+  -- только в одну сторону: redeemed_by обнуляется при удалении аккаунта, а время погашения остаётся
+  check (redeemed_by is null or redeemed_at is not null),
+  check (redeemed_at is null or revoked_at is null)
 );
 alter table public.trainer_profiles
   add foreign key (trainer_invite_id) references public.trainer_invites(id) on delete set null;
@@ -337,8 +483,9 @@ alter table public.trainer_profiles
 create table public.client_invites (
   id          uuid primary key default gen_random_uuid(),
   trainer_id  uuid not null references public.trainer_profiles(user_id) on delete cascade,
-  token       text not null unique,            -- в ссылке/QR (startapp-параметр), 22 симв. base64url
-  code        text not null unique check (code ~ '^[A-Z0-9]{6}$'),  -- «Введите код тренера»
+  token       text not null unique default private.gen_link_token(),   -- в ссылке/QR (startapp-параметр), 22 симв. base64url; генерирует БД
+  code        text not null unique default private.gen_invite_code()   -- «Введите код тренера»; генерирует БД, без похожих символов
+              check (code ~ '^[A-Z0-9]{6}$'),
   label       text,                            -- «Основная», «Зал на Ленина»
   max_uses    integer check (max_uses > 0),
   uses_count  integer not null default 0,
@@ -351,7 +498,7 @@ create index on public.client_invites (trainer_id);
 create table public.trial_links (
   id           uuid primary key default gen_random_uuid(),
   trainer_id   uuid not null references public.trainer_profiles(user_id) on delete cascade,
-  token        text not null unique,
+  token        text not null unique default private.gen_link_token(),
   title        text not null,
   description  text,
   duration_min smallint not null default 60 check (duration_min between 15 and 240),
@@ -362,13 +509,14 @@ create table public.trial_links (
   max_uses     integer check (max_uses > 0),
   uses_count   integer not null default 0,
   expires_at   timestamptz,
-  archived_at  timestamptz,
+  is_enabled   boolean not null default true,  -- переключатель вкл/выкл (screens.md /trainer/links); токен сохраняется
+  archived_at  timestamptz,                    -- окончательное удаление; архив не снимается
   created_at   timestamptz not null default now()
 );
 create index on public.trial_links (trainer_id);
 ```
 
-Токены клиентских ссылок хранятся открыто: это адрес, а не секрет (их печатают в QR и показывают многократно). Раскрытие токена даёт только возможность стать клиентом этого тренера, а ссылка ровно для этого и нужна. Код инвайта тренера, наоборот, даёт привилегию и хранится хешем.
+Токены и коды генерирует база (значения по умолчанию), тренер выбрать их не может. Токены клиентских ссылок хранятся открыто: это адрес, а не секрет (их печатают в QR и показывают многократно). Раскрытие токена даёт только возможность стать клиентом этого тренера, а ссылка ровно для этого и нужна. Код инвайта тренера, наоборот, даёт привилегию и хранится хешем.
 
 #### Пара, разрешения, заметки, анкета, связь
 
@@ -379,29 +527,29 @@ create type public.coaching_source as enum ('client_invite', 'trainer_code', 'tr
 create table public.coachings (
   id                        uuid primary key default gen_random_uuid(),
   trainer_id                uuid not null references public.trainer_profiles(user_id) on delete cascade,
-  client_id                 uuid not null references public.profiles(id) on delete restrict,  -- restrict: при удалении аккаунта переназначается на «Удалённого клиента» (§1.6)
+  client_id                 uuid not null references public.profiles(id),   -- без каскада: при удалении аккаунта переназначается на «Удалённого клиента» (§1.6)
   status                    public.coaching_status not null default 'active',
   source                    public.coaching_source not null,
-  client_invite_id          uuid references public.client_invites(id) on delete set null,
-  trial_link_id             uuid references public.trial_links(id) on delete set null,
+  client_invite_id          uuid,                 -- составной FK (client_invite_id, trainer_id): только ссылка этого тренера
+  trial_link_id             uuid,                 -- составной FK (trial_link_id, trainer_id)
   started_at                timestamptz not null default now(),   -- «вместе с …»
   ended_at                  timestamptz,
   ended_by                  uuid references public.profiles(id) on delete set null,
   end_reason                text,
-  client_alias              text,          -- как тренер подписал клиента у себя; клиенту не видно
-  cancellation_deadline_hours smallint check (cancellation_deadline_hours between 0 and 168), -- null = из trainer_profiles
+  -- client_alias переехал в coaching_trainer_meta: колоночный грант не может показать столбец тренеру и скрыть от клиента.
+  -- Дедлайна отмены на пару нет: правило тренера действует для всех его клиентов (PRD 2.6.5-1).
   self_book_on_debt         boolean not null default false,       -- «Разрешить запись в долг» этому клиенту (Q22); долг при списании возникает всегда
   debt_limit_sessions       smallint check (debt_limit_sessions > 0),  -- null = без лимита при self_book_on_debt
-  client_reminder_offsets   smallint[] not null,                  -- копия default_client_reminder_offsets при создании; меняет клиент
-  broadcasts_muted          boolean not null default false,       -- W2: клиент отключил рассылки этого тренера
-  primary_nutrition_group_id uuid,                                -- W2, FK добавляется с groups
-  churn_hidden_until        date,                                 -- W2: тренер скрыл из «угрозы ухода»
+  client_reminder_offsets   smallint[] not null                   -- копия default_client_reminder_offsets при создании; меняет клиент
+                            check (private.valid_reminder_offsets(client_reminder_offsets)),
+  -- W2: broadcasts_muted и primary_nutrition_group_id добавляются вместе со своими функциями;
+  -- churn_hidden_until ляжет в coaching_trainer_meta (R9)
   -- зарезервировано (later): studio_id uuid
   updated_at                timestamptz not null default now(),
   check (trainer_id <> client_id),
   check ((status = 'ended') = (ended_at is not null)),
-  check (cardinality(client_reminder_offsets) <= 3
-         and 5 <= all(client_reminder_offsets) and 10080 >= all(client_reminder_offsets))
+  -- цели составных FK из таблиц пары (тенантная целостность)
+  unique (id, trainer_id), unique (id, client_id), unique (id, trainer_id, client_id)
 );
 create index on public.coachings (client_id);
 create index on public.coachings (trainer_id, status);
@@ -410,7 +558,21 @@ create unique index coachings_trainer_client_uniq on public.coachings (trainer_i
   where client_id <> private.deleted_client_id();
 ```
 
-Повторное присоединение к тому же тренеру после `ended` реактивирует ту же строку (`coachings_trainer_client_uniq`), история сохраняется.
+Повторное присоединение к тому же тренеру после `ended` реактивирует ту же строку (`coachings_trainer_client_uniq`), история сохраняется; RPC при этом сбрасывает `data_shares` и поля завершения.
+
+Таблицы пары (`passes`, `payments`, `bookings`, `ledger_entries`, `money_events`, `recurrences`, `workout_logs` …) ссылаются на пару составным ключом `(coaching_id, trainer_id, client_id)` с `on update cascade`, поэтому строка не может указать на чужую пару, а смена клиента пары (заглушка, слияние карточки) переносит их сама. Составные FK по `coaching_id` объявлены `deferrable initially immediate`: RPC слияния переносит строки между парами в несколько шагов под `set constraints all deferred`.
+
+```sql
+create table public.coaching_trainer_meta (     -- то, что видит только тренер пары; создаётся с парой триггером
+  coaching_id    uuid primary key references public.coachings(id) on delete cascade,
+  client_alias   text check (char_length(client_alias) between 1 and 64),  -- как тренер подписал клиента у себя
+  contact        text check (char_length(contact) <= 200),                 -- «контакт для себя» из формы карточки (PRD 2.5-3)
+  archived_at    timestamptz,                    -- тренер убрал клиента из активного списка (PAIR-6)
+  intake_seen_at timestamptz,                    -- когда тренер открыл анкету; отсюда «изменилась с …» (PRD 2.4-5)
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now()
+);
+```
 
 **Карточка клиента без аккаунта** (`managed_client`, журнал решений §4, было O1). Чтобы не делать `client_id` nullable в десятке таблиц (`bookings`, `passes`, `ledger_entries`, `payments`, `measurements`, `workout_logs` …), карточка хранится как обычная строка `profiles` без возможности входа:
 
@@ -423,19 +585,23 @@ create table public.managed_client_claims (       -- запрос тренеру
   id                uuid primary key default gen_random_uuid(),
   trainer_id        uuid not null references public.trainer_profiles(user_id) on delete cascade,
   claimant_id       uuid not null references public.profiles(id) on delete cascade,   -- реальный пользователь
-  new_coaching_id   uuid not null references public.coachings(id) on delete cascade,  -- его новая пара
-  managed_client_id uuid references public.profiles(id) on delete cascade,            -- выбранная тренером карточка
-  status            text not null default 'pending' check (status in ('pending', 'merged', 'rejected')),
+  -- set null, а не cascade: слияние удаляет новую пару, а решённый запрос должен остаться
+  new_coaching_id   uuid references public.coachings(id) on delete set null,          -- его новая пара
+  managed_client_id uuid references public.profiles(id) on delete set null,           -- выбранная тренером карточка
+  status            public.managed_client_claim_status not null default 'pending',    -- pending, merged, rejected
   decided_at        timestamptz,
-  created_at        timestamptz not null default now()
+  created_at        timestamptz not null default now(),
+  check ((status = 'pending') = (decided_at is null)),
+  check (status <> 'pending' or new_coaching_id is not null)
 );
-create index on public.managed_client_claims (trainer_id) where status = 'pending';
+create index on public.managed_client_claims (trainer_id);
+create unique index on public.managed_client_claims (new_coaching_id) where status = 'pending';
 ```
 
 - Создание: RPC `create_managed_client(display_name, note)` (тренер). Серверный код создаёт пользователя Supabase Auth **без** `telegram_id` (синтетический email `managed-<uuid>@users.fit.invalid`, `banned_until = 'infinity'`), строку `profiles` с `managed_by_trainer_id = uid`, пару `coachings(source = 'manual')` и `data_shares` со всеми категориями `true` (данные вносит тренер; разрешения клиента не применимы, пока клиента нет). Войти под карточкой невозможно: `signInWithTelegram()` ищет только по `app_metadata.telegram_id` (ADR 0004).
 - Уведомления: `private.enqueue_notification()` пропускает получателей с `managed_by_trainer_id is not null`; запись на слоты и напоминания для пары-карточки недоступны.
 - RLS: карточку видят только её тренер и его делегаты (политика `profiles` через `managed_by_trainer_id = uid` / `is_coaching_trainer`); в остальном работают обычные политики пары.
-- Переход (claim): `join_by_invite` / `join_by_code` создают пару как обычно, а если у тренера есть карточки без аккаунта, ещё и строку `managed_client_claims (pending)` и уведомление тренеру. RPC `resolve_managed_client_claim(claim_id, managed_client_id | null)` (тренер) в одной транзакции: переносит все строки карточки на `claimant_id` (`update … set client_id = claimant` в `coachings`, `sessions`/`bookings`, `passes`, `ledger_entries`, `payments`, `coaching_notes`, `measurements`, `workout_logs`, `personal_records` …), объединяет пару карточки с новой парой (история переносится в пару карточки, новая пара удаляется, `coachings.source` остаётся `manual`, сохраняется `started_at` карточки), сбрасывает `data_shares` на умолчания клиента (`intake = false`, `intake_decided_at = null` → клиенту показывается шаг согласия), ставит `profiles.claimed_by`, пишет `booking_events`/журнал пары и удаляет пользователя Auth карточки. `null` → `rejected`, карточка остаётся. Слияние необратимо.
+- Переход (claim): `join_by_invite` / `join_by_code` создают пару как обычно, а если у тренера есть карточки без аккаунта, ещё и строку `managed_client_claims (pending)` и уведомление тренеру. Лимит Free (R91, решено до ответа владельца): эти две RPC пропускают `assert_can_add_client`, только когда у тренера есть непривязанная карточка, и тогда всегда создают запрос; `resolve_managed_client_claim` с ответом «новый клиент» проверяет лимит снова и при превышении завершает новую пару с `plan_limit_reached`. Слияние возвращает счётчик к прежнему. RPC `resolve_managed_client_claim(claim_id, managed_client_id | null)` (тренер) в одной транзакции: переносит все строки карточки на `claimant_id` (`update … set client_id = claimant` в `coachings`, `sessions`/`bookings`, `passes`, `ledger_entries`, `payments`, `coaching_notes`, `measurements`, `workout_logs`, `personal_records` …), объединяет пару карточки с новой парой (история переносится в пару карточки, новая пара удаляется, `coachings.source` остаётся `manual`, сохраняется `started_at` карточки), сбрасывает `data_shares` на умолчания клиента (`intake = false`, `intake_decided_at = null` → клиенту показывается шаг согласия), ставит `profiles.claimed_by`, пишет `booking_events`/журнал пары и удаляет пользователя Auth карточки. `null` → `rejected`, карточка остаётся. Слияние необратимо.
 
 
 ```sql
@@ -453,7 +619,7 @@ create table public.data_shares (              -- одна строка на п�
 
 create table public.coaching_notes (
   id                uuid primary key default gen_random_uuid(),
-  coaching_id       uuid not null references public.coachings(id) on delete cascade,
+  coaching_id       uuid not null references public.coachings(id) on delete cascade,   -- тренер-владелец читает и правит и после завершения пары (R12)
   author_id         uuid references public.profiles(id) on delete set null,  -- тренер или делегат
   session_id        uuid,                       -- FK на sessions; заметка к занятию
   body              text not null check (char_length(body) between 1 and 5000),
@@ -469,7 +635,7 @@ create table public.intakes (                  -- версии анкеты кл
   form_version  text not null,                -- версия набора вопросов в коде
   answers       jsonb not null,               -- цели, здоровье, травмы, противопоказания
   parq_answers  jsonb not null,               -- PAR-Q: {q1: bool, ...}
-  parq_flagged  boolean not null,             -- хотя бы один «да» — тренер видит предупреждение
+  parq_flagged  boolean not null generated always as (private.parq_any_yes(parq_answers)) stored,  -- считает БД; клиент не может занизить
   submitted_at  timestamptz not null default now()
 );
 create index on public.intakes (user_id, submitted_at desc);
@@ -482,7 +648,7 @@ create table public.contact_requests (          -- «Попросить связ
   recipient_id uuid not null references public.profiles(id) on delete cascade,
   status       public.contact_request_status not null default 'pending',
   created_at   timestamptz not null default now(),
-  responded_at timestamptz
+  responded_at timestamptz                      -- expired ставят RPC и диспетчер для pending старше 7 дней, правила в БД нет
 );
 create index on public.contact_requests (recipient_id, status);
 ```
@@ -503,13 +669,14 @@ create table public.locations (
   lat         numeric(9,6),
   lng         numeric(9,6),
   notes       text,                            -- «вход со двора», парковка
-  club_id     uuid,                            -- W4: FK на clubs добавляется в волне 4
+  -- W4: club_id добавляется вместе с клубами
   archived_at timestamptz,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
 create index on public.locations (trainer_id);
-alter table public.trial_links add foreign key (location_id) references public.locations(id) on delete set null;
+alter table public.trial_links add foreign key (location_id, trainer_id)   -- только место того же тренера
+  references public.locations(id, trainer_id) on delete set null (location_id);
 
 create table public.week_templates (
   id            uuid primary key default gen_random_uuid(),
@@ -518,6 +685,7 @@ create table public.week_templates (
   time_zone     public.iana_tz not null,
   is_active     boolean not null default false,
   horizon_weeks smallint not null default 4 check (horizon_weeks between 1 and 12),
+  buffer_min    smallint not null default 0 check (buffer_min between 0 and 240),   -- перерыв между слотами (PRD 2.6.1-1)
   generated_until date,                         -- до какой даты (вкл.) слоты уже созданы
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
@@ -528,13 +696,15 @@ create table public.week_template_items (
   id           uuid primary key default gen_random_uuid(),
   template_id  uuid not null references public.week_templates(id) on delete cascade,
   iso_weekday  smallint not null check (iso_weekday between 1 and 7),
-  start_time   time not null,
+  start_time   time not null,                  -- окно start_time–end_time режется на слоты по duration_min (R22)
+  end_time     time not null,
   duration_min smallint not null check (duration_min between 15 and 480),
-  kind         public.session_kind not null default 'personal' check (kind <> 'trial'),
-  capacity     smallint not null default 1 check (capacity between 1 and 100),
-  location_id  uuid references public.locations(id) on delete set null,
+  location_id  uuid references public.locations(id) on delete set null,   -- триггер: только место тренера шаблона
   mode         public.session_mode not null default 'offline',
-  allow_trial  boolean not null default false
+  meeting_url  text check (meeting_url ~ '^https://'),   -- ссылка онлайн; таблица видна только тренеру (R77)
+  allow_trial  boolean not null default true,  -- PRD 2.3-4
+  check (end_time > start_time and extract(epoch from (end_time - start_time)) / 60 >= duration_min)
+  -- Слоты только персональные (вместимость 1); групповые занятия тренер создаёт в sessions.
 );
 create index on public.week_template_items (template_id);
 
@@ -545,8 +715,8 @@ create table public.slots (
   ends_at           timestamptz not null,
   location_id       uuid references public.locations(id) on delete set null,
   mode              public.session_mode not null default 'offline',
-  status            public.slot_status not null default 'open',
-  allow_trial       boolean not null default false,
+  status            public.slot_status not null default 'open',   -- closed = отметка «закрыто» (отпуск); генератор её обходит (R92)
+  allow_trial       boolean not null default true,
   template_item_id  uuid references public.week_template_items(id) on delete set null,
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now(),
@@ -571,7 +741,7 @@ create table public.recurrences (
   capacity          smallint not null default 1 check (capacity between 1 and 100),
   location_id       uuid references public.locations(id) on delete set null,
   mode              public.session_mode not null default 'offline',
-  meeting_url       text check (meeting_url ~ '^https://'),
+  meeting_url       text check (meeting_url ~ '^https://'),   -- не выдаётся на SELECT; тренер читает через recurrence_meeting_url()
   open_for_booking  boolean not null default false,   -- групповой повтор, на который клиенты записываются сами
   materialized_until date,                     -- до какой локальной даты созданы sessions
   ended_at          timestamptz,               -- «больше не повторять» (будущие экземпляры отменены)
@@ -593,8 +763,8 @@ create table public.sessions (
   ends_at            timestamptz not null,
   location_id        uuid references public.locations(id) on delete set null,
   mode               public.session_mode not null,
-  meeting_url        text check (meeting_url ~ '^https://'),
-  capacity           smallint not null default 1 check (capacity between 1 and 100),
+  meeting_url        text check (meeting_url ~ '^https://'),   -- не выдаётся на SELECT; ссылку отдаёт session_meeting_url() (R25)
+  capacity           smallint not null default 1 check (capacity between 1 and 100),   -- места занимают requested, confirmed, attended, no_show
   open_for_booking   boolean not null default false,   -- клиенты тренера видят и записываются сами
   status             public.session_status not null default 'scheduled',
   cancelled_at       timestamptz,
@@ -605,7 +775,7 @@ create table public.sessions (
   original_starts_at timestamptz,               -- для экземпляров повтора: исходное время (ключ исключения)
   is_exception       boolean not null default false,   -- экземпляр повтора изменён вручную
   trial_link_id      uuid references public.trial_links(id) on delete set null,
-  conducted_by       uuid references public.profiles(id) on delete set null,  -- W3: подмена
+  -- W3: conducted_by (подмена) добавляется вместе с делегированием
   created_by         uuid references public.profiles(id) on delete set null,
   manually_adjusted_at timestamptz,             -- метрика беты «занятия без ручных правок» (Q26)
   completed_at       timestamptz,
@@ -624,6 +794,8 @@ alter table public.coaching_notes add foreign key (session_id) references public
 ```
 
 Пересечение занятий тренера не запрещено ограничением (тренер может сознательно поставить два занятия подряд с наложением); RPC и интерфейс предупреждают. Слоты пересекаться не могут.
+
+Статусы занятия меняет триггер для всех ролей: `scheduled → completed | cancelled`, `completed → cancelled`. Занятие с записями удалить нельзя (`session_in_use`), его отменяют; занятие без записей удалить можно. Когда тренер меняет пояс, шаблоны недели и открытые повторы переходят на новый пояс (триггер на `user_settings`), а созданные занятия и слоты сохраняют свои моменты времени (R24).
 
 **Записи**
 
@@ -651,7 +823,7 @@ create table public.bookings (
   status                public.booking_status not null,
   source                public.booking_source not null,
   reserved_pass_id      uuid,                   -- FK на passes; абонемент, под который запись автоподтверждена (подсказка)
-  cancel_deadline_hours smallint not null,      -- снимок правила на момент записи
+  -- Снимка часов дедлайна нет: RPC считает дедлайн по текущему правилу тренера и пишет часы и deadline_at в booking_events.payload
   requested_at          timestamptz,
   confirmed_at          timestamptz,
   decided_by            uuid references public.profiles(id) on delete set null,
@@ -665,8 +837,12 @@ create table public.bookings (
   created_at            timestamptz not null default now(),
   updated_at            timestamptz not null default now()
 );
-create unique index bookings_one_live_per_client on public.bookings (session_id, client_id)
+-- Ключ по паре, а не по клиенту: обезличенные клиенты одной группы все указывают на заглушку (R29).
+create unique index bookings_one_live_per_pair_uniq on public.bookings (session_id, coaching_id)
   where status in ('requested', 'confirmed', 'attended', 'no_show', 'late_cancelled');
+-- Одна живая пробная запись на пару; «никогда дважды» проверяет book_trial (R39).
+create unique index bookings_one_trial_per_pair_uniq on public.bookings (coaching_id)
+  where source = 'trial' and status in ('requested', 'confirmed', 'attended', 'no_show', 'late_cancelled');
 create index on public.bookings (session_id, status);
 create index on public.bookings (client_id, status);
 create index on public.bookings (coaching_id, created_at desc);
@@ -688,7 +864,14 @@ create index on public.booking_events (booking_id, id);
 
 «Запрос на запись» (`booking_request` в словаре) хранится как `bookings.status = 'requested'`, отдельной таблицы нет: подтверждённый запрос становится той же записью, а история лежит в `booking_events`.
 
-Вместимость: RPC записи берёт `select ... from sessions where id = $1 for update`, считает живые записи (`requested` не занимают место; `confirmed` занимают) и отказывает при `count >= capacity`. То же правило действует для листа ожидания (W2), отсюда тест конкурентности wave-2 9.5.
+Инварианты записей держат триггеры для всех ролей, включая RPC (R93), поэтому ошибка в одной RPC не испортит историю:
+
+- статусы: создать запись можно как `requested`, `confirmed` или `attended`; дальше только `requested → confirmed | declined | expired | cancelled`, `confirmed → cancelled | late_cancelled | rescheduled | attended | no_show`, `attended ↔ no_show`, `attended | no_show → cancelled`;
+- места (R18, PRD 2.6.3-2): место занимают `requested`, `confirmed`, `attended` и `no_show`; `late_cancelled` его освобождает. Триггер после вставки или смены статуса или занятия берёт строку занятия `for no key update` и пересчитывает места (`session_full`); уменьшить вместимость ниже занятых мест нельзя (`capacity_below_occupied`). `for no key update`, а не `for update`: внешний ключ к этому моменту уже держит `for key share` на строке занятия, и `for update` приводил параллельные записи к взаимной блокировке вместо очереди;
+- блокировка с последующим подсчётом верна только в READ COMMITTED (так работают PostgREST, RPC и pg_cron) или SERIALIZABLE. В REPEATABLE READ подсчёт видит старый снимок, поэтому такие транзакции получают `unsupported_isolation`;
+- запись не удаляется напрямую никем (триггер), её отменяют статусом; уходит она только каскадом вместе с парой или тренером.
+
+То же правило мест действует для листа ожидания (W2), отсюда тест конкурентности wave-2 9.5.
 
 #### Деньги
 
@@ -698,7 +881,7 @@ create type public.package_applies_to as enum ('any', 'personal', 'group');
 create table public.packages (                  -- то, что тренер продаёт; набор = ценовая сетка
   id                uuid primary key default gen_random_uuid(),
   trainer_id        uuid not null references public.trainer_profiles(user_id) on delete cascade,
-  title             text not null,
+  title             text not null check (char_length(title) between 1 and 120),
   sessions_count    smallint not null check (sessions_count between 1 and 200),  -- 1 = разовое занятие
   price_minor       bigint not null check (price_minor >= 0),
   currency          public.currency_code not null,
@@ -709,9 +892,10 @@ create table public.packages (                  -- то, что тренер п�
   price_updated_at  timestamptz not null default now(),  -- подсказка «цены не менялись 12 мес.» (W2)
   archived_at       timestamptz,
   created_at        timestamptz not null default now(),
-  updated_at        timestamptz not null default now()
+  updated_at        timestamptz not null default now(),
+  unique (id, trainer_id)                              -- цель составного FK из passes
 );
-create index on public.packages (trainer_id) where archived_at is null;
+create index on public.packages (trainer_id);          -- полный: каскад при удалении тренера
 create unique index packages_one_drop_in on public.packages (trainer_id, currency, applies_to)
   where sessions_count = 1 and archived_at is null;   -- одна цена разового на валюту и тип
 
@@ -719,43 +903,91 @@ create type public.pass_status as enum ('active', 'cancelled');   -- exhausted/e
 
 create table public.passes (                    -- абонемент: экземпляр пакета на клиента в паре
   id             uuid primary key default gen_random_uuid(),
-  coaching_id    uuid not null references public.coachings(id) on delete cascade,
-  client_id      uuid not null references public.profiles(id) on delete restrict,  -- restrict: при удалении аккаунта переназначается на «Удалённого клиента» (§1.6)
+  coaching_id    uuid not null,                  -- составной FK к паре, ниже
+  client_id      uuid not null references public.profiles(id),  -- NO ACTION: удаление аккаунта переносит пару на заглушку, ключ пары каскадом меняет client_id здесь (§1.6)
   trainer_id     uuid not null references public.trainer_profiles(user_id) on delete cascade,
-  package_id     uuid references public.packages(id) on delete set null,
-  title          text not null,                  -- снимок
+  package_id     uuid,                           -- составной FK к пакету этого тренера, ниже
+  title          text not null check (char_length(title) between 1 and 120),  -- снимок
   sessions_total smallint not null check (sessions_total between 1 and 200),  -- снимок; сам остаток — в журнале
   price_minor    bigint not null check (price_minor >= 0),
   currency       public.currency_code not null,
   applies_to     public.package_applies_to not null default 'any',
   is_drop_in     boolean not null default false, -- разовое занятие = абонемент на 1
-  is_bonus       boolean not null default false, -- W3: начислен рефералкой, цена 0
+  -- W3: is_bonus boolean (начислен рефералкой, цена 0) добавится вместе с рефералкой (R60).
   starts_on      date not null,                  -- дата продажи в поясе тренера
   expires_at     timestamptz,                    -- базовый срок без учёта заморозок; null = бессрочно
   status         public.pass_status not null default 'active',
   cancelled_at   timestamptz,
-  cancel_reason  text,
-  note           text,
-  sold_by        uuid references public.profiles(id) on delete set null,
+  cancelled_by   uuid references public.profiles(id) on delete set null,  -- ставит триггер из auth.uid()
+  cancel_reason  text check (char_length(cancel_reason) <= 500),
+  note           text check (char_length(note) <= 500),
+  sold_by        uuid references public.profiles(id) on delete set null,  -- ставит триггер из auth.uid()
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now(),
   check ((status = 'cancelled') = (cancelled_at is not null)),
-  check (not is_bonus or price_minor = 0)
+  check (not is_drop_in or sessions_total = 1),
+  foreign key (coaching_id, trainer_id, client_id) references public.coachings (id, trainer_id, client_id)
+    on update cascade on delete cascade deferrable initially immediate,
+  foreign key (package_id, trainer_id) references public.packages (id, trainer_id) on delete set null (package_id),
+  unique (id, coaching_id)                        -- цель составных FK из bookings, ledger_entries, payments
 );
 create index on public.passes (coaching_id);
 create index on public.passes (client_id);
 create index on public.passes (trainer_id, created_at);
-alter table public.bookings add foreign key (reserved_pass_id) references public.passes(id) on delete set null;
+create index on public.passes (package_id);
+alter table public.bookings add foreign key (reserved_pass_id, coaching_id)
+  references public.passes (id, coaching_id) on delete set null (reserved_pass_id);
 
 create table public.pass_freezes (
   id         uuid primary key default gen_random_uuid(),
   pass_id    uuid not null references public.passes(id) on delete cascade,
   period     daterange not null check (not isempty(period) and lower_inc(period) and not upper_inf(period)),
-  reason     text,
+  reason     text check (char_length(reason) <= 500),
   created_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
   exclude using gist (pass_id with =, period with &&)
 );
+```
+
+Абонемент создаёт RPC вместе со строкой `grant` в журнале. Напрямую тренер меняет только `title` и `note`; отмена, срок, заморозки и остальное идут через RPC. Срок (`expires_at`) меняется только с причиной: RPC ставит `fit.change_reason`, без неё триггер отвечает `reason_required` для любой роли (PRD 2.8-8). Удалить абонемент может тренер пары, пока в журнале по нему есть только `grant` и на него не ссылается ни один платёж; строка `grant` уходит каскадом (R27, PRD 2.8-16). Абонемент с движением по журналу отменяют, а не удаляют.
+
+**История денег** (`money_events`, PRD строка 27, Q21 «История с причинами»). Записи пишут `booking_events`, журнал сам себе история, а абонементы, заморозки и платежи меняются и напрямую. Поэтому каждое их изменение записывает триггер `BEFORE` на этих таблицах (для всех ролей, кроме каскадов). Таблица только для добавления.
+
+```sql
+create type public.money_event_action as enum (
+  'pass_created', 'pass_changed', 'pass_cancelled', 'pass_deleted',
+  'freeze_added', 'freeze_changed', 'freeze_removed',
+  'payment_created', 'payment_changed', 'payment_confirmed', 'payment_voided'
+);
+
+create table public.money_events (
+  id          bigint generated always as identity primary key,
+  coaching_id uuid not null,
+  client_id   uuid not null references public.profiles(id),   -- NO ACTION, как у passes
+  trainer_id  uuid not null,
+  pass_id     uuid,          -- без FK: история переживает удалённый абонемент
+  payment_id  uuid,          -- без FK
+  freeze_id   uuid,          -- без FK: снятая заморозка сохраняет историю
+  action      public.money_event_action not null,
+  actor_id    uuid references public.profiles(id) on delete set null,   -- auth.uid(); null = серверная задача
+  actor_role  public.actor_role not null,
+  reason      text check (char_length(reason) <= 500),   -- fit.change_reason транзакции, иначе причина отмены, аннулирования или заморозки
+  old_values  jsonb,         -- изменённые столбцы до (вся строка при удалении)
+  new_values  jsonb,         -- изменённые столбцы после (вся строка при создании)
+  created_at  timestamptz not null default now(),
+  check (case
+           when action in ('pass_created', 'pass_changed', 'pass_cancelled', 'pass_deleted')
+             then pass_id is not null and payment_id is null and freeze_id is null
+           when action in ('freeze_added', 'freeze_changed', 'freeze_removed')
+             then pass_id is not null and freeze_id is not null and payment_id is null
+           else payment_id is not null and freeze_id is null
+         end),
+  foreign key (coaching_id, trainer_id, client_id) references public.coachings (id, trainer_id, client_id)
+    on update cascade on delete cascade deferrable initially immediate
+);
+-- Только добавление: client_id и coaching_id переезжают вместе с парой, actor_id только очищается,
+-- удаление только каскадом (как у журнала, R28). Читают клиент пары и тренер пары.
 ```
 
 **Журнал списаний**. Точные правила см. в разделе 3.
@@ -768,26 +1000,26 @@ create type public.ledger_entry_type as enum (
   'settlement',          -- −1 с абонемента: покрытие долгового charge из нового абонемента
   'settlement_reversal', -- +1: откат settlement при прощении покрытого charge
   'refund',              -- −k: закрытие неиспользованного остатка при возврате денег/отмене абонемента
-  'adjustment'           -- ±k: ручная корректировка тренера с обязательным комментарием
+  'adjustment'           -- ±k: ручная корректировка тренера с обязательным комментарием, всегда по абонементу (R84)
 );
-create type public.charge_reason as enum ('attended', 'late_cancel', 'no_show', 'manual');
+create type public.charge_reason as enum ('attended', 'late_cancel', 'no_show', 'manual');   -- manual: повторное выставление долга с комментарием
 
 create table public.ledger_entries (
   id               uuid primary key default gen_random_uuid(),
-  coaching_id      uuid not null references public.coachings(id) on delete cascade,
-  client_id        uuid not null references public.profiles(id) on delete restrict,  -- restrict: при удалении аккаунта переназначается на «Удалённого клиента» (§1.6)
+  coaching_id      uuid not null,                -- составные FK к паре, абонементу, записи и charge этой пары, ниже
+  client_id        uuid not null references public.profiles(id),  -- NO ACTION, как у passes (§1.6)
   trainer_id       uuid not null references public.trainer_profiles(user_id) on delete cascade,
   entry_type       public.ledger_entry_type not null,
-  pass_id          uuid references public.passes(id) on delete cascade,   -- null у долгового charge
-  booking_id       uuid references public.bookings(id) on delete cascade,
-  related_entry_id uuid references public.ledger_entries(id),             -- waiver/settlement/reversal → charge
+  pass_id          uuid,                         -- null у долгового charge
+  booking_id       uuid,
+  related_entry_id uuid,                         -- waiver/settlement/reversal → charge
   sessions_delta   integer not null,
   amount_minor     bigint not null default 0,    -- стоимость, приписанная записи (знак как у выручки: charge > 0, waiver < 0)
   currency         public.currency_code,
   charge_reason    public.charge_reason,
-  occurred_at      timestamptz not null,         -- для charge — начало занятия; иначе = created_at
-  note             text,
-  created_by       uuid references public.profiles(id) on delete set null,  -- null = система
+  occurred_at      timestamptz not null,         -- для charge начало занятия, иначе created_at
+  note             text check (char_length(note) <= 500),
+  created_by       uuid references public.profiles(id) on delete set null,  -- ставит триггер из auth.uid(); null = система
   created_at       timestamptz not null default now(),
   check (case entry_type
            when 'grant' then sessions_delta > 0 and pass_id is not null
@@ -796,20 +1028,48 @@ create table public.ledger_entries (
            when 'settlement' then sessions_delta = -1 and pass_id is not null and related_entry_id is not null
            when 'settlement_reversal' then sessions_delta = 1 and pass_id is not null and related_entry_id is not null
            when 'refund' then sessions_delta < 0 and pass_id is not null
-           when 'adjustment' then sessions_delta <> 0 and note is not null
+           when 'adjustment' then sessions_delta <> 0 and note is not null and pass_id is not null
+           else false
+         end),
+  -- Знак суммы как у выручки (R84): charge и settlement приносят, waiver и reversal возвращают, остальные без денег.
+  check (case
+           when entry_type in ('grant', 'refund', 'adjustment') then amount_minor = 0
+           when entry_type in ('charge', 'settlement') then amount_minor >= 0
+           else amount_minor <= 0
          end),
   check (charge_reason is null or entry_type = 'charge'),
-  check ((amount_minor = 0) or currency is not null)
+  check ((amount_minor = 0) or currency is not null),
+  check (entry_type <> 'charge' or charge_reason = 'manual' or booking_id is not null),
+  check (charge_reason is distinct from 'manual' or (note is not null and booking_id is null)),
+  foreign key (coaching_id, trainer_id, client_id) references public.coachings (id, trainer_id, client_id)
+    on update cascade on delete cascade deferrable initially immediate,
+  foreign key (pass_id, coaching_id) references public.passes (id, coaching_id) on delete cascade,
+  foreign key (booking_id, coaching_id) references public.bookings (id, coaching_id) on delete cascade,
+  foreign key (related_entry_id, coaching_id) references public.ledger_entries (id, coaching_id),
+  unique (id, coaching_id)
 );
 create unique index ledger_one_charge_per_booking on public.ledger_entries (booking_id) where entry_type = 'charge';
+create unique index ledger_one_grant_per_pass_uniq on public.ledger_entries (pass_id) where entry_type = 'grant';
 create unique index ledger_one_waiver_per_charge on public.ledger_entries (related_entry_id) where entry_type = 'waiver';
+-- Одно покрытие и один откат на charge (R34): откат бывает только после окончательного прощения.
 create unique index ledger_one_settlement_per_charge on public.ledger_entries (related_entry_id)
-  where entry_type = 'settlement';   -- повторное покрытие возможно только после reversal: см. 3.4
+  where entry_type = 'settlement';
+create unique index ledger_one_reversal_per_charge_uniq on public.ledger_entries (related_entry_id)
+  where entry_type = 'settlement_reversal';
 create index on public.ledger_entries (pass_id);
 create index on public.ledger_entries (coaching_id, occurred_at);
 create index on public.ledger_entries (trainer_id, occurred_at);
--- Триггер private.ledger_immutable(): запрет update/delete (кроме каскада при удалении пары/аккаунта).
+create index on public.ledger_entries (client_id);
+create index on public.ledger_entries (booking_id) where booking_id is not null;
+create index on public.ledger_entries (related_entry_id) where related_entry_id is not null;
 ```
+
+Журнал только для добавления (R28, ADR 0008): строки не меняются, кроме `client_id` и `coaching_id` (перенос пары при удалении аккаунта и слиянии карточки) и очистки `created_by`; удаляются только каскадом (удаление пары или тренера, удаление неиспользованного абонемента вместе с его `grant`); `truncate` запрещён. Триггер проверки при вставке берёт строку абонемента `for no key update` и проверяет остаток под блокировкой (`pass_overdrawn`), а также:
+
+- `grant` равен `sessions_total` абонемента, у абонемента ровно один `grant`;
+- `charge` по записи бывает только для статусов `attended`, `no_show`, `late_cancelled`;
+- `waiver`, `settlement` и `settlement_reversal` ссылаются на charge этой же пары; прощённый charge нельзя покрыть, а `settlement_reversal` возможен только после `waiver`;
+- в транзакции с уровнем изоляции `repeatable read` такие записи отклоняются (`unsupported_isolation`): проверка остатка после блокировки видела бы старый снимок.
 
 ```sql
 create type public.payment_method as enum ('cash', 'bank_transfer', 'sbp', 'card', 'payment_link', 'other');
@@ -818,10 +1078,10 @@ create type public.payment_direction as enum ('in', 'refund');
 
 create table public.payments (
   id           uuid primary key default gen_random_uuid(),
-  coaching_id  uuid not null references public.coachings(id) on delete cascade,
-  client_id    uuid not null references public.profiles(id) on delete restrict,  -- restrict: при удалении аккаунта переназначается на «Удалённого клиента» (§1.6)
+  coaching_id  uuid not null,                  -- составной FK к паре, ниже
+  client_id    uuid not null references public.profiles(id),  -- NO ACTION, как у passes (§1.6)
   trainer_id   uuid not null references public.trainer_profiles(user_id) on delete cascade,
-  pass_id      uuid references public.passes(id) on delete set null,   -- за какой абонемент; null = «на счёт»
+  pass_id      uuid,                           -- за какой абонемент этой пары; null = «на счёт»
   direction    public.payment_direction not null default 'in',
   amount_minor bigint not null check (amount_minor > 0),
   currency     public.currency_code not null,
@@ -832,23 +1092,33 @@ create table public.payments (
   confirmed_by uuid references public.profiles(id) on delete set null,
   confirmed_at timestamptz,
   voided_at    timestamptz,
-  void_reason  text,
+  voided_by    uuid references public.profiles(id) on delete set null,  -- тренер или клиент, отозвавший своё сообщение
+  void_reason  text check (char_length(void_reason) <= 500),
   note         text check (char_length(note) <= 500),
-  -- later: provider text, provider_payment_id text unique — эквайринг
+  -- later: provider text, provider_payment_id text unique (эквайринг)
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
   check ((status = 'voided') = (voided_at is not null)),
-  check (status <> 'confirmed' or confirmed_at is not null)
+  check (status <> 'confirmed' or confirmed_at is not null),
+  check (status <> 'voided' or void_reason is not null),
+  foreign key (coaching_id, trainer_id, client_id) references public.coachings (id, trainer_id, client_id)
+    on update cascade on delete cascade deferrable initially immediate,
+  foreign key (pass_id, coaching_id) references public.passes (id, coaching_id) on delete set null (pass_id)
 );
 create index on public.payments (coaching_id, paid_at);
 create index on public.payments (trainer_id, paid_at) where status = 'confirmed';
 create index on public.payments (pass_id);
+create index on public.payments (client_id);
+-- Жизненный цикл для всех ролей (R93): создаётся как reported или confirmed; reported → confirmed | voided,
+-- confirmed → voided; voided окончательный. Авторов и время ставит тот же триггер из auth.uid().
+-- Ошибку исправляют аннулированием и новой строкой, удаления нет (R26). У аннулированного платежа поля
+-- аннулирования больше не меняются; причину тренер пишет только в момент аннулирования.
 
 create type public.payment_link_kind as enum ('sbp', 'self_employed', 'bank', 'other');
 create table public.payment_links (
   id          uuid primary key default gen_random_uuid(),
   trainer_id  uuid not null references public.trainer_profiles(user_id) on delete cascade,
-  title       text not null,
+  title       text not null check (char_length(title) between 1 and 64),
   url         text not null check (url ~ '^https://'),
   kind        public.payment_link_kind not null default 'other',
   sort_order  smallint not null default 0,
@@ -856,47 +1126,59 @@ create table public.payment_links (
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
-create index on public.payment_links (trainer_id) where archived_at is null;
+create index on public.payment_links (trainer_id);
+-- Клиенты пары видят только живые ссылки; архивные видит только тренер.
 ```
 
 #### Уведомления, напоминания, календарь
 
-Отдельной таблицы «напоминаний» нет. **Настройки** хранятся в `coachings.client_reminder_offsets` (клиент, на пару), `trainer_profiles.default_client_reminder_offsets` (значения по умолчанию для новых пар) и `trainer_profiles.own_reminder_offsets` (самому тренеру); **запланированные** напоминания хранятся как строки outbox с типом `session_reminder`.
+Отдельной таблицы «напоминаний» нет. **Настройки** хранятся в `coachings.client_reminder_offsets` (клиент, на пару) и `trainer_profiles.default_client_reminder_offsets` (значения по умолчанию для новых пар). Напоминаний самому тренеру нет (R35, Q23). **Запланированные** напоминания хранятся как строки outbox с типом `session_reminder`.
 
 ```sql
 create type public.outbox_status as enum ('pending', 'processing', 'sent', 'failed', 'skipped', 'cancelled');
 
 create table public.notification_outbox (
   id               bigint generated always as identity primary key,
-  user_id          uuid not null references public.profiles(id) on delete cascade,
+  user_id          uuid references public.profiles(id) on delete cascade,   -- null = сообщение в чат команды
+  chat_target      text check (chat_target in ('admin_group')),             -- чат команды для А1 и А2; id чата знает диспетчер
   type             public.notification_type not null,
-  dedupe_key       text not null unique,       -- 'reminder:{booking_id}:{offset}', 'summary:{trainer_id}:{date}' …
-  payload          jsonb not null,             -- ключи шаблона и deep link, без лишних персональных данных
+  dedupe_key       text not null unique,       -- с моментом цели: 'reminder:{booking_id}:{offset}:{epoch начала}' (R75)
+  payload          jsonb not null check (jsonb_typeof(payload) = 'object'),  -- ключи шаблона и deep link, без лишних персональных данных
   booking_id       uuid references public.bookings(id) on delete cascade,
   session_id       uuid references public.sessions(id) on delete cascade,
-  broadcast_id     uuid,                       -- W2: FK на broadcasts
+  -- W2: broadcast_id uuid (FK на broadcasts) добавится вместе с рассылками (R60).
   scheduled_for    timestamptz not null,       -- когда должно уйти по смыслу
   deliver_after    timestamptz not null,       -- с учётом тихих часов (см. ниже)
   status           public.outbox_status not null default 'pending',
-  attempts         smallint not null default 0,
+  attempts         smallint not null default 0 check (attempts >= 0),
   locked_until     timestamptz,                -- аренда воркером
-  last_error       text,                       -- код ошибки Telegram, без токенов и URL с секретами
+  last_error       text check (char_length(last_error) <= 500),   -- код ошибки Telegram, без токенов и URL с секретами
   telegram_message_id bigint,
   sent_at          timestamptz,
-  created_at       timestamptz not null default now()
+  created_at       timestamptz not null default now(),
+  check (status <> 'sent' or sent_at is not null),
+  check (status <> 'processing' or locked_until is not null),
+  check (deliver_after >= scheduled_for),
+  check (type <> 'session_reminder' or booking_id is not null),
+  -- Ровно один получатель: пользователь или чат команды (verification_submitted, feedback_received;
+  -- PRD §3 А1, А2, FDBK-1), чтобы любое исходящее сообщение оставалось строкой outbox (ADR 0006).
+  check (num_nonnulls(user_id, chat_target) = 1)
 );
 create index on public.notification_outbox (deliver_after) where status = 'pending';
-create index on public.notification_outbox (booking_id) where status = 'pending';
-create index on public.notification_outbox (broadcast_id);
+create index on public.notification_outbox (booking_id);
+create index on public.notification_outbox (user_id);
+create index on public.notification_outbox (session_id) where session_id is not null;
+create index on public.notification_outbox (created_at) where status in ('sent', 'skipped', 'cancelled');   -- очистка через 90 дней
+-- RLS включён, политик нет и не будет: outbox доступен только секретному ключу и definer-коду.
 ```
 
 Механика (бот serverless, Q11):
 
-- Постановка в очередь происходит внутри доменных RPC и триггеров, в той же транзакции, что и изменение (transactional outbox): подтверждение записи создаёт строки напоминаний по `client_reminder_offsets` и `own_reminder_offsets`; отмена/перенос переводит их в `cancelled` (по `booking_id`) и ставит новые.
+- Постановка в очередь происходит внутри доменных RPC и триггеров, в той же транзакции, что и изменение (transactional outbox): подтверждение записи создаёт строки напоминаний по `client_reminder_offsets`; отмена или перенос переводит их в `cancelled` (по `booking_id`) и ставит новые.
 - `notification_preferences` и `profiles.bot_blocked_at` проверяются при отправке (строка уходит в `skipped`), чтобы смена настроек действовала и на уже запланированное.
 - Тихие часы (ADR 0006): если `scheduled_for` попадает в тихие часы получателя, напоминание о занятии (`session_reminder`) уходит **в своё время** (`deliver_after = scheduled_for`), но беззвучно: диспетчер при отправке передаёт `disable_notification = true`; для остальных (несрочных) типов `deliver_after` = конец тихих часов.
 - Диспетчер: `pg_cron` раз в минуту вызывает через `pg_net` защищённый маршрут Vercel `POST /api/cron/notifications` (секрет в заголовке; секрет хранится в Supabase Vault и в env Vercel). Маршрут с секретным ключом забирает пачку `private.claim_outbox(limit 50)` (`for update skip locked`, ставит `processing` и `locked_until`), отправляет через Bot API с учётом лимитов Telegram, фиксирует результат. Ошибка 403 → `profiles.bot_blocked_at`, `skipped`. Повтор с экспоненциальной задержкой до 5 попыток, затем `failed`.
-- Утренняя сводка: cron раз в 15 минут ставит строки `morning_summary` тренерам, у которых `morning_summary_time` в их поясе попадает в текущее окно (`dedupe_key` по дате защищает от дублей).
+- Утренняя сводка: cron раз в 15 минут ставит строки `daily_digest` тренерам, у которых `user_settings.daily_digest_time` в их поясе попадает в текущее окно (`dedupe_key` по дате защищает от дублей; имя по R31).
 - Хранение: `sent/skipped/cancelled` старше 90 дней удаляются cron-задачей.
 
 ```sql
@@ -904,12 +1186,15 @@ create table public.calendar_feeds (            -- календарный фид
   id               uuid primary key default gen_random_uuid(),
   user_id          uuid not null references public.profiles(id) on delete cascade,
   zone             public.app_zone not null,   -- лента тренера или клиента
-  token_hash       bytea not null unique,      -- sha256; сам токен показывается один раз
+  token_hash       bytea not null unique check (octet_length(token_hash) = 32),   -- sha256; сам токен показывается один раз
   created_at       timestamptz not null default now(),
   revoked_at       timestamptz,
-  last_accessed_at timestamptz
+  last_accessed_at timestamptz,
+  check (revoked_at is null or revoked_at >= created_at)
 );
 create unique index on public.calendar_feeds (user_id, zone) where revoked_at is null;
+create index on public.calendar_feeds (user_id);
+-- Пишет только серверный код; пользователь читает свои строки без token_hash.
 ```
 
 ICS-маршрут `GET /api/calendar/{token}.ics`: хеш → `user_id` (секретный ключ), затем выборка ровно того, что этот пользователь видит в своей зоне; в событие попадают время, тип, локация/ссылка, имя второй стороны; заметок и данных тела в нём нет.
@@ -924,8 +1209,8 @@ create table public.exercises (
   source           public.exercise_source not null,
   wger_id          integer unique,
   wger_uuid        uuid unique,
-  owner_id         uuid references public.profiles(id) on delete cascade,  -- автор своего упражнения (тренер)
-  name             text not null,              -- имя на языке автора / англ. имя wger (запасное)
+  owner_id         uuid references public.profiles(id) on delete set null,  -- автор своего упражнения (тренер); R61
+  name             text not null check (char_length(name) between 1 and 200),   -- имя на языке автора или англ. имя wger
   category         text,                       -- wger category или своя
   muscles_primary  text[] not null default '{}',
   muscles_secondary text[] not null default '{}',
@@ -939,9 +1224,15 @@ create table public.exercises (
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now(),
   check ((source = 'wger') = (wger_id is not null)),
-  check ((source = 'custom') = (owner_id is not null)),
-  check (source <> 'wger' or license is not null)
+  check (source = 'custom' or owner_id is null),   -- своё упражнение без автора остаётся, когда автор удалил аккаунт
+  check (source <> 'wger' or license is not null),
+  check (source = 'wger' or wger_uuid is null),
+  check (image_path is null
+         or (source = 'wger' and image_path like 'wger/%')
+         or (source = 'custom' and (owner_id is null or image_path like ('custom/' || owner_id::text || '/%'))))
 );
+-- Читают: упражнения wger все; своё упражнение автор, его клиенты (любой статус пары, R81) и клиент,
+-- у которого оно есть в собственных записях тренировок. Своё упражнение без автора видно только через эти записи (R61).
 create index on public.exercises (owner_id);
 create index exercises_name_trgm on public.exercises using gin (name extensions.gin_trgm_ops);  -- pg_trgm
 
@@ -982,21 +1273,24 @@ create table public.workout_template_items (
 create table public.workout_logs (
   id               uuid primary key default gen_random_uuid(),
   client_id        uuid not null references public.profiles(id) on delete cascade,
-  coaching_id      uuid references public.coachings(id) on delete set null,  -- null = самостоятельная тренировка
-  booking_id       uuid unique references public.bookings(id) on delete set null,
-  homework_occurrence_id uuid,                -- W2: FK на homework_occurrences
+  coaching_id      uuid,                       -- null = самостоятельная тренировка или пара удалена; FK (coaching_id, client_id) on delete set null
+  booking_id       uuid unique,                -- FK (booking_id, coaching_id) к записи этой пары, on delete set null
+  -- W2: homework_occurrence_id uuid (FK на homework_occurrences) добавится вместе с домашними заданиями (R60).
   template_id      uuid references public.workout_templates(id) on delete set null,
-  title            text,
+  title            text check (char_length(title) <= 200),
   performed_at     timestamptz not null,
   local_date       date not null,
   duration_min     smallint check (duration_min between 1 and 600),
-  notes            text,
-  created_by       uuid references public.profiles(id) on delete set null,
+  notes            text check (char_length(notes) <= 5000),
+  created_by       uuid default auth.uid() references public.profiles(id) on delete set null,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now()
 );
 create index on public.workout_logs (client_id, performed_at desc);
 create index on public.workout_logs (coaching_id, performed_at desc);
+create index on public.workout_logs (created_by);
+-- Своя тренировка: coaching_id is null and created_by = client_id (R62). Правит запись только автор,
+-- удаляет автор (в паре) или клиент (R42). Записи пары меняются только пока пара жива.
 
 create table public.workout_log_exercises (
   id          uuid primary key default gen_random_uuid(),
@@ -1022,91 +1316,101 @@ create table public.workout_sets (               -- «подход» (set)
   check (coalesce(reps, duration_s, distance_m) is not null)
 );
 
-create type public.pr_type as enum ('max_weight', 'max_reps', 'est_1rm', 'max_duration', 'max_distance');
-create table public.personal_records (            -- поддерживается триггером по workout_sets
+create type public.pr_type as enum ('max_weight', 'max_reps', 'max_duration');   -- R43
+create table public.personal_records (            -- кеш, его пишут только триггеры тренировок
   client_id   uuid references public.profiles(id) on delete cascade,
   exercise_id uuid references public.exercises(id) on delete cascade,
   record_type public.pr_type,
-  value       numeric(10,2) not null,           -- кг / повторы / с / м
+  value       numeric(10,2) not null,           -- кг, повторы или секунды
   set_id      uuid references public.workout_sets(id) on delete set null,
   achieved_at timestamptz not null,
   primary key (client_id, exercise_id, record_type)
 );
 ```
 
-`personal_records` служит кешем: SECURITY DEFINER-триггер `private.refresh_personal_records()` после insert/update/delete подхода пересчитывает рекорды для пары (клиент, упражнение) по разминочным-исключённым подходам. `est_1rm` считается по формуле Эпли `w × (1 + reps/30)` для `reps ≤ 12`. «Прошлые результаты» берутся обычным запросом к последним `workout_log_exercises` по упражнению.
+`personal_records` служит кешем: SECURITY DEFINER-триггеры на `workout_sets`, `workout_log_exercises` и `workout_logs` пересчитывают рекорды пары (клиент, упражнение) функцией `private.recompute_personal_records()` по подходам без разминки. Рекорды по PRD 2.10-6 (R43): наибольший вес, наибольшее число повторов без веса, наибольшая длительность; при равенстве берётся самый ранний подход. Для заглушки «Удалённый клиент» рекорды не считаются. Таблицу читает только сам клиент; тренер видит рекорды через представление `visible_personal_records` (§5.1), где рекорд считается только по подходам, которые этот тренер видит. «Прошлые результаты» берутся обычным запросом к последним `workout_log_exercises` по упражнению.
 
 #### Прогресс
 
 ```sql
-create type public.measurement_kind as enum (
-  'weight', 'body_fat_pct', 'neck', 'chest', 'waist', 'hips', 'biceps', 'forearm', 'thigh', 'calf', 'custom'
+create type public.measurement_kind as enum (   -- R40; новые виды добавляются alter type
+  'weight', 'neck', 'chest', 'waist', 'abdomen', 'hips', 'thigh', 'upper_arm', 'calf'
 );
 
 create table public.measurements (
   id           uuid primary key default gen_random_uuid(),
   client_id    uuid not null references public.profiles(id) on delete cascade,
   kind         public.measurement_kind not null,
-  custom_label text,
-  value        numeric(7,2) not null check (value > 0),   -- кг / см / %
+  value        numeric(7,2) not null check (value > 0),   -- кг или см
   measured_at  timestamptz not null,
   local_date   date not null,
-  entered_by   uuid references public.profiles(id) on delete set null,  -- клиент или тренер (Q24)
-  note         text,
+  entered_by   uuid default auth.uid() references public.profiles(id) on delete set null,  -- клиент или тренер (Q24)
+  note         text check (char_length(note) <= 500),
   created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now(),
-  check ((kind = 'custom') = (custom_label is not null))
+  updated_at   timestamptz not null default now()
 );
 create index on public.measurements (client_id, kind, measured_at desc);
+create index on public.measurements (entered_by);
+-- Правит и удаляет только автор; тренеру-автору нужен ещё открытый доступ measurements (R41b).
 
-create type public.photo_angle as enum ('front', 'back', 'left', 'right', 'other');
+create type public.photo_angle as enum ('front', 'side', 'back');   -- R41
 create table public.progress_photos (
   id            uuid primary key default gen_random_uuid(),
   client_id     uuid not null references public.profiles(id) on delete cascade,
   angle         public.photo_angle not null,
   taken_on      date not null,
-  storage_path  text not null unique,           -- progress-photos/{client_id}/{id}.webp — только размытая версия
+  storage_path  text not null unique,           -- имя объекта без бакета: {client_id}/{id}.webp или .jpg (R52); только размытая версия
   face_blurred  boolean not null check (face_blurred),   -- клиент подтверждает обработку на устройстве
-  blur_method   text not null,                  -- 'auto', 'auto+brush', 'brush', 'none_no_face'
+  blur_method   text not null check (blur_method in ('auto', 'auto+brush', 'brush', 'none_no_face')),
   width         smallint not null,
   height        smallint not null,
-  note          text,
-  created_at    timestamptz not null default now()
+  note          text check (char_length(note) <= 500),
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+  check (width > 0 and height > 0),
+  check (storage_path in (client_id::text || '/' || id::text || '.webp', client_id::text || '/' || id::text || '.jpg'))
 );
 create index on public.progress_photos (client_id, taken_on desc);
 
-create type public.milestone_kind as enum ('first_session', 'sessions_10', 'sessions_25', 'sessions_50', 'sessions_100');
+create type public.milestone_kind as enum ('sessions_10', 'sessions_25', 'sessions_50', 'sessions_100');   -- R37
 create table public.milestones (                 -- зафиксированные вехи пары (для уведомления и ленты прогресса)
   id          uuid primary key default gen_random_uuid(),
   coaching_id uuid not null references public.coachings(id) on delete cascade,
   kind        public.milestone_kind not null,
-  booking_id  uuid references public.bookings(id) on delete set null,
-  achieved_at timestamptz not null,
+  booking_id  uuid,                             -- FK (booking_id, coaching_id) к записи этой пары, on delete set null
+  achieved_at timestamptz not null,             -- начало занятия, на котором порог достигнут (R74)
   unique (coaching_id, kind)
 );
 ```
 
-Для «До/после» в интерфейсе выбирают два фото одного ракурса, отдельной таблицы нет. «Вместе с …» считается из `coachings.started_at`, «проведено N» берётся из `coaching_stats` (раздел 5). Веха создаётся триггером при переходе записи в `attended`; при откате (`attended → no_show`) веха не удаляется.
+Для «До/после» в интерфейсе выбирают два фото одного ракурса, отдельной таблицы нет. «Вместе с …» считается из `coachings.started_at`, «проведено N» берётся из `coaching_stats` (раздел 5). Веху создаёт триггер, когда запись становится `attended` (вставка сразу как `attended` тоже считается, пробные записи тоже); при откате (`attended → no_show`) веха не удаляется. Сообщения бота и строки outbox о вехе нет (R37).
+
+Лимит фото на Free (Q57, Q58, PRD 2.14-6, PLAN-3) проверяет политика вставки через `private.can_add_progress_photo(taken_on)`. Пока владелец не ответил на R82, действует самое строгое прочтение, при котором работают все описанные сценарии: «комплект» это фото одной даты `taken_on`; клиент на Free начинает не больше `limits.progress_photo_sets_per_month` новых комплектов за календарный месяц загрузки (по `created_at` в поясе клиента), а фото в уже начатый в этом месяце комплект добавляются свободно. Ограничения нет при `client.progress_photos_unlimited` или пока у клиента есть живая пара с тренером на платном тарифе. Фото принадлежат клиенту, а не паре, поэтому унаследованное право не привязано к одной паре. Параллельные загрузки одного клиента идут по очереди под рекомендательной блокировкой.
 
 #### Обратная связь, жалобы, аудит, аварийный доступ
 
 ```sql
-create type public.feedback_kind as enum ('bug', 'idea', 'question', 'other');
-create type public.feedback_status as enum ('new', 'triaged', 'issue_created', 'closed');
+create type public.feedback_kind as enum ('bug', 'idea', 'other');               -- R46
+create type public.feedback_status as enum ('new', 'in_progress', 'closed');
 create table public.feedback (
   id               uuid primary key default gen_random_uuid(),
-  user_id          uuid references public.profiles(id) on delete set null,
+  user_id          uuid default auth.uid() references public.profiles(id) on delete set null,
   zone             public.app_zone,
   kind             public.feedback_kind not null,
   body             text not null check (char_length(body) between 1 and 5000),
-  route            text,
-  platform         text,                       -- 'tma-android', 'web-desktop' …
-  app_version      text,
-  attachment_paths text[] not null default '{}',
+  route            text check (char_length(route) <= 200),
+  platform         text check (char_length(platform) <= 32),   -- 'tma-android', 'web-desktop' …
+  app_version      text check (char_length(app_version) <= 32),
+  locale           public.app_locale,
+  theme            public.app_theme,
+  attachment_paths text[] not null default '{}' check (cardinality(attachment_paths) <= 3),   -- {user_id}/{id}/…
   status           public.feedback_status not null default 'new',
-  github_issue_url text,
-  created_at       timestamptz not null default now()
+  github_issue_url text check (github_issue_url is null or github_issue_url like 'https://github.com/%'),
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now()
 );
+create index on public.feedback (user_id);
+create index on public.feedback (status, created_at desc);
 
 create type public.report_target as enum ('review', 'user', 'trainer_profile', 'club', 'post', 'buddy_profile');
 create type public.report_status as enum ('open', 'kept', 'hidden', 'dismissed');
@@ -1115,21 +1419,24 @@ create table public.reports (                    -- жалобы и споры (
   reporter_id     uuid references public.profiles(id) on delete set null,
   target_type     public.report_target not null,
   target_id       uuid not null,               -- без FK: полиморфная ссылка
-  reason          text not null,               -- 'insult', 'false_facts', 'not_my_client', 'spam', 'other' …
+  reason          text not null check (char_length(reason) between 1 and 64),   -- 'insult', 'false_facts', 'not_my_client', 'spam', 'other' …
   body            text check (char_length(body) <= 2000),
   status          public.report_status not null default 'open',
   resolved_by     uuid references public.profiles(id) on delete set null,
   resolved_at     timestamptz,
-  resolution_note text,
-  created_at      timestamptz not null default now()
+  resolution_note text check (char_length(resolution_note) <= 2000),
+  created_at      timestamptz not null default now(),
+  check ((status = 'open') = (resolved_at is null))
 );
 create index on public.reports (status, created_at);
 create index on public.reports (target_type, target_id);
+create index on public.reports (reporter_id);
+-- В волне 1 пути записи нет (R55): таблица ждёт жалоб на отзывы из волны 2.
 
 create table public.admin_audit_log (
   id          bigint generated always as identity primary key,
-  actor_id    uuid references public.profiles(id) on delete set null,
-  action      text not null,                   -- 'trainer_invite.create', 'verification.decide', 'break_glass.open' …
+  actor_id    uuid,                            -- без FK (R45): set null был бы запрещённым UPDATE
+  action      text not null check (action ~ '^[a-z_]+\.[a-z_]+$'),   -- 'trainer_invite.create', 'verification.decide', 'break_glass.open' …
   target_type text,
   target_id   uuid,
   reason      text,
@@ -1138,6 +1445,7 @@ create table public.admin_audit_log (
 );
 create index on public.admin_audit_log (created_at desc);
 create index on public.admin_audit_log (target_type, target_id);
+-- Только добавление, без исключений: строки не меняются и не удаляются, truncate запрещён.
 
 create table public.break_glass_grants (         -- логируемый аварийный доступ админа (Q41)
   id             uuid primary key default gen_random_uuid(),
@@ -1145,11 +1453,16 @@ create table public.break_glass_grants (         -- логируемый ава�
   target_user_id uuid not null references public.profiles(id) on delete cascade,
   categories     public.share_category[] not null check (cardinality(categories) > 0),
   reason         text not null check (char_length(reason) >= 20),
-  expires_at     timestamptz not null,         -- ≤ now() + 1 hour, проверяет функция выдачи
+  expires_at     timestamptz not null,
   revoked_at     timestamptz,
-  created_at     timestamptz not null default now()
+  created_at     timestamptz not null default now(),
+  check (expires_at > created_at and expires_at <= created_at + interval '1 hour'),
+  check (revoked_at is null or revoked_at >= created_at)
 );
-create index on public.break_glass_grants (admin_id, target_user_id) where revoked_at is null;
+create index on public.break_glass_grants (admin_id, target_user_id);   -- полный: политика и каскад
+create index on public.break_glass_grants (target_user_id);
+-- Отозванный грант остаётся отозванным для любой роли: revoked_at пишется один раз (триггер keep_revoked).
+-- Доступ открывается снова только новым грантом.
 ```
 
 Грант создаётся только через `admin_open_break_glass(target_user, categories, reason)`. Функция проверяет `is_admin()`, пишет `admin_audit_log` и ставит пользователю уведомление о факте доступа (новый тип `break_glass` в `notification_type`, см. Допущения, п. 26). Пока грант действует, `private.can_view()` возвращает `true` для этого админа и этих категорий.
@@ -1163,14 +1476,15 @@ create index on public.break_glass_grants (admin_id, target_user_id) where revok
 ```sql
 create type public.plan_side as enum ('trainer', 'client');
 create table public.plans (
-  code        text primary key,               -- 'trainer_free', 'trainer_pro', 'client_free', 'client_premium'
+  code        text primary key check (code ~ '^[a-z]+_[a-z]+$'),   -- 'trainer_free', 'trainer_pro', 'client_free', 'client_premium'
   side        public.plan_side not null,
-  rank        smallint not null,              -- 0 = free, 1 = платный; выше ранг — шире права
-  title       jsonb not null,                 -- {ru, en}
-  limits      jsonb not null default '{}',    -- trainer_free: {"max_active_clients": 3}; client_free: {"progress_photo_sets_per_month": 1}
+  rank        smallint not null check (rank >= 0),   -- 0 = free, 1 = платный; чем выше ранг, тем шире права
+  title       jsonb not null check (jsonb_typeof(title) = 'object' and title ? 'ru' and title ? 'en'),
+  limits      jsonb not null default '{}' check (jsonb_typeof(limits) = 'object'),   -- trainer_free: {"max_active_clients": 3}; client_free: {"progress_photo_sets_per_month": 1}
   features    text[] not null default '{}',   -- коды функций, см. ниже
   price_minor bigint,                         -- null в бете
-  currency    public.currency_code
+  currency    public.currency_code,
+  check ((price_minor is null) = (currency is null))
 );
 
 create type public.plan_grant_source as enum ('admin', 'purchase', 'referral_bonus');
@@ -1186,21 +1500,31 @@ create table public.plan_grants (
   revoked_at  timestamptz,
   revoked_by  uuid references public.profiles(id) on delete set null,
   revoke_reason text,
-  created_at  timestamptz not null default now()
+  created_at  timestamptz not null default now(),
+  check (expires_at is null or expires_at > starts_at),
+  check (revoked_at is null or (revoke_reason is not null and char_length(revoke_reason) between 3 and 500))
 );
-create index plan_grants_active_idx on public.plan_grants (user_id, plan_code) where revoked_at is null;
+create index on public.plan_grants (user_id, plan_code);   -- полный: политика (user_id = auth.uid()) и каскад
+create index on public.plan_grants (plan_code);
+-- Меняется только отзыв, и только один раз для любой роли: revoked_at, revoked_by и revoke_reason
+-- пишутся вместе и потом не меняются; revoked_by только очищается при удалении аккаунта админа.
+-- Строки уходят только каскадом от profiles; truncate запрещён.
 
 create table public.access_requests (               -- «Запросить доступ»
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references public.profiles(id) on delete cascade,
   plan_code   text not null references public.plans(code),
-  feature     text,
-  status      text not null default 'open' check (status in ('open', 'granted', 'declined')),
+  feature     text check (char_length(feature) <= 64),
+  status      public.access_request_status not null default 'open',   -- enum ('open', 'granted', 'declined'), R48
   created_at  timestamptz not null default now(),
   decided_by  uuid references public.profiles(id) on delete set null,
-  decided_at  timestamptz
+  decided_at  timestamptz,
+  check ((status = 'open') = (decided_at is null))
 );
-create unique index access_requests_one_open_per_day on public.access_requests (user_id, plan_code, (created_at::date)) where status = 'open';
+create unique index access_requests_one_open_uniq on public.access_requests (user_id, plan_code) where status = 'open';   -- R57
+create index on public.access_requests (user_id);
+create index on public.access_requests (plan_code);
+-- Пользователь создаёт запрос только на платный тариф (rank >= 1) своей стороны: тариф тренера, только если он тренер.
 ```
 
 **Коды функций** (фиксированный справочник в коде и в `plans.features`):
@@ -1210,16 +1534,19 @@ create unique index access_requests_one_open_per_day on public.access_requests (
 **Проверка прав**: одна функция, её используют RLS/RPC и сервер для интерфейса:
 
 ```sql
--- SECURITY DEFINER, search_path = ''. true, если:
+-- private.has_entitlement: SECURITY DEFINER, search_path = ''. true, если:
 --  1) у пользователя действует выдача тарифа (не отозвана, starts_at <= now() < coalesce(expires_at, 'infinity')),
 --     в features которого есть p_feature; или
---  2) p_pair задан, функция наследуемая (client.nutrition_advanced, client.progress_photos_unlimited, client.trends),
---     пара активна, тренер пары имеет действующий trainer_pro и (для питания) ведёт питание клиента (Q58).
+--  2) p_pair задан, функция наследуемая, p_user клиент этой пары, пара живая (trial или active), а у тренера пары
+--     действует тариф тренера ранга >= 1 (Q58, R58). В волне 1 наследуются client.progress_photos_unlimited и
+--     client.trends; client.nutrition_advanced станет наследуемым в волне 2 вместе с ведением питания.
+create function private.has_entitlement(p_user uuid, p_feature text, p_pair uuid default null) returns boolean ...;
+-- Обёртка для приложения: о чужом пользователе отвечает только админу и серверу, остальным ошибка (R58).
 create function public.has_entitlement(p_user uuid, p_feature text, p_pair uuid default null) returns boolean ...;
 create function public.effective_plan(p_user uuid, p_side public.plan_side) returns text ...;   -- для «Мой тариф»
 ```
 
-- **Лимит Free-тренера** проверяется внутри `redeem_client_invite`, `create_managed_client`, `accept_trial_booking` и любых функций, создающих активную пару: если `effective_plan(trainer,'trainer') = 'trainer_free'` и активных пар ≥ `limits.max_active_clients`, возвращается ошибка `plan_limit_reached`. Запись в `coachings` напрямую через RLS запрещена.
+- **Лимит Free-тренера** проверяет `private.assert_can_add_client(trainer)`, её первой вызывает каждая RPC, создающая живую пару (`redeem_client_invite`, `create_managed_client`, `accept_trial_booking` и другие): если у тренера нет `trainer.unlimited_clients`, а пар в статусах `trial` и `active` (карточки считаются, заглушка нет) уже `limits.max_active_clients`, возвращается ошибка `plan_limit_reached` (R85). Функция берёт строку `trainer_profiles` `for no key update`, поэтому два клиента не займут последнее место одновременно; в `repeatable read` она отказывает (`unsupported_isolation`). Исключение для карточек описано в R91 (§2.1, «Переход»). Запись в `coachings` напрямую через RLS запрещена.
 - **Понижение тарифа:** данные не удаляются; функции Pro проверяют `has_entitlement` на запись, чтение ранее созданных данных остаётся (группы, отчёты: «только чтение»).
 - **RLS:** `plans` читают все аутентифицированные; в `plan_grants` пользователь видит свои выдачи, админ: все, через `admin_grant_plan()` / `admin_revoke_plan()` (SECURITY DEFINER, проверка `is_admin()`, запись в `admin_audit_log`, постановка уведомления в outbox); в `access_requests` пользователь создаёт и видит свои запросы, админ решает их через RPC.
 - Истечение проверяется по времени в `has_entitlement`, без cron; уведомление «тариф заканчивается через 3 дня» ставит ежедневный cron в outbox.
@@ -1451,7 +1778,7 @@ create table public.group_members (
   primary key (group_id, coaching_id)
 );
 create index on public.group_members (coaching_id);
-alter table public.coachings add foreign key (primary_nutrition_group_id) references public.groups(id) on delete set null;
+alter table public.coachings add column primary_nutrition_group_id uuid references public.groups(id) on delete set null;   -- R60
 -- триггер: группа и пара принадлежат одному тренеру
 
 create table public.broadcasts (
@@ -1466,7 +1793,7 @@ create table public.broadcasts (
   created_at  timestamptz not null default now()
 );
 create index on public.broadcasts (trainer_id, created_at);
-alter table public.notification_outbox add foreign key (broadcast_id) references public.broadcasts(id) on delete set null;
+alter table public.notification_outbox add column broadcast_id uuid references public.broadcasts(id) on delete set null;   -- R60
 ```
 
 Статистика рассылки считается агрегатом `notification_outbox` по `broadcast_id` и `status`. Лимит 5 в сутки проверяет RPC `send_broadcast`.
@@ -1526,7 +1853,7 @@ create table public.homework_occurrences (       -- каждая отметка;
   workout_log_id uuid references public.workout_logs(id) on delete set null,
   unique (homework_id, due_on)
 );
-alter table public.workout_logs add foreign key (homework_occurrence_id) references public.homework_occurrences(id) on delete set null;
+alter table public.workout_logs add column homework_occurrence_id uuid references public.homework_occurrences(id) on delete set null;   -- R60
 
 create type public.review_status as enum ('published', 'disputed', 'hidden');
 create table public.reviews (
@@ -1836,7 +2163,7 @@ create table public.clubs (
 );
 create index on public.clubs using gist (location);
 create table public.club_trainers (club_id uuid references public.clubs(id) on delete cascade, trainer_id uuid references public.trainer_profiles(user_id) on delete cascade, primary key (club_id, trainer_id));
-alter table public.locations add foreign key (club_id) references public.clubs(id) on delete set null;
+alter table public.locations add column club_id uuid references public.clubs(id) on delete set null;   -- R60
 ```
 
 Точная позиция пользователя не хранится нигде: «тренеры рядом» и бадди считаются по координате, которую клиент присылает в запросе, а в БД попадает только ячейка сетки.
@@ -1922,7 +2249,7 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
 
 ### 3.3. Какое событие пишет какую строку
 
-Все записи делают доменные RPC под блокировкой строки записи (`select … from bookings where id = $1 for update`).
+Все записи делают доменные RPC под блокировкой строки записи (`select … from bookings where id = $1 for update`). Переходы статусов записи и занятия, места и правила журнала дополнительно держат триггеры для всех ролей (R93, §2.1 «Записи» и «Журнал списаний»), поэтому ошибка в RPC не испортит историю.
 
 | Событие | Запись `bookings` | Строка журнала |
 |---|---|---|
@@ -1930,9 +2257,10 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
 | Разовое занятие | создаётся абонемент `is_drop_in`, `sessions_total = 1`, цена из пакета на 1 | `grant +1` |
 | Клиент отменил ≥ дедлайна до начала | `cancelled`, `cancelled_by_role = 'client'` | нет |
 | Клиент отменил < дедлайна | `late_cancelled` | `charge −1`, `charge_reason = 'late_cancel'` |
-| Перенос клиентом ≥ дедлайна | старая `rescheduled` → новая `confirmed`/`requested` | нет |
+| Перенос клиентом ≥ дедлайна | старая `rescheduled` → новая `confirmed`/`requested` (`rescheduled` только для переносов клиента) | нет |
 | Перенос клиентом < дедлайна | запрещён RPC; доступна отмена со списанием или просьба тренеру | нет |
-| Тренер отменил/перенёс | `cancelled`/`rescheduled`, роль `trainer` | нет; если по записи уже был charge, пишется автоматический `waiver` |
+| Тренер отменил запись или занятие | `cancelled`, `cancelled_by_role = 'trainer'` | нет; если по записи уже был charge, пишется автоматический `waiver`. «Не состоялось» тоже `waiver`; в отчётах его отличают от прощения по `bookings.status = 'cancelled'` с ролью `trainer` (R30) |
+| Тренер перенёс занятие | меняется `sessions.starts_at`/`ends_at`; запись остаётся `confirmed` (R32), напоминания ставятся заново | нет |
 | Занятие завершилось (cron в `ends_at`) | `confirmed → attended` (кто не отмечен иначе) | `charge −1`, `'attended'` |
 | Тренер отметил неявку | `no_show` | `charge −1`, `'no_show'` (если был `attended`-charge, строка не меняется, см. ниже) |
 | Тренер исправил `attended ↔ no_show` | статус меняется, событие в `booking_events` | **нет**: сумма та же; разбивка «проведено/неявка» в аналитике берётся из `bookings.status` |
@@ -1940,10 +2268,11 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
 | Запрос (`requested`) отменён, отклонён, истёк | `cancelled`/`declined`/`expired` | никогда |
 | Бесплатное пробное (`trial_links.price_minor = 0`) | `attended` | нет (у пробного нет списания) |
 | Платное пробное | абонемент `is_drop_in` с ценой ссылки | `grant +1`, затем `charge` как обычно |
-| Отмена абонемента тренером | `passes.status = 'cancelled'` | `refund −remaining` (остаток обнуляется; деньги возвращаются отдельной `payments.direction = 'refund'`) |
-| Ручная корректировка | нет | `adjustment ±k` с обязательным `note` |
+| Отмена абонемента тренером | `passes.status = 'cancelled'` | `refund −remaining`, `amount_minor = 0` (остаток обнуляется; деньги возвращаются отдельной `payments.direction = 'refund'`) |
+| Ручная корректировка | нет | `adjustment ±k` по конкретному абонементу, с обязательным `note`, `amount_minor = 0` (R84) |
+| Повторное выставление долга | нет | `charge −1` без абонемента и записи, `charge_reason = 'manual'`, с обязательным `note` (R84) |
 
-Правило дедлайна: `deadline_at = session.starts_at − bookings.cancel_deadline_hours * interval '1 hour'`; отмена бесплатна, если `now() <= deadline_at` (граница тоже бесплатна). Снимок часов берётся при создании записи: `coalesce(coachings.cancellation_deadline_hours, trainer_profiles.cancellation_deadline_hours)`. Если тренер переносит занятие, дедлайн считается от нового начала, снимок часов не меняется. Если место из листа ожидания принято позже дедлайна, запись создаётся, но отмена сразу будет поздней (wave-2 9.4, предупреждение в интерфейсе).
+Правило дедлайна: `deadline_at = session.starts_at − trainer_profiles.cancellation_deadline_hours * interval '1 hour'`; отмена бесплатна, если `now() <= deadline_at` (граница тоже бесплатна). Снимка часов в записи нет (R19), отдельного правила для пары тоже (R20): RPC отмены берёт текущее правило тренера, общее для всех его клиентов (PRD 2.6.5-1), и пишет часы и `deadline_at` в `booking_events.payload`. Если тренер переносит занятие, дедлайн считается от нового начала. Если место из листа ожидания принято позже дедлайна, запись создаётся, но отмена сразу будет поздней (wave-2 9.4, предупреждение в интерфейсе).
 
 Частичных списаний нет (Q21): `sessions_delta` у charge всегда −1.
 
@@ -1955,9 +2284,9 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
 2. Сначала `bookings.reserved_pass_id`, если он ещё подходит; иначе ближайший `effective_expires_at` (бессрочные последними), затем самый ранний `starts_on`.
 3. Если абонемент нашёлся, пишется `charge` с этим `pass_id`. Если нет, **всегда** пишется **долговое** `charge` с `pass_id = null` (Q22, было O2); автоматического превращения в разовое «не оплачено» нет.
 
-`amount_minor` для charge по абонементу равен справедливой доле с распределением остатка копеек: для k-го нетто-списания абонемента (k = 1 + число непрощённых charge/settlement этого абонемента) `amount = floor(price·k/N) − floor(price·(k−1)/N)`; сумма по всем N занятиям ровно равна цене. Для долгового charge берётся цена разового занятия тренера в валюте пары (пакет `sessions_count = 1`, `applies_to` по типу занятия); если такого пакета нет, `amount_minor = 0` и долг показывается только в занятиях.
+`amount_minor` для charge по абонементу равен справедливой доле с распределением остатка копеек: для k-го нетто-списания абонемента (k = 1 + число непрощённых charge/settlement этого абонемента) `amount = floor(price·k/N) − floor(price·(k−1)/N)`; сумма по всем N занятиям ровно равна цене. Для долгового charge берётся цена разового занятия тренера в его `trainer_profiles.default_currency` (у пары валюты нет, R38): живой пакет `sessions_count = 1`, `applies_to` по типу занятия. Если такого пакета нет, `amount_minor = 0` и долг показывается только в занятиях.
 
-Погашение: при `grant` нового абонемента функция проходит долговые charge пары по возрастанию `occurred_at` и для каждого, пока остаток > 0 и тип подходит, пишет `settlement −1` (`pass_id` = новый, `related_entry_id` = charge, `amount_minor` = доля абонемента по той же формуле, а у исходного charge сумма не меняется). Выручка за такое занятие в аналитике = `amount_minor` settlement (если он есть), иначе charge. Так долговое занятие, оплаченное позже абонементом, учитывается по цене абонемента, а не разового.
+Погашение: при `grant` нового абонемента функция проходит долговые charge пары по возрастанию `occurred_at` и для каждого, пока остаток > 0 и тип подходит, пишет `settlement −1` (`pass_id` = новый, `related_entry_id` = charge, `amount_minor` = доля абонемента по той же формуле, а у исходного charge сумма не меняется). Выручка за такое занятие в аналитике = `amount_minor` settlement (если он есть), иначе charge. Так долговое занятие, оплаченное позже абонементом, учитывается по цене абонемента, а не разового. У charge бывает не больше одного settlement и одного `settlement_reversal` (R34): прощённый charge покрыть нельзя, а откат пишется только вместе с прощением, поэтому повторного покрытия после отката не бывает. `settlement_reversal` возвращает сумму покрытия со знаком минус (R84). Долг без абонемента гасится так же, разовыми абонементами (R36).
 
 ### 3.5. Автоподтверждение и долг
 
@@ -1977,20 +2306,29 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
 
 ### 4.1. Функции-помощники
 
-Все функции лежат в схеме `private` (не экспонируется PostgREST, их нельзя вызвать как RPC), объявлены как `language sql stable security definer set search_path = ''`, все имена схемно-квалифицированы, владелец `postgres`, права: `revoke execute on function … from public, anon; grant execute … to authenticated`.
+Все функции лежат в схеме `private` (не экспонируется PostgREST, их нельзя вызвать как RPC), объявлены как `language sql stable security definer set search_path = ''`, все имена схемно-квалифицированы, владелец `postgres`, права: `revoke all on function … from public; grant execute … to authenticated, service_role`. У `authenticated` нет USAGE на схему `private`: политики вызывают функции по OID, а по имени из запроса их не достать. Базовая миграция отключает и выдачу EXECUTE роли `public` по умолчанию для новых функций.
+
+В волне 1 делегатов нет: параметр `scope` уже есть в подписях (тип `delegation_scope`, R2), но пока не используется, и в волне 3 функции меняются через `create or replace` без смены подписи.
 
 | Функция | Возвращает `true`, если текущий пользователь… |
 |---|---|
 | `private.is_admin()` | имеет `user_roles.role = 'admin'` |
 | `private.is_trainer()` | имеет `trainer_profiles` |
 | `private.is_coaching_client(coaching_id)` | клиент этой пары (любой статус) |
-| `private.is_coaching_trainer(coaching_id, scope delegation_scope default null)` | тренер-владелец пары; **или** активный делегат (`status = 'active'`, `now()` в `[starts_at, ends_at)`), у которого пара покрыта (`all_clients`, `delegation_clients` или подмена на занятие с записью этой пары) и `scope = any(scopes)` (при `scope is null` подходит любое делегирование) |
-| `private.is_coaching_member(coaching_id)` | клиент или тренер/делегат пары |
-| `private.is_trainer_of(client_id, scope default null)` | тренер/делегат хотя бы одной пары с этим клиентом в статусе `trial`/`active` |
-| `private.can_view(client_id, category share_category)` | это сам клиент; **или** тренер пары `trial`/`active` с `data_shares.<category> = true` (для делегата нужен ещё scope: `progress` для `measurements`/`photos`, `nutrition` для `nutrition`/`steps`, `notes` для `intake`, `workouts` для `workouts`); **или** админ с действующим `break_glass_grants` на эту категорию |
-| `private.can_manage_session(session_id, scope default 'schedule')` | тренер занятия или делегат (помощник с scope; подмена: на это занятие) |
-| `private.trainer_ids_visible()` | `setof uuid`: тренеры, с которыми у пользователя есть пара (для справочников: пакеты, ссылки на оплату, упражнения, локации) |
+| `private.is_coaching_trainer(coaching_id, scope delegation_scope default null)` | тренер-владелец пары, любой статус. В волне 3 сюда добавится активный делегат (`status = 'active'`, `now()` в `[starts_at, ends_at)`), у которого пара покрыта (`all_clients`, `delegation_clients` или подмена на занятие с записью этой пары) и `scope = any(scopes)` |
+| `private.is_coaching_member(coaching_id)` | клиент или тренер пары, любой статус |
+| `private.is_live_coaching(coaching_id)` | пара в статусе `trial` или `active`; на пользователя не смотрит |
+| `private.is_trainer_of(client_id, scope default null)` | тренер хотя бы одной живой пары (`trial`/`active`) с этим клиентом |
+| `private.can_view(client_id, category share_category)` | это сам клиент; **или** тренер живой пары с `data_shares.<category> = true` (в волне 3 делегату нужен ещё scope: `progress` для `measurements`/`photos`, `nutrition` для `nutrition`/`steps`, `notes` для `intake`, `workouts` для `workouts`); **или** админ с действующим `break_glass_grants` на эту категорию |
+| `private.acts_for_trainer(trainer_id, scope default null)` | это сам тренер; для таблиц тренера без пары (пакеты, локации, шаблоны недели, ссылки). В волне 3 сюда добавятся делегаты |
+| `private.can_manage_session(session_id, scope default 'schedule')` | тренер занятия (в волне 3 ещё помощник со scope и подмена на это занятие) |
+| `private.is_session_participant(session_id)` | у пользователя есть запись на это занятие в любом статусе (R80) |
+| `private.trainer_ids_visible(p_live_only default false)` | `setof uuid`: тренеры, с которыми у пользователя есть пара как у клиента; с `p_live_only` только живые пары (R81, R89) |
+| `private.pair_partner_ids()` | `setof uuid`: все, с кем у пользователя есть пара, в обе стороны и в любом статусе |
+| `private.own_logged_exercise_ids()` | `setof uuid`: упражнения из собственных записей тренировок пользователя как клиента, включая записи пары |
 | `private.attended_count(coaching_id)` | (число) проведённых записей пары, нужно для отзывов (≥ 3) и вех |
+
+Для больших таблиц есть те же правила в виде массива: `private.trainer_coaching_ids(scopes)` (пары, где пользователь тренер), `private.acting_trainer_ids(scopes)`, `private.client_trainer_ids(p_live_only)`, `private.own_booked_session_ids()` и `private.viewable_client_ids(category)` (форма `can_view`). Политика пишется как `coaching_id = any ((select private.trainer_coaching_ids())::uuid[])`: функция считается один раз на запрос, а условие идёт по индексу. Построчный вызов функции на таблицах вроде `bookings` и `sessions` давал полный проход: сотни миллисекунд вместо единиц. Приведение `::uuid[]` обязательно, без него `any ((select …))` разбирается как подзапрос.
 
 **Почему SECURITY DEFINER и фиксированный `search_path`.**
 
@@ -1999,76 +2337,79 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
 3. **`set search_path = ''`.** DEFINER-функция работает с правами владельца; без фиксированного пути злоумышленник может создать в доступной ему схеме объект с тем же именем (`coachings`, оператор `=`), и функция выполнит его с повышенными правами. Пустой путь + полные имена (`public.coachings`, `pg_catalog.now()`) закрывают эту атаку; Supabase advisor `function_search_path_mutable` проверяет именно это.
 4. **Схема `private`.** Функции не попадают в REST API (`/rpc/...`), поэтому их нельзя дёргать перебором чужих идентификаторов (хотя и сами ответы касаются только вызывающего).
 
-Пример политик:
+Пример политик (одна разрешающая политика на команду, R88):
 
 ```sql
-create policy "measurements: read if allowed" on public.measurements for select to authenticated
-  using ((select private.can_view(client_id, 'measurements')));
+create policy "measurements: client, sharing trainers, break-glass read" on public.measurements for select to authenticated
+  using (client_id = any ((select private.viewable_client_ids('measurements'))::uuid[]));
 
-create policy "measurements: client writes own" on public.measurements for insert to authenticated
-  with check (client_id = (select auth.uid()) and entered_by = (select auth.uid()));
-
-create policy "measurements: trainer writes for client" on public.measurements for insert to authenticated
+create policy "measurements: client or sharing trainer inserts" on public.measurements for insert to authenticated
   with check (entered_by = (select auth.uid())
-              and (select private.is_trainer_of(client_id, 'progress'))
-              and (select private.can_view(client_id, 'measurements')));
+              and (client_id = (select auth.uid())
+                   or (private.is_trainer_of(client_id, 'progress') and private.can_view(client_id, 'measurements'))));
 
-create policy "coaching_notes: client sees flagged" on public.coaching_notes for select to authenticated
-  using (visible_to_client and (select private.is_coaching_client(coaching_id)));
+create policy "coaching_notes: trainer, or client when visible, reads" on public.coaching_notes for select to authenticated
+  using (private.is_coaching_trainer(coaching_id, 'notes')
+         or (visible_to_client and private.is_coaching_client(coaching_id)));
 ```
 
 ### 4.2. Матрица
 
-Обозначения: **C**: клиент (сам пользователь / клиент пары), **T**: тренер-владелец пары, **D[scope]**: делегат с этим scope (W3), **A**: админ, **S**: только сервер с секретным ключом или SECURITY DEFINER-RPC/триггер, **pub**: через публичную DEFINER-функцию, **никто**: доступа нет ни у кого. «share:X» означает, что нужно ещё разрешение клиента `data_shares.X` в паре `trial`/`active`. Если D не указан, делегату недоступно. A не имеет доступа ни к чему, что не указано явно; персональные данные он видит только через break-glass (**BG**).
+Строки волны 1 приведены к миграциям; делегатов (D) в волне 1 нет, они появятся в волне 3 с теми же функциями-помощниками. Одна разрешающая политика на команду (R88). Обозначения: **C**: клиент (сам пользователь / клиент пары), **T**: тренер-владелец пары, **D[scope]**: делегат с этим scope (W3), **A**: админ, **S**: только сервер с секретным ключом или SECURITY DEFINER-RPC/триггер, **pub**: через публичную DEFINER-функцию, **никто**: доступа нет ни у кого. «share:X» означает, что нужно ещё разрешение клиента `data_shares.X` в паре `trial`/`active`. Если D не указан, делегату недоступно. A не имеет доступа ни к чему, что не указано явно; персональные данные он видит только через break-glass (**BG**).
 
 | Таблица | SELECT | INSERT | UPDATE | DELETE |
 |---|---|---|---|---|
-| `profiles` | сам; T/C общих пар (вкл. завершённые); D покрытых пар; A. Без `telegram_id` (колоночный грант) | S | S | S (удаление аккаунта) |
-| `user_settings` | сам; остальные: только `display_name`, `avatar_path` через вью `public_profiles` | S (при входе) | сам | никто (каскад) |
-| `notification_preferences` | сам | сам | сам | сам |
-| `user_roles` | сам; A | A через `admin_grant_role` (S-RPC) | никто | A через `admin_revoke_role` |
-| `consents` | сам; A (факт, без содержания пользователя) | сам (только `accepted_at = now()`) | сам: только `revoked_at` | никто |
-| `account_deletions` | сам; A | S-RPC `request_account_deletion` | S-RPC `cancel_account_deletion` | S |
+| `profiles` | сам; все, с кем есть пара (обе стороны, любой статус); тренер своих карточек; A (кроме карточек и заглушки, R5). Без `telegram_id`, `bot_*`, `blocked_*`, `claimed_by` и `last_seen_at` (колоночный грант) | S | S | S (удаление аккаунта) |
+| `user_settings` | сам; остальные: только `display_name`, `avatar_path`, `time_zone` через вью `public_profiles` (R6) | S (триггер при создании профиля, R64) | сам | никто (каскад) |
+| `notification_preferences` | сам | сам | сам (`enabled`) | сам |
+| `user_roles` | сам; A | никто (позже `admin_grant_role`, R13) | никто | никто (позже `admin_revoke_role`) |
+| `consents` | сам; A | сам (`user_id`, `kind`, `version`) | сам: только `revoked_at`, один раз | никто |
+| `account_deletions` | сам; партнёры по паре в любом статусе (только даты, R10); A | S-RPC `request_account_deletion` | S-RPC `cancel_account_deletion` | S |
 | `data_exports` | сам | S-RPC `request_data_export` | S | S |
-| `trainer_profiles` | сам; клиенты (любые пары); D; A; anon/прочие: **pub** `get_trainer_showcase(slug)` (не отдаёт витрину при `verification_status = 'rejected'`, Q15/Q55); зона «Тренер» и `is_trainer()` доступны при наличии `trainer_profiles` (доступ не зависит от верификации и тарифа, Q55) | S-RPC `redeem_trainer_invite` | сам (кроме `verification_status`, `verified_at`, `trainer_invite_id`: колоночные гранты); A через `admin_decide_verification` | никто |
-| `trainer_certificates` | сам; A | сам | сам | сам |
-| `trainer_verifications` | сам; A | A через RPC; сам: повторная подача (`decision = 'pending'`) через RPC | никто | никто |
-| `trainer_invites` | A | A через `admin_create_trainer_invite` | A (отзыв), S-RPC (погашение) | никто |
+| `trainer_profiles` | сам; его клиенты в любом статусе пары (R89); A; anon/прочие: **pub** `get_trainer_showcase(slug)` (позже; R16 для `rejected`); зона «Тренер» и `is_trainer()` доступны при наличии `trainer_profiles` (доступ не зависит от верификации и тарифа, Q55) | S-RPC `redeem_trainer_invite` | сам (кроме `verification_status`, `verified_at`, `trainer_invite_id`: колоночные гранты); A через `admin_decide_verification` | никто |
+| `trainer_certificates` | сам; A | сам (не больше 5, R53) | сам | сам |
+| `trainer_verifications` | сам; A | S-RPC (подача и решение) | никто | никто |
+| `trainer_invites` | A (без хеша кода) | A через `admin_create_trainer_invite` | S-RPC (отзыв, погашение) | никто |
 | `client_invites` | T; **pub** по токену/коду (`resolve_client_invite`) | T | T | никто (архив) |
-| `trial_links` | T; **pub** `get_trial_link(token)` | T | T | никто (архив) |
-| `coachings` | C; T; D (покрытые); A напрямую не видит (только агрегаты) | S-RPC `join_by_invite`, `join_by_code`, `book_trial`, `create_managed_client` | T: `client_alias`, `cancellation_deadline_hours`, `self_book_on_debt`, `debt_limit_sessions`, `churn_hidden_until`, `primary_nutrition_group_id`; C: `client_reminder_offsets`, `broadcasts_muted`; завершение через RPC `end_coaching` (любая сторона) | никто |
-| `data_shares` | C; T; D | S (вместе с парой) | **только C** (у карточки без аккаунта никто, все `true`) | никто |
-| `managed_client_claims` | T (свои) | S-RPC `join_by_invite`/`join_by_code` | T через `resolve_managed_client_claim` | никто |
-| `coaching_notes` | T; D[notes]; C: только `visible_to_client` | T; D[notes] (`author_id = uid`) | автор | автор |
-| `intakes` | C; T/D[notes] только при share:intake (по умолчанию `false`, ставит клиент шагом согласия); BG | C | никто (новая версия) | C |
-| `contact_requests` | requester; recipient | S-RPC `request_contact` (участник пары) | recipient через RPC (принять/отклонить) | никто |
-| `locations` | T; D[schedule]; клиенты тренера | T | T | никто (архив) |
-| `week_templates`, `week_template_items` | T; D[schedule] | T; D[schedule] | T; D[schedule] | T; D[schedule] |
-| `slots` | T; D[schedule]; клиенты тренера: `status = 'open'` и `starts_at > now()`; пробные: **pub** через `get_trial_link` | T; D[schedule]; S (шаблон недели) | T; D[schedule] | T; D[schedule], только `open`/`closed` без занятия |
-| `recurrences` | T; D[schedule]; C: свои (`coaching_id`) | T; D[schedule] | T; D[schedule] | никто (`ended_at`) |
-| `sessions` | T; D[schedule]/подмена; C: с живой записью; клиенты тренера: `open_for_booking and status = 'scheduled'` | T; D[schedule]; S (повторы) | T; D[schedule] (через RPC при изменении времени/отмене, т. к. затрагивает записи и outbox) | никто |
-| `bookings` | C (свои); T; D[schedule]/[attendance] | **только S-RPC** (`book_slot`, `book_session`, `assign_client`, `waitlist_accept`) | **только S-RPC** (`confirm`, `decline`, `cancel_booking`, `reschedule`, `mark_attendance`) | никто |
+| `trial_links` | T; **pub** `get_trial_link(token)` | T | T (вкл. `is_enabled`) | никто (архив) |
+| `coachings` | C; T; A напрямую не видит (только агрегаты) | S-RPC `join_by_invite`, `join_by_code`, `book_trial`, `create_managed_client` | T: `self_book_on_debt`, `debt_limit_sessions`; C: `client_reminder_offsets` (триггер не даёт стороне менять чужие столбцы); завершение через RPC `end_coaching` (любая сторона) | никто |
+| `coaching_trainer_meta` | только T (R9) | S (вместе с парой) | T: `client_alias`, `contact`, `archived_at`, `intake_seen_at` | никто (каскад) |
+| `data_shares` | C; T | S (вместе с парой) | **только C** (у карточки без аккаунта никто, все `true`) | никто |
+| `managed_client_claims` | T (свои) | S-RPC `join_by_invite`/`join_by_code` | S-RPC `resolve_managed_client_claim` (T) | никто |
+| `coaching_notes` | T, в том числе после завершения пары (R12); C: только `visible_to_client` | T (`author_id = uid`) | автор | автор |
+| `intakes` | C; T только при share:intake (по умолчанию `false`, ставит клиент шагом согласия); BG | C | никто (новая версия) | C |
+| `contact_requests` | requester; recipient | S-RPC `request_contact` (участник пары) | S-RPC (принять или отклонить, recipient) | никто |
+| `locations` | T; клиенты тренера в любом статусе пары (R81) | T | T | никто (архив) |
+| `week_templates`, `week_template_items` | T | T | T | T |
+| `slots` | T; клиенты живых пар: `status = 'open'` и `starts_at > now()` (R81); пробные: **pub** через `get_trial_link` | T (`open` или `closed`); S (шаблон недели) | T, пока слот не занят | T, пока слот не занят |
+| `recurrences` | T; C своей пары (без `meeting_url`; ссылку отдаёт `recurrence_meeting_url()` тренеру) | T, для живой пары | T | никто (`ended_at`) |
+| `sessions` | T; участники с записью в любом статусе (R80); клиенты живых пар: `open_for_booking and status = 'scheduled'`. `meeting_url` не выдаётся, ссылку отдаёт `session_meeting_url()` (R25) | T (`scheduled`, личное или групповое); S (повторы) | T: `title`, `capacity`, `open_for_booking`; время, отмена и статус через RPC | никто (без записей удаляет RPC, R93) |
+| `bookings` | C (свои); T | **только S-RPC** (`book_slot`, `book_session`, `assign_client`, `waitlist_accept`) | **только S-RPC** (`confirm`, `decline`, `cancel_booking`, `reschedule`, `mark_attendance`) | никто (каскад) |
 | `booking_events` | как `bookings` | S (внутри RPC) | никто | никто |
-| `packages` | T; клиенты тренера (не архив); **pub** витрина (`is_public`) | T | T | никто (архив) |
-| `passes` | C; T; D[passes] | S-RPC `create_pass` (T, D[passes]), пишет `grant` | T, D[passes]: `title`, `expires_at`, `note`; отмена через RPC `cancel_pass` | никто |
-| `pass_freezes` | C; T; D[passes] | T; D[passes] | T; D[passes] | T; D[passes] (будущие) |
-| `ledger_entries` | C; T; D[passes]/[attendance] | **только S-RPC/триггеры** (`post_charge`, `waive_charge`: T, D[attendance]; `adjust_balance`: T) | никто (триггер запрещает) | никто |
-| `payments` | C; T; D[payments] | T/D[payments]: `status = 'confirmed'`; C: `status = 'reported'`, `reported_by = uid` | T/D[payments]: `status`, `confirmed_*`, `voided_at`, `void_reason`; C: свою `reported` до подтверждения | никто |
-| `payment_links` | T; клиенты тренера | T | T | никто (архив) |
+| `packages` | T; клиенты тренера в любом статусе пары; **pub** витрина (`is_public`) | T | T | никто (архив) |
+| `passes` | C; T | S-RPC `create_pass` (T), пишет `grant` | T: `title`, `note` у активного абонемента; срок, отмена и остальное через RPC (срок только с причиной) | T, пока в журнале только `grant` и нет платежей (R27) |
+| `pass_freezes` | C; T | T | T | T (ещё не начавшиеся) |
+| `ledger_entries` | C; T | **только S-RPC/триггеры** (`post_charge`, `waive_charge`, `adjust_balance`: T) | никто (триггер запрещает, кроме переноса пары, R28) | никто (только каскад) |
+| `payments` | C; T | T: `status = 'confirmed'`; C: `status = 'reported'` (`reported_by` ставит триггер) | T: сумма, метод, дата, абонемент, подтверждение и аннулирование с причиной; C: свою `reported` до подтверждения и её отзыв. Аннулированный платёж больше не меняется | никто (R26) |
+| `money_events` | C; T | S (триггеры на `passes`, `pass_freezes`, `payments`) | никто | никто (только каскад) |
+| `payment_links` | T; клиенты тренера в любом статусе пары: только живые (не архив) | T | T | никто (архив) |
 | `notification_outbox` | никто | S | S | S |
 | `calendar_feeds` | сам (без `token_hash`) | S-RPC `create_calendar_feed` | S-RPC `revoke_calendar_feed` | никто |
-| `exercises` | wger: все authenticated; custom: владелец, его клиенты, его делегаты | custom: тренер (`owner_id = uid`); wger: S | владелец; wger: S | никто (архив) |
+| `exercises` | wger: все authenticated; custom: владелец, его клиенты в любом статусе пары, клиент, у которого упражнение есть в своих записях; custom без владельца: только через эти записи (R61) | custom: тренер (`owner_id = uid`); wger: S | владелец; wger: S | никто (архив) |
 | `exercise_translations` | как `exercises` | владелец (custom); S (wger) | то же | то же |
-| `workout_templates`, `workout_template_items` | владелец; D[workouts]; клиенты владельца: шаблоны, привязанные к их домашним заданиям | владелец | владелец | владелец |
-| `workout_logs`, `workout_log_exercises`, `workout_sets` | C; T/D[workouts] пары лога; для `coaching_id is null`: T активных пар клиента с share:workouts (Q38) | C (свои); T/D[workouts] (с `coaching_id` своей пары) | автор лога; C | автор лога; C |
-| `personal_records` | C; T/D[workouts] (`is_trainer_of`) | S (триггер) | S | S |
-| `measurements` | share:measurements (`can_view`); BG | C; T/D[progress] share:measurements (`entered_by = uid`) | автор записи | автор записи; C |
-| `progress_photos` (+ Storage) | share:photos (по умолчанию **выкл**); BG | **только C** | C (`note`, `angle`) | C |
-| `milestones` | C; T; D | S (триггер) | никто | никто |
-| `feedback` | автор; A | автор | A (`status`, `github_issue_url`) | никто |
-| `reports` | автор; A | любой authenticated (по объекту, к которому есть доступ; проверка в RPC `create_report`) | A через `admin_resolve_report` | никто |
-| `admin_audit_log` | A | S (внутри `admin_*`) | никто (триггер) | никто (триггер) |
-| `break_glass_grants` | A (свои); целевой пользователь видит факт | A через `admin_open_break_glass` | A: `revoked_at` | никто |
+| `workout_templates`, `workout_template_items` | владелец (W2: клиенты владельца, шаблоны их домашних заданий) | владелец (тренер) | владелец | владелец (R51) |
+| `workout_logs`, `workout_log_exercises`, `workout_sets` | C; T пары лога; своя тренировка клиента (`coaching_id is null and created_by = client_id`): T живых пар с share:workouts (Q38, R62) | C (свои); T (с `coaching_id` своей живой пары) | автор лога; запись пары только пока пара жива (R42) | C или автор-тренер; запись пары только пока пара жива |
+| `personal_records` | только C (R43); тренер видит рекорды через `visible_personal_records` | S (триггер) | S | S |
+| `measurements` | share:measurements (`can_view`); BG | C; T share:measurements (`entered_by = uid`) | автор записи (R41b) | автор записи |
+| `progress_photos` (+ Storage) | share:photos (по умолчанию **выкл**); BG | **только C**, с лимитом Free (`can_add_progress_photo`) | C (`note`, `angle`) | C |
+| `milestones` | C; T | S (триггер) | никто | никто |
+| `feedback` | автор; A | автор | A (`status`, `github_issue_url`), с записью в `admin_audit_log` | никто |
+| `reports` | автор; A | никто в волне 1 (R55); позже RPC `create_report` | позже A через `admin_resolve_report` | никто |
+| `admin_audit_log` | A | S (внутри `admin_*` и триггеры аудита) | никто (триггер) | никто (триггер) |
+| `break_glass_grants` | A, выдавший грант; целевой пользователь видит весь грант (R73) | A через `admin_open_break_glass` | A, выдавший грант: `revoked_at`, один раз (с записью в журнал) | никто |
+| `plans` | все authenticated | никто (миграции) | никто | никто |
+| `plan_grants` | сам; A (R59) | A через `admin_grant_plan` | A через `admin_revoke_plan` (отзыв один раз) | никто (каскад) |
+| `access_requests` | сам; A | сам: платный тариф своей стороны, тренерский только тренеру | S-RPC (решение A) | никто (каскад) |
 | **W2** `client_goals` | C; T/D share:nutrition | C | никто | C |
 | `body_profiles` | C; T/D share:nutrition; BG | C | C | C |
 | `nutrition_targets` | C (свои и групп, где состоит); T: свои пары и группы; другой тренер клиента видит только факт «активна норма другого тренера» через функцию; D[nutrition] | T/D[nutrition] (source trainer/group, `low_kcal_confirmed_at` обязателен при низкой норме, это проверяет RPC `set_nutrition_target`); C (calculator) | никто (неизменяемые; закрытие периода через RPC) | никто |
@@ -2104,13 +2445,16 @@ create policy "coaching_notes: client sees flagged" on public.coaching_notes for
 | `buddy_profiles` | сам; другим: через RPC поиска (без точных координат, только расстояние, 18+) | сам | сам | сам |
 | `buddy_interests` | from; to (только при взаимности) | from | никто | from |
 | `clubs`, `club_trainers` | все (`approved`); автор; A | тренер | автор (pending); A | A |
-| **Later** `studios`, `studio_members`, `plans`, `plan_subscriptions` | по членству / все (`plans`) / тренер | owner / никто / S | owner / S | owner / S |
+| **Later** `studios`, `studio_members`, `plan_subscriptions` | по членству / тренер | owner / S | owner / S | owner / S |
 
 ### 4.3. Как закодированы правила приватности
 
-- **Тренер видит только свои пары**: любая политика тренера идёт через `is_coaching_trainer(coaching_id)` / `is_trainer_of(client_id)`; у таблиц без `coaching_id` (личные данные клиента) она идёт через `can_view(client_id, category)`, которая ищет пару именно с текущим пользователем.
+- **Тренер видит только свои пары**: любая политика тренера идёт через `is_coaching_trainer(coaching_id)` / `is_trainer_of(client_id)` или их формы-массивы (`trainer_coaching_ids()`); у таблиц без `coaching_id` (личные данные клиента) она идёт через `can_view(client_id, category)` или `viewable_client_ids(category)`, которые ищут пару именно с текущим пользователем. Ссылки на чужие строки закрыты составными внешними ключами: абонемент, запись, платёж и строка журнала ссылаются на строки той же пары (R65).
+- **Нельзя подбирать скрытые строки записью**: UPDATE и DELETE с условием по скрытым столбцам проходят через политику SELECT, а столбцы, которые читать нельзя, не выданы и на запись. Тест `950_privacy_matrix` проверяет вслепую записи от лица каждой роли.
+- **Рекорды не раскрывают чужие подходы**: `personal_records` читает только клиент; тренер видит рекорд через `visible_personal_records`, где он считается только по видимым ему подходам (R43).
 - **Разрешения на данные**: `data_shares` пишет только клиент; `can_view` проверяет флаг категории в момент запроса, поэтому отзыв мгновенно закрывает и историю (wave-2). Фото по умолчанию `false`. После завершения пары (`ended`) персональные данные закрыты, а учёт (занятия, оплаты, журнал) остаётся виден обеим сторонам.
-- **Заметки тренера скрыты**: политика клиента на `coaching_notes` требует `visible_to_client`.
+- **Заметки тренера скрыты**: политика клиента на `coaching_notes` требует `visible_to_client`. Псевдоним клиента и контакт лежат в `coaching_trainer_meta`, которую клиент не читает вовсе (R9).
+- **Онлайн-ссылка только участникам**: `sessions.meeting_url` и `recurrences.meeting_url` не выданы на SELECT; ссылку отдают `session_meeting_url()` (тренер и участники с записью `confirmed` или `attended`) и `recurrence_meeting_url()` (тренер), R25.
 - **Админ не видит персональные данные**: ни одна политика на `measurements`, `progress_photos`, `food_diary_entries`, `activity_entries`, `nutrition_*`, `body_profiles`, `client_goals`, `intakes`, `coaching_notes` не упоминает `is_admin()`, только `can_view`, которая для админа истинна лишь при действующем `break_glass_grants`, выданном с записью в журнал. Админская аналитика читает только `analytics.*` через `admin_*`-функции.
 - **Делегат не видит больше владельца**: `can_view` для делегата требует и флаг клиента в паре владельца, и scope делегирования.
 - **`initDataUnsafe` и присланные id не используются**: каждая политика сравнивает с `auth.uid()`; RPC берут идентичность только из `auth.uid()`.
@@ -2126,11 +2470,12 @@ create policy "coaching_notes: client sees flagged" on public.coaching_notes for
 | `pass_balances` | `pass_id`, `remaining`, `available`, `effective_expires_at`, производный `status`, `unpaid_minor` | карточка клиента, автоподтверждение, «заканчивается абонемент» (≤ 2 занятий или ≤ 7 дней) |
 | `coaching_balances` | по паре: доступно занятий, `debt_sessions`, `debt_amount` по валютам, неоплачено по валютам | клиенты тренера, уведомление `debt` |
 | `coaching_stats` | `attended_count`, `no_show_count`, `late_cancel_count`, `last_attended_at`, `next_session_at` | вехи, отзывы (≥ 3), список клиентов |
-| `price_grid` | пакеты тренера по валюте/типу: цена за занятие (`price_minor / sessions_count`), выгода % к разовому, `best_value` (минимальная цена за занятие среди пакетов > 1 занятия) | сетка, витрина, подсказки по ценам |
-| `public_profiles` | `id`, отображаемое имя (`coalesce(display_name, first_name || ' ' || last_name)`), аватар | всё, где показывается другой человек |
-| `my_groups` | группы клиента: `name`, `goal` | зона «Клиент» |
+| `price_grid` | живые пакеты тренера по валюте и типу (R21, PRD 2.8-2): цена за занятие с округлением половины вверх, выгода в % к разовому с округлением вниз; меньше 1 % выгоды показывается как `null`, без значка; `is_best_value` у пакета с наибольшей выгодой больше 0, при равенстве у большего пакета, одна отметка на тренера, валюту и тип | сетка, витрина, подсказки по ценам |
+| `public_profiles` | `id`, отображаемое имя, аватар и пояс из столбцов-зеркал в `profiles` (R6); вью над одной `profiles`, поэтому работает встраивание PostgREST | всё, где показывается другой человек |
+| `visible_personal_records` | рекорды, посчитанные по подходам, которые вызывающий видит (сам клиент или тренер с share:workouts), без заглушки удалённого клиента (R43) | карточка клиента у тренера |
+| `my_groups` (W2) | группы клиента: `name`, `goal` | зона «Клиент» |
 
-Плюс DEFINER-функции, отдающие счётчики без чужих персональных данных: `session_occupancy(session_id)` (занято/вместимость для клиента группового занятия), `waitlist_position(session_id)`.
+Плюс DEFINER-функции, отдающие данные без чужих персональных данных: `session_occupancy(session_id)` (занято/вместимость для клиента группового занятия), `session_meeting_url(session_id)` и `recurrence_meeting_url(recurrence_id)` (онлайн-ссылка, R25), позже `waitlist_position(session_id)`.
 
 ### 5.2. Аналитика тренера: живые запросы (SECURITY INVOKER-функции)
 
@@ -2148,7 +2493,7 @@ create policy "coaching_notes: client sees flagged" on public.coaching_notes for
 | Таблица | Когда | Почему не живой запрос |
 |---|---|---|
 | `nutrition_daily_summaries` | каждые 15 мин закрывает дни клиентов, у которых в их поясе наступила полночь; + очередь пересчёта при правках | «норма того дня» должна фиксироваться; попадание за 7/30/90 дней = быстрый агрегат по готовым дням |
-| `churn_flags` | ночью (03:00 UTC) | правила с окнами 8 недель и «2 из 4 последних» дороги на каждом открытии; скрытие на 30 дней хранится в `coachings.churn_hidden_until` |
+| `churn_flags` | ночью (03:00 UTC) | правила с окнами 8 недель и «2 из 4 последних» дороги на каждом открытии; скрытие на 30 дней хранится в `coaching_trainer_meta.churn_hidden_until` (R9) |
 | `personal_records`, `streaks`, `challenge_participants.score`, `milestones` | триггеры / каждый час | кеши для лент и бейджей |
 
 Это обычные таблицы с RLS. Материализованные представления здесь не подходят: MV в Supabase не поддерживают RLS и в схеме `public` были бы доступны через API без ограничений.
@@ -2233,7 +2578,7 @@ erDiagram
 1. **Настройки отдельно от `profiles`.** `profiles` остаётся «серверным» (как в существующей миграции); всё, что меняет пользователь, лежит в `user_settings` 1:1. `telegram_id` скрыт от других пользователей колоночным грантом.
 2. **Пояс по умолчанию** `Europe/Moscow` (бета в основном РФ, Q3), уточняется при первом входе из браузера/устройства. Расписание разворачивается в поясе, скопированном в шаблон/повтор при создании.
 3. **Единицы**: `unit_system = null` значит «по локали», храним всегда в метрике (как в wave-2).
-4. **Напоминания клиента: на пару** (`coachings.client_reminder_offsets`), а не глобально: у клиента двух тренеров могут быть разные. По умолчанию для новых пар `{1440, 60}` (1 день и 1 час); тренеру самому себе: `{60}`. Отдельной таблицы reminders нет: запланированные напоминания живут в outbox.
+4. **Напоминания клиента: на пару** (`coachings.client_reminder_offsets`), а не глобально: у клиента двух тренеров могут быть разные. По умолчанию для новых пар `{1440, 60}` (1 день и 1 час). Напоминаний тренеру самому себе нет (R35). Отдельной таблицы reminders нет: запланированные напоминания живут в outbox.
 5. **Тихие часы** решены в ADR 0006, это не допущение: напоминание о занятии отправляется в своё время беззвучно (`disable_notification`), остальные уведомления ждут окончания тихих часов.
 6. **Диспетчер уведомлений** (ADR 0006): бот работает как serverless-функция на Vercel (webhook), Docker нужен только для локальной разработки; Vercel Hobby не даёт поминутный cron, поэтому outbox разгребается вызовом из `pg_cron` + `pg_net` раз в минуту.
 7. **Код инвайта тренера хранится хешем** и показывается админу один раз; токены ссылок клиента/пробного хранятся открыто (это адреса, а не секреты). У ссылки клиента есть короткий код из 6 символов для экрана «Введите код тренера».
@@ -2242,21 +2587,21 @@ erDiagram
 10. **После завершения пары** тренер теряет доступ к персональным данным клиента, но видит историю занятий, абонементов и оплат этой пары.
 11. **Слот = одно окно на одно персональное занятие** (вместимость 1). Групповые занятия создаются тренером как `sessions` с `open_for_booking`. Слоты не пересекаются (exclusion); занятия могут, с предупреждением.
 12. **Автозавершение**: в `ends_at` cron переводит `confirmed` → `attended` и пишет списания (иначе «80% занятий без ручных правок» недостижимо); тренер исправляет на `no_show` в любое время, это не меняет журнал.
-13. **Перенос клиентом после дедлайна запрещён**: остаётся только отмена со списанием или просьба тренеру. Отмена ровно в дедлайн бесплатна (`now() <= deadline`). Снимок часов дедлайна хранится в записи.
-14. **Прощение окончательное** (решение; одно на списание); повторно списать можно только ручной корректировкой (`adjustment`) тренера с комментарием. Отмена тренером уже списанного занятия автоматически прощает списание.
+13. **Перенос клиентом после дедлайна запрещён**: остаётся только отмена со списанием или просьба тренеру. Отмена ровно в дедлайн бесплатна (`now() <= deadline`). Снимка часов в записи нет: действует текущее правило тренера, а RPC пишет часы и `deadline_at` в `booking_events` (R19).
+14. **Прощение окончательное** (решение; одно на списание); повторно выставить долг можно только ручным `charge` с причиной `manual` и комментарием (R84). Отмена тренером уже списанного занятия автоматически прощает списание.
 15. **Разовое занятие = абонемент на 1** из пакета с `sessions_count = 1`; цена разового на валюту и тип занятия одна.
 16. **Выбор абонемента при списании**: подходящий по типу, ближайший к истечению; срок и заморозка проверяются на дату занятия.
 17. **Долг гасится автоматически** из следующего оформленного абонемента (самые старые долговые занятия первыми). Долговое занятие оценивается в деньгах по цене разового; после погашения выручка за него считается по цене абонемента.
 18. **Распределение копеек**: доля k-го занятия равна `floor(P·k/N) − floor(P·(k−1)/N)`, чтобы сумма по абонементу точно равнялась цене.
 19. **Заморозка** только останавливает срок и делает абонемент неподходящим для списаний в эти даты; ставит её тренер; лимитов нет.
-20. **Оплата «я оплатил»**: клиент может создать `payments.status = 'reported'`, тренер подтверждает; в выручку («поступления») идут только `confirmed`. Отменённая оплата получает статус `voided` и не удаляется.
-21. **Свои упражнения** может создавать только тренер (`owner_id` указывает на profiles, чтобы позже разрешить клиентам без миграции). Самостоятельные тренировки клиента (без пары) видны тренеру по `data_shares.workouts` (по умолчанию включено, Q38).
-22. **Рекорды**: разминочные подходы не учитываются; `est_1rm` по Эпли для ≤ 12 повторов.
+20. **Оплата «я оплатил»**: клиент может создать `payments.status = 'reported'`, тренер подтверждает; в выручку («поступления») идут только `confirmed`. Отменённая оплата получает статус `voided` с причиной и автором и не удаляется; ошибку исправляют новой строкой (R26). Каждое изменение абонемента, заморозки и платежа попадает в `money_events` с автором и причиной.
+21. **Свои упражнения** может создавать только тренер (`owner_id` указывает на profiles, чтобы позже разрешить клиентам без миграции). Когда автор удаляет аккаунт, упражнение остаётся без автора и видно только клиентам, у которых оно есть в записях (R61). Самостоятельные тренировки клиента (без пары) видны тренерам живых пар по `data_shares.workouts` (по умолчанию включено, Q38). В волне 1 они доступны и на Free (R44: владелец уточняет, относится ли Q57 «тренировки без тренера» к ним).
+22. **Рекорды**: разминочные подходы не учитываются; виды по PRD 2.10-6: наибольший вес, повторы без веса, длительность (R43). Расчётного 1ПМ нет.
 23. **Фото прогресса загружает только клиент**; сервер не может проверить размытие, поэтому клиент подтверждает его флагом `face_blurred` (обязателен) и `blur_method`. Signed URL живёт 5 минут (решение).
-24. **Вехи** фиксируются один раз и не отзываются при исправлении посещаемости; добавлена веха `first_session`.
+24. **Вехи** фиксируются один раз и не отзываются при исправлении посещаемости; виды только `sessions_10/25/50/100`, без `first_session` и без сообщения в боте (R37).
 25. **Удаление аккаунта**: в течение 30 дней аккаунт заморожен (будущие записи отменены бесплатно, уведомления не идут, войти можно, только чтобы отменить удаление). Через 30 дней аккаунт обезличивается по §1.6 (решение): личные данные удаляются, учёт тренера (занятия, журнал, оплаты) остаётся за «Удалённым клиентом».
 26. **Аварийный доступ** (ADR 0007): есть с волны 1 как функция `admin_open_break_glass`, **без интерфейса в бете**; грант на категории до 1 часа, причина ≥ 20 символов, запись в журнал, **уведомление пользователя** о факте доступа (тип `break_glass`).
-27. **Админ не читает бизнес-таблицы напрямую** (пары, занятия, оплаты), только агрегаты `analytics.*` через функции; в списке пользователей видит профили, роли, последний вход.
+27. **Админ не читает бизнес-таблицы напрямую** (пары, занятия, оплаты), только агрегаты `analytics.*` через функции; в списке пользователей видит профили (без карточек и заглушки) и роли. `profiles.last_seen_at` пишет сервер, пользователям столбец не выдан; админ получит его через `admin_*`-функцию.
 28. **Продуктовая телеметрия** (`product_events`) нужна для метрик беты «открытия из напоминаний» и «использование функций»; хранится 180 дней, без значений пользовательских данных.
 29. **Метрика «ведёт всё расписание 2 недели»**: тренер провёл занятия в каждой из двух последних недель, и у всех его занятий за 14 дней есть итог (`completed`/`cancelled`). Это приближение, уточнить с Давидом.
 30. **Календарный фид**: токен на зону (тренер/клиент), показывается один раз, перевыпуск отзывает старый; в событиях нет заметок и данных тела.
@@ -2266,6 +2611,6 @@ erDiagram
 34. **Месячный отчёт и карточки для сторис** строятся на лету, без таблиц (кеш по необходимости).
 35. **W4-гео**: бадди хранит только центр ячейки сетки ~2 км; клубы хранят точную точку (публичные места). PostGIS включается в W4.
 36. **Студии**: столбцы `studio_id` не создаются заранее (добавление nullable-столбца в Postgres мгновенно и ничего не переписывает), но владение везде выражено через `trainer_id`, а проверки идут через `is_coaching_trainer`, которую достаточно расширить.
-37. **Поиск по названиям** упражнений и продуктов идёт через `pg_trgm` (расширение нужно включить вместе с первой миграцией тренировок).
+37. **Поиск по названиям** упражнений и продуктов идёт через `pg_trgm` (расширение включает базовая миграция).
 38. **Хранение outbox**: 90 дней для обработанных строк; экспорт хранится 7 дней.
 39. **Карточка клиента без аккаунта**: профиль без входа (пользователь Auth без `telegram_id`, заблокирован), а не nullable `client_id`; так все политики и журнал работают без изменений, а слияние сводится к одному переносу `client_id`. Подсказка совпадения при переходе ищет по имени; слияние необратимо.

@@ -1,0 +1,480 @@
+-- Test helpers for pgTAP files. Not a test itself: pg_prove only runs *.sql and *.pg, so this .psql is skipped.
+-- Include it right after `begin;` in every test file:
+--
+--   begin;
+--   \ir _helpers.psql
+--   select plan(3);
+--   ...
+--   select * from finish();
+--   rollback;
+--
+-- Keep test files flat in supabase/tests/: `supabase test db <file>` mounts only that file's directory
+-- into the pg_prove container, so `\ir ../_helpers.psql` from a subdirectory would not be found.
+-- Everything below is created inside the test's transaction, so the rollback removes it again:
+-- nothing persists in the database, and a single file can run on its own.
+-- Must stay silent (no SELECT output): pg_prove reads stdout as TAP.
+--
+-- Fixture helpers (create_*, set_share, grant_plan, set_claims) write as postgres: call them after
+-- tests.clear_authentication(), never while acting as a user. They reference tables from every wave 1
+-- migration; plpgsql checks those names only when a helper runs.
+
+create schema if not exists tests;
+grant usage on schema tests to anon, authenticated, service_role;
+-- The base migration stops new functions from getting EXECUTE for PUBLIC. Test helpers are called while
+-- acting as authenticated or anon, so functions in schema tests get it back (rolled back with the test).
+alter default privileges for role postgres in schema tests grant execute on functions to public;
+
+-- Test users by handle ('trainer_a', 'client_c', ...), so tests never hard-code uuids.
+-- telegram_id is null for cards and the deleted-client stub.
+create table if not exists tests.users (
+  handle text primary key,
+  id uuid not null unique,
+  telegram_id bigint unique
+);
+grant select on tests.users to anon, authenticated, service_role;
+
+-- Creates an auth user shaped like the one Telegram sign-in creates (apps/web/src/lib/auth/sign-in-with-telegram.ts)
+-- plus its public.profiles row (a trigger adds user_settings, with locale en when p_language_code starts with en).
+-- Run as postgres (the default test role). Returns the new user id.
+create or replace function tests.create_user(
+  p_handle text,
+  p_telegram_id bigint default null,
+  p_app_metadata jsonb default '{}',
+  p_language_code text default 'ru'
+)
+returns uuid
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_id uuid := gen_random_uuid();
+  v_tg bigint := coalesce(p_telegram_id, 900000000 + (select count(*) from tests.users) + 1);
+begin
+  insert into auth.users (
+    instance_id, id, aud, role, email, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+  ) values (
+    '00000000-0000-0000-0000-000000000000', v_id, 'authenticated', 'authenticated',
+    'tg' || v_tg || '@users.fit.invalid', now(),
+    jsonb_build_object('provider', 'telegram', 'providers', jsonb_build_array('telegram'), 'telegram_id', v_tg)
+      || p_app_metadata,
+    jsonb_build_object('first_name', p_handle),
+    now(), now()
+  );
+
+  insert into public.profiles (id, telegram_id, first_name, language_code)
+  values (v_id, v_tg, p_handle, p_language_code);
+
+  insert into tests.users (handle, id, telegram_id) values (p_handle, v_id, v_tg);
+  return v_id;
+end;
+$$;
+
+create or replace function tests.user_id(p_handle text)
+returns uuid
+language plpgsql
+stable
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  select u.id into v_id from tests.users u where u.handle = p_handle;
+  if v_id is null then
+    raise exception 'tests.user_id: unknown test user "%"', p_handle;
+  end if;
+  return v_id;
+end;
+$$;
+
+-- Sets only the JWT claims of the given user, so auth.uid() returns that user. The role stays as it is
+-- (postgres when called after clear_authentication), which lets a test call private.* helpers directly.
+-- request.jwt.claim.sub is set too, because auth.uid() reads it first when it is non-empty.
+-- set_config(..., true) = SET LOCAL: it outlives the function call and ends with the transaction.
+create or replace function tests.set_claims(p_handle text)
+returns void
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_user tests.users;
+begin
+  select * into v_user from tests.users u where u.handle = p_handle;
+  if v_user.id is null then
+    raise exception 'tests.set_claims: unknown test user "%"', p_handle;
+  end if;
+  perform pg_catalog.set_config('request.jwt.claim.sub', v_user.id::text, true);
+  perform pg_catalog.set_config('request.jwt.claims', pg_catalog.jsonb_build_object(
+    'sub', v_user.id,
+    'role', 'authenticated',
+    'aud', 'authenticated',
+    'email', 'tg' || v_user.telegram_id || '@users.fit.invalid',
+    'app_metadata', pg_catalog.jsonb_build_object('provider', 'telegram', 'telegram_id', v_user.telegram_id),
+    'user_metadata', '{}'::jsonb,
+    'is_anonymous', false,
+    'aal', 'aal1'
+  )::text, true);
+end;
+$$;
+
+-- Acts as the given user for the rest of the transaction, the way PostgREST does for a request with
+-- that user's access token: role authenticated + JWT claims in request.jwt.claims.
+create or replace function tests.authenticate_as(p_handle text)
+returns void
+language plpgsql
+set search_path = ''
+as $$
+begin
+  perform tests.set_claims(p_handle);
+  perform pg_catalog.set_config('role', 'authenticated', true);
+end;
+$$;
+
+-- A request without a session (publishable key only).
+create or replace function tests.authenticate_as_anon()
+returns void
+language plpgsql
+set search_path = ''
+as $$
+begin
+  perform pg_catalog.set_config('role', 'anon', true);
+  perform pg_catalog.set_config('request.jwt.claim.sub', '', true);
+  perform pg_catalog.set_config('request.jwt.claims', '{"role":"anon"}', true);
+end;
+$$;
+
+-- Server code with the secret key (lib/supabase/admin.ts): bypasses RLS, still subject to grants and triggers.
+create or replace function tests.authenticate_as_service_role()
+returns void
+language plpgsql
+set search_path = ''
+as $$
+begin
+  perform pg_catalog.set_config('role', 'service_role', true);
+  perform pg_catalog.set_config('request.jwt.claim.sub', '', true);
+  perform pg_catalog.set_config('request.jwt.claims', '{"role":"service_role"}', true);
+end;
+$$;
+
+-- Back to the session user (postgres: owns public tables, bypasses RLS) with no JWT.
+-- Works from any current role: role 'none' means the session user, and SET ROLE is checked against it.
+create or replace function tests.clear_authentication()
+returns void
+language plpgsql
+set search_path = ''
+as $$
+begin
+  perform pg_catalog.set_config('role', 'none', true);
+  perform pg_catalog.set_config('request.jwt.claim.sub', '', true);
+  perform pg_catalog.set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- A user with the admin role.
+create or replace function tests.create_admin(p_handle text)
+returns uuid
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_id uuid := tests.create_user(p_handle);
+begin
+  insert into public.user_roles (user_id, role) values (v_id, 'admin');
+  return v_id;
+end;
+$$;
+
+-- A user with a trainer profile. The default slug is the handle in lower case with '_' replaced by '-'.
+create or replace function tests.create_trainer(p_handle text, p_slug text default null)
+returns uuid
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_id uuid := tests.create_user(p_handle);
+begin
+  insert into public.trainer_profiles (user_id, slug)
+  values (v_id, coalesce(p_slug, replace(lower(p_handle), '_', '-')));
+  return v_id;
+end;
+$$;
+
+-- A pair. Triggers add data_shares (measurements and workouts shared, photos and intake not) and
+-- coaching_trainer_meta; client_reminder_offsets come from the trainer default.
+create or replace function tests.create_pair(
+  p_trainer text,
+  p_client text,
+  p_status public.coaching_status default 'active',
+  p_source public.coaching_source default 'client_invite'
+)
+returns uuid
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  insert into public.coachings (trainer_id, client_id, status, source, ended_at)
+  values (
+    tests.user_id(p_trainer), tests.user_id(p_client), p_status, p_source,
+    case when p_status = 'ended' then now() end
+  )
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+-- The pair of a trainer and a client. Raises when there is none or (pairs to the stub) more than one.
+create or replace function tests.pair_id(p_trainer text, p_client text)
+returns uuid
+language plpgsql
+stable
+set search_path = ''
+as $$
+declare
+  v_ids uuid[];
+begin
+  select array_agg(c.id) into v_ids
+  from public.coachings c
+  where c.trainer_id = tests.user_id(p_trainer) and c.client_id = tests.user_id(p_client);
+  if coalesce(cardinality(v_ids), 0) <> 1 then
+    raise exception 'tests.pair_id: % pairs of "%" and "%"', coalesce(cardinality(v_ids), 0), p_trainer, p_client;
+  end if;
+  return v_ids[1];
+end;
+$$;
+
+-- A card of the trainer: an auth user that cannot sign in (no Telegram id, banned), a profile managed by the
+-- trainer and an active pair with source 'manual' (all data shared). Registers the handle; returns the card id.
+create or replace function tests.create_card(p_trainer text, p_card_handle text)
+returns uuid
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_id uuid := gen_random_uuid();
+begin
+  insert into auth.users (
+    instance_id, id, aud, role, email, email_confirmed_at, banned_until,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+  ) values (
+    '00000000-0000-0000-0000-000000000000', v_id, 'authenticated', 'authenticated',
+    'managed-' || v_id || '@users.fit.invalid', now(), 'infinity',
+    jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email')),
+    jsonb_build_object('first_name', p_card_handle),
+    now(), now()
+  );
+
+  insert into public.profiles (id, telegram_id, first_name, language_code, managed_by_trainer_id)
+  values (v_id, null, p_card_handle, 'ru', tests.user_id(p_trainer));
+
+  insert into tests.users (handle, id, telegram_id) values (p_card_handle, v_id, null);
+  perform tests.create_pair(p_trainer, p_card_handle, 'active', 'manual');
+  return v_id;
+end;
+$$;
+
+-- The single "deleted client" stub (id = private.deleted_client_id(), no Telegram id), registered as
+-- handle 'deleted_client'. Returns its id.
+create or replace function tests.create_deleted_stub()
+returns uuid
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_id uuid := private.deleted_client_id();
+begin
+  insert into auth.users (
+    instance_id, id, aud, role, email, email_confirmed_at, banned_until,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+  ) values (
+    '00000000-0000-0000-0000-000000000000', v_id, 'authenticated', 'authenticated',
+    'deleted-client@users.fit.invalid', now(), 'infinity',
+    jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email')),
+    '{}'::jsonb,
+    now(), now()
+  );
+
+  insert into public.profiles (id, telegram_id, first_name) values (v_id, null, 'deleted_client');
+
+  insert into tests.users (handle, id, telegram_id) values ('deleted_client', v_id, null);
+  return v_id;
+end;
+$$;
+
+-- Sets one data_shares flag of the pair, bypassing RLS and the client-only guard.
+create or replace function tests.set_share(
+  p_trainer text,
+  p_client text,
+  p_category public.share_category,
+  p_value boolean
+)
+returns void
+language plpgsql
+set search_path = ''
+as $$
+begin
+  execute format('update public.data_shares set %I = $1 where coaching_id = $2', p_category::text)
+    using p_value, tests.pair_id(p_trainer, p_client);
+end;
+$$;
+
+-- A plan grant (source admin, reason 'test grant'). Backdate or postdate with p_starts_at / p_expires_at.
+create or replace function tests.grant_plan(
+  p_handle text,
+  p_plan_code text,
+  p_starts_at timestamptz default now(),
+  p_expires_at timestamptz default null
+)
+returns uuid
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  insert into public.plan_grants (user_id, plan_code, reason, starts_at, expires_at)
+  values (tests.user_id(p_handle), p_plan_code, 'test grant', p_starts_at, p_expires_at)
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+-- A one-hour scheduled session of the trainer: online when a meeting URL is given, else offline.
+create or replace function tests.create_session(
+  p_trainer text,
+  p_starts_at timestamptz,
+  p_kind public.session_kind default 'personal',
+  p_capacity integer default 1,
+  p_open boolean default false,
+  p_meeting_url text default null
+)
+returns uuid
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  insert into public.sessions (trainer_id, kind, starts_at, ends_at, mode, meeting_url, capacity, open_for_booking)
+  values (
+    tests.user_id(p_trainer), p_kind, p_starts_at, p_starts_at + interval '1 hour',
+    case when p_meeting_url is null then 'offline' else 'online' end::public.session_mode,
+    p_meeting_url, p_capacity, p_open
+  )
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+-- A booking of the pair on the session, with the timestamps the status checks need. One insert only:
+-- the bookings state machine accepts requested, confirmed and attended on insert, so create one of those
+-- and update the status to reach the others.
+create or replace function tests.create_booking(
+  p_session uuid,
+  p_trainer text,
+  p_client text,
+  p_status public.booking_status default 'confirmed',
+  p_source public.booking_source default 'trainer'
+)
+returns uuid
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  insert into public.bookings (
+    session_id, coaching_id, trainer_id, client_id, status, source,
+    requested_at, confirmed_at, cancelled_at, cancelled_by_role, attendance_marked_at
+  ) values (
+    p_session, tests.pair_id(p_trainer, p_client), tests.user_id(p_trainer), tests.user_id(p_client),
+    p_status, p_source,
+    case when p_status = 'requested' then now() end,
+    case when p_status in ('confirmed', 'attended', 'no_show', 'late_cancelled', 'rescheduled') then now() end,
+    case when p_status in ('cancelled', 'late_cancelled') then now() end,
+    case when p_status in ('cancelled', 'late_cancelled') then 'client'::public.actor_role end,
+    case when p_status in ('attended', 'no_show') then now() end
+  )
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+-- A pass of the pair plus its grant ledger row (sessions_delta = p_sessions, amount 0).
+create or replace function tests.create_pass(
+  p_trainer text,
+  p_client text,
+  p_sessions integer,
+  p_price bigint default 0,
+  p_currency text default 'RUB',
+  p_expires_at timestamptz default null
+)
+returns uuid
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_pair uuid := tests.pair_id(p_trainer, p_client);
+  v_id uuid;
+begin
+  insert into public.passes (
+    coaching_id, trainer_id, client_id, title, sessions_total, price_minor, currency, starts_on, expires_at
+  ) values (
+    v_pair, tests.user_id(p_trainer), tests.user_id(p_client), p_sessions || ' sessions',
+    p_sessions, p_price, p_currency::public.currency_code, current_date, p_expires_at
+  )
+  returning id into v_id;
+
+  insert into public.ledger_entries (
+    coaching_id, trainer_id, client_id, entry_type, pass_id, sessions_delta, amount_minor, currency, occurred_at
+  ) values (
+    v_pair, tests.user_id(p_trainer), tests.user_id(p_client), 'grant', v_id,
+    p_sessions, 0, p_currency::public.currency_code, now()
+  );
+  return v_id;
+end;
+$$;
+
+-- Deletes a trainer's account the way the account deletion job must when it also wrote rows of that trainer
+-- in the same transaction: the trainer profile first (pairs, passes, freezes, notes and logs go while the
+-- profile still exists), then the auth user. A single "delete from auth.users" fails with 23503 when the
+-- same transaction wrote a note, a freeze or a pair log of the trainer: the set-null of the author column
+-- re-checks the row's other foreign keys (Postgres does that for rows the current transaction wrote) after
+-- the cascade already removed their parent. GoTrue deletes a user in its own transaction, so that path is safe.
+create or replace function tests.delete_trainer(p_handle text)
+returns void
+language plpgsql
+set search_path = ''
+as $$
+begin
+  delete from public.trainer_profiles where user_id = tests.user_id(p_handle);
+  delete from auth.users where id = tests.user_id(p_handle);
+end;
+$$;
+
+-- A break-glass grant of the admin on the target user. Backdate p_created_at (and p_expires_at) to build
+-- an expired grant: the table allows at most one hour between the two.
+create or replace function tests.create_break_glass(
+  p_admin text,
+  p_target text,
+  p_categories public.share_category[],
+  p_expires_at timestamptz default now() + interval '30 minutes',
+  p_created_at timestamptz default now()
+)
+returns uuid
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  insert into public.break_glass_grants (admin_id, target_user_id, categories, reason, expires_at, created_at)
+  values (
+    tests.user_id(p_admin), tests.user_id(p_target), p_categories,
+    'test break-glass access for a support case', p_expires_at, p_created_at
+  )
+  returning id into v_id;
+  return v_id;
+end;
+$$;

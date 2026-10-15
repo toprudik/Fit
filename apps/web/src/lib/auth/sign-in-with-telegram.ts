@@ -52,7 +52,8 @@ export async function signInWithTelegram(identity: TelegramIdentity): Promise<{ 
     throw new Error("Supabase user does not belong to this Telegram account");
   }
 
-  // Keep profile fresh on every sign-in (names/photo change in Telegram).
+  // Keep profile fresh on every sign-in (names/photo change in Telegram). The first insert also creates
+  // the user_settings row (database trigger profiles_create_settings), so nothing else is written here.
   const updated = await admin.auth.admin.updateUserById(userId, { user_metadata: metadata });
   if (updated.error) throw new Error(`Supabase updateUser failed: ${updated.error.code ?? updated.error.status}`);
   const profile = await admin.from("profiles").upsert(
@@ -64,6 +65,7 @@ export async function signInWithTelegram(identity: TelegramIdentity): Promise<{ 
       last_name: identity.lastName,
       photo_url: identity.photoUrl,
       language_code: identity.languageCode,
+      last_seen_at: new Date().toISOString(),
     },
     { onConflict: "id" },
   );

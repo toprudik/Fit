@@ -6,7 +6,7 @@ Sign-in with Telegram only; backend on Supabase.
 ```
 apps/web     Next.js 16 · Tailwind v4 · shadcn/ui · motion · Telegram Mini App SDK
 apps/bot     Python 3.13 · aiogram 3
-supabase/    SQL migrations
+supabase/    SQL migrations and pgTAP tests
 docs/adr/    Architecture decisions
 ```
 
@@ -40,7 +40,24 @@ cd apps/web && npm run e2e   # after build: Playwright + axe, phone and desktop,
 cd apps/bot && uv run ruff check . && uv run pytest
 ```
 
-CI runs the same plus a gitleaks secret scan and Docker image builds.
+CI runs the same plus the database checks below, a gitleaks secret scan and Docker image builds.
+
+### Database
+
+The schema lives in `supabase/migrations/` and its tests in `supabase/tests/` (pgTAP: RLS, column grants, triggers, constraints). You need Docker and Supabase CLI 2.121.0, the version CI pins. Run from the repo root:
+
+```bash
+supabase db start      # local Postgres 17, every migration applied from scratch
+supabase test db       # all pgTAP tests
+supabase db lint --local --schema public,private --fail-on error   # plpgsql_check
+supabase db advisors --local --type all --fail-on warn            # security and performance advisors
+supabase gen types typescript --local > apps/web/src/lib/supabase/database.types.ts
+supabase stop          # when done
+```
+
+After you add or edit a migration, `supabase db reset` rebuilds the database from all migrations. Commit the regenerated `database.types.ts` as the CLI wrote it, without reformatting: CI fails when it differs from the schema.
+
+Migrations reach the hosted project `fit` only through `main`: when a push to `main` changes `supabase/migrations/`, the workflow `Database deploy` runs `supabase db push` and the advisors against it (it can also be started by hand). It reads one repository secret, `SUPABASE_DB_URL`: the Session pooler connection string from the Supabase dashboard (Connect), with the password percent-encoded. Never edit the hosted schema by hand.
 
 ## Docs
 

@@ -1,10 +1,11 @@
+import type { Tables } from "@/lib/supabase/database.types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AccountSync } from "./account-sync";
 
-type ProfileRow = { first_name: string | null; last_name: string | null; username: string | null; photo_url: string | null };
+type ProfileName = Pick<Tables<"profiles">, "first_name" | "last_name" | "username">;
 
 /** "Анна Смирнова" from Telegram's first and last name, else the username, else "" (the avatar shows an icon). */
-function displayName(profile: ProfileRow | null): string {
+function displayName(profile: ProfileName | null): string {
   if (!profile) return "";
   const fullName = [profile.first_name, profile.last_name]
     .map((part) => part?.trim())
@@ -21,12 +22,13 @@ async function readAccount(): Promise<{ name: string; photoUrl: string | null } 
     const userId = session?.claims.sub;
     if (!userId) return null;
 
-    // RLS lets a user read only their own profile row.
+    // List the columns: telegram_id and last_seen_at are not granted to signed-in users, so select("*")
+    // fails. RLS also shows pair partners' rows, so the id filter stays.
     const { data: profile } = await supabase
       .from("profiles")
       .select("first_name, last_name, username, photo_url")
       .eq("id", userId)
-      .maybeSingle<ProfileRow>();
+      .maybeSingle();
     return { name: displayName(profile), photoUrl: profile?.photo_url ?? null };
   } catch {
     // Supabase unreachable: the shell works signed out rather than failing the page.

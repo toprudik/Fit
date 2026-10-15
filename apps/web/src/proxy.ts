@@ -6,6 +6,7 @@ import { routeRequest } from "@/lib/navigation/routing";
 import { ZONE_COOKIE } from "@/lib/navigation/zones";
 import { preferenceCookieOptions } from "@/lib/preferences";
 import { sessionCookieOptions } from "@/lib/supabase/cookie-options";
+import type { Database } from "@/lib/supabase/database.types";
 
 type CookieToSet = { name: string; value: string; options: Parameters<NextResponse["cookies"]["set"]>[2] };
 
@@ -28,7 +29,7 @@ export async function proxy(request: NextRequest) {
   if (decision.kind === "redirect") return NextResponse.redirect(new URL(decision.location, request.url));
 
   const refreshed: CookieToSet[] = [];
-  const supabase = createServerClient(clientEnv.NEXT_PUBLIC_SUPABASE_URL, clientEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
+  const supabase = createServerClient<Database>(clientEnv.NEXT_PUBLIC_SUPABASE_URL, clientEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
     cookieOptions: sessionCookieOptions,
     cookies: {
       getAll: () => request.cookies.getAll(),
