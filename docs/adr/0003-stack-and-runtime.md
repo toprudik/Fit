@@ -14,7 +14,7 @@ Monorepo with two apps, each with its own toolchain and Dockerfile:
 | `supabase/migrations` | Database schema | SQL migrations applied to the Supabase project |
 
 - **Local development runs in Docker**: `docker compose up` starts web (hot reload) and the bot (polling). `--profile tunnel` adds a Cloudflare quick tunnel to get the HTTPS URL Telegram requires for Mini Apps.
-- **Production**: web on Vercel (or the `runner` image via `docker-compose.prod.yml`). The bot runs serverless on Vercel in webhook mode during the beta — see ADR 0006 (supersedes the earlier "bot in a Docker container" plan).
+- **Production**: web on Vercel (or the `runner` image via `docker-compose.prod.yml`). The bot runs serverless on Vercel in webhook mode during the beta, as ADR 0006 describes (it supersedes the earlier "bot in a Docker container" plan).
 - **Database**: hosted Supabase project (no local Supabase stack yet). Schema changes are files in `supabase/migrations/`, applied to the dev project, then to production.
 - **Bot ↔ web**: the bot only opens the Mini App and sends messages; business logic and data access live in the web app / database, not in the bot.
 - **shadcn/ui**: components live in `apps/web/src/components/ui` and are added with `npx shadcn@latest add <name>` from `apps/web`.
@@ -23,5 +23,5 @@ Monorepo with two apps, each with its own toolchain and Dockerfile:
 ## Consequences
 
 - Two languages (TypeScript + Python) and two CI jobs; the bot stays thin to keep the split cheap.
-- Inside Telegram the UI uses DaFit's own brand theme; only light/dark comes from Telegram — see ADR 0010.
+- Inside Telegram the UI uses DaFit's own brand theme; only light/dark comes from Telegram (see ADR 0010).
 - A quick tunnel URL changes on every run; for regular Mini App testing set up a named tunnel with a stable hostname.
