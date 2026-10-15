@@ -5,7 +5,8 @@ import { defineConfig } from "@playwright/test";
  * Port 3100 keeps clear of `next dev` on 3000. Chromium only: it is what Telegram's Android and
  * Desktop clients embed, and the only browser preinstalled in CI images (PLAYWRIGHT_BROWSERS_PATH).
  */
-// E2E_PORT lets parallel runs (several checkouts on one machine) use their own servers.
+// E2E_PORT lets parallel runs (several checkouts on one machine) use their own servers. Each run
+// also takes the next port: e2e/session.spec.ts starts a server of its own there.
 const PORT = Number(process.env.E2E_PORT ?? 3100);
 const baseURL = `http://localhost:${PORT}`;
 
