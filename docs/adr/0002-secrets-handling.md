@@ -26,3 +26,11 @@ Fit uses secret credentials (Supabase secret key, Telegram bot token, and more t
 - Development keys shared during testing are treated as compromised and rotated before the production launch; nothing in the code needs to change for that.
 - Agents never read `.env*.local`, never echo secret values, and never paste them into third-party fields; humans place secret values into Vercel and local env files.
 - Slightly more setup up front (env module, schema, per-environment keys) in exchange for no "prod hardening" pass later.
+
+## Notes (2026-10-15)
+
+On §5. The bot's Vercel project `dafit-bot` has Telegram variables in Production only. Its `/healthz` shows `bot_id`, the public id of the bot whose token the deployment holds, so a token that slipped into a preview shows up there. Local development uses a separate dev bot, and local polling refuses to start with @fitconnection_bot.
+
+On §7. The webhook secret defaults to HMAC-SHA256 of a fixed label (`dafit/telegram-webhook-secret/v1`) keyed with the bot token, in hex. It lives wherever the token lives and rotates with it. Whoever holds the token can call `setWebhook` anyway, so this adds no exposure. `TELEGRAM_WEBHOOK_SECRET` overrides it, which keeps rotation of the secret alone possible without a code change (§9). Set it in every store that holds the token for the bot (Vercel `dafit-bot` Production and the GitHub repository secrets) or in none.
+
+GitHub Actions. The Actions secrets of this repository are repository secrets (`SUPABASE_DB_URL`, `TELEGRAM_BOT_TOKEN`): the repo is private and user-owned, and GitHub offers environment secrets and branch rules there only on paid plans. Any workflow on any branch of the repo can read them. Only the owner and Claude sessions push here. A workflow passes a secret only to the step that needs it, and a job that uses one runs only on `main`; `Bot setup` follows this. `Database deploy` predates the rule: it gives `SUPABASE_DB_URL` to the whole job and does not check the branch when started by hand. With a paid plan, move the secrets into environments limited to `main`.

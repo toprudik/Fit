@@ -1,0 +1,135 @@
+name: Bot setup
+
+# Points the Telegram webhook of @fitconnection_bot at the bot's Vercel production domain and syncs its commands,
+# descriptions, name and menu button (python -m fit_bot setup, see apps/bot/src/fit_bot/bot_setup.py). Runs after a
+# push to main that changes apps/bot or this file, once Vercel serves that commit; by hand (mode setup or check); and
+# daily as a read-only check. The only secret is the repository secret TELEGRAM_BOT_TOKEN (the production bot, the
+# same token as in the Vercel projects; optional TELEGRAM_WEBHOOK_SECRET), and only the last step gets it. Code that
+# runs in this job is pinned: actions by commit SHA, uv by version and checksum, Python packages by the hashes in
+# uv.lock, and nothing is built. Prints no secrets.
+
+on:
+  push:
+    branches: [main]
+    paths: ["apps/bot/**", ".github/workflows/bot-setup.yml"]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "setup registers the webhook and syncs the bot profile; check only reads and probes"
+        type: choice
+        options: [setup, check]
+        default: setup
+  schedule:
+    - cron: "17 6 * * *" # daily read-only check, 09:17 Moscow time
+
+permissions:
+  contents: read
+
+concurrency:
+  # One group for every mode, never cancelled: a check that starts while a setup run waits for Vercel or syncs the
+  # profile waits for that run, so it never compares Telegram with code that setup has not applied yet. GitHub keeps
+  # one pending run per group and a newer run takes its place, so a check can replace a pending setup run (it shows
+  # as cancelled); run Bot setup by hand then.
+  group: bot-setup
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    if: github.repository == 'toprudik/Fit' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      # Public values. If Vercel gives the project another domain, change BOT_WEBHOOK_URL here.
+      BOT_WEBHOOK_URL: https://dafit-bot.vercel.app
+      WEBAPP_URL: https://dafit-web-eight.vercel.app
+      MODE: ${{ github.event_name == 'schedule' && 'check' || inputs.mode || 'setup' }}
+    steps:
+      - name: Check the secret
+        id: config
+        env:
+          HAS_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN != '' }}
+        run: |
+          if [ "$HAS_TOKEN" = true ]; then echo "ready=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          message="The repository has no Actions secret TELEGRAM_BOT_TOKEN (Settings, Secrets and variables, Actions)."
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then echo "::error::$message"; exit 1; fi
+          echo "::notice::$message Skipping until it is set."
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+      - if: steps.config.outputs.ready == 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 50
+      - if: steps.config.outputs.ready == 'true'
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+        with:
+          # uv 0.11.32, checked against the SHA-256 of uv-x86_64-unknown-linux-gnu.tar.gz from its GitHub release.
+          # v6.8.0 knows checksums only up to uv 0.8.20 and would otherwise install the latest uv unchecked.
+          version: "0.11.32"
+          checksum: "aab924fd522efd06f1c5f3b93a243864fc453132c94b2dc49f1371b528a4b967"
+          python-version: "3.13"
+          # No shared uv cache: the CI bot job saves one under the same key with unpinned tools, and uv trusts its
+          # cache. The locked wheels are small, so this job always downloads them fresh.
+          enable-cache: false
+      - if: steps.config.outputs.ready == 'true'
+        working-directory: apps/bot
+        # Only the locked wheels. The project itself is not built, so no build backend runs in this job; the last step
+        # imports fit_bot from src.
+        run: uv sync --frozen --no-dev --no-install-project
+      - name: Wait until Vercel serves this commit
+        if: steps.config.outputs.ready == 'true' && github.event_name == 'push'
+        run: |
+          base="${BOT_WEBHOOK_URL%/}"
+          body="$RUNNER_TEMP/healthz.json"
+          code=""
+          served=""
+          deadline=$((SECONDS + 900))
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            rm -f "$body"
+            code=$(curl -s -o "$body" -w '%{http_code}' --max-time 10 "$base/healthz" || true)
+            served=""
+            if [ "$code" = 200 ]; then
+              served=$(jq -r '.commit // empty' "$body" 2>/dev/null || true)
+              # Only a full commit SHA is printed or passed to git; anything else counts as no commit.
+              [[ "$served" =~ ^[0-9a-f]{40}$ ]] || served=""
+            fi
+            if [ "$served" = "$GITHUB_SHA" ]; then echo "Vercel serves $GITHUB_SHA."; exit 0; fi
+            if [ -n "$served" ]; then
+              git fetch --quiet --depth=50 origin main || true
+              if git merge-base --is-ancestor "$GITHUB_SHA" "$served" 2>/dev/null; then
+                echo "Vercel serves $served, which includes $GITHUB_SHA."; exit 0
+              fi
+            fi
+            sleep 15
+          done
+          case "$code" in
+            200)
+              if [ -n "$served" ]; then
+                hint="it serves $served. Check the dafit-bot deployment of this commit on Vercel."
+              else
+                hint="its /healthz shows no commit. Turn on Automatically expose System Environment Variables in the Vercel project dafit-bot and redeploy."
+              fi
+              ;;
+            30? | 401 | 403)
+              hint="/healthz answers $code. Deployment Protection seems to cover the production domain, which must stay public."
+              ;;
+            404)
+              hint="/healthz answers 404. Check that BOT_WEBHOOK_URL in this workflow is the production domain of dafit-bot and that its latest deployment is Ready."
+              ;;
+            000)
+              hint="/healthz cannot be reached (no HTTP answer: DNS, connection, TLS or a 10 second timeout)."
+              ;;
+            *)
+              hint="/healthz answers $code."
+              ;;
+          esac
+          echo "::error::After 15 minutes $base does not serve $GITHUB_SHA: $hint"
+          exit 1
+      - name: Set up the bot
+        if: steps.config.outputs.ready == 'true'
+        working-directory: apps/bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+          PYTHONPATH: src
+        run: |
+          if [ "$MODE" = check ]; then set -- --check-only; fi
+          uv run --no-sync python -m fit_bot setup "$@"

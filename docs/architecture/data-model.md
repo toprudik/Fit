@@ -93,7 +93,7 @@
 2. **Доменные RPC**: `security definer` функции в `public` с `set search_path = ''`, `revoke execute ... from public, anon`, `grant execute ... to authenticated`. Первая строка тела определяет `v_uid := auth.uid()` и проверяет права явно. Используются, когда операция трогает несколько таблиц или требует блокировок: запись на занятие, отмена/перенос, отметка посещения, списание/прощение, создание абонемента, присоединение по ссылке, лист ожидания, выпуск токенов, все `admin_*`. Таблицы, в которые пишут только RPC (`bookings`, `ledger_entries`, `booking_events`), не имеют политик insert/update/delete вовсе.
 3. **Сервер с секретным ключом** (`lib/supabase/admin.ts`) применяется только там, где нет пользовательской сессии или нужно обойти RLS ради системной работы (ADR 0002 п. 6):
    - вход через Telegram: upsert `profiles`, создание `auth.users`;
-   - диспетчер уведомлений (outbox → Telegram) и обработчик webhook бота;
+   - диспетчер уведомлений (outbox → Telegram). Бот к базе не обращается и ключей Supabase не получает (ADR 0006). Как нажатие кнопки в уведомлении (wave-1 §3: Т2, Т7a, С1) доходит до базы, решается вместе с outbox;
    - cron-задачи: материализация повторов и шаблонов недели, автозавершение занятий, утренняя сводка, дневные сводки питания, флаги оттока, обновление MV, очистка удалённых аккаунтов;
    - приём шагов от iOS Shortcuts (личный токен → пользователь);
    - отдача ICS-ленты календаря (токен → пользователь);
@@ -277,7 +277,7 @@ create type public.share_category as enum ('nutrition', 'measurements', 'photos'
 ```sql
 alter table public.profiles
   add column last_seen_at   timestamptz,          -- обновляет сервер при входе; админка читает через definer-функции
-  add column bot_started_at timestamptz,          -- пользователь нажал /start; без этого бот не может писать
+  add column bot_started_at timestamptz,          -- пользователь нажал /start; кто пишет поле, решается вместе с outbox
   add column bot_blocked_at timestamptz,          -- Telegram вернул 403 при отправке; сброс при /start
   add column blocked_at     timestamptz,          -- админ заблокировал аккаунт (ADM-7), пишет только админская RPC
   add column blocked_reason text check (char_length(blocked_reason) <= 500),
@@ -293,6 +293,8 @@ grant select (id, username, first_name, last_name, photo_url, language_code, dis
               managed_by_trainer_id, created_at, updated_at)
   on public.profiles to authenticated;
 ```
+
+Кто заполняет `bot_started_at` и сбрасывает `bot_blocked_at`, решается вместе с outbox: бот к базе не обращается (ADR 0006). Писать человеку бот может и после разрешения в Mini App (`requestWriteAccess`). В применённой миграции комментарий к `bot_started_at` ещё говорит, что без `/start` бот писать не может. Применённые миграции не меняются, поэтому комментарий поправит следующая миграция через `comment on column`.
 
 Зеркальные столбцы нужны вью `public_profiles`: она `security_invoker` и читает только `profiles`, поэтому видит ровно тех, кого пускает политика `profiles` (сам, партнёры по парам в любом статусе, свои карточки тренера, админ без карточек и заглушки).
 

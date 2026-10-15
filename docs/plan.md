@@ -31,6 +31,7 @@
 | Sam | Supabase → Auth: выключить «Allow new users to sign up» (ADR 0004) | сейчас |
 | Sam | @BotFather → Login Widget: добавить URL превью и `…/auth/telegram/callback`, получить Client ID/Secret | после деплоя превью (неделя 0) |
 | Sam | Подключить репозиторий к Vercel (GitHub App Vercel с доступом к `toprudik/Fit`) и вставить секреты в Environment Variables | неделя 0 |
+| Sam | Бот: проект Vercel `dafit-bot` и его переменные, секрет репозитория `TELEGRAM_BOT_TOKEN`, в @BotFather адрес Mini App и аватар (шаги в README) | неделя 0 |
 | Давид | Список 5 тренеров, их формат работы (офлайн/онлайн, группы, цены), 1–2 тренера для репетиции | до 26 окт |
 | Давид | Закрытая Telegram-группа беты | до 17 ноя |
 | Sam / Давид | Выдать Pro всем 5 тренерам беты при онбординге (админка → «Тарифы и выдачи»); Premium клиентам по решению | 24 ноя |
