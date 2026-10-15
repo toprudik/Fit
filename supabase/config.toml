@@ -1,0 +1,14 @@
+# Supabase CLI config for the local Postgres used by migrations and pgTAP tests
+# (`supabase db start`, `supabase test db`), on a laptop and in CI. Local defaults only, no secrets:
+# the hosted project (ref zxwabddqqtitybtsdeqp) is configured in the Supabase dashboard, not here.
+project_id = "fit"
+
+[db]
+port = 54322
+shadow_port = 54320
+# Must match the hosted project (Postgres 17).
+major_version = 17
+
+[db.seed]
+# No seed data yet; tests create their own rows inside a rolled-back transaction.
+enabled = false
