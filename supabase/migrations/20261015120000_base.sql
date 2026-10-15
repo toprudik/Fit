@@ -20,6 +20,8 @@ alter default privileges for role postgres in schema public revoke all on functi
 -- PUBLIC keeps EXECUTE on new functions (global default), so every function still needs
 -- "revoke all on function ... from public" (and "from anon" for functions in public).
 
+-- set_updated_at comes from the profiles migration, which had no function comment yet.
+comment on function public.set_updated_at() is 'Trigger: sets updated_at to now() on every update of the row.';
 revoke all on function public.set_updated_at() from public, anon, authenticated;  -- trigger only; triggers do not check EXECUTE
 
 -- The profiles migration predates the default-privilege change above, so anon and authenticated got every table
