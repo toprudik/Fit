@@ -1,0 +1,43 @@
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { AccountSync } from "./account-sync";
+
+type ProfileRow = { first_name: string | null; last_name: string | null; username: string | null; photo_url: string | null };
+
+/** "Анна Смирнова" from Telegram's first and last name, else the username, else "" (the avatar shows an icon). */
+function displayName(profile: ProfileRow | null): string {
+  if (!profile) return "";
+  const fullName = [profile.first_name, profile.last_name]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" ");
+  return fullName || profile.username?.trim() || "";
+}
+
+async function readAccount(): Promise<{ name: string; photoUrl: string | null } | null> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    // getClaims() verifies the session JWT; the user id comes from it, never from the client.
+    const { data: session } = await supabase.auth.getClaims();
+    const userId = session?.claims.sub;
+    if (!userId) return null;
+
+    // RLS lets a user read only their own profile row.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("first_name, last_name, username, photo_url")
+      .eq("id", userId)
+      .maybeSingle<ProfileRow>();
+    return { name: displayName(profile), photoUrl: profile?.photo_url ?? null };
+  } catch {
+    // Supabase unreachable: the shell works signed out rather than failing the page.
+    return null;
+  }
+}
+
+/**
+ * Reads who is signed in for this request and passes it to the client store. The root layout
+ * renders it inside <Suspense>: it is the only per-request part of otherwise static pages.
+ */
+export async function AccountLoader() {
+  return <AccountSync account={await readAccount()} />;
+}

@@ -21,6 +21,10 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  async redirects() {
+    // The scaffold's /me became the profile (screens.md §2.3).
+    return [{ source: "/me", destination: "/profile", permanent: true }];
+  },
   turbopack: {
     rules: {
       "*.css": {

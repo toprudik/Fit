@@ -1,57 +1,219 @@
 "use client";
 
-import { init, isTMA, miniApp, retrieveRawInitData, themeParams, viewport } from "@tma.js/sdk-react";
+import {
+  backButton,
+  init,
+  isTMA,
+  miniApp,
+  retrieveRawInitData,
+  settingsButton,
+  swipeBehavior,
+  themeParams,
+  viewport,
+} from "@tma.js/sdk-react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { toast } from "sonner";
+import { useEffect, useEffectEvent } from "react";
+import { toast } from "@/components/ui/sonner";
+import { useI18n } from "@/i18n/client";
+import { isLocale, LOCALE_COOKIE, type Locale } from "@/i18n/config";
+import { reloadPage } from "@/lib/navigation/reload";
+import { readCookie } from "@/lib/preferences";
+import {
+  markMiniAppReady,
+  type MiniAppSignInResult,
+  safely,
+  safelyAsync,
+  setMiniAppSignIn,
+  signInToMiniApp,
+} from "@/lib/telegram/mini-app";
+import { THEME_BG } from "@/lib/theme/colors";
+import { setTelegramScheme } from "@/lib/theme/store";
+import { isColorDark } from "@/lib/theme/theme";
 
-function safely(fn: () => void) {
+const SETTINGS_HREF = "/settings";
+const LOGIN_HREF = "/login";
+
+/**
+ * initData already sent this page load. React runs effects twice in development, and a second
+ * sign-in would answer `fresh: false` while the first one's answer is thrown away.
+ */
+const sentInitData = new Set<string>();
+
+/** Set in sessionStorage once this tab reloaded for the language: it never reloads for it again. */
+const LOCALE_RELOAD_KEY = "dafit-locale-reload";
+
+/** True the first time in this tab, false after that or when sessionStorage is unavailable. */
+function takeLocaleReload(): boolean {
   try {
-    fn();
+    if (sessionStorage.getItem(LOCALE_RELOAD_KEY)) return false;
+    sessionStorage.setItem(LOCALE_RELOAD_KEY, "1");
+    return true;
   } catch {
-    // Feature not supported by this Telegram client — ignore.
+    return false;
   }
 }
 
 /**
- * Inside Telegram: initialises the Mini App SDK, binds Telegram theme to our CSS tokens and
- * signs the user in from initData (verified on the server). Outside Telegram it does nothing.
+ * What to do after the server accepted initData. It sends `detected` only when the request came
+ * without a language cookie: on the first launch it picked the language from Telegram and set the
+ * cookie (ADR 0015). When the browser did not keep that cookie, it drops the app's cookies, as
+ * Telegram Web does in its iframe with third-party cookies blocked: no session can last there.
+ */
+function afterSignIn(detected: Locale | null, rendered: Locale): "stay" | "reload" | "blocked" {
+  if (!detected) return "stay";
+  if (readCookie(document.cookie, LOCALE_COOKIE) !== detected) return "blocked";
+  if (detected === rendered) return "stay";
+  // One reload shows the page in that language. If the server still got no cookie after it, the
+  // browser keeps the cookie but does not send it: another reload would loop, so stay.
+  return takeLocaleReload() ? "reload" : "blocked";
+}
+
+/**
+ * Paints Telegram's header, background and bottom bar in DaFit's `bg` for the theme on <html>
+ * (ADR 0010). The color comes from THEME_BG, never from the CSS: the minifier shortens #000000
+ * to #000, and the SDK takes six-digit hex only. The SDK posts only colors that changed.
+ */
+function paintTelegramChrome() {
+  const color = THEME_BG[document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark"];
+  safely(() => miniApp.setHeaderColor(color));
+  safely(() => miniApp.setBgColor(color));
+  safely(() => miniApp.setBottomBarColor(color));
+}
+
+/**
+ * Hands Telegram's light/dark scheme to the theme store and follows theme_changed live. The scheme
+ * comes from Telegram's theme (the brightness of its bg_color, as Telegram clients derive
+ * colorScheme), never from miniApp.isDark: that one reflects the colors we paint ourselves.
+ */
+function followTelegramScheme() {
+  const apply = (bg: string | undefined) => {
+    const dark = bg ? isColorDark(bg) : null;
+    if (dark !== null) setTelegramScheme(dark ? "dark" : "light");
+  };
+  return safely(() => {
+    apply(themeParams.bgColor());
+    return themeParams.bgColor.sub(apply);
+  });
+}
+
+/**
+ * Initializes the SDK from the launch params and reads initData. Returns undefined when that fails
+ * (launch params the SDK can't parse, no Telegram bridge): the app then stays the website.
+ */
+function launchMiniApp() {
+  return safely(() => {
+    const cleanup = init();
+    try {
+      return { cleanup, rawInitData: retrieveRawInitData() };
+    } catch (error) {
+      cleanup();
+      throw error;
+    }
+  });
+}
+
+/**
+ * Inside Telegram: mounts the Mini App SDK, takes the light/dark scheme and safe areas from
+ * Telegram (never its colors), keeps Telegram's chrome in DaFit's background color, routes the
+ * Settings item of Telegram's menu to /settings and signs the user in from initData (verified on
+ * the server) on every page load. After a full page load the URL has no launch hash; the SDK then
+ * reads the launch params it saved in sessionStorage (tapps/launchParams) on the first load.
+ * Outside Telegram it does nothing; when the SDK can't start, the app stays the website, and
+ * /login asks to reopen it. When the browser drops the app's cookies (Telegram Web's iframe with
+ * third-party cookies blocked), it asks to use the Telegram app and never reloads in a loop.
  */
 export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const { locale, t } = useI18n();
 
-  useEffect(() => {
-    if (!isTMA()) return;
-    const cleanup = init();
-    document.documentElement.dataset.tma = "";
+  const openSettings = useEffectEvent(() => {
+    if (window.location.pathname !== SETTINGS_HREF) router.push(SETTINGS_HREF);
+  });
 
-    safely(() => miniApp.mount());
-    safely(() => themeParams.mount());
-    safely(() => themeParams.bindCssVars());
-    safely(() => miniApp.ready());
-    safely(() => {
-      void viewport.mount().then(() => viewport.expand());
-    });
-
-    const rawInitData = retrieveRawInitData();
-    if (rawInitData) void signIn(rawInitData);
-
-    async function signIn(raw: string) {
+  const signIn = useEffectEvent(async (initData: string): Promise<MiniAppSignInResult> => {
+    let result: MiniAppSignInResult = "failed";
+    try {
       const res = await fetch("/api/auth/telegram/mini-app", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData: raw }),
+        body: JSON.stringify({ initData }),
       });
-      // Session cookies are httpOnly, so the server decides whether this was a new sign-in.
       if (res.ok) {
-        const { fresh } = (await res.json()) as { fresh?: boolean };
-        if (fresh) router.refresh();
+        // Session cookies are httpOnly, so the server decides whether this was a new sign-in.
+        const { fresh, locale: detected } = (await res.json()) as { fresh?: boolean; locale?: string };
+        const next = afterSignIn(isLocale(detected) ? detected : null, locale);
+        if (next === "reload") reloadPage();
+        else if (next === "stay" && fresh) router.refresh();
+        if (next !== "blocked") return "signed-in";
+        result = "blocked";
+      } else if (res.status === 401) {
+        // initData too old or not genuine. Sending it again won't help, only a new launch will.
+        result = "reopen";
       }
-      else toast.error("Не удалось войти через Telegram");
+    } catch {
+      // Network or a malformed answer: another try may work.
+    }
+    // /login shows how the sign-in went on the page itself.
+    if (window.location.pathname !== LOGIN_HREF) toast.error(result === "blocked" ? t.telegram.cookiesBlocked : t.telegram.signInFailed);
+    return result;
+  });
+
+  useEffect(() => {
+    if (!safely(() => isTMA())) {
+      // The pre-paint script took launch params for Telegram, the SDK did not: this is the website.
+      document.documentElement.removeAttribute("data-telegram");
+      return;
+    }
+    const launch = launchMiniApp();
+    if (!launch) {
+      // Inside Telegram, but without launch params there is no initData to sign in with.
+      setMiniAppSignIn(null);
+      return;
+    }
+    const disposers: (() => void)[] = [launch.cleanup];
+    const keep = (dispose: (() => void) | undefined) => {
+      if (dispose) disposers.push(dispose);
+    };
+
+    safely(() => miniApp.mount());
+    safely(() => themeParams.mount());
+    safely(() => backButton.mount());
+    safely(() => settingsButton.mount());
+    safely(() => swipeBehavior.mount());
+
+    // The scheme first: it may change data-theme, and the chrome is painted from data-theme.
+    keep(followTelegramScheme());
+    paintTelegramChrome();
+    const observer = new MutationObserver(paintTelegramChrome);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    keep(() => observer.disconnect());
+
+    safely(() => settingsButton.show());
+    keep(safely(() => settingsButton.onClick(() => openSettings())));
+
+    safely(() => viewport.expand());
+    // Safe-area insets become --tg-viewport-* variables, read by --safe-* in globals.css. They are
+    // bound right away and fill in once the mount has asked Telegram for the insets.
+    keep(safely(() => viewport.bindCssVars()));
+    void safelyAsync(() => viewport.mount());
+
+    markMiniAppReady();
+    // Show the app after the first frame so Telegram's splash hands over to a painted screen.
+    const frame = requestAnimationFrame(() => safely(() => miniApp.ready()));
+    keep(() => cancelAnimationFrame(frame));
+
+    const { rawInitData } = launch;
+    // Screens can ask to sign in again (/login after a failure); the provider signs in once per page load.
+    setMiniAppSignIn(rawInitData ? () => signIn(rawInitData) : null);
+    if (rawInitData && !sentInitData.has(rawInitData)) {
+      sentInitData.add(rawInitData);
+      void signInToMiniApp();
     }
 
-    return cleanup;
-  }, [router]);
+    return () => {
+      for (const dispose of disposers.reverse()) dispose();
+    };
+  }, []);
 
   return children;
 }

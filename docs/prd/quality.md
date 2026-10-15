@@ -69,7 +69,7 @@
 1. Секреты только в env; новая переменная добавляется в `.env.example` с пометкой public / server-only; server-only читаются только через `src/env/server.ts`.
 2. В `NEXT_PUBLIC_*` только безопасные для браузера значения.
 3. Отдельные ключи и боты для local / preview / production.
-4. Вход только через Telegram: проверенный `initData` (HMAC, возраст ≤ `TELEGRAM_INIT_DATA_MAX_AGE`) или OIDC; `initDataUnsafe` и присланные клиентом id не доверяются.
+4. Вход только через Telegram: проверенный `initData` (HMAC; новую сессию открывает только `initData` не старше `TELEGRAM_INIT_DATA_MAX_AGE`) или OIDC; `initDataUnsafe` и присланные клиентом id не доверяются.
 5. Supabase secret key используется только там, где RLS нужно обойти; никогда для отдачи данных пользователю.
 6. RLS на каждой открытой таблице; схема только миграциями; после DDL Supabase security advisors не показывают предупреждений уровня ERROR/WARN (допущение для WARN).
 7. Вебхуки аутентифицированы (`X-Telegram-Bot-Api-Secret-Token`, подписи провайдеров); новые публичные эндпоинты с токенами (iOS Shortcuts и т. п.) хешируют токены и ограничены rate limit.

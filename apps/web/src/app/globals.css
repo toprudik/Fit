@@ -1,78 +1,279 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+/* Theme comes from data-theme on <html> (set before first paint, see src/lib/theme). Dark is the default. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* Inside the Telegram Mini App, from before the first paint (data-telegram, see src/lib/theme/init-script.ts). */
+@custom-variant telegram (&:where([data-telegram] *));
 
-/* shadcn/ui tokens (new-york, neutral) */
+/*
+ * DaFit design tokens. Names and values mirror docs/design/tokens.json (the contract);
+ * src/app/tokens.test.ts fails if they drift apart. Colors and shadows depend on the theme,
+ * everything else is shared. Telegram's --tg-theme-* colors are never used (ADR 0010).
+ */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --surface-1: #131418;
+  --surface-2: #1c1e23;
+  --surface-3: #26292f;
+  --field: #1c1e23;
+  --field-line: #2f333a;
+  --material: rgba(19, 20, 24, 0.72);
+  --line: #2a2d34;
+  --line-strong: #666c76;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --ink: #f5f6f7;
+  --ink-2: #a9adb4;
+  --ink-3: #878c94;
+  --accent: #3d63ff;
+  --on-accent: #ffffff;
+  --accent-ink: #8099ff;
+  --accent-soft: #17224d;
+  --inverse: var(--ink);
+  --on-inverse: #000000;
+  --focus-ring: #8aa2ff;
+  --success: #3ecf7f;
+  --success-soft: #0e2a1b;
+  --warning: #f2b632;
+  --warning-soft: #2d230d;
+  --danger: #ff6359;
+  --danger-soft: #36120f;
+  --pro: var(--accent-ink);
+  --pro-soft: var(--accent-soft);
+  --premium: #f0c35a;
+  --premium-soft: #2b2312;
+  --plate-1: #4a6fff;
+  --plate-2: #b98a00;
+  --plate-3: #de5f99;
+  --plate-4: #cf6a22;
+  --plate-5: #1ea6b8;
+  --plate-6: #ee5a4f;
+  --plate-7: #8a6ff0;
+  --plate-8: #1fa865;
+  --shadow-float: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f2f3f5;
+  --surface-1: #ffffff;
+  --surface-2: #e6e8ec;
+  --surface-3: #dadde2;
+  --field: #ffffff;
+  --field-line: #d3d7dd;
+  --material: rgba(255, 255, 255, 0.78);
+  --line: #e3e6ea;
+  --line-strong: #7a808a;
+  --scrim: rgba(14, 15, 17, 0.4);
+  --ink: #0e0f11;
+  --ink-2: #52575f;
+  --ink-3: #686d75;
+  --accent: #2f5be8;
+  --on-accent: #ffffff;
+  --accent-ink: #2149d4;
+  --accent-soft: #e7ecfd;
+  --inverse: var(--ink);
+  --on-inverse: #ffffff;
+  --focus-ring: #2f5be8;
+  --success: #0b7a41;
+  --success-soft: #e2f4e9;
+  --warning: #875c00;
+  --warning-soft: #fcf0d4;
+  --danger: #c62a20;
+  --danger-soft: #fde8e6;
+  --pro: var(--accent-ink);
+  --pro-soft: var(--accent-soft);
+  --premium: #876200;
+  --premium-soft: #faefd2;
+  --plate-1: #2f5be8;
+  --plate-2: #e0a100;
+  --plate-3: #d64f8e;
+  --plate-4: #ef7a22;
+  --plate-5: #0fa2b3;
+  --plate-6: #e4473e;
+  --plate-7: #7d5ce8;
+  --plate-8: #14a35b;
+  --shadow-float: 0 0 0 1px rgba(14, 15, 17, 0.04), 0 12px 32px rgba(14, 15, 17, 0.12);
+}
+
 :root {
-  --radius: 0.75rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --size-touch: 44px;
+  --size-control-sm: 36px;
+  --size-control-md: 44px;
+  --size-control-lg: 52px;
+  --size-tabbar: 56px;
+  --size-header: 52px;
+  --duration-instant: 100ms;
+  --duration-fast: 160ms;
+  --duration-base: 240ms;
+  --duration-slow: 400ms;
+  --duration-da: 680ms;
+  --easing-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --easing-exit: cubic-bezier(0.4, 0, 1, 1);
+  --easing-overshoot: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --opacity-disabled: 0.4;
+  --opacity-locked: 0.55;
+  --z-header: 20;
+  --z-tabbar: 30;
+  --z-sheet: 50;
+  --z-toast: 60;
+
+  /*
+   * Safe areas: the larger of the browser inset and Telegram's (device + Telegram's own header in
+   * fullscreen). Telegram values come from viewport.bindCssVars() in the Telegram provider.
+   */
+  --safe-top: max(env(safe-area-inset-top, 0px), calc(var(--tg-viewport-safe-area-inset-top, 0px) + var(--tg-viewport-content-safe-area-inset-top, 0px)));
+  --safe-right: max(env(safe-area-inset-right, 0px), calc(var(--tg-viewport-safe-area-inset-right, 0px) + var(--tg-viewport-content-safe-area-inset-right, 0px)));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), calc(var(--tg-viewport-safe-area-inset-bottom, 0px) + var(--tg-viewport-content-safe-area-inset-bottom, 0px)));
+  --safe-left: max(env(safe-area-inset-left, 0px), calc(var(--tg-viewport-safe-area-inset-left, 0px) + var(--tg-viewport-content-safe-area-inset-left, 0px)));
+
+  /* shadcn/ui variables point at DaFit tokens. shadcn's "accent" is DaFit's blue; hover fills use surface-3. */
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: var(--surface-1);
+  --card-foreground: var(--ink);
+  --popover: var(--surface-1);
+  --popover-foreground: var(--ink);
+  --primary: var(--accent);
+  --primary-foreground: var(--on-accent);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--ink-2);
+  --accent-foreground: var(--on-accent);
+  --destructive: var(--danger);
+  --border: var(--line);
+  --input: var(--field-line);
+  --ring: var(--focus-ring);
+  --radius: var(--radius-md);
+  --chart-1: var(--plate-1);
+  --chart-2: var(--plate-2);
+  --chart-3: var(--plate-3);
+  --chart-4: var(--plate-4);
+  --chart-5: var(--plate-5);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+/* Only DaFit values exist as Tailwind colors, text styles and radii: no raw palette, no stray sizes. */
+@theme {
+  --color-*: initial;
+  --text-*: initial;
+  --radius-*: initial;
+  --spacing: 4px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-tma]) {
-    color-scheme: dark;
-  }
-}
+@theme static {
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+  --radius-full: 999px;
 
-/* Inside Telegram: follow the user's Telegram theme (vars bound by the tma.js SDK). */
-:root[data-tma] {
-  --background: var(--tg-theme-bg-color, oklch(1 0 0));
-  --foreground: var(--tg-theme-text-color, oklch(0.145 0 0));
-  --card: var(--tg-theme-secondary-bg-color, var(--background));
-  --card-foreground: var(--tg-theme-text-color, var(--foreground));
-  --muted-foreground: var(--tg-theme-hint-color, oklch(0.556 0 0));
-  --primary: var(--tg-theme-button-color, oklch(0.205 0 0));
-  --primary-foreground: var(--tg-theme-button-text-color, oklch(0.985 0 0));
-  --accent-foreground: var(--tg-theme-link-color, oklch(0.205 0 0));
-  --destructive: var(--tg-theme-destructive-text-color, oklch(0.577 0.245 27.325));
+  /* --font-onest and --font-tektur-narrow are set by next/font/local on <html> (src/fonts). */
+  --font-sans: var(--font-onest), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-numeric: var(--font-tektur-narrow), var(--font-onest), system-ui, sans-serif;
+
+  /* Type styles from tokens.json → text-<name>. Numerals (num-*) also need font-numeric tabular-nums. */
+  --text-num-hero: 64px;
+  --text-num-hero--line-height: 60px;
+  --text-num-hero--font-weight: 700;
+  --text-num-hero--letter-spacing: -0.5px;
+  --text-num-xl: 44px;
+  --text-num-xl--line-height: 44px;
+  --text-num-xl--font-weight: 700;
+  --text-num-xl--letter-spacing: -0.25px;
+  --text-num-lg: 32px;
+  --text-num-lg--line-height: 34px;
+  --text-num-lg--font-weight: 600;
+  --text-large-title: 34px;
+  --text-large-title--line-height: 40px;
+  --text-large-title--font-weight: 700;
+  --text-large-title--letter-spacing: -0.68px;
+  --text-title-1: 28px;
+  --text-title-1--line-height: 34px;
+  --text-title-1--font-weight: 700;
+  --text-title-1--letter-spacing: -0.5px;
+  --text-title-2: 22px;
+  --text-title-2--line-height: 28px;
+  --text-title-2--font-weight: 600;
+  --text-title-2--letter-spacing: -0.3px;
+  --text-title-3: 20px;
+  --text-title-3--line-height: 26px;
+  --text-title-3--font-weight: 600;
+  --text-title-3--letter-spacing: -0.2px;
+  --text-headline: 17px;
+  --text-headline--line-height: 22px;
+  --text-headline--font-weight: 600;
+  --text-body: 17px;
+  --text-body--line-height: 24px;
+  --text-body--font-weight: 400;
+  --text-callout: 16px;
+  --text-callout--line-height: 22px;
+  --text-callout--font-weight: 400;
+  --text-subhead: 15px;
+  --text-subhead--line-height: 20px;
+  --text-subhead--font-weight: 400;
+  --text-footnote: 13px;
+  --text-footnote--line-height: 18px;
+  --text-footnote--font-weight: 400;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--font-weight: 500;
+  --text-caption--letter-spacing: 0.1px;
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --color-bg: var(--bg);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-field: var(--field);
+  --color-field-line: var(--field-line);
+  --color-material: var(--material);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-scrim: var(--scrim);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-inverse: var(--inverse);
+  --color-on-inverse: var(--on-inverse);
+  --color-focus-ring: var(--focus-ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-pro: var(--pro);
+  --color-pro-soft: var(--pro-soft);
+  --color-premium: var(--premium);
+  --color-premium-soft: var(--premium-soft);
+  --color-plate-1: var(--plate-1);
+  --color-plate-2: var(--plate-2);
+  --color-plate-3: var(--plate-3);
+  --color-plate-4: var(--plate-4);
+  --color-plate-5: var(--plate-5);
+  --color-plate-6: var(--plate-6);
+  --color-plate-7: var(--plate-7);
+  --color-plate-8: var(--plate-8);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -85,19 +286,74 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --ease-standard: var(--easing-standard);
+  --ease-exit: var(--easing-exit);
+  --ease-overshoot: var(--easing-overshoot);
+}
+
+/* Floating elements only (sheets, menus, toasts); cards in the flow have no shadow. */
+@utility shadow-float {
+  box-shadow: var(--shadow-float);
+}
+
+/* Translucent header and tab bar over content. */
+@utility material {
+  background-color: var(--material);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+  *,
+  ::before,
+  ::after {
+    border-color: var(--line);
+  }
+  html {
+    background-color: var(--bg);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /*
+     * Focus and in-page jumps never land under the sticky header bar or the tab bar (WCAG 2.4.11);
+     * the 1px is the tab bar's top border. The header bar's own buttons opt out (ScreenHeader).
+     */
+    scroll-padding-top: calc(var(--size-header) + var(--safe-top));
+    scroll-padding-bottom: calc(var(--size-tabbar) + 1px + var(--safe-bottom));
+  }
+  @media (min-width: 48rem) {
+    /* From 768px there is no header bar or tab bar over the content. */
+    html {
+      scroll-padding-top: var(--safe-top);
+      scroll-padding-bottom: var(--safe-bottom);
+    }
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 17px;
+    line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-synthesis: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Keyboard focus: solid 2px ring with a 2px gap, visible on every surface in both themes. */
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    /* Room for that ring when focus scrolls an element into view. */
+    scroll-margin-block: var(--space-1);
   }
 }
