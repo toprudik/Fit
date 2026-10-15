@@ -15,7 +15,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useEffectEvent } from "react";
 import { toast } from "@/components/ui/sonner";
 import { useI18n } from "@/i18n/client";
-import { isLocale } from "@/i18n/config";
+import { isLocale, LOCALE_COOKIE, type Locale } from "@/i18n/config";
+import { reloadPage } from "@/lib/navigation/reload";
+import { readCookie } from "@/lib/preferences";
 import {
   markMiniAppReady,
   type MiniAppSignInResult,
@@ -36,6 +38,35 @@ const LOGIN_HREF = "/login";
  * sign-in would answer `fresh: false` while the first one's answer is thrown away.
  */
 const sentInitData = new Set<string>();
+
+/** Set in sessionStorage once this tab reloaded for the language: it never reloads for it again. */
+const LOCALE_RELOAD_KEY = "dafit-locale-reload";
+
+/** True the first time in this tab, false after that or when sessionStorage is unavailable. */
+function takeLocaleReload(): boolean {
+  try {
+    if (sessionStorage.getItem(LOCALE_RELOAD_KEY)) return false;
+    sessionStorage.setItem(LOCALE_RELOAD_KEY, "1");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * What to do after the server accepted initData. It sends `detected` only when the request came
+ * without a language cookie: on the first launch it picked the language from Telegram and set the
+ * cookie (ADR 0015). When the browser did not keep that cookie, it drops the app's cookies, as
+ * Telegram Web does in its iframe with third-party cookies blocked: no session can last there.
+ */
+function afterSignIn(detected: Locale | null, rendered: Locale): "stay" | "reload" | "blocked" {
+  if (!detected) return "stay";
+  if (readCookie(document.cookie, LOCALE_COOKIE) !== detected) return "blocked";
+  if (detected === rendered) return "stay";
+  // One reload shows the page in that language. If the server still got no cookie after it, the
+  // browser keeps the cookie but does not send it: another reload would loop, so stay.
+  return takeLocaleReload() ? "reload" : "blocked";
+}
 
 /**
  * Paints Telegram's header, background and bottom bar in DaFit's `bg` for the theme on <html>
@@ -88,7 +119,8 @@ function launchMiniApp() {
  * the server) on every page load. After a full page load the URL has no launch hash; the SDK then
  * reads the launch params it saved in sessionStorage (tapps/launchParams) on the first load.
  * Outside Telegram it does nothing; when the SDK can't start, the app stays the website, and
- * /login asks to reopen it.
+ * /login asks to reopen it. When the browser drops the app's cookies (Telegram Web's iframe with
+ * third-party cookies blocked), it asks to use the Telegram app and never reloads in a loop.
  */
 export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -109,23 +141,29 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         // Session cookies are httpOnly, so the server decides whether this was a new sign-in.
         const { fresh, locale: detected } = (await res.json()) as { fresh?: boolean; locale?: string };
-        // First launch: the server picked the language from Telegram; re-render in it if it differs.
-        if (isLocale(detected) && detected !== locale) window.location.reload();
-        else if (fresh) router.refresh();
-        return "signed-in";
+        const next = afterSignIn(isLocale(detected) ? detected : null, locale);
+        if (next === "reload") reloadPage();
+        else if (next === "stay" && fresh) router.refresh();
+        if (next !== "blocked") return "signed-in";
+        result = "blocked";
+      } else if (res.status === 401) {
+        // initData too old or not genuine. Sending it again won't help, only a new launch will.
+        result = "reopen";
       }
-      // 401: initData too old or not genuine. Sending it again won't help, only a new launch will.
-      if (res.status === 401) result = "reopen";
     } catch {
       // Network or a malformed answer: another try may work.
     }
     // /login shows how the sign-in went on the page itself.
-    if (window.location.pathname !== LOGIN_HREF) toast.error(t.telegram.signInFailed);
+    if (window.location.pathname !== LOGIN_HREF) toast.error(result === "blocked" ? t.telegram.cookiesBlocked : t.telegram.signInFailed);
     return result;
   });
 
   useEffect(() => {
-    if (!safely(() => isTMA())) return;
+    if (!safely(() => isTMA())) {
+      // The pre-paint script took launch params for Telegram, the SDK did not: this is the website.
+      document.documentElement.removeAttribute("data-telegram");
+      return;
+    }
     const launch = launchMiniApp();
     if (!launch) {
       // Inside Telegram, but without launch params there is no initData to sign in with.

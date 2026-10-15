@@ -45,6 +45,7 @@ beforeEach(() => {
   setSystemLight(false);
   sessionStorage.clear();
   document.documentElement.removeAttribute("data-theme");
+  document.documentElement.removeAttribute("data-telegram");
 });
 
 afterEach(() => {
@@ -117,6 +118,36 @@ describe("themeInitScript", () => {
     setSystemLight(true);
     expect(runScript()).toBe("light");
     expect(sessionStorage.getItem(TELEGRAM_SCHEME_KEY)).toBeNull();
+  });
+
+  // /login hides the website's way in under data-telegram before hydration (ADR 0004).
+  describe("marks <html> inside Telegram", () => {
+    const marked = () => document.documentElement.hasAttribute("data-telegram");
+
+    it("on a launch: the hash has tgWebAppData", () => {
+      setTelegramLaunch(DARK_BG);
+      runScript();
+      expect(marked()).toBe(true);
+    });
+
+    it("on a later page load of the launch: tma.js saved the launch params in this tab", () => {
+      sessionStorage.setItem("tapps/launchParams", JSON.stringify("tgWebAppData=x"));
+      runScript();
+      expect(marked()).toBe(true);
+    });
+
+    it("not on the website", () => {
+      history.replaceState(null, "", "/login#section");
+      runScript();
+      expect(marked()).toBe(false);
+    });
+
+    it("whatever the theme cookie says", () => {
+      setThemeCookie("light");
+      setTelegramLaunch(DARK_BG);
+      expect(runScript()).toBe("light");
+      expect(marked()).toBe(true);
+    });
   });
 
   it("follows prefers-color-scheme outside Telegram", () => {

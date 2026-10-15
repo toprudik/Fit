@@ -204,6 +204,11 @@ test.describe("/login inside Telegram", () => {
   const websiteLogin = (page: Page) => page.locator('a[href^="/auth/telegram/login"]');
   const signInButton = (page: Page) => page.getByRole("button", { name: SIGN_IN, exact: true });
   const reopen = (page: Page) => page.getByText("Данные для входа от Telegram устарели или не пришли. Закрой приложение и открой его снова.");
+  /** The profile sheet's way in: a client-side navigation to /login, the sign-in status stays as it was. */
+  async function openProfileSignIn(page: Page) {
+    await page.getByRole("button", { name: "Профиль", exact: true }).click();
+    await page.getByRole("dialog", { name: "Профиль" }).getByRole("link", { name: SIGN_IN }).click();
+  }
 
   test("where sign-out used to land, signs in from initData and opens the app", async ({ page }) => {
     const errors = collectErrors(page);
@@ -268,19 +273,85 @@ test.describe("/login inside Telegram", () => {
         { status: 200, body: { ok: true, fresh: true } },
       ],
     });
-    await expect(page.getByText("Не удалось войти, открой приложение заново")).toBeVisible();
+    const toast = page.getByText("Не удалось войти, открой приложение заново");
+    await expect(toast).toBeVisible();
+    // On a phone the toast covers the avatar, and a pointer over it holds the toast open: wait it out.
+    await expect(toast).toBeHidden({ timeout: 10_000 });
 
-    await page.getByRole("button", { name: "Профиль", exact: true }).click();
-    await page.getByRole("dialog", { name: "Профиль" }).getByRole("link", { name: SIGN_IN }).click();
-    await expect.poll(() => pathname(page)).toBe("/login");
-    await expect(page.getByText("Не удалось войти через Telegram, попробуй ещё раз.")).toBeVisible();
-    await expect(websiteLogin(page)).toHaveCount(0);
-
-    await signInButton(page).click();
+    await openProfileSignIn(page);
     await expect.poll(() => pathname(page)).toBe("/trainer");
     await expect(page.getByRole("heading", { level: 1, name: "Сегодня" })).toBeVisible();
     expect(signIns).toHaveLength(2);
     expect(errors()).toEqual([]);
+  });
+
+  // The session may be gone since the sign-in of this page load: it expired, or a sign-out on the
+  // website ended every session. /login asks the server again instead of trusting that answer.
+  test("after a sign-in that worked, the profile's sign-in sends initData again before going back", async ({ page }) => {
+    const errors = collectErrors(page);
+    const signIns = await openInTelegram(page, "/trainer");
+    await expect.poll(() => signIns.length).toBe(1);
+
+    await openProfileSignIn(page);
+    await expect.poll(() => signIns.length).toBe(2);
+    await expect.poll(() => pathname(page)).toBe("/trainer");
+    expect(signIns[1]).toBe(signIns[0]);
+    expect(errors()).toEqual([]);
+  });
+
+  test("when the server no longer takes initData there, /login asks to reopen the app instead of going back", async ({ page }) => {
+    const errors = collectErrors(page, [/Failed to load resource.*401/]);
+    const signIns = await openInTelegram(page, "/trainer", {
+      signIn: [
+        { status: 200, body: { ok: true, fresh: false } },
+        { status: 401, body: { error: "invalid_init_data" } },
+      ],
+    });
+    await expect.poll(() => signIns.length).toBe(1);
+
+    await openProfileSignIn(page);
+    await expect(reopen(page)).toBeVisible();
+    expect(pathname(page)).toBe("/login");
+    expect(signIns).toHaveLength(2);
+    expect(errors()).toEqual([]);
+  });
+
+  test("a crafted `next` never leads to Telegram's login for websites", async ({ page }) => {
+    const oauth: string[] = [];
+    await page.route(/oauth\.telegram\.org/, async (route) => {
+      oauth.push(route.request().url());
+      await route.abort();
+    });
+    const signIns = await openInTelegram(page, "/login?next=%2Fauth%2Ftelegram%2Flogin");
+
+    // "/" opens the last zone, the client zone for a new user.
+    await expect.poll(() => pathname(page)).toBe("/client");
+    expect(signIns).toHaveLength(1);
+    expect(oauth).toEqual([]);
+  });
+
+  test("before the app starts, shows a busy button instead of the website's link", async ({ page }) => {
+    // Scripts held back, as on a slow connection: the server's HTML is all there is.
+    let releaseScripts = () => {};
+    const scripts = new Promise<void>((resolve) => (releaseScripts = resolve));
+    await page.route(
+      (url) => url.pathname.startsWith("/_next/static/chunks/") && url.pathname.endsWith(".js"),
+      async (route) => {
+        await scripts;
+        await route.continue();
+      },
+    );
+    const signIns = await openInTelegram(page, "/login?next=%2Fclient%2Fprogress", { waitUntil: "commit" });
+
+    await expect(signInButton(page)).toBeVisible();
+    await expect(signInButton(page)).toBeDisabled();
+    await expect(websiteLogin(page)).toHaveCount(1);
+    await expect(websiteLogin(page)).toBeHidden();
+    expect(signIns).toEqual([]);
+
+    releaseScripts();
+    await expect.poll(() => pathname(page)).toBe("/client/progress");
+    expect(signIns).toHaveLength(1);
   });
 
   test("on the website /login keeps Telegram's website login", async ({ page }) => {

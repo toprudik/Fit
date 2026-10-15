@@ -6,7 +6,8 @@ import { defineConfig } from "@playwright/test";
  * Desktop clients embed, and the only browser preinstalled in CI images (PLAYWRIGHT_BROWSERS_PATH).
  */
 // E2E_PORT lets parallel runs (several checkouts on one machine) use their own servers. Each run
-// also takes the next port: e2e/session.spec.ts starts a server of its own there.
+// also takes the next two ports: e2e/session.spec.ts starts a server of its own on the first, and
+// e2e/telegram-web.spec.ts a stand-in for Telegram Web on the second.
 const PORT = Number(process.env.E2E_PORT ?? 3100);
 const baseURL = `http://localhost:${PORT}`;
 

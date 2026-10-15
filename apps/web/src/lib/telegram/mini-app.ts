@@ -27,19 +27,28 @@ export function useInTelegram(): boolean {
  * The sign-in from initData (ADR 0004): `pending` while the request is on its way, `signed-in` once
  * the server set the session, `failed` when the request or the server failed (another try may
  * work), `reopen` when there is no initData or the server rejected it as too old (only a new launch
- * of the Mini App brings fresh initData).
+ * of the Mini App brings fresh initData), `blocked` when the browser does not keep the app's cookies,
+ * as in Telegram Web with third-party cookies blocked (only the Telegram app helps).
  */
-export type MiniAppSignInStatus = "pending" | "signed-in" | "failed" | "reopen";
+export type MiniAppSignInStatus = "pending" | "signed-in" | "failed" | "reopen" | "blocked";
 export type MiniAppSignInResult = Exclude<MiniAppSignInStatus, "pending">;
 
 let signInStatus: MiniAppSignInStatus | null = null;
 let sendInitData: (() => Promise<MiniAppSignInResult>) | null = null;
 let pendingSignIn: Promise<MiniAppSignInResult> | null = null;
+/** Sign-ins answered on this page load. */
+let answered = 0;
+/** `answered` when the screen that needs the session now (/login) started showing; null while it is not shown. */
+let visitFrom: number | null = null;
 const signInListeners = new Set<() => void>();
+
+function notifySignIn() {
+  for (const listener of signInListeners) listener();
+}
 
 function setSignInStatus(status: MiniAppSignInStatus) {
   signInStatus = status;
-  for (const listener of signInListeners) listener();
+  notifySignIn();
 }
 
 function subscribeSignIn(listener: () => void) {
@@ -63,6 +72,7 @@ export function signInToMiniApp(): Promise<MiniAppSignInResult> {
   setSignInStatus("pending");
   pendingSignIn = sendInitData().then((result) => {
     pendingSignIn = null;
+    answered += 1;
     setSignInStatus(result);
     return result;
   });
@@ -75,6 +85,40 @@ export function signInToMiniApp(): Promise<MiniAppSignInResult> {
  */
 export function useMiniAppSignIn(): MiniAppSignInStatus | null {
   return useSyncExternalStore(subscribeSignIn, () => signInStatus, () => null);
+}
+
+/** Answers another request may change; `reopen` and `blocked` hold for the whole page load. */
+const mayChange = (status: MiniAppSignInStatus | null) => status === "signed-in" || status === "failed";
+
+/** The sign-in as of the current visit: `pending` until an answer arrives during it. */
+function signInNow(): MiniAppSignInStatus | null {
+  return mayChange(signInStatus) && (visitFrom === null || answered <= visitFrom) ? "pending" : signInStatus;
+}
+
+const subscribeNever = () => () => {};
+
+/**
+ * `useMiniAppSignIn` for a screen that needs the session to exist now (/login). An answer from before
+ * the app got there says nothing about that: the session may have expired since, or a sign-out on
+ * the website ended it. So a visit that starts with a navigation inside the app sends initData again
+ * (or follows the request already on its way) and reports only answers that arrive during the visit;
+ * until then it is `pending`. A visit that starts with the page load takes every answer of that load.
+ */
+export function useMiniAppSignInNow(): MiniAppSignInStatus | null {
+  // The first render of a page load hydrates the server's HTML; a navigation inside the app does not.
+  const hydrating = !useSyncExternalStore(subscribeNever, () => true, () => false);
+  const fromPageLoad = useRef(hydrating);
+  useEffect(() => {
+    visitFrom = fromPageLoad.current ? 0 : answered;
+    // Shown again later (Next keeps a page it leaves, in React Activity): that is a new visit.
+    fromPageLoad.current = false;
+    if (mayChange(signInStatus) && answered <= visitFrom) void signInToMiniApp();
+    else notifySignIn();
+    return () => {
+      visitFrom = null;
+    };
+  }, []);
+  return useSyncExternalStore(subscribeSignIn, signInNow, () => null);
 }
 
 function report(error: unknown) {
@@ -198,4 +242,6 @@ export function resetMiniAppForTests() {
   signInStatus = null;
   sendInitData = null;
   pendingSignIn = null;
+  answered = 0;
+  visitFrom = null;
 }

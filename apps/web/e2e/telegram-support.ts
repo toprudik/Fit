@@ -1,3 +1,4 @@
+import { createServer, request as forward } from "node:http";
 import { expect, type Page } from "@playwright/test";
 
 /*
@@ -82,8 +83,13 @@ export async function openInTelegram(
   path: string,
   {
     signIn = { status: 200, body: { ok: true, fresh: false } },
+    waitUntil = "load",
     ...launch
-  }: LaunchOptions & { signIn?: SignInAnswer | readonly SignInAnswer[] } = {},
+  }: LaunchOptions & {
+    signIn?: SignInAnswer | readonly SignInAnswer[];
+    /** "commit" to look at the page before its scripts ran. */
+    waitUntil?: "load" | "commit";
+  } = {},
 ) {
   await page.addInitScript(() => {
     const w = window as TelegramWindow;
@@ -100,8 +106,80 @@ export async function openInTelegram(
     const answer = answers[Math.min(signIns.length, answers.length) - 1];
     await route.fulfill({ status: answer.status, json: answer.body });
   });
-  await page.goto(path + launchHash(launch));
+  await page.goto(path + launchHash(launch), { waitUntil });
   return signIns;
+}
+
+/**
+ * A stand-in for Telegram Web, which runs the Mini App in an iframe on web.telegram.org, another site
+ * than the app's. Listens on `port`: http://127.0.0.1:<port>/host frames http://localhost:<port>
+ * (127.0.0.1 and localhost are different sites), which forwards to the app at `upstream` without its
+ * CSP (the real one lets only Telegram frame the app). The browser handles every cookie itself, so
+ * SameSite and partitioning work as in Telegram Web. The stand-in answers the Mini App sign-in like
+ * the server would, with Set-Cookie headers carrying `cookieAttributes`: a session cookie, and, when
+ * the request came without a language cookie, the language cookie with `locale`.
+ */
+export async function startTelegramWeb({
+  port,
+  upstream,
+  cookieAttributes,
+  locale,
+}: {
+  port: number;
+  upstream: string;
+  cookieAttributes: string;
+  locale: string;
+}) {
+  const app = `http://localhost:${port}`;
+  const signIns: string[] = [];
+  const server = createServer((req, res) => {
+    const url = new URL(req.url ?? "/", app);
+    if (url.pathname === "/host") {
+      res.writeHead(200, { "content-type": "text/html" });
+      res.end(`<!doctype html><title>Telegram Web</title><iframe src="${url.searchParams.get("src")}" style="width:390px;height:780px"></iframe>`);
+      return;
+    }
+    const cookie = req.headers.cookie ?? "";
+    if (req.method === "POST" && url.pathname === "/api/auth/telegram/mini-app") {
+      signIns.push(cookie);
+      const hasSession = /(?:^|; )e2e-session=/.test(cookie);
+      const hasLocale = /(?:^|; )dafit-locale=/.test(cookie);
+      const setCookie = [`e2e-session=1; Path=/; HttpOnly; ${cookieAttributes}`];
+      if (!hasLocale) setCookie.push(`dafit-locale=${locale}; Path=/; Max-Age=31536000; ${cookieAttributes}`);
+      res.writeHead(200, { "content-type": "application/json", "set-cookie": setCookie });
+      res.end(JSON.stringify(hasLocale ? { ok: true, fresh: !hasSession } : { ok: true, fresh: true, locale }));
+      return;
+    }
+    const target = new URL(upstream);
+    const upstreamRequest = forward(
+      { host: target.hostname, port: target.port, method: req.method, path: req.url, headers: { ...req.headers, host: target.host } },
+      (response) => {
+        const headers = { ...response.headers };
+        delete headers["content-security-policy"];
+        res.writeHead(response.statusCode ?? 502, headers);
+        response.pipe(res);
+      },
+    );
+    upstreamRequest.on("error", () => {
+      res.writeHead(502);
+      res.end();
+    });
+    req.pipe(upstreamRequest);
+  });
+  await new Promise<void>((resolve) => server.listen(port, resolve));
+  return {
+    /** The Telegram Web page with the Mini App opened at `path`, launch params included. */
+    hostUrl: (path: string) => `http://127.0.0.1:${port}/host?src=${encodeURIComponent(app + path + launchHash())}`,
+    /** The app's origin inside the iframe. */
+    app,
+    /** The Cookie header of each sign-in request. */
+    signIns,
+    close: () =>
+      new Promise<void>((resolve) => {
+        server.closeAllConnections();
+        server.close(() => resolve());
+      }),
+  };
 }
 
 /** Every event the page posted to Telegram so far, oldest first. */

@@ -127,6 +127,8 @@ export const ru = {
   telegram: {
     signInFailed: "Не удалось войти, открой приложение заново",
     signInExpired: "Данные для входа от Telegram устарели или не пришли. Закрой приложение и открой его снова.",
+    /** The browser drops the app's cookies, as Telegram Web does with third-party cookies blocked. */
+    cookiesBlocked: "Браузер не даёт сохранить вход. Открой DaFit в приложении Telegram на телефоне или компьютере.",
   },
   notFound: {
     title: "Такой страницы нет",

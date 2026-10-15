@@ -125,6 +125,7 @@ export const en: Dictionary = {
   telegram: {
     signInFailed: "Couldn't log you in. Reopen the app.",
     signInExpired: "The login data from Telegram has expired or never arrived. Close the app and open it again.",
+    cookiesBlocked: "This browser won't let us keep you logged in. Open DaFit in the Telegram app on your phone or computer.",
   },
   notFound: {
     title: "This page doesn't exist",

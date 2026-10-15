@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n/client";
-import { signInToMiniApp, useMiniAppSignIn } from "@/lib/telegram/mini-app";
+import { signInToMiniApp, useMiniAppSignInNow } from "@/lib/telegram/mini-app";
 
 type MiniAppLoginProps = {
   /** Where to go once signed in: a path on this site. */
@@ -16,14 +16,15 @@ type MiniAppLoginProps = {
 /**
  * The way in on /login. On the website it is `children`. Inside Telegram the account is the one the
  * Mini App was opened with, and Telegram's login page for websites does not load in the Mini App:
- * the page follows the sign-in from initData that the Telegram provider runs on every page load and
- * goes on to `next` once it succeeds. A failed attempt gets a button to try again; initData that is
- * missing or too old can't be fixed from here, so the page asks to reopen the app.
+ * the page sends initData again (an earlier answer says nothing about the session now) and goes on
+ * to `next` once that sign-in succeeds. A failed attempt gets a button to try again; initData that is
+ * missing or too old can't be fixed from here, so the page asks to reopen the app, and a browser
+ * that drops the app's cookies gets sent to the Telegram app.
  */
 export function MiniAppLogin({ next, children }: MiniAppLoginProps) {
   const { t } = useI18n();
   const router = useRouter();
-  const status = useMiniAppSignIn();
+  const status = useMiniAppSignInNow();
 
   useEffect(() => {
     if (status !== "signed-in") return;
@@ -32,11 +33,24 @@ export function MiniAppLogin({ next, children }: MiniAppLoginProps) {
     router.refresh();
   }, [status, next, router]);
 
-  if (status === null) return children;
-  if (status === "reopen") {
+  if (status === null) {
+    // Before hydration the Telegram provider has not started yet. Inside Telegram the pre-paint
+    // script marks <html data-telegram>: the website's link must not show there even for a moment.
+    return (
+      <>
+        <div className="contents telegram:hidden">{children}</div>
+        <div className="hidden telegram:contents">
+          <Button size="lg" block loading>
+            {t.login.action}
+          </Button>
+        </div>
+      </>
+    );
+  }
+  if (status === "reopen" || status === "blocked") {
     return (
       <p role="alert" className="text-subhead text-danger">
-        {t.telegram.signInExpired}
+        {status === "reopen" ? t.telegram.signInExpired : t.telegram.cookiesBlocked}
       </p>
     );
   }

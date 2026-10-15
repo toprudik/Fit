@@ -6,7 +6,7 @@ import { isSameOrigin } from "@/lib/auth/same-origin";
 import { signInWithTelegram } from "@/lib/auth/sign-in-with-telegram";
 import { preferenceCookieOptions, readCookie } from "@/lib/preferences";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { InitDataError, verifyInitData } from "@/lib/telegram/init-data";
+import { assertInitDataFresh, InitDataError, verifyInitData } from "@/lib/telegram/init-data";
 import type { TelegramIdentity } from "@/lib/telegram/identity";
 
 const body = z.object({ initData: z.string().min(1).max(4096) });
@@ -23,7 +23,11 @@ function respond(request: Request, identity: TelegramIdentity, fresh: boolean) {
   return response;
 }
 
-/** Mini App sign-in: the client posts raw initData, the server verifies its HMAC and sets the session. */
+/**
+ * Mini App sign-in: the client posts raw initData on every page load, the server verifies its HMAC
+ * and sets the session. A session needs initData younger than TELEGRAM_INIT_DATA_MAX_AGE only to
+ * start: page loads of a Mini App opened earlier send the same, older initData.
+ */
 export async function POST(request: Request) {
   // CSRF: JSON content type forces a CORS preflight for cross-site callers; Origin must be ours.
   if (!isSameOrigin(request) || !request.headers.get("content-type")?.startsWith("application/json")) {
@@ -34,15 +38,14 @@ export async function POST(request: Request) {
 
   const env = serverEnv();
   try {
-    const identity = verifyInitData(parsed.data.initData, {
-      botToken: env.TELEGRAM_BOT_TOKEN,
-      maxAgeSeconds: env.TELEGRAM_INIT_DATA_MAX_AGE,
-    });
-    // Already signed in as this Telegram user? Skip re-provisioning.
+    const initData = verifyInitData(parsed.data.initData, { botToken: env.TELEGRAM_BOT_TOKEN });
+    const { identity } = initData;
+    // Already signed in as this Telegram user? Genuine initData of any age confirms it; nothing to do.
     const supabase = await createSupabaseServerClient();
     const { data } = await supabase.auth.getClaims();
     if (data?.claims?.app_metadata?.telegram_id === identity.telegramId) return respond(request, identity, false);
 
+    assertInitDataFresh(initData, { maxAgeSeconds: env.TELEGRAM_INIT_DATA_MAX_AGE });
     await signInWithTelegram(identity);
     return respond(request, identity, true);
   } catch (error) {

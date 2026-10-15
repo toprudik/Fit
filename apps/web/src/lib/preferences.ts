@@ -1,21 +1,23 @@
+import { cookieAttributes, cookieAttributesString, SECURE_COOKIES } from "./cookie-attributes";
+
 /**
  * Device-level interface preferences (language, theme, last zone) live in plain cookies so the
  * proxy and the pre-paint script can read them. They hold no personal data. Once user_settings
  * exists (docs/architecture/data-model.md) the server will also persist them per account.
+ * The server and the browser write them with the same attributes (lib/cookie-attributes.ts).
  */
 export const PREFERENCE_MAX_AGE = 60 * 60 * 24 * 365;
 
 export const preferenceCookieOptions = {
   path: "/",
   maxAge: PREFERENCE_MAX_AGE,
-  sameSite: "lax" as const,
-  secure: process.env.NODE_ENV === "production",
   httpOnly: false,
+  ...cookieAttributes(SECURE_COOKIES),
 };
 
 /** document.cookie string for a preference set in the browser. */
-export function preferenceCookie(name: string, value: string, secure = typeof location !== "undefined" && location.protocol === "https:") {
-  return `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${PREFERENCE_MAX_AGE}; SameSite=Lax${secure ? "; Secure" : ""}`;
+export function preferenceCookie(name: string, value: string, secure = SECURE_COOKIES) {
+  return `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${PREFERENCE_MAX_AGE}; ${cookieAttributesString(secure)}`;
 }
 
 /** Reads one cookie from a document.cookie-style string. */

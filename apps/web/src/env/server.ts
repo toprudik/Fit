@@ -13,7 +13,7 @@ const schema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().regex(/^\d+:[\w-]+$/, "must look like <id>:<secret>"),
   TELEGRAM_LOGIN_CLIENT_ID: z.string().min(1),
   TELEGRAM_LOGIN_CLIENT_SECRET: z.string().min(1),
-  /** Max age of Mini App initData accepted for sign-in, seconds. */
+  /** Max age of Mini App initData that may start a new session, seconds. */
   TELEGRAM_INIT_DATA_MAX_AGE: z.coerce.number().int().positive().default(3600),
 });
 

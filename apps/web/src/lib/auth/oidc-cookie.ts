@@ -23,6 +23,11 @@ export function parseOidcCookie(raw: string | undefined): OidcCookie | null {
   }
 }
 
+/**
+ * Lax on purpose, unlike the session cookies (lib/cookie-attributes.ts): the OIDC flow runs only on
+ * the website, as a top-level page, and the way back from oauth.telegram.org is a top-level
+ * navigation, which carries Lax cookies.
+ */
 export const oidcCookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
@@ -31,7 +36,16 @@ export const oidcCookieOptions = {
   maxAge: OIDC_COOKIE_MAX_AGE,
 };
 
-/** Only allow redirects back to our own origin after login (prevents open redirects). */
+/**
+ * Route handlers and /login itself. Going on to one of them after a sign-in makes no sense, and inside
+ * the Mini App /auth/telegram/login would lead to oauth.telegram.org, which does not load there.
+ */
+const NOT_AFTER_LOGIN = /^\/(?:auth|api)\/|^\/login(?:\/|$)/;
+
+/**
+ * Where to go after login: a page on our own origin (prevents open redirects), never a route handler
+ * or /login.
+ */
 export function safeNext(value: string | null | undefined, appUrl: string): string {
   // "/" opens the last zone (see src/lib/navigation/routing.ts).
   const fallback = "/";
@@ -39,7 +53,10 @@ export function safeNext(value: string | null | undefined, appUrl: string): stri
   try {
     const app = new URL(appUrl);
     const target = new URL(value, app);
-    return target.origin === app.origin ? `${target.pathname}${target.search}${target.hash}` : fallback;
+    if (target.origin !== app.origin) return fallback;
+    // Decoded, so /%61uth/… counts as /auth/….
+    if (NOT_AFTER_LOGIN.test(decodeURIComponent(target.pathname))) return fallback;
+    return `${target.pathname}${target.search}${target.hash}`;
   } catch {
     return fallback;
   }

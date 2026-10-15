@@ -20,6 +20,27 @@ describe("safeNext", () => {
   it("falls back when empty", () => {
     expect(safeNext(null, APP)).toBe("/");
   });
+
+  // Inside the Mini App /login goes on to `next` once signed in: a crafted one must not reach the
+  // OIDC flow (oauth.telegram.org does not load there), an API route or /login itself.
+  it.each([
+    "/auth/telegram/login",
+    "/auth/sign-out",
+    "/api/auth/telegram/mini-app",
+    "/login",
+    "/login/",
+    "/login?next=%2Fclient",
+    "/%61uth/telegram/login",
+    "/x/../auth/telegram/login",
+    "https://fit.example/auth/telegram/login?next=%2F",
+  ])("sends %s to the start", (value) => {
+    expect(safeNext(value, APP)).toBe("/");
+  });
+
+  it("keeps screens whose names only start like those paths", () => {
+    expect(safeNext("/login-help", APP)).toBe("/login-help");
+    expect(safeNext("/client/authors", APP)).toBe("/client/authors");
+  });
 });
 
 describe("parseOidcCookie", () => {

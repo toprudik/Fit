@@ -2,6 +2,7 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LOCALE_COOKIE } from "@/i18n/config";
 import { resetMiniAppForTests, signInToMiniApp, useInTelegram, useMiniAppSignIn } from "@/lib/telegram/mini-app";
 import { THEME_BG } from "@/lib/theme/colors";
 import { resetThemeStoreForTests, setThemePreference } from "@/lib/theme/store";
@@ -58,6 +59,10 @@ vi.mock("next/navigation", () => ({ useRouter: () => router }));
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 vi.mock("@/components/ui/sonner", () => ({ toast }));
 
+// jsdom can't navigate: the reload is counted instead.
+const reload = vi.hoisted(() => ({ reloadPage: vi.fn() }));
+vi.mock("@/lib/navigation/reload", () => reload);
+
 const DARK_TELEGRAM = "#17212b";
 const LIGHT_TELEGRAM = "#ffffff";
 
@@ -83,8 +88,15 @@ function launch({ bg = DARK_TELEGRAM }: { bg?: string } = {}) {
   return initData;
 }
 
-function signInResponse(body: unknown, ok = true, status = ok ? 200 : 401) {
-  const fetch = vi.fn(async () => ({ ok, status, json: async () => body }));
+/**
+ * The server's answer. Like the real one, it sets the language cookie when it sends `locale`; the
+ * browser keeps it unless `keepsCookies` is false (third-party cookies blocked in Telegram Web).
+ */
+function signInResponse(body: Record<string, unknown>, ok = true, status = ok ? 200 : 401, { keepsCookies = true } = {}) {
+  const fetch = vi.fn(async () => {
+    if (keepsCookies && typeof body.locale === "string") document.cookie = `${LOCALE_COOKIE}=${body.locale}; Path=/`;
+    return { ok, status, json: async () => body };
+  });
   vi.stubGlobal("fetch", fetch);
   return fetch;
 }
@@ -118,6 +130,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   resetMiniAppForTests();
   document.cookie = `${THEME_COOKIE}=; Path=/; Max-Age=0`;
+  document.cookie = `${LOCALE_COOKIE}=; Path=/; Max-Age=0`;
+  document.documentElement.removeAttribute("data-telegram");
   sessionStorage.clear();
   document.documentElement.setAttribute("data-theme", "dark");
   resetThemeStoreForTests();
@@ -139,6 +153,15 @@ describe("outside Telegram", () => {
     expect(signInStatus()).toBe("none");
     expect(sdk.init).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
+    sdk.isTMA.mockReturnValue(true);
+  });
+
+  it("takes back the Telegram mark the pre-paint script set, so /login shows the website's way in", () => {
+    document.documentElement.setAttribute("data-telegram", "");
+    sdk.isTMA.mockReturnValue(false);
+    renderApp();
+
+    expect(document.documentElement.hasAttribute("data-telegram")).toBe(false);
     sdk.isTMA.mockReturnValue(true);
   });
 
@@ -328,6 +351,56 @@ describe("sign-in", () => {
     expect(screen.getByText("telegram")).toBeTruthy();
     expect(signInStatus()).toBe("reopen");
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("reloads once to show the language the server picked on the first launch", async () => {
+    launch();
+    signInResponse({ ok: true, fresh: true, locale: "en" });
+    renderApp();
+
+    await waitFor(() => expect(signInStatus()).toBe("signed-in"));
+    expect(reload.reloadPage).toHaveBeenCalledOnce();
+    expect(router.refresh).not.toHaveBeenCalled();
+  });
+
+  it("asks for the Telegram app, without reloading, when the browser drops the cookies the server set", async () => {
+    // Telegram Web with third-party cookies blocked: the session can't last, and a reload for the
+    // language would find no language cookie and reload again.
+    launch();
+    signInResponse({ ok: true, fresh: true, locale: "en" }, true, 200, { keepsCookies: false });
+    renderApp();
+
+    await waitFor(() => expect(signInStatus()).toBe("blocked"));
+    expect(reload.reloadPage).not.toHaveBeenCalled();
+    expect(router.refresh).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledExactlyOnceWith(
+      "Браузер не даёт сохранить вход. Открой DaFit в приложении Telegram на телефоне или компьютере.",
+    );
+  });
+
+  it("notices dropped cookies when the language needs no reload too", async () => {
+    launch();
+    signInResponse({ ok: true, fresh: true, locale: "ru" }, true, 200, { keepsCookies: false });
+    renderApp();
+
+    await waitFor(() => expect(signInStatus()).toBe("blocked"));
+    expect(router.refresh).not.toHaveBeenCalled();
+  });
+
+  it("reloads for the language at most once per tab: after that it stays and asks for the Telegram app", async () => {
+    launch();
+    signInResponse({ ok: true, fresh: true, locale: "en" });
+    const first = renderApp();
+    await waitFor(() => expect(reload.reloadPage).toHaveBeenCalledOnce());
+    first.unmount();
+
+    // The next page load: the server again got no language cookie, though the browser shows one.
+    resetMiniAppForTests();
+    launch();
+    renderApp();
+
+    await waitFor(() => expect(signInStatus()).toBe("blocked"));
+    expect(reload.reloadPage).toHaveBeenCalledOnce();
   });
 
   it("leaves the toast out on /login, which shows the outcome on the page", async () => {

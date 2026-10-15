@@ -21,8 +21,9 @@ export async function proxy(request: NextRequest) {
     zoneCookie: request.cookies.get(ZONE_COOKIE)?.value,
     acceptLanguage: request.headers.get("accept-language"),
     // Browsers without Fetch Metadata (WebKit before 16.4) send no Sec-Fetch-Dest: count those as
-    // document loads, so a deep link there still remembers its zone.
-    isDocument: (request.headers.get("sec-fetch-dest") ?? "document") === "document",
+    // document loads, so a deep link there still remembers its zone. Telegram Web loads the Mini App
+    // in an iframe, whose page loads say "iframe".
+    isDocument: ["document", "iframe"].includes(request.headers.get("sec-fetch-dest") ?? "document"),
   });
   if (decision.kind === "redirect") return NextResponse.redirect(new URL(decision.location, request.url));
 

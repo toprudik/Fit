@@ -1,5 +1,8 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook } from "@testing-library/react";
+import { createElement } from "react";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   hapticImpact,
@@ -12,6 +15,7 @@ import {
   signInToMiniApp,
   useInTelegram,
   useMiniAppSignIn,
+  useMiniAppSignInNow,
   useTelegramBackButton,
   useTelegramVerticalSwipeLock,
 } from "./mini-app";
@@ -228,5 +232,114 @@ describe("sign-in from initData", () => {
     expect(result.current).toBe("reopen");
     expect(await signInToMiniApp()).toBe("reopen");
     expect(result.current).toBe("reopen");
+  });
+
+  /*
+   * /login needs to know whether the session exists now. An answer from earlier on this page load says
+   * nothing about that: the session may have expired since, or a sign-out on the website ended it.
+   */
+  describe("for a screen that needs the session now", () => {
+    it("asks again over an earlier answer and follows only the new one", async () => {
+      const { send, answer } = sender();
+      setMiniAppSignIn(send);
+      const earlier = signInToMiniApp();
+      answer("signed-in");
+      await earlier;
+
+      const { result } = renderHook(() => useMiniAppSignInNow());
+      expect(result.current).toBe("pending");
+      expect(send).toHaveBeenCalledTimes(2);
+
+      await act(async () => answer("signed-in"));
+      expect(result.current).toBe("signed-in");
+    });
+
+    it("never shows the earlier answer, even before asking again", () => {
+      const { send, answer } = sender();
+      setMiniAppSignIn(send);
+      void signInToMiniApp();
+      answer("failed");
+
+      const seen: (string | null)[] = [];
+      renderHook(() => seen.push(useMiniAppSignInNow()));
+      expect(seen).not.toContain("failed");
+    });
+
+    it("tells a new failure", async () => {
+      const { send, answer } = sender();
+      setMiniAppSignIn(send);
+      void signInToMiniApp();
+      await act(async () => answer("signed-in"));
+
+      const { result } = renderHook(() => useMiniAppSignInNow());
+      await act(async () => answer("failed"));
+      expect(result.current).toBe("failed");
+    });
+
+    it("follows a sign-in already on its way instead of sending another", async () => {
+      const { send, answer } = sender();
+      setMiniAppSignIn(send);
+      void signInToMiniApp();
+
+      const { result } = renderHook(() => useMiniAppSignInNow());
+      expect(result.current).toBe("pending");
+      await act(async () => answer("signed-in"));
+      expect(result.current).toBe("signed-in");
+      expect(send).toHaveBeenCalledOnce();
+    });
+
+    it("waits for the first sign-in of the page load", async () => {
+      const { send, answer } = sender();
+      const { result } = renderHook(() => useMiniAppSignInNow());
+      expect(result.current).toBeNull();
+
+      act(() => {
+        setMiniAppSignIn(send);
+        void signInToMiniApp();
+      });
+      await act(async () => answer("signed-in"));
+      expect(result.current).toBe("signed-in");
+      expect(send).toHaveBeenCalledOnce();
+    });
+
+    it("asks again on every visit", async () => {
+      const { send, answer } = sender();
+      setMiniAppSignIn(send);
+      const first = renderHook(() => useMiniAppSignInNow());
+      void signInToMiniApp();
+      await act(async () => answer("signed-in"));
+      expect(first.result.current).toBe("signed-in");
+      first.unmount();
+
+      const second = renderHook(() => useMiniAppSignInNow());
+      expect(second.result.current).toBe("pending");
+      expect(send).toHaveBeenCalledTimes(2);
+    });
+
+    it("takes the answers of the page load when the screen came with it", async () => {
+      // /login opened by a full page load: the provider's sign-in may answer before /login hydrates.
+      function Screen() {
+        return createElement("p", null, useMiniAppSignInNow() ?? "none");
+      }
+      const container = document.createElement("div");
+      container.innerHTML = renderToString(createElement(Screen));
+      document.body.append(container);
+      const { send, answer } = sender();
+      setMiniAppSignIn(send);
+      void signInToMiniApp();
+      await act(async () => answer("failed"));
+
+      const root = await act(async () => hydrateRoot(container, createElement(Screen)));
+      expect(container.textContent).toBe("failed");
+      expect(send).toHaveBeenCalledOnce();
+      act(() => root.unmount());
+      container.remove();
+    });
+
+    it("keeps an answer no new request can change", () => {
+      const { result } = renderHook(() => useMiniAppSignInNow());
+      act(() => setMiniAppSignIn(null));
+      expect(result.current).toBe("reopen");
+    });
   });
 });

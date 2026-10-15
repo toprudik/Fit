@@ -3,6 +3,8 @@
 
 /* Theme comes from data-theme on <html> (set before first paint, see src/lib/theme). Dark is the default. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* Inside the Telegram Mini App, from before the first paint (data-telegram, see src/lib/theme/init-script.ts). */
+@custom-variant telegram (&:where([data-telegram] *));
 
 /*
  * DaFit design tokens. Names and values mirror docs/design/tokens.json (the contract);

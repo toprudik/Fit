@@ -10,7 +10,7 @@ export type RouteInput = {
   zoneCookie: string | null | undefined;
   acceptLanguage: string | null | undefined;
   /**
-   * A browser document load (Sec-Fetch-Dest: document). Only those remember the zone: router
+   * A browser page load (Sec-Fetch-Dest: document, or iframe in Telegram Web). Only those remember the zone: router
    * prefetches must not, and Next strips its own prefetch headers before the proxy sees them.
    * In-app navigations between zones are remembered by the shell in the browser.
    */

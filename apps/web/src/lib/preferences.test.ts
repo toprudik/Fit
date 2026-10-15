@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { cookieAttributes } from "./cookie-attributes";
 import { PREFERENCE_MAX_AGE, preferenceCookie, preferenceCookieOptions, readCookie } from "./preferences";
 
 describe("preference cookies", () => {
@@ -6,12 +7,22 @@ describe("preference cookies", () => {
     expect(PREFERENCE_MAX_AGE).toBe(31_536_000);
   });
 
-  it("are readable by the pre-paint script and the proxy, and not sent cross-site", () => {
-    expect(preferenceCookieOptions).toMatchObject({ path: "/", maxAge: PREFERENCE_MAX_AGE, sameSite: "lax", httpOnly: false });
+  it("are readable by the pre-paint script and the proxy", () => {
+    expect(preferenceCookieOptions).toMatchObject({ path: "/", maxAge: PREFERENCE_MAX_AGE, httpOnly: false });
   });
 
-  it("are Secure only in production builds", () => {
-    expect(preferenceCookieOptions.secure).toBe(process.env.NODE_ENV === "production");
+  it("carry the build's cookie attributes", () => {
+    expect(preferenceCookieOptions).toMatchObject(cookieAttributes(process.env.NODE_ENV === "production"));
+  });
+
+  it("are SameSite=None, Secure and Partitioned in production, so Telegram Web's iframe keeps them", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.resetModules();
+    const production = await import("./preferences");
+    vi.unstubAllEnvs();
+
+    expect(production.preferenceCookieOptions).toMatchObject({ sameSite: "none", secure: true, partitioned: true });
+    expect(production.preferenceCookie("dafit-theme", "light")).toBe("dafit-theme=light; Path=/; Max-Age=31536000; SameSite=None; Secure; Partitioned");
   });
 });
 
@@ -20,13 +31,14 @@ describe("preferenceCookie", () => {
     expect(preferenceCookie("dafit-theme", "light", false)).toBe("dafit-theme=light; Path=/; Max-Age=31536000; SameSite=Lax");
   });
 
-  it("adds Secure when asked", () => {
-    expect(preferenceCookie("dafit-locale", "en", true)).toBe("dafit-locale=en; Path=/; Max-Age=31536000; SameSite=Lax; Secure");
+  it("matches what the server sets in production: SameSite=None, Secure, Partitioned", () => {
+    expect(preferenceCookie("dafit-locale", "en", true)).toBe("dafit-locale=en; Path=/; Max-Age=31536000; SameSite=None; Secure; Partitioned");
   });
 
-  it("is not Secure outside a browser by default", () => {
-    // Node has no `location`; in the browser the default follows location.protocol.
-    expect(preferenceCookie("dafit-zone", "trainer")).not.toContain("Secure");
+  it("follows the build by default, like the server's cookies", () => {
+    // A cookie the browser writes must carry the same attributes as the one the server wrote, or
+    // the two live side by side: a partitioned cookie is replaced only by a partitioned one.
+    expect(preferenceCookie("dafit-zone", "trainer")).toBe(preferenceCookie("dafit-zone", "trainer", process.env.NODE_ENV === "production"));
   });
 
   it("encodes values so separators cannot break the cookie", () => {
