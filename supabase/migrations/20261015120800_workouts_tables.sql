@@ -136,7 +136,9 @@ create table public.workout_logs (
   id           uuid primary key default gen_random_uuid(),
   client_id    uuid not null references public.profiles (id) on delete cascade,
   coaching_id  uuid,
-  booking_id   uuid unique,
+  -- The plain FK clears booking_id when the booking goes; the composite one below is skipped once a deleted
+  -- pair has already cleared coaching_id (MATCH SIMPLE), which would leave a dangling booking_id.
+  booking_id   uuid unique references public.bookings (id) on delete set null,
   template_id  uuid references public.workout_templates (id) on delete set null,
   title        text check (char_length(title) <= 200),
   performed_at timestamptz not null,

@@ -750,9 +750,9 @@ select is(
 select tests.clear_authentication();
 delete from public.coachings where id = tests.i('pair_ac');
 select results_eq(
-  $$ select coaching_id, created_by from public.workout_logs where id = tests.i('log_ac') $$,
-  $$ values (null::uuid, tests.u('trainer_a')) $$,
-  'workout_logs: deleting the pair keeps the log with coaching_id null and its trainer author'
+  $$ select coaching_id, booking_id, created_by from public.workout_logs where id = tests.i('log_ac') $$,
+  $$ values (null::uuid, null::uuid, tests.u('trainer_a')) $$,
+  'workout_logs: deleting the pair keeps the log with coaching_id and booking_id null and its trainer author'
 );
 select tests.authenticate_as('trainer_b');
 select set_eq(
