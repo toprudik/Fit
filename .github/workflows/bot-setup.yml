@@ -1,0 +1,90 @@
+name: Bot setup
+
+# Points the Telegram webhook of @fitconnection_bot at the bot's Vercel production domain and syncs its commands,
+# descriptions, name and menu button (python -m fit_bot setup, see apps/bot/src/fit_bot/bot_setup.py). Runs after a
+# push to main that changes apps/bot or this file, once Vercel serves that commit; by hand (mode setup or check); and
+# daily as a read-only check. The only secret is the repository secret TELEGRAM_BOT_TOKEN (the production bot, the
+# same token as in the Vercel projects; optional TELEGRAM_WEBHOOK_SECRET), and only the last step gets it.
+# Prints no secrets.
+
+on:
+  push:
+    branches: [main]
+    paths: ["apps/bot/**", ".github/workflows/bot-setup.yml"]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "setup registers the webhook and syncs the bot profile; check only reads and probes"
+        type: choice
+        options: [setup, check]
+        default: setup
+  schedule:
+    - cron: "17 6 * * *" # daily read-only check, 09:17 Moscow time
+
+permissions:
+  contents: read
+
+concurrency:
+  # A read-only check never cancels or replaces a setup run; runs in each group queue instead of cancelling.
+  group: ${{ (github.event_name == 'schedule' || inputs.mode == 'check') && 'bot-check' || 'bot-setup' }}
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    if: github.repository == 'toprudik/Fit' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      # Public values. If Vercel gives the project another domain, change BOT_WEBHOOK_URL here.
+      BOT_WEBHOOK_URL: https://dafit-bot.vercel.app
+      WEBAPP_URL: https://dafit-web-eight.vercel.app
+      MODE: ${{ github.event_name == 'schedule' && 'check' || inputs.mode || 'setup' }}
+    steps:
+      - name: Check the secret
+        id: config
+        env:
+          HAS_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN != '' }}
+        run: |
+          if [ "$HAS_TOKEN" = true ]; then echo "ready=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          message="The repository has no Actions secret TELEGRAM_BOT_TOKEN (Settings, Secrets and variables, Actions)."
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then echo "::error::$message"; exit 1; fi
+          echo "::notice::$message Skipping until it is set."
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+      - if: steps.config.outputs.ready == 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 50
+      - if: steps.config.outputs.ready == 'true'
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+        with:
+          python-version: "3.13"
+      - if: steps.config.outputs.ready == 'true'
+        working-directory: apps/bot
+        run: uv sync --frozen --no-dev
+      - name: Wait until Vercel serves this commit
+        if: steps.config.outputs.ready == 'true' && github.event_name == 'push'
+        run: |
+          base="${BOT_WEBHOOK_URL%/}"
+          served=""
+          for attempt in $(seq 1 60); do
+            served=$(curl -fsS --max-time 10 "$base/healthz" | jq -r '.commit // empty' 2>/dev/null || true)
+            if [ "$served" = "$GITHUB_SHA" ]; then echo "Vercel serves $GITHUB_SHA."; exit 0; fi
+            if [ -n "$served" ]; then
+              git fetch --quiet --depth=50 origin main || true
+              if git merge-base --is-ancestor "$GITHUB_SHA" "$served" 2>/dev/null; then
+                echo "Vercel serves $served, which includes $GITHUB_SHA."; exit 0
+              fi
+            fi
+            sleep 15
+          done
+          echo "::error::After 15 minutes $base serves ${served:-no commit} instead of $GITHUB_SHA. Check the dafit-bot deployment on Vercel. If /healthz shows no commit, turn on Automatically expose System Environment Variables in the Vercel project."
+          exit 1
+      - name: Set up the bot
+        if: steps.config.outputs.ready == 'true'
+        working-directory: apps/bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+        run: |
+          if [ "$MODE" = check ]; then set -- --check-only; fi
+          uv run --no-sync python -m fit_bot setup "$@"
