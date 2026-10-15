@@ -2,7 +2,7 @@
 -- trainer_profiles, trainer_verifications, trainer_certificates, trainer_invites, client_invites, trial_links.
 begin;
 \ir _helpers.psql
-select plan(93);
+select plan(94);
 
 -- Fixtures: C has a live pair to A and a trial pair to B, E an ended pair to A. V is a trainer used for the
 -- verification history and its deletion.
@@ -444,6 +444,17 @@ select is_empty(
 select tests.authenticate_as('client_c');
 select is_empty($$ select id from public.trial_links $$, 'trial_links: A''s client reads 0 rows');
 select tests.clear_authentication();
+
+-- R16 (decisions Q60): a rejected verification hides the public showcase. Nothing reads is_public yet; the
+-- column comment carries the rule for the later get_trainer_showcase.
+select matches(
+  col_description(
+    'public.trainer_profiles'::regclass,
+    (select a.attnum::integer from pg_catalog.pg_attribute a
+     where a.attrelid = 'public.trainer_profiles'::regclass and a.attname = 'is_public')),
+  'A rejected verification hides the showcase too \(R16, decisions Q60\)',
+  'trainer_profiles.is_public: the comment says a rejected verification hides the showcase (R16)'
+);
 
 select * from finish();
 rollback;
