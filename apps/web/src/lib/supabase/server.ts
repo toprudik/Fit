@@ -4,6 +4,7 @@ import { io } from "next/cache";
 import { cookies } from "next/headers";
 import { clientEnv } from "@/env/client";
 import { sessionCookieOptions } from "./cookie-options";
+import type { Database } from "./database.types";
 
 /** Supabase client acting as the signed-in user (publishable key + session cookies, RLS applies). */
 export async function createSupabaseServerClient() {
@@ -13,7 +14,7 @@ export async function createSupabaseServerClient() {
   // prerender; page requests and route handlers get it as before.
   await io();
   const cookieStore = await cookies();
-  return createServerClient(clientEnv.NEXT_PUBLIC_SUPABASE_URL, clientEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
+  return createServerClient<Database>(clientEnv.NEXT_PUBLIC_SUPABASE_URL, clientEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
     cookieOptions: sessionCookieOptions,
     cookies: {
       getAll: () => cookieStore.getAll(),
