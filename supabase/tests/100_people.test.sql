@@ -5,7 +5,7 @@
 -- raise instead of changing 0 rows.
 begin;
 \ir _helpers.psql
-select plan(103);
+select plan(104);
 
 -- Fixtures: C has live pairs to A and B, D a live pair to A, E an ended pair to A, M is A's card, A has an
 -- ended pair to the deleted-client stub. X is an admin with a live break-glass grant on C for every category.
@@ -259,6 +259,15 @@ select lives_ok(
   $$ insert into public.notification_preferences (user_id, type, enabled) values (tests.u('client_c'), 'contact_request', true) $$,
   'a mandatory type may be stored as on'
 );
+-- A trainer who is also a client turns off "a client cancelled" and keeps "my trainer cancelled" (PRD 2.9-8).
+select tests.authenticate_as('trainer_a');
+select lives_ok(
+  $$ insert into public.notification_preferences (user_id, type, enabled)
+     values (tests.u('trainer_a'), 'booking_cancelled_by_client', false),
+            (tests.u('trainer_a'), 'booking_cancelled_by_trainer', true) $$,
+  'the trainer and client versions of a message are switched separately'
+);
+select tests.authenticate_as('client_c');
 select throws_ok(
   $$ insert into public.notification_preferences (user_id, type, enabled) values (tests.u('client_d'), 'booking_created', false) $$,
   '42501', 'new row violates row-level security policy for table "notification_preferences"',

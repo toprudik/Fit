@@ -37,7 +37,7 @@ alter table public.measurements enable row level security;
 revoke all on table public.measurements from anon, authenticated;
 
 -- progress_photos: a progress photo of the client. Only the version blurred on the device is uploaded.
--- The free-plan limit is not enforced here (R82).
+-- The Free plan limit binds direct uploads through the insert policy (private.can_add_progress_photo).
 create table public.progress_photos (
   id           uuid primary key default gen_random_uuid(),
   client_id    uuid not null references public.profiles (id) on delete cascade,

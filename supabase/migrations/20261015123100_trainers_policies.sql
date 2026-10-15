@@ -138,8 +138,10 @@ create policy "trial_links: trainer updates own"
 
 grant select on table public.trial_links to authenticated;
 grant insert (
-  trainer_id, title, description, duration_min, price_minor, currency, location_id, mode, max_uses, expires_at
+  trainer_id, title, description, duration_min, price_minor, currency, location_id, mode, max_uses, expires_at,
+  is_enabled
 ) on table public.trial_links to authenticated;
 grant update (
-  title, description, duration_min, price_minor, currency, location_id, mode, max_uses, expires_at, archived_at
+  title, description, duration_min, price_minor, currency, location_id, mode, max_uses, expires_at, is_enabled,
+  archived_at
 ) on table public.trial_links to authenticated;

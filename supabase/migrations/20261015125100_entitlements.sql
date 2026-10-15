@@ -148,6 +148,12 @@ begin
   end if;
 end $$;
 
+-- R91 (a Free trainer at the limit with an unclaimed card, decisions O1): decided as option (a), with no schema
+-- change. join_by_invite and join_by_code may skip this check only when the trainer has an unclaimed card,
+-- and then always create the pending managed_client_claims row (its pair must exist, which keeps PRD 2.5-3a
+-- «пока тренер не ответил, человек уже клиент»). resolve_managed_client_claim with "new client" calls this
+-- check again and ends the new pair with plan_limit_reached when the limit is exceeded; a merge brings the
+-- count back. Every other pair-creating RPC calls it first, as before.
 comment on function private.assert_can_add_client(uuid) is
   'Raises not_a_trainer or plan_limit_reached unless the trainer may take one more live client. '
   'Locks the trainer_profiles row until the end of the transaction.';

@@ -3,7 +3,7 @@
 -- managed_client_claims, contact_requests, and the cascades around pairs.
 begin;
 \ir _helpers.psql
-select plan(79);
+select plan(81);
 
 -- Fixtures: C has live pairs to A and B, D a live pair to A, E an ended pair to A, M is A's card.
 -- N is a real user who joined A while A has the card, so a claim asks A whether N is M.
@@ -208,6 +208,16 @@ select results_eq(
      where coaching_id = tests.i('pair_ac') returning client_alias $$,
   $$ values ('Cat from the morning group'::text) $$,
   'coaching_trainer_meta: A sets an alias and archives the client'
+);
+select results_eq(
+  $$ update public.coaching_trainer_meta set contact = 'WhatsApp +7 900 000-00-00, after 18:00'
+     where coaching_id = tests.i('pair_ac') returning contact $$,
+  $$ values ('WhatsApp +7 900 000-00-00, after 18:00'::text) $$,
+  'coaching_trainer_meta: A keeps a contact note for the client (PRD 2.5-3)'
+);
+select throws_ok(
+  $$ update public.coaching_trainer_meta set contact = repeat('x', 201) where coaching_id = tests.i('pair_ac') $$,
+  '23514', null, 'coaching_trainer_meta: a contact note over 200 characters violates the check'
 );
 select throws_ok(
   $$ update public.coaching_trainer_meta set coaching_id = tests.i('pair_ad') where coaching_id = tests.i('pair_ac') $$,

@@ -45,14 +45,22 @@ create type public.share_category as enum ('nutrition', 'measurements', 'photos'
 create type public.delegation_scope as enum (
   'schedule', 'attendance', 'workouts', 'homework', 'notes', 'progress', 'nutrition', 'passes', 'payments'
 );
+-- One value per message of PRD §3, so each can be switched off on its own (PRD 2.9-8). A trainer who is also
+-- someone's client gets both sides of a pair of messages, so the trainer and client versions are separate:
+-- booking_assigned (К1) / booking_created (Т1), booking_cancelled_by_trainer (К5) /
+-- booking_cancelled_by_client (Т3), pass_ending (К10) / client_pass_ending (Т6).
+-- verification_submitted (А1) and feedback_received (А2) go to the team group (notification_outbox.chat_target);
+-- bot_test is the test message after the bot is switched on (AUTH-7); intake_reminder is the bot nudge to fill
+-- the intake before the first session.
 create type public.notification_type as enum (
-  'booking_created', 'booking_requested', 'booking_confirmed', 'booking_declined', 'booking_expired',
-  'booking_cancelled', 'booking_rescheduled', 'session_reminder', 'session_changed',
-  'charge_posted', 'charge_waived', 'pass_ending', 'pass_expired', 'debt', 'payment_reported',
-  'daily_digest', 'coaching_created', 'coaching_ended', 'managed_client_claim', 'intake_submitted',
+  'booking_assigned', 'booking_created', 'booking_requested', 'booking_confirmed', 'booking_declined',
+  'booking_expired', 'booking_cancelled_by_trainer', 'booking_cancelled_by_client', 'booking_rescheduled',
+  'session_reminder', 'session_changed',
+  'charge_posted', 'charge_waived', 'pass_ending', 'client_pass_ending', 'pass_expired', 'debt', 'payment_reported',
+  'daily_digest', 'coaching_created', 'coaching_ended', 'managed_client_claim', 'intake_submitted', 'intake_reminder',
   'contact_request', 'contact_response', 'verification_result', 'export_ready', 'account_deletion',
   'counterpart_deleting', 'plan_granted', 'plan_revoked', 'plan_expiring', 'feedback_reply',
-  'break_glass', 'report_resolution',
+  'break_glass', 'report_resolution', 'bot_test', 'verification_submitted', 'feedback_received',
   -- wave 2
   'trainer_comment', 'trainer_broadcast', 'homework_reminder', 'homework_done', 'waitlist_offer',
   'waitlist_closed', 'review_prompt', 'review_reply', 'goal_changed',
@@ -79,6 +87,12 @@ create type public.actor_role as enum ('client', 'trainer', 'delegate', 'system'
 create type public.package_applies_to as enum ('any', 'personal', 'group');
 -- exhausted, expired and frozen are derived in the pass_balances view.
 create type public.pass_status as enum ('active', 'cancelled');
+-- What a money_events row records (PRD line 27: who, when, what, why for passes, freezes and payments).
+create type public.money_event_action as enum (
+  'pass_created', 'pass_changed', 'pass_cancelled', 'pass_deleted',
+  'freeze_added', 'freeze_changed', 'freeze_removed',
+  'payment_created', 'payment_changed', 'payment_confirmed', 'payment_voided'
+);
 create type public.ledger_entry_type as enum (
   'grant', 'charge', 'waiver', 'settlement', 'settlement_reversal', 'refund', 'adjustment'
 );
@@ -184,7 +198,8 @@ comment on function private.parq_any_yes(jsonb) is
 revoke all on function private.parq_any_yes(jsonb) from public;
 grant execute on function private.parq_any_yes(jsonb) to authenticated, service_role;
 
--- Service and account notifications cannot be switched off (PRD 2.9-8); everything else is optional.
+-- Service and account notifications cannot be switched off (PRD 2.9-8); everything else is optional. The team
+-- group messages and the bot test have no user preference at all, so they count as mandatory too.
 create function private.notification_type_is_optional(t public.notification_type)
 returns boolean
 language sql
@@ -194,7 +209,7 @@ as $$
   select coalesce(t not in (
     'managed_client_claim', 'contact_request', 'contact_response', 'verification_result', 'export_ready',
     'account_deletion', 'counterpart_deleting', 'plan_granted', 'plan_revoked', 'plan_expiring',
-    'feedback_reply', 'break_glass', 'report_resolution'
+    'feedback_reply', 'break_glass', 'report_resolution', 'bot_test', 'verification_submitted', 'feedback_received'
   ), false)
 $$;
 

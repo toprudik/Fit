@@ -2,7 +2,7 @@
 -- contract §1.4 file 24, §1.5 file 26, §6 800_plans; decisions Q56-Q59, R57-R59, R85).
 begin;
 \ir _helpers.psql
-select plan(103);
+select plan(107);
 
 -- Fixtures: A is on Pro and has C and D live and E ended; B is Free with C on trial. F is a Free trainer with
 -- C on trial, D active, its card N, E ended and an anonymized pair (stub). P, X, R and U hold client Premium
@@ -198,8 +198,19 @@ select throws_ok(
   'C cannot request for D'
 );
 select throws_ok(
-  $$ insert into public.access_requests (user_id, plan_code, feature) values (tests.u('client_c'), 'trainer_pro', repeat('x', 65)) $$,
+  $$ insert into public.access_requests (user_id, plan_code, feature) values (tests.u('client_c'), 'client_premium', repeat('x', 65)) $$,
   '23514', null, 'a feature code over 64 characters violates the check'
+);
+-- Only a paid plan of the user's own side: C is not a trainer.
+select throws_ok(
+  $$ insert into public.access_requests (user_id, plan_code) values (tests.u('client_c'), 'trainer_pro') $$,
+  '42501', 'new row violates row-level security policy for table "access_requests"',
+  'C, not a trainer, cannot request a trainer plan'
+);
+select throws_ok(
+  $$ insert into public.access_requests (user_id, plan_code) values (tests.u('client_c'), 'client_free') $$,
+  '42501', 'new row violates row-level security policy for table "access_requests"',
+  'C cannot request a free plan'
 );
 select throws_ok(
   $$ update public.access_requests set status = 'granted', decided_at = now() where user_id = tests.u('client_c') $$,
@@ -217,8 +228,19 @@ select lives_ok(
   'D opens its own request'
 );
 
+select tests.authenticate_as('trainer_b');
+select lives_ok(
+  $$ insert into public.access_requests (user_id, plan_code, feature) values (tests.u('trainer_b'), 'trainer_pro', 'trainer.analytics') $$,
+  'B, a trainer, requests Pro'
+);
+select throws_ok(
+  $$ insert into public.access_requests (user_id, plan_code) values (tests.u('trainer_b'), 'trainer_free') $$,
+  '42501', 'new row violates row-level security policy for table "access_requests"',
+  'B cannot request the free trainer plan'
+);
+
 select tests.authenticate_as('admin_x');
-select results_eq($$ select count(*)::integer from public.access_requests $$, $$ values (2) $$, 'the admin reads every request');
+select results_eq($$ select count(*)::integer from public.access_requests $$, $$ values (3) $$, 'the admin reads every request');
 
 -- After the admin RPC decides, a new request may be opened.
 select tests.clear_authentication();

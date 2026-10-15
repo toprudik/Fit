@@ -2,7 +2,7 @@
 -- (PROG-1, PRIV-4, R41b), progress photos (PROG-5/6, R52), break-glass on both (ADM-15) and milestones (PROG-8).
 begin;
 \ir _helpers.psql
-select plan(89);
+select plan(97);
 
 -- Fixtures: C has live pairs to A and B, D a live pair to A, E an ended pair to A, M is A's card.
 -- admin_x and admin_y are admins; S is a plain user.
@@ -468,6 +468,79 @@ select tests.authenticate_as('client_c');
 select is((select count(*)::integer from public.milestones), 1, 'ended pair: C still reads the milestone');
 select tests.authenticate_as('trainer_b');
 select is((select count(*)::integer from public.measurements where client_id = tests.u('client_c')), 4, 'ended pair: B (live pair) still reads C''s measurements');
+
+-- =========================================================================================================
+-- Free photo limit (decisions §11, PRD 2.14-6): one new set (photos of one taken_on date) per calendar month of
+-- upload; Premium or a live pair with a paid trainer lifts it.
+
+select tests.clear_authentication();
+select tests.create_user('client_f');
+select tests.create_user('client_g');
+select tests.create_trainer('trainer_p');
+select tests.create_pair('trainer_p', 'client_g');
+select tests.grant_plan('trainer_p', 'trainer_pro');
+-- One photo row of a client for a date, with a fresh id and the matching object name.
+create function tests.photo_row(p_client text, p_taken_on date, p_angle public.photo_angle default 'front')
+returns public.progress_photos language plpgsql set search_path = '' as $$
+declare
+  v_row public.progress_photos;
+begin
+  v_row.id := gen_random_uuid();
+  v_row.client_id := tests.user_id(p_client);
+  v_row.angle := p_angle;
+  v_row.taken_on := p_taken_on;
+  v_row.storage_path := tests.user_id(p_client)::text || '/' || v_row.id::text || '.webp';
+  v_row.face_blurred := true;
+  v_row.blur_method := 'auto';
+  v_row.width := 1080;
+  v_row.height := 1440;
+  return v_row;
+end $$;
+create function tests.upload(p_client text, variadic p_dates date[]) returns integer language plpgsql set search_path = '' as $$
+declare
+  v_count integer;
+begin
+  insert into public.progress_photos (id, client_id, angle, taken_on, storage_path, face_blurred, blur_method, width, height)
+  select (r).id, (r).client_id, (r).angle, (r).taken_on, (r).storage_path, (r).face_blurred, (r).blur_method, (r).width, (r).height
+  from (select tests.photo_row(p_client, d) as r from unnest(p_dates) d) x;
+  get diagnostics v_count = row_count;
+  return v_count;
+end $$;
+
+select tests.authenticate_as('client_f');
+select is(tests.upload('client_f', current_date, current_date, current_date), 3,
+  'photo limit: a Free client uploads a set of three photos of one date');
+select is(tests.upload('client_f', current_date), 1, 'photo limit: one more photo of the same set is free');
+select throws_ok(
+  $$ select tests.upload('client_f', current_date - 1) $$,
+  '42501', 'new row violates row-level security policy for table "progress_photos"',
+  'photo limit: a second set in the same month fails for a Free client'
+);
+select throws_ok(
+  $$ select tests.upload('client_f', current_date, current_date - 2) $$,
+  '42501', 'new row violates row-level security policy for table "progress_photos"',
+  'photo limit: a multi-row insert that starts a second set fails as a whole'
+);
+select throws_ok(
+  $$ select tests.upload('client_f', current_date - 40) $$,
+  '42501', 'new row violates row-level security policy for table "progress_photos"',
+  'photo limit: a backdated taken_on still counts in the month of upload'
+);
+select tests.clear_authentication();
+select tests.create_user('client_h');
+select tests.authenticate_as('client_h');
+select throws_ok(
+  $$ select tests.upload('client_h', current_date, current_date - 1) $$,
+  '42501', 'new row violates row-level security policy for table "progress_photos"',
+  'photo limit: two new sets in one insert fail, the second row sees the first'
+);
+select tests.clear_authentication();
+select tests.grant_plan('client_f', 'client_premium');
+select tests.authenticate_as('client_f');
+select is(tests.upload('client_f', current_date - 1, current_date - 2), 2, 'photo limit: with Premium there is no limit');
+select tests.authenticate_as('client_g');
+select is(tests.upload('client_g', current_date, current_date - 7, current_date - 14), 3,
+  'photo limit: a client of a Pro trainer in a live pair has no limit (PLAN-3)');
 
 select * from finish();
 rollback;

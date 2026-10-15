@@ -10,7 +10,8 @@ revoke all on table
   public.passes,
   public.pass_freezes,
   public.payments,
-  public.payment_links
+  public.payment_links,
+  public.money_events
 from anon, authenticated;
 
 -- packages
@@ -52,8 +53,9 @@ create policy "passes: client and trainer read"
   to authenticated
   using (client_id = (select auth.uid()) or private.is_coaching_trainer(coaching_id, 'passes'));
 
--- The trainer edits title, expiry (to extend an expired pass, PRD 2.8-8) and note of an active pass. A
--- cancelled pass is history. Cancelling goes through the cancel_pass RPC, which also writes the refund row.
+-- The trainer edits title and note of an active pass. A cancelled pass is history. Cancelling goes through the
+-- cancel_pass RPC, which also writes the refund row. The expiry is not granted: extending a pass (PRD 2.8-8)
+-- goes through an RPC that takes a reason, because money_events_record refuses an expiry change without one.
 create policy "passes: trainer updates active"
   on public.passes for update
   to authenticated
@@ -68,7 +70,7 @@ create policy "passes: trainer deletes"
   using (private.is_coaching_trainer(coaching_id, 'passes'));
 
 grant select, delete on table public.passes to authenticated;
-grant update (title, expires_at, note) on table public.passes to authenticated;
+grant update (title, note) on table public.passes to authenticated;
 
 -- pass_freezes
 
@@ -229,7 +231,8 @@ begin
     return new;
   end if;
   if old.status = 'voided'
-     and (new.void_reason is distinct from old.void_reason or new.voided_at is distinct from old.voided_at) then
+     and (new.void_reason is distinct from old.void_reason or new.voided_at is distinct from old.voided_at
+          or new.voided_by is distinct from old.voided_by) then
     raise exception 'forbidden' using errcode = '42501', detail = 'a voided payment keeps its void details';
   end if;
   if v_uid = old.trainer_id then
@@ -298,3 +301,21 @@ create policy "payment_links: trainer updates"
 grant select on table public.payment_links to authenticated;
 grant insert (trainer_id, title, url, kind, sort_order) on table public.payment_links to authenticated;
 grant update (title, url, kind, sort_order, archived_at) on table public.payment_links to authenticated;
+
+-- money_events
+
+-- The history of a pass, freeze or payment is read by whoever reads the pair's money: the client and the pair
+-- trainer, in any pair status (wave 3 delegates with the passes or payments scope). Written only by triggers.
+create policy "money_events: client and pair trainer read"
+  on public.money_events for select
+  to authenticated
+  using (
+    client_id = (select auth.uid())
+    or (payment_id is null and private.is_coaching_trainer(coaching_id, 'passes'))
+    or (payment_id is not null and private.is_coaching_trainer(coaching_id, 'payments'))
+  );
+
+comment on policy "money_events: client and pair trainer read" on public.money_events is
+  'The client and the pair trainer read the history of the pair''s passes, freezes and payments; nobody writes it.';
+
+grant select on table public.money_events to authenticated;

@@ -2,7 +2,7 @@
 -- trainer_profiles, trainer_verifications, trainer_certificates, trainer_invites, client_invites, trial_links.
 begin;
 \ir _helpers.psql
-select plan(91);
+select plan(93);
 
 -- Fixtures: C has a live pair to A and a trial pair to B, E an ended pair to A. V is a trainer used for the
 -- verification history and its deletion.
@@ -418,6 +418,17 @@ select results_eq(
      returning title, duration_min $$,
   $$ values ('Free first session'::text, 45::smallint) $$,
   'trial_links: the trainer updates title, price and length'
+);
+-- The on/off switch (screens.md /trainer/links) keeps the token, so shared QR codes work again.
+select results_eq(
+  $$ update public.trial_links set is_enabled = false returning is_enabled $$,
+  $$ values (false) $$,
+  'trial_links: the trainer switches a link off'
+);
+select results_eq(
+  $$ update public.trial_links set is_enabled = true returning is_enabled, token is not null $$,
+  $$ values (true, true) $$,
+  'trial_links: the trainer switches it back on, with the same token'
 );
 select lives_ok($$ update public.trial_links set archived_at = now() $$, 'trial_links: the trainer archives a link');
 select throws_ok(

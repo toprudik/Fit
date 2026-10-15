@@ -252,9 +252,10 @@ priced as (
     l.*,
     di.id as drop_in_package_id,
     di.price_minor as drop_in_price_minor,
+    -- NULL, not 0, when the saving rounds down to nothing (under 1 %): the grid shows no "-0 %".
     case
       when l.sessions_count > 1 and di.price_minor > 0 and l.per_session_minor < di.price_minor
-        then floor(100 - l.per_session_minor * 100.0 / di.price_minor)::integer
+        then nullif(floor(100 - l.per_session_minor * 100.0 / di.price_minor)::integer, 0)
     end as savings_pct
   from live l
   left join lateral (
@@ -292,7 +293,7 @@ comment on column public.price_grid.per_session_minor is 'Price per session in m
 comment on column public.price_grid.drop_in_price_minor is
   'Price of the drop-in package (1 session) used for the savings, in minor units; null when there is none.';
 comment on column public.price_grid.savings_pct is
-  'Whole percent saved per session against the drop-in, rounded down; null for the drop-in itself or no saving.';
+  'Whole percent saved per session against the drop-in, rounded down; null for the drop-in itself or a saving under 1 %.';
 comment on column public.price_grid.is_best_value is
   'True for one package per trainer, currency and type: the highest savings above 0, ties to the larger pack.';
 

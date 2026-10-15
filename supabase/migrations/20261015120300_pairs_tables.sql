@@ -133,6 +133,7 @@ revoke all on table public.coachings from anon, authenticated;
 create table public.coaching_trainer_meta (
   coaching_id    uuid primary key references public.coachings (id) on delete cascade,
   client_alias   text check (char_length(client_alias) between 1 and 64),  -- how the trainer labels the client; hidden from the client
+  contact        text check (char_length(contact) <= 200),                 -- the trainer's own contact note for the client (card form)
   archived_at    timestamptz,                                              -- trainer hid the client from the active list (PRD 2.5-2, PAIR-6)
   intake_seen_at timestamptz,                                              -- trainer last opened the intake; drives "changed since" (PRD 2.4-5)
   created_at     timestamptz not null default now(),
@@ -140,7 +141,10 @@ create table public.coaching_trainer_meta (
 );
 
 comment on table public.coaching_trainer_meta is
-  'Trainer-only details of a pair (alias, archive mark, intake seen). Created with the pair by a trigger.';
+  'Trainer-only details of a pair (alias, contact note, archive mark, intake seen). Created with the pair by a trigger.';
+comment on column public.coaching_trainer_meta.contact is
+  'How the trainer reaches the client, «контакт для себя» (PRD 2.5-3); free text, never shown to the client. '
+  'create_managed_client fills it for a card.';
 
 create trigger coaching_trainer_meta_set_updated_at
   before update on public.coaching_trainer_meta

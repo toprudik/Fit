@@ -1,7 +1,7 @@
 -- Base migration: domains, immutable helpers and generic trigger functions (contract §1.3 file 1).
 begin;
 \ir _helpers.psql
-select plan(47);
+select plan(50);
 
 -- Domains. Values go through a table column, as in real writes (an explicit ::char(3) cast would truncate).
 create table tests.domain_probe (tz public.iana_tz, cur public.currency_code);
@@ -53,6 +53,16 @@ select is(private.parq_any_yes('{"q1":"true"}'), false, 'parq_any_yes ignores th
 -- Mandatory notification types.
 select is(private.notification_type_is_optional('contact_request'), false, 'contact_request is mandatory');
 select is(private.notification_type_is_optional('booking_created'), true, 'booking_created is optional');
+select is(private.notification_type_is_optional('bot_test'), false, 'bot_test is mandatory');
+select is(private.notification_type_is_optional('feedback_received'), false, 'feedback_received (team group) is mandatory');
+-- Each PRD §3 message is its own type, so the trainer and client versions switch off separately (PRD 2.9-8).
+select ok(
+  enum_range(null::public.notification_type) @> array[
+    'booking_assigned', 'booking_created', 'booking_cancelled_by_trainer', 'booking_cancelled_by_client',
+    'pass_ending', 'client_pass_ending', 'verification_submitted', 'feedback_received', 'bot_test', 'intake_reminder'
+  ]::public.notification_type[],
+  'notification_type has one value per message: К1/Т1, К5/Т3, К10/Т6, А1, А2, the bot test and the intake reminder'
+);
 
 -- Storage paths.
 select is(private.all_paths_under('{u/f/1.webp,u/f/2.webp}', 'u/f/'), true, 'paths under the prefix pass');

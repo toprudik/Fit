@@ -199,7 +199,10 @@ create table public.data_exports (
 );
 
 comment on table public.data_exports is 'A data export request and its archive. Written only by RPCs and the server.';
-comment on column public.data_exports.storage_path is 'Object name inside bucket exports, starting with the user id folder (no bucket prefix).';
+comment on column public.data_exports.storage_path is
+  'Where the archive lies in bucket exports, starting with the user id folder (no bucket prefix). An archive larger '
+  'than the 50 MB object limit is split into parts under one folder, {user_id}/{export id}/part-N.zip, and this '
+  'column holds that folder prefix.';
 
 create index data_exports_user_id_requested_at_idx on public.data_exports (user_id, requested_at desc);
 

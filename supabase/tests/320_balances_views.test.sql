@@ -5,7 +5,7 @@
 -- Ledger rows, bookings and payments are written as postgres, the way the RPCs and jobs write them.
 begin;
 \ir _helpers.psql
-select plan(66);
+select plan(67);
 
 -- Fixtures: C has live pairs to A and B, D a live pair to A, E an ended pair to A, F a live pair to A
 -- (no bookings), M is A's card.
@@ -409,6 +409,7 @@ values
   (tests.u('trainer_a'), 'Pack 3 same price', 3, 6000, 'RUB', 'any', null),
   (tests.u('trainer_a'), 'Pack 2 dearer', 2, 5000, 'RUB', 'any', null),
   (tests.u('trainer_a'), 'Pack 2 half', 2, 3001, 'RUB', 'any', null),
+  (tests.u('trainer_a'), 'Pack 2 almost', 2, 3990, 'RUB', 'any', null),
   (tests.u('trainer_a'), 'Old 30', 30, 30000, 'RUB', 'any', now()),
   (tests.u('trainer_a'), 'Personal drop-in', 1, 1000, 'RUB', 'personal', null),
   (tests.u('trainer_a'), 'Personal 4', 4, 3600, 'RUB', 'personal', null),
@@ -435,6 +436,11 @@ select results_eq(
   $$ select per_session_minor, savings_pct from public.price_grid where title = 'Pack 2 half' $$,
   $$ values (1501::bigint, 24) $$,
   'price_grid: the per-session price rounds half up and the savings round down'
+);
+select results_eq(
+  $$ select per_session_minor, savings_pct, is_best_value from public.price_grid where title = 'Pack 2 almost' $$,
+  $$ values (1995::bigint, null::integer, false) $$,
+  'price_grid: a saving under 1 % is NULL, not 0 (no "-0 %" in the grid)'
 );
 select results_eq(
   $$ select title, savings_pct, is_best_value from public.price_grid where applies_to = 'personal' order by sessions_count $$,

@@ -45,11 +45,18 @@ create policy "access_requests: owner or admin reads"
 comment on policy "access_requests: owner or admin reads" on public.access_requests is
   'A user sees their own requests; admins see all of them to decide.';
 
--- One open request per user and plan is the unique index access_requests_one_open_uniq.
+-- One open request per user and plan is the unique index access_requests_one_open_uniq. Only a paid plan
+-- (rank >= 1) of the user's own side can be asked for: client plans by anyone, trainer plans only by a trainer.
+-- The plans subquery runs under the plans policy, which every signed-in user passes.
 create policy "access_requests: owner inserts"
   on public.access_requests for insert
   to authenticated
-  with check (user_id = (select auth.uid()));
+  with check (
+    user_id = (select auth.uid())
+    and exists (
+      select 1 from public.plans p
+      where p.code = plan_code and p.rank >= 1 and (p.side = 'client' or (select private.is_trainer())))
+  );
 
 comment on policy "access_requests: owner inserts" on public.access_requests is
-  'A user asks for a plan for themselves only (the "Request access" button, PLAN-4).';
+  'A user asks for a paid plan of their own side, for themselves only (the "Request access" button, PLAN-4).';

@@ -4,7 +4,7 @@
 -- keeps its accounting, and the admin sees no money rows, not even with break-glass access.
 begin;
 \ir _helpers.psql
-select plan(144);
+select plan(145);
 
 -- Fixtures: C has live pairs to A and B, D a live pair to A, E an ended pair to A.
 select tests.create_trainer('trainer_a');
@@ -268,10 +268,14 @@ select throws_ok(
   '42501', null, 'passes: insert raises 42501 (create_pass RPC only)'
 );
 select results_eq(
-  $$ update public.passes set title = 'Ten', expires_at = now() + interval '60 days', note = 'paid in cash'
+  $$ update public.passes set title = 'Ten', note = 'paid in cash'
      where id = tests.i('pass_ac') returning title, note $$,
   $$ values ('Ten'::text, 'paid in cash'::text) $$,
-  'passes: A updates title, expires_at and note'
+  'passes: A updates title and note'
+);
+select throws_ok(
+  $$ update public.passes set expires_at = now() + interval '60 days' where id = tests.i('pass_ac') $$,
+  '42501', null, 'passes: expires_at is not writable (extending takes a reason, through an RPC)'
 );
 select throws_ok(
   $$ update public.passes set price_minor = 1 where id = tests.i('pass_ac') $$,

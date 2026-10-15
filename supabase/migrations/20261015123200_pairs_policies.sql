@@ -89,7 +89,7 @@ create policy "coaching_trainer_meta: trainer updates"
   with check (private.is_coaching_trainer(coaching_id));
 
 grant select on table public.coaching_trainer_meta to authenticated;
-grant update (client_alias, archived_at, intake_seen_at) on table public.coaching_trainer_meta to authenticated;
+grant update (client_alias, contact, archived_at, intake_seen_at) on table public.coaching_trainer_meta to authenticated;
 
 -- data_shares
 

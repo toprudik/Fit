@@ -5,7 +5,8 @@
 -- as the change; the dispatcher sends them through the bot. Nobody but server code ever reads or writes it.
 create table public.notification_outbox (
   id                  bigint generated always as identity primary key,
-  user_id             uuid not null references public.profiles (id) on delete cascade,
+  user_id             uuid references public.profiles (id) on delete cascade,     -- null = a team chat (chat_target)
+  chat_target         text check (chat_target in ('admin_group')),               -- team chat for А1/А2, mapped by the dispatcher
   type                public.notification_type not null,
   dedupe_key          text not null unique,
   payload             jsonb not null check (jsonb_typeof(payload) = 'object'),  -- template keys and deep link, no extra personal data
@@ -23,7 +24,10 @@ create table public.notification_outbox (
   constraint notification_outbox_sent_check check (status <> 'sent' or sent_at is not null),
   constraint notification_outbox_lease_check check (status <> 'processing' or locked_until is not null),
   constraint notification_outbox_delivery_time_check check (deliver_after >= scheduled_for),
-  constraint notification_outbox_reminder_booking_check check (type <> 'session_reminder' or booking_id is not null)
+  constraint notification_outbox_reminder_booking_check check (type <> 'session_reminder' or booking_id is not null),
+  -- Exactly one recipient: a user, or a team chat for the admin messages (verification_submitted,
+  -- feedback_received; PRD §3 А1, А2, FDBK-1), so every outgoing message stays an outbox row (ADR 0006).
+  constraint notification_outbox_recipient_check check (num_nonnulls(user_id, chat_target) = 1)
 );
 
 comment on table public.notification_outbox is
@@ -35,6 +39,10 @@ comment on column public.notification_outbox.dedupe_key is
 comment on column public.notification_outbox.deliver_after is
   'Earliest send time: scheduled_for, or the end of the recipient quiet hours for non-urgent types (ADR 0006).';
 comment on column public.notification_outbox.locked_until is 'Lease of the dispatcher run that is sending the row.';
+comment on column public.notification_outbox.user_id is 'Recipient user; null when the message goes to a team chat.';
+comment on column public.notification_outbox.chat_target is
+  'Team chat the message goes to instead of a user (admin_group: the closed admin group); the dispatcher maps it '
+  'to a Telegram chat id from its configuration.';
 comment on column public.notification_outbox.last_error is 'Last Telegram error code; never tokens or URLs with secrets.';
 
 create index notification_outbox_deliver_after_idx on public.notification_outbox (deliver_after) where status = 'pending';

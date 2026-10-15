@@ -202,7 +202,8 @@ create policy "feedback: author uploads"
 
 comment on policy "feedback: author uploads" on storage.objects is 'A user uploads feedback screenshots into their own folder only.';
 
--- exports: <user_id>/<export_id>.zip, private. The export job writes with the secret key; the owner reads
+-- exports: <user_id>/<export_id>.zip, or <user_id>/<export_id>/part-N.zip when the archive is over the 50 MB
+-- object limit (many photos), private. The export job writes with the secret key; the owner reads each part
 -- through a 15-minute signed URL (R54).
 
 create policy "exports: owner reads"

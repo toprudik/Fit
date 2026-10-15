@@ -2,7 +2,7 @@
 -- notification outbox (ADR 0006) and calendar feeds without token_hash (R50).
 begin;
 \ir _helpers.psql
-select plan(34);
+select plan(38);
 
 -- Fixtures: C and D are clients of A; C has a confirmed booking on a session of A.
 select tests.create_trainer('trainer_a');
@@ -134,6 +134,30 @@ select throws_ok(
   $$ insert into public.notification_outbox (user_id, type, dedupe_key, payload, scheduled_for, deliver_after)
      values (tests.u('client_d'), 'daily_digest', 'digest:d:array', '[]', now(), now()) $$,
   '23514', null, 'notification_outbox: a payload that is not an object violates the check'
+);
+
+-- Team group messages (PRD §3 А1, А2): no user, a chat target instead; exactly one recipient.
+select lives_ok(
+  $$ insert into public.notification_outbox (user_id, chat_target, type, dedupe_key, payload, scheduled_for, deliver_after)
+     values (null, 'admin_group', 'verification_submitted', 'verification:a:1', '{"documents": 2}', now(), now()) $$,
+  'notification_outbox: an admin message goes to the team group without a user'
+);
+select throws_ok(
+  $$ insert into public.notification_outbox (user_id, chat_target, type, dedupe_key, payload, scheduled_for, deliver_after)
+     values (null, null, 'feedback_received', 'feedback:1', '{}', now(), now()) $$,
+  '23514', 'new row for relation "notification_outbox" violates check constraint "notification_outbox_recipient_check"',
+  'notification_outbox: a row without a recipient violates the check'
+);
+select throws_ok(
+  $$ insert into public.notification_outbox (user_id, chat_target, type, dedupe_key, payload, scheduled_for, deliver_after)
+     values (tests.u('client_d'), 'admin_group', 'feedback_received', 'feedback:2', '{}', now(), now()) $$,
+  '23514', 'new row for relation "notification_outbox" violates check constraint "notification_outbox_recipient_check"',
+  'notification_outbox: a row for a user and a group at once violates the check'
+);
+select throws_ok(
+  $$ insert into public.notification_outbox (user_id, chat_target, type, dedupe_key, payload, scheduled_for, deliver_after)
+     values (null, 'everyone', 'feedback_received', 'feedback:3', '{}', now(), now()) $$,
+  '23514', null, 'notification_outbox: an unknown chat target violates the check'
 );
 
 -- A booking is never deleted directly; when its pair goes (trainer account deletion), the reminders go too,
