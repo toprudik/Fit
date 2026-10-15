@@ -66,6 +66,9 @@ jobs:
           version: "0.11.32"
           checksum: "aab924fd522efd06f1c5f3b93a243864fc453132c94b2dc49f1371b528a4b967"
           python-version: "3.13"
+          # No shared uv cache: the CI bot job saves one under the same key with unpinned tools, and uv trusts its
+          # cache. The locked wheels are small, so this job always downloads them fresh.
+          enable-cache: false
       - if: steps.config.outputs.ready == 'true'
         working-directory: apps/bot
         # Only the locked wheels. The project itself is not built, so no build backend runs in this job; the last step
@@ -112,7 +115,7 @@ jobs:
               hint="/healthz answers 404. Check that BOT_WEBHOOK_URL in this workflow is the production domain of dafit-bot and that its latest deployment is Ready."
               ;;
             000)
-              hint="/healthz does not answer within 10 seconds."
+              hint="/healthz cannot be reached (no HTTP answer: DNS, connection, TLS or a 10 second timeout)."
               ;;
             *)
               hint="/healthz answers $code."
