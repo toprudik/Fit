@@ -7,6 +7,7 @@ exc_info: pydantic, aiogram's ClientDecodeError and aiohttp errors embed input v
 
 import hmac
 import logging
+import re
 import traceback
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -41,6 +42,7 @@ BOT_API_TIMEOUT: Final = 10.0
 TRANSIENT_RETRY_AFTER: Final = 5
 CONFIG_RETRY_AFTER: Final = 60
 MAX_RETRY_AFTER: Final = 3600
+_CLIENT_ERROR_PREFIX: Final = re.compile(r"([A-Z][A-Za-z0-9_]{0,63}): ")
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,14 +94,27 @@ def event_type(update: Update) -> str:
 def describe_error(error: BaseException) -> str:
     """The exception type, plus Telegram's own description for Bot API errors (e.g. "Bad Request: chat not found").
 
-    Flood control and chat migration are left out: aiogram writes the chat id into their message.
+    Flood control and chat migration are left out: aiogram writes the chat id into their message. A network error
+    names only its cause type (e.g. "TelegramNetworkError (TimeoutError)"): its message can hold the token URL.
     """
     name = type(error).__name__
-    if isinstance(error, TelegramAPIError) and not isinstance(
-        error, TelegramNetworkError | TelegramRetryAfter | TelegramMigrateToChat
-    ):
+    if isinstance(error, TelegramNetworkError):
+        cause = network_error_cause(error)
+        return f"{name} ({cause})" if cause else name
+    if isinstance(error, TelegramAPIError) and not isinstance(error, TelegramRetryAfter | TelegramMigrateToChat):
         return f"{name}: {error.message}"
     return name
+
+
+def network_error_cause(error: TelegramNetworkError) -> str | None:
+    """The class name of what aiogram wrapped (it raises "from" the aiohttp or timeout error), never its message."""
+    if error.__cause__ is not None:
+        return type(error.__cause__).__name__
+    if error.message == "Request timeout error":
+        return "TimeoutError"
+    # aiogram's own format for client errors is "<ClassName>: <message>"; keep the class name only.
+    match = _CLIENT_ERROR_PREFIX.match(error.message)
+    return match.group(1) if match else None
 
 
 def traceback_frames(error: BaseException) -> str:
@@ -107,11 +122,9 @@ def traceback_frames(error: BaseException) -> str:
     return "".join(traceback.format_tb(error.__traceback__))
 
 
-def make_bot(settings: Settings, *, api: TelegramAPIServer | None = None) -> Bot:
+def make_bot(settings: Settings, *, api: TelegramAPIServer | None = None, timeout: float = BOT_API_TIMEOUT) -> Bot:
     """A Bot with its own aiohttp session (bound to the running loop once used). Plain text, no parse mode."""
-    session = (
-        AiohttpSession(timeout=BOT_API_TIMEOUT) if api is None else AiohttpSession(api=api, timeout=BOT_API_TIMEOUT)
-    )
+    session = AiohttpSession(timeout=timeout) if api is None else AiohttpSession(api=api, timeout=timeout)
     return Bot(settings.telegram_bot_token.get_secret_value(), session=session)
 
 
