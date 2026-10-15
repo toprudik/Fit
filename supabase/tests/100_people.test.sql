@@ -5,7 +5,7 @@
 -- raise instead of changing 0 rows.
 begin;
 \ir _helpers.psql
-select plan(102);
+select plan(103);
 
 -- Fixtures: C has live pairs to A and B, D a live pair to A, E an ended pair to A, M is A's card, A has an
 -- ended pair to the deleted-client stub. X is an admin with a live break-glass grant on C for every category.
@@ -57,6 +57,8 @@ select throws_ok($$ select telegram_id from public.profiles where id = tests.u('
 select throws_ok($$ select bot_blocked_at from public.profiles where id = tests.u('client_c') $$, '42501', null,
   'bot_blocked_at is not readable');
 select throws_ok($$ select claimed_by from public.profiles $$, '42501', null, 'claimed_by is not readable');
+select throws_ok($$ select last_seen_at from public.profiles where id = tests.u('trainer_a') $$, '42501', null,
+  'last_seen_at of a pair partner is not readable');
 select throws_ok($$ select blocked_reason from public.profiles $$, '42501', null, 'blocked_reason is not readable');
 select throws_ok($$ select * from public.profiles $$, '42501', null, 'select * fails because of the hidden columns');
 select is_empty($$ select 1 from public.profiles where id = tests.u('client_d') $$, 'C reads 0 rows of D (both clients of A)');
@@ -468,7 +470,7 @@ select is(
       and not has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT')
     order by 1
   ),
-  array['blocked_at', 'blocked_reason', 'bot_blocked_at', 'bot_started_at', 'claimed_by', 'telegram_id'],
+  array['blocked_at', 'blocked_reason', 'bot_blocked_at', 'bot_started_at', 'claimed_by', 'last_seen_at', 'telegram_id'],
   'exactly the server-only profiles columns are hidden'
 );
 select ok(

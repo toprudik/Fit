@@ -174,3 +174,18 @@ comment on function private.attended_count(uuid) is
   'Number of attended bookings of the pair. Does not check the caller; not exposed through the API.';
 revoke all on function private.attended_count(uuid) from public;
 grant execute on function private.attended_count(uuid) to authenticated, service_role;
+
+-- Definer and set-returning, so the exercises policy can use it without reading workout_log_exercises under
+-- RLS: that table's insert check reads exercises, and a policy loop would be refused as infinite recursion.
+create function private.own_logged_exercise_ids() returns setof uuid
+language sql stable security definer set search_path = '' as $$
+  select distinct e.exercise_id
+  from public.workout_log_exercises e
+  join public.workout_logs l on l.id = e.log_id
+  where l.client_id = auth.uid()
+$$;
+
+comment on function private.own_logged_exercise_ids() is
+  'RLS helper: ids of the exercises used in the caller''s own workout logs (as the client), pair logs included.';
+revoke all on function private.own_logged_exercise_ids() from public;
+grant execute on function private.own_logged_exercise_ids() to authenticated, service_role;

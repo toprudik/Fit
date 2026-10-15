@@ -13,7 +13,7 @@ alter table public.profiles
   add column time_zone      public.iana_tz not null default 'Europe/Moscow',
   add constraint profiles_blocked_check check ((blocked_at is null) = (blocked_reason is null));
 
-comment on column public.profiles.last_seen_at is 'Last sign-in; set by the server.';
+comment on column public.profiles.last_seen_at is 'Last sign-in; set by the server. Not granted to signed-in users.';
 comment on column public.profiles.bot_started_at is 'User pressed /start in the bot; without it the bot cannot message them.';
 comment on column public.profiles.bot_blocked_at is 'Telegram answered 403 when the bot wrote; cleared on /start.';
 comment on column public.profiles.blocked_at is 'Admin blocked the account; written by an admin RPC only (not granted).';

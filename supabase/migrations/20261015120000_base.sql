@@ -17,8 +17,10 @@ create extension if not exists pg_trgm with schema extensions;     -- exercise n
 alter default privileges for role postgres in schema public revoke all on tables from anon, authenticated;
 alter default privileges for role postgres in schema public revoke all on sequences from anon, authenticated;
 alter default privileges for role postgres in schema public revoke all on functions from anon, authenticated;
--- PUBLIC keeps EXECUTE on new functions (global default), so every function still needs
--- "revoke all on function ... from public" (and "from anon" for functions in public).
+-- New functions also start without EXECUTE for PUBLIC, in every schema: anon is a member of PUBLIC, so a later
+-- RPC that forgot its "revoke ... from public" would otherwise be callable by anyone with the publishable key.
+-- Every function still revokes and grants explicitly; extension functions belong to supabase_admin and keep theirs.
+alter default privileges for role postgres revoke execute on functions from public;
 
 -- set_updated_at comes from the profiles migration, which had no function comment yet.
 comment on function public.set_updated_at() is 'Trigger: sets updated_at to now() on every update of the row.';

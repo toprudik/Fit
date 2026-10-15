@@ -161,7 +161,15 @@ comment on policy "recurrences: trainer inserts for a live pair" on public.recur
 comment on policy "recurrences: trainer updates" on public.recurrences is
   'The trainer edits the rule of own repeats. No DELETE: a repeat ends through ended_at (RPC).';
 
-grant select on table public.recurrences to authenticated;
+-- meeting_url is not granted for SELECT, as on sessions (R25, SCHED-21): the client of a personal repeat
+-- reads the repeat in any pair status and with no confirmed booking, and a trainer often reuses one room
+-- link. Each session carries its own link through public.session_meeting_url(); the trainer's edit form reads
+-- the repeat's link through public.recurrence_meeting_url(). Clients must list columns: select=* fails.
+grant select (
+  id, trainer_id, coaching_id, rrule, dtstart_local, time_zone, until_date, occurrence_count, duration_min, kind,
+  title, capacity, location_id, mode, open_for_booking, materialized_until, ended_at, created_by, created_at,
+  updated_at
+) on table public.recurrences to authenticated;
 grant insert (
   trainer_id, coaching_id, rrule, dtstart_local, time_zone, until_date, occurrence_count, duration_min, kind,
   title, capacity, location_id, mode, meeting_url, open_for_booking

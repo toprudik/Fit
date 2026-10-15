@@ -2,7 +2,7 @@
 -- feedback, reports, admin_audit_log, break_glass_grants, and the audit triggers on admin updates (R47).
 begin;
 \ir _helpers.psql
-select plan(89);
+select plan(92);
 
 -- Fixtures: two admins, plain users C and D (no pairs, so C's account can be deleted at the end), trainers
 -- A and B, and a live pair A-D so that D's trainer can be checked too.
@@ -398,6 +398,22 @@ select tests.authenticate_as_service_role();
 update public.break_glass_grants set revoked_at = now() where id = tests.i('g_yd');
 select tests.clear_authentication();
 select is(tests.audit('break_glass.revoke', tests.u('client_d')), 1::bigint, 'a server revocation is audited as well');
+
+-- A revoked grant stays revoked for every role, server code included.
+select tests.authenticate_as_service_role();
+select throws_ok(
+  format($$ update public.break_glass_grants set revoked_at = null where id = %L $$, tests.i('g_yd')),
+  'P0001', 'append_only', 'server code cannot clear the revocation of a grant'
+);
+select throws_ok(
+  format($$ update public.break_glass_grants set revoked_at = now() + interval '1 minute' where id = %L $$, tests.i('g_yd')),
+  'P0001', 'append_only', 'server code cannot move the revocation time'
+);
+select tests.clear_authentication();
+select throws_ok(
+  format($$ update public.break_glass_grants set revoked_at = null where id = %L $$, tests.i('g_rev')),
+  'P0001', 'append_only', 'not even the table owner reopens a revoked grant'
+);
 
 -- Table checks.
 select throws_ok(

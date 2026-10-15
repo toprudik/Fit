@@ -4,7 +4,7 @@
 -- keeps its accounting, and the admin sees no money rows, not even with break-glass access.
 begin;
 \ir _helpers.psql
-select plan(130);
+select plan(142);
 
 -- Fixtures: C has live pairs to A and B, D a live pair to A, E an ended pair to A.
 select tests.create_trainer('trainer_a');
@@ -482,6 +482,14 @@ select lives_ok(
      values (tests.i('pair_ac'), 3000, 'RUB', 'cash', now(), 'reported', 'c report 2') $$,
   'payments: C reports a payment on account (no pass)'
 );
+insert into public.payments (coaching_id, pass_id, amount_minor, currency, method, paid_at, status, note)
+values (tests.i('pair_ac'), tests.i('pass_ac'), 8000, 'RUB', 'sbp', now() - interval '1 day', 'reported', 'c report 3'),
+       (tests.i('pair_ac'), null, 4000, 'RUB', 'sbp', now() - interval '1 day', 'reported', 'c report 4');
+select results_eq(
+  $$ update public.payments set pass_id = tests.i('pass_ac_paid') where note = 'c report 3' returning pass_id $$,
+  $$ values (tests.i('pass_ac_paid')) $$,
+  'payments: C moves own report to another pass of the pair'
+);
 select results_eq(
   $$ select reported_by, client_id, trainer_id from public.payments where note = 'c report 1' $$,
   $$ values (tests.u('client_c'), tests.u('client_c'), tests.u('trainer_a')) $$,
@@ -561,7 +569,7 @@ select throws_ok(
 );
 select set_eq(
   $$ select note from public.payments $$,
-  array['fixture paid', 'fixture bc', 'c report 1 fixed', 'c report 2'],
+  array['fixture paid', 'fixture bc', 'c report 1 fixed', 'c report 2', 'c report 3', 'c report 4'],
   'payments: C reads own payments in both pairs'
 );
 
@@ -610,6 +618,33 @@ select throws_ok(
   $$ update public.payments set note = 'trainer note' where note = 'a entry' $$,
   '42501', 'forbidden', 'payments: A changing the note raises forbidden'
 );
+-- Every detail column of C's still reported payment, one at a time (on account, so a currency change is not
+-- refused by the pass currency check first).
+select throws_ok(
+  format('update public.payments set %I = %s where note = %L', c.col, c.val, 'c report 4'),
+  '42501', 'forbidden', format('payments: A changing %s of C''s report raises forbidden', c.col)
+)
+from (values
+  ('amount_minor', '1'),
+  ('currency', quote_literal('USD')),
+  ('method', quote_literal('cash')),
+  ('paid_at', quote_literal((now() - interval '90 days')::text)),
+  ('note', quote_literal('trainer note')),
+  ('pass_id', quote_literal(tests.i('pass_ac')::text))
+) as c (col, val)
+order by c.col;
+select throws_ok(
+  $$ update public.payments set void_reason = 'looks odd' where note = 'c report 4' $$,
+  '42501', 'forbidden', 'payments: A giving a void reason without voiding raises forbidden'
+);
+-- A confirm conditioned on what A saw: C changes the amount meanwhile, so A's confirm changes 0 rows.
+select tests.authenticate_as('client_c');
+update public.payments set amount_minor = 800000 where note = 'c report 3';
+select tests.authenticate_as('trainer_a');
+select is_empty(
+  $$ update public.payments set status = 'confirmed' where note = 'c report 3' and amount_minor = 8000 returning 1 $$,
+  'payments: a confirm conditioned on the amount A saw changes 0 rows after C edited it'
+);
 select throws_ok(
   $$ update public.payments set status = 'voided' where note = 'a entry' $$,
   '23514', null, 'payments: voiding without a reason violates the check'
@@ -619,6 +654,15 @@ select results_eq(
      returning status, voided_at is not null $$,
   $$ values ('voided'::public.payment_status, true) $$,
   'payments: A voids a confirmed payment with a reason'
+);
+select throws_ok(
+  $$ update public.payments set void_reason = 'client never paid' where note = 'a entry' $$,
+  '42501', 'forbidden', 'payments: A cannot rewrite the void reason of a voided payment'
+);
+select results_eq(
+  $$ select void_reason from public.payments where note = 'a entry' $$,
+  $$ values ('wrong amount'::text) $$,
+  'payments: the void reason stays as given when voiding'
 );
 select throws_ok(
   $$ update public.payments set status = 'confirmed' where note = 'a entry' $$,
@@ -713,11 +757,16 @@ select throws_ok(
   $$ delete from public.payment_links where id = tests.i('link_a') $$,
   '42501', null, 'payment_links: delete raises 42501'
 );
+select set_eq(
+  $$ select title from public.payment_links $$,
+  array['SBP A', 'Bank A'],
+  'payment_links: A still reads own archived link'
+);
 select tests.authenticate_as('client_c');
 select set_eq(
   $$ select title from public.payment_links $$,
-  array['SBP A', 'Bank A', 'SBP B'],
-  'payment_links: C reads the links of both trainers'
+  array['SBP A', 'SBP B'],
+  'payment_links: C reads the live links of both trainers, not A''s archived one'
 );
 select is_empty(
   $$ update public.payment_links set url = 'https://evil.example.com' where id = tests.i('link_a') returning 1 $$,
@@ -725,8 +774,8 @@ select is_empty(
 );
 select tests.authenticate_as('client_e');
 select set_eq(
-  $$ select title from public.payment_links $$, array['SBP A', 'Bank A'],
-  'payment_links: E (ended pair) still reads A''s links'
+  $$ select title from public.payment_links $$, array['SBP A'],
+  'payment_links: E (ended pair) still reads A''s live links'
 );
 select tests.authenticate_as('trainer_b');
 select set_eq($$ select title from public.payment_links $$, array['SBP B'], 'payment_links: B reads 0 of A''s links');

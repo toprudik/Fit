@@ -133,5 +133,28 @@ create index break_glass_grants_admin_id_target_user_id_idx on public.break_glas
   where revoked_at is null;
 create index break_glass_grants_target_user_id_idx on public.break_glass_grants (target_user_id);
 
+-- A revoked grant stays revoked, for every role: revoked_at is written once and never cleared or moved, so
+-- access that was ended cannot be reopened or its end rewritten. Access is opened again only with a new grant.
+create function private.break_glass_grants_keep_revoked()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if old.revoked_at is not null and new.revoked_at is distinct from old.revoked_at then
+    raise exception 'append_only' using errcode = 'P0001',
+      detail = 'a revoked break-glass grant stays revoked';
+  end if;
+  return new;
+end $$;
+
+comment on function private.break_glass_grants_keep_revoked() is
+  'Trigger: once revoked_at is set it cannot be cleared or changed, by any role.';
+revoke all on function private.break_glass_grants_keep_revoked() from public;
+
+create trigger break_glass_grants_keep_revoked
+  before update of revoked_at on public.break_glass_grants
+  for each row execute function private.break_glass_grants_keep_revoked();
+
 alter table public.break_glass_grants enable row level security;
 revoke all on table public.break_glass_grants from anon, authenticated;

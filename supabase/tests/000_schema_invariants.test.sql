@@ -2,7 +2,7 @@
 -- objects exist, so it holds while migrations are added and checks every new table, view and function.
 begin;
 \ir _helpers.psql
-select plan(11);
+select plan(12);
 
 select is(
   array(
@@ -145,6 +145,21 @@ select is(
 select ok(
   not has_schema_privilege('authenticated', 'private', 'USAGE'),
   'authenticated has no USAGE on schema private'
+);
+
+-- A function added by a later migration starts closed: nobody but the owner (and service_role in public)
+-- may run it until the migration grants EXECUTE, so a forgotten revoke cannot open an RPC to anon.
+create function public.zz_default_acl_probe() returns integer language sql set search_path = '' as $$ select 1 $$;
+create function private.zz_default_acl_probe() returns integer language sql set search_path = '' as $$ select 1 $$;
+select is(
+  array(
+    select r || ' ' || f from unnest(array['public', 'anon', 'authenticated']) r,
+      unnest(array['public.zz_default_acl_probe()', 'private.zz_default_acl_probe()']) f
+    where has_function_privilege(r, f, 'EXECUTE')
+    order by 1
+  ),
+  '{}'::text[],
+  'a new function gets no EXECUTE for PUBLIC, anon or authenticated by default'
 );
 
 select * from finish();

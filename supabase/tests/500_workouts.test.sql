@@ -3,7 +3,7 @@
 -- their exercises and sets, and personal records (WORK-4, R43).
 begin;
 \ir _helpers.psql
-select plan(140);
+select plan(161);
 
 -- Fixtures: C has live pairs to A, B and F; D a live pair to A; E an ended pair to A. S is a plain user.
 -- admin_x gets break-glass grants on C; admin_y never has one.
@@ -493,7 +493,8 @@ select results_eq(
   'personal_records: max_reps counts only unweighted sets'
 );
 
--- Who reads records: the client all; a trainer only records whose set it can read (R43).
+-- Who reads records: the client reads the cache; a trainer reads visible_personal_records, which computes
+-- the bests over the sets the trainer can read (R43).
 select tests.authenticate_as('client_c');
 select is(
   (select count(*)::integer from public.personal_records where exercise_id in (tests.i('squat'), tests.i('pullup'))), 3,
@@ -508,22 +509,35 @@ select throws_ok(
   $$ update public.personal_records set value = 300 where client_id = tests.u('client_c') $$,
   '42501', null, 'personal_records: update raises 42501'
 );
+select results_eq(
+  $$ select client_id, exercise_id, record_type, value, set_id, achieved_at from public.visible_personal_records
+     where exercise_id in (tests.i('squat'), tests.i('pullup')) order by 2, 3 $$,
+  $$ select client_id, exercise_id, record_type, value, set_id, achieved_at from public.personal_records
+     where exercise_id in (tests.i('squat'), tests.i('pullup')) order by 2, 3 $$,
+  'visible_personal_records: for C it matches the cache'
+);
 select tests.authenticate_as('trainer_a');
+select is(
+  (select count(*)::integer from public.personal_records), 0,
+  'personal_records: A reads no row of C''s cache, not even a record set in A''s own pair log'
+);
 select set_eq(
-  $$ select exercise_id, record_type::text from public.personal_records
+  $$ select exercise_id, record_type::text from public.visible_personal_records
      where client_id = tests.u('client_c') and exercise_id in (tests.i('squat'), tests.i('pullup')) $$,
   $$ values (tests.i('squat'), 'max_weight'), (tests.i('pullup'), 'max_reps'), (tests.i('pullup'), 'max_weight') $$,
-  'personal_records: A reads records of A-C sets and of C''s shared self log'
+  'visible_personal_records: A gets the records of A-C sets and of C''s shared self log'
 );
 select tests.authenticate_as('trainer_b');
 select set_eq(
-  $$ select exercise_id, record_type::text from public.personal_records
+  $$ select exercise_id, record_type::text from public.visible_personal_records
      where client_id = tests.u('client_c') and exercise_id in (tests.i('squat'), tests.i('pullup')) $$,
   $$ values (tests.i('pullup'), 'max_reps'), (tests.i('pullup'), 'max_weight') $$,
-  'personal_records: B reads the self-log records but not the record set in the A-C pair'
+  'visible_personal_records: B gets the self-log records but nothing from the A-C pair'
 );
 select tests.authenticate_as('client_d');
 select is((select count(*)::integer from public.personal_records), 0, 'personal_records: D reads none of C''s records');
+select is((select count(*)::integer from public.visible_personal_records where client_id = tests.u('client_c')), 0,
+  'visible_personal_records: D gets none of C''s records');
 
 -- Edits move the record: deleting the 100 kg set reverts to 95; changing the exercise moves it to bench.
 select tests.authenticate_as('trainer_a');
@@ -679,9 +693,9 @@ select set_eq(
   'workout_logs: with workouts off, A reads the pair logs but no self log'
 );
 select set_eq(
-  $$ select exercise_id, record_type::text from public.personal_records where client_id = tests.u('client_c') $$,
+  $$ select exercise_id, record_type::text from public.visible_personal_records where client_id = tests.u('client_c') $$,
   $$ values (tests.i('ex_a'), 'max_reps') $$,
-  'personal_records: with workouts off, A reads only the record set in the pair log'
+  'visible_personal_records: with workouts off, A gets only the record set in the pair log'
 );
 select is(
   (select count(*)::integer from public.workout_sets where id = tests.i('set_c_self')), 0,
@@ -701,6 +715,8 @@ select tests.authenticate_as('admin_x');
 select is((select count(*)::integer from public.workout_logs), 0, 'workout_logs: an admin without break-glass reads 0 rows');
 select is((select count(*)::integer from public.workout_sets), 0, 'workout_sets: an admin without break-glass reads 0 rows');
 select is((select count(*)::integer from public.personal_records), 0, 'personal_records: an admin without break-glass reads 0 rows');
+select is((select count(*)::integer from public.visible_personal_records), 0,
+  'visible_personal_records: an admin without break-glass gets 0 rows');
 select tests.clear_authentication();
 select tests.create_break_glass('admin_x', 'client_c', '{measurements}');
 select tests.authenticate_as('admin_x');
@@ -715,10 +731,12 @@ select set_eq(
   'workout_logs: a live workouts grant shows the admin C''s self logs, not the pair logs'
 );
 select set_eq(
-  $$ select exercise_id, record_type::text from public.personal_records $$,
+  $$ select exercise_id, record_type::text from public.visible_personal_records $$,
   $$ values (tests.i('ex_a'), 'max_duration'), (tests.i('pullup'), 'max_reps'), (tests.i('pullup'), 'max_weight') $$,
-  'personal_records: the admin with the grant reads only the records set in self logs'
+  'visible_personal_records: the admin with the grant gets only the records set in self logs'
 );
+select is((select count(*)::integer from public.personal_records), 0,
+  'personal_records: even with a grant the admin reads no row of the cache');
 select tests.authenticate_as('admin_y');
 select is((select count(*)::integer from public.workout_logs), 0, 'workout_logs: an expired grant shows nothing');
 select tests.clear_authentication();
@@ -741,6 +759,40 @@ select is(
   (select count(*)::integer from public.workout_sets where id = tests.i('set_ac')), 1,
   'workout_sets: after the pair ends, A still reads the pair log sets'
 );
+select is_empty(
+  $$ update public.workout_logs set title = 'Rewritten after the end' where id = tests.i('log_ac') returning 1 $$,
+  'workout_logs: after the pair ends, A editing the pair log A wrote changes 0 rows'
+);
+select is_empty(
+  $$ delete from public.workout_logs where id = tests.i('log_ac') returning 1 $$,
+  'workout_logs: after the pair ends, A deleting the pair log changes 0 rows'
+);
+select throws_ok(
+  $$ insert into public.workout_log_exercises (log_id, position, exercise_id) values (tests.i('log_ac'), 5, tests.i('squat')) $$,
+  '42501', 'new row violates row-level security policy for table "workout_log_exercises"',
+  'workout_log_exercises: after the pair ends, A cannot add an exercise to the pair log'
+);
+select throws_ok(
+  $$ insert into public.workout_sets (log_exercise_id, position, reps, weight_kg) values (tests.i('le_ac'), 9, 1, 400) $$,
+  '42501', 'new row violates row-level security policy for table "workout_sets"',
+  'workout_sets: after the pair ends, A cannot add a set to the pair log (no fabricated record)'
+);
+select is_empty(
+  $$ update public.workout_sets set reps = 99 where id = tests.i('set_ac') returning 1 $$,
+  'workout_sets: after the pair ends, A editing a pair log set changes 0 rows'
+);
+select is_empty(
+  $$ delete from public.workout_log_exercises where id = tests.i('le_ac') returning 1 $$,
+  'workout_log_exercises: after the pair ends, A deleting a pair log exercise changes 0 rows'
+);
+select tests.clear_authentication();
+select results_eq(
+  $$ select title, (select count(*)::integer from public.workout_sets where log_exercise_id = tests.i('le_ac'))
+     from public.workout_logs where id = tests.i('log_ac') $$,
+  $$ values ('Session 1, legs'::text, 1) $$,
+  'workout_logs: the ended pair''s log is unchanged'
+);
+select tests.authenticate_as('trainer_a');
 select tests.authenticate_as('client_c');
 select is(
   (select count(*)::integer from public.exercises where id = tests.i('ex_a')), 1,
@@ -786,7 +838,88 @@ select is(
   'exercises: C''s log still references it'
 );
 select tests.authenticate_as('client_c');
-select is((select count(*)::integer from public.exercises where id = tests.i('ex_f')), 0, 'exercises: nobody reads an orphaned custom exercise');
+select is((select count(*)::integer from public.exercises where id = tests.i('ex_f')), 1,
+  'exercises: C keeps reading F''s orphaned custom exercise, which C''s own log uses');
+select tests.authenticate_as('client_d');
+select is((select count(*)::integer from public.exercises where id = tests.i('ex_f')), 0,
+  'exercises: D, who never logged it, reads no orphaned custom exercise');
+select tests.authenticate_as('trainer_b');
+select is((select count(*)::integer from public.exercises where id = tests.i('ex_f')), 0,
+  'exercises: B reads no orphaned custom exercise either');
+
+-- =========================================================================================================
+-- A trainer cannot probe the client's hidden bests through the record cache (R43)
+
+-- H keeps a self log at 97.5 kg (not shared with G) and has a B-H pair log at 92 kg and 300 s. G writes one
+-- set in the G-H pair log and moves its weight and date around.
+select tests.clear_authentication();
+select tests.create_trainer('trainer_g');
+select tests.create_user('client_h');
+select tests.create_pair('trainer_g', 'client_h');
+select tests.create_pair('trainer_b', 'client_h');
+select tests.set_share('trainer_g', 'client_h', 'workouts', false);
+insert into tests.ids
+select n, gen_random_uuid() from unnest(array['log_h_self', 'le_h_self', 'log_bh', 'le_bh', 'log_gh', 'le_gh', 'set_gh']) n;
+insert into public.workout_logs (id, client_id, performed_at, local_date, created_by)
+values (tests.i('log_h_self'), tests.u('client_h'), '2026-03-02 10:00+00', '2026-03-02', tests.u('client_h'));
+insert into public.workout_log_exercises (id, log_id, position, exercise_id) values (tests.i('le_h_self'), tests.i('log_h_self'), 1, tests.i('bench'));
+insert into public.workout_sets (log_exercise_id, position, reps, weight_kg) values (tests.i('le_h_self'), 1, 5, 97.5);
+insert into public.workout_logs (id, client_id, coaching_id, performed_at, local_date, created_by)
+values (tests.i('log_bh'), tests.u('client_h'), tests.pair_id('trainer_b', 'client_h'), '2026-02-01 10:00+00', '2026-02-01', tests.u('trainer_b'));
+insert into public.workout_log_exercises (id, log_id, position, exercise_id) values (tests.i('le_bh'), tests.i('log_bh'), 1, tests.i('bench'));
+insert into public.workout_sets (log_exercise_id, position, reps, weight_kg, duration_s) values (tests.i('le_bh'), 1, 5, 92, 300);
+
+select tests.authenticate_as('trainer_g');
+insert into public.workout_logs (id, client_id, coaching_id, performed_at, local_date)
+values (tests.i('log_gh'), tests.u('client_h'), tests.pair_id('trainer_g', 'client_h'), '2026-04-01 10:00+00', '2026-04-01');
+insert into public.workout_log_exercises (id, log_id, position, exercise_id) values (tests.i('le_gh'), tests.i('log_gh'), 1, tests.i('bench'));
+insert into public.workout_sets (id, log_exercise_id, position, reps, weight_kg, duration_s) values (tests.i('set_gh'), tests.i('le_gh'), 1, 5, 120, 10);
+select is((select count(*)::integer from public.personal_records), 0,
+  'personal_records: G reads no row of H''s cache, even when G''s own set holds the record');
+-- The answers depend only on G's own set, never on H's hidden 97.5 kg or B's 300 s.
+update public.workout_sets set weight_kg = 97.75 where id = tests.i('set_gh');
+select results_eq(
+  $$ select record_type::text, value, set_id from public.visible_personal_records
+     where client_id = tests.u('client_h') and exercise_id = tests.i('bench') order by 1 $$,
+  $$ values ('max_duration', 10.00::numeric, tests.i('set_gh')), ('max_weight', 97.75::numeric, tests.i('set_gh')) $$,
+  'visible_personal_records: at 97.75 kg G sees own set as the record'
+);
+update public.workout_sets set weight_kg = 97.25 where id = tests.i('set_gh');
+select results_eq(
+  $$ select value from public.visible_personal_records
+     where client_id = tests.u('client_h') and exercise_id = tests.i('bench') and record_type = 'max_weight' $$,
+  $$ values (97.25::numeric) $$,
+  'visible_personal_records: at 97.25 kg G still sees own set, so the hidden 97.5 kg is not revealed'
+);
+update public.workout_logs set performed_at = '2026-03-03 10:00+00' where id = tests.i('log_gh');
+update public.workout_sets set weight_kg = 97.5 where id = tests.i('set_gh');
+select results_eq(
+  $$ select set_id from public.visible_personal_records
+     where client_id = tests.u('client_h') and exercise_id = tests.i('bench') and record_type = 'max_weight' $$,
+  $$ values (tests.i('set_gh')) $$,
+  'visible_personal_records: an equal value dated after the hidden record still shows G''s set (no date oracle)'
+);
+select tests.authenticate_as('client_h');
+select results_eq(
+  $$ select record_type::text, value from public.personal_records where exercise_id = tests.i('bench') order by 1 $$,
+  $$ values ('max_duration', 300.00::numeric), ('max_weight', 97.50::numeric) $$,
+  'personal_records: H''s cache holds the bests over every own log'
+);
+
+-- Deleting a trainer who wrote pair logs, in the order the account deletion job uses when the rows were
+-- written in the same transaction: the trainer profile first (pairs, passes and notes go while the profile
+-- still exists), then the account (contract §7.1).
+select tests.clear_authentication();
+select lives_ok(
+  $$ delete from public.trainer_profiles where user_id = tests.u('trainer_g');
+     delete from auth.users where id = tests.u('trainer_g') $$,
+  'workout_logs: a trainer who wrote a pair log is deleted (profile first, then the account)'
+);
+select results_eq(
+  $$ select coaching_id, created_by from public.workout_logs where id = tests.i('log_gh') $$,
+  $$ values (null::uuid, null::uuid) $$,
+  'workout_logs: H keeps the log of the deleted trainer, with no pair and no author'
+);
 
 select * from finish();
 rollback;

@@ -20,6 +20,9 @@
 
 create schema if not exists tests;
 grant usage on schema tests to anon, authenticated, service_role;
+-- The base migration stops new functions from getting EXECUTE for PUBLIC. Test helpers are called while
+-- acting as authenticated or anon, so functions in schema tests get it back (rolled back with the test).
+alter default privileges for role postgres in schema tests grant execute on functions to public;
 
 -- Test users by handle ('trainer_a', 'client_c', ...), so tests never hard-code uuids.
 -- telegram_id is null for cards and the deleted-client stub.

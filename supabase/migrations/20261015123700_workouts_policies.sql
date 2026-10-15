@@ -20,14 +20,17 @@ from anon, authenticated;
 
 -- The wger catalog is open to everyone signed in. A custom exercise is seen by its trainer and by the clients
 -- of that trainer in any pair status (R81), so an ended client still reads old logs (PRD 2.10-1, WORK-2).
--- A custom exercise whose author deleted the account has owner_id null and is read by nobody (R61).
+-- A custom exercise whose author deleted the account has owner_id null (R61); a client whose own logs use it
+-- keeps reading it, because the logs stay with the client (PRD 2.12-8). Nobody else reads it. The client could
+-- read it before the author left, so this opens nothing new.
 create policy "exercises: catalog, own and own trainers' read"
   on public.exercises for select
   to authenticated
   using (
     source = 'wger'
     or owner_id = (select auth.uid())
-    or owner_id in (select private.trainer_ids_visible()));
+    or owner_id in (select private.trainer_ids_visible())
+    or (source = 'custom' and owner_id is null and id in (select private.own_logged_exercise_ids())));
 
 -- Only trainers add their own exercises; wger rows come from the import job with the secret key.
 create policy "exercises: trainer adds custom"
@@ -187,24 +190,29 @@ create policy "workout_logs: client or live pair trainer inserts"
           and private.is_coaching_trainer(coaching_id, 'workouts')
           and private.is_live_coaching(coaching_id))));
 
--- Only the author edits (PRD 2.10-10, R42), and only while still the client or the pair's trainer.
--- Deviation from contract §1.4: the check also requires a readable template, as on insert, so an edit cannot
--- point a log at another trainer's template.
+-- Only the author edits (PRD 2.10-10, R42), and only while still the client or the trainer of a live pair:
+-- after the client ends the pair, the trainer keeps reading the pair logs but can no longer change them
+-- (PRD 2.12-5). Deviation from contract §1.4: the check also requires a readable template, as on insert, so
+-- an edit cannot point a log at another trainer's template.
 create policy "workout_logs: author updates"
   on public.workout_logs for update
   to authenticated
   using (
     created_by = (select auth.uid())
     and (client_id = (select auth.uid())
-         or (coaching_id is not null and private.is_coaching_trainer(coaching_id, 'workouts'))))
+         or (coaching_id is not null
+             and private.is_coaching_trainer(coaching_id, 'workouts')
+             and private.is_live_coaching(coaching_id))))
   with check (
     created_by = (select auth.uid())
     and (template_id is null or exists (select 1 from public.workout_templates t where t.id = template_id))
     and (client_id = (select auth.uid())
-         or (coaching_id is not null and private.is_coaching_trainer(coaching_id, 'workouts'))));
+         or (coaching_id is not null
+             and private.is_coaching_trainer(coaching_id, 'workouts')
+             and private.is_live_coaching(coaching_id))));
 
 -- The client deletes any own log, pair logs included (the data belongs to the client); a trainer deletes the
--- pair logs they wrote. Exercises and sets go with the log by cascade.
+-- pair logs they wrote while the pair is live. Exercises and sets go with the log by cascade.
 create policy "workout_logs: client or authoring trainer deletes"
   on public.workout_logs for delete
   to authenticated
@@ -212,7 +220,8 @@ create policy "workout_logs: client or authoring trainer deletes"
     client_id = (select auth.uid())
     or (created_by = (select auth.uid())
         and coaching_id is not null
-        and private.is_coaching_trainer(coaching_id, 'workouts')));
+        and private.is_coaching_trainer(coaching_id, 'workouts')
+        and private.is_live_coaching(coaching_id)));
 
 grant select, delete on table public.workout_logs to authenticated;
 grant insert (
@@ -228,27 +237,36 @@ create policy "workout_log_exercises: log readers read"
   to authenticated
   using (exists (select 1 from public.workout_logs l where l.id = log_id));
 
--- Only the author of a log the caller can still read writes its exercises, and only with exercises the caller
--- can see.
+-- Only the author of a log the caller can still read writes its exercises, only while the log is a self log
+-- or its pair is live (an ended pair's logs are read-only for the trainer), and only with exercises the
+-- caller can see.
 create policy "workout_log_exercises: log author inserts"
   on public.workout_log_exercises for insert
   to authenticated
   with check (
-    exists (select 1 from public.workout_logs l where l.id = log_id and l.created_by = (select auth.uid()))
+    exists (select 1 from public.workout_logs l
+            where l.id = log_id and l.created_by = (select auth.uid())
+              and (l.coaching_id is null or private.is_live_coaching(l.coaching_id)))
     and exists (select 1 from public.exercises e where e.id = exercise_id));
 
 create policy "workout_log_exercises: log author updates"
   on public.workout_log_exercises for update
   to authenticated
-  using (exists (select 1 from public.workout_logs l where l.id = log_id and l.created_by = (select auth.uid())))
+  using (exists (select 1 from public.workout_logs l
+                 where l.id = log_id and l.created_by = (select auth.uid())
+                   and (l.coaching_id is null or private.is_live_coaching(l.coaching_id))))
   with check (
-    exists (select 1 from public.workout_logs l where l.id = log_id and l.created_by = (select auth.uid()))
+    exists (select 1 from public.workout_logs l
+            where l.id = log_id and l.created_by = (select auth.uid())
+              and (l.coaching_id is null or private.is_live_coaching(l.coaching_id)))
     and exists (select 1 from public.exercises e where e.id = exercise_id));
 
 create policy "workout_log_exercises: log author deletes"
   on public.workout_log_exercises for delete
   to authenticated
-  using (exists (select 1 from public.workout_logs l where l.id = log_id and l.created_by = (select auth.uid())));
+  using (exists (select 1 from public.workout_logs l
+                 where l.id = log_id and l.created_by = (select auth.uid())
+                   and (l.coaching_id is null or private.is_live_coaching(l.coaching_id))));
 
 grant select, delete on table public.workout_log_exercises to authenticated;
 grant insert (id, log_id, position, exercise_id, notes) on table public.workout_log_exercises to authenticated;
@@ -262,30 +280,34 @@ create policy "workout_sets: log readers read"
   to authenticated
   using (exists (select 1 from public.workout_log_exercises e where e.id = log_exercise_id));
 
--- Only the author of the log writes its sets.
+-- Only the author of the log writes its sets, and only while the log is a self log or its pair is live.
 create policy "workout_sets: log author inserts"
   on public.workout_sets for insert
   to authenticated
   with check (exists (
     select 1 from public.workout_log_exercises e join public.workout_logs l on l.id = e.log_id
-    where e.id = log_exercise_id and l.created_by = (select auth.uid())));
+    where e.id = log_exercise_id and l.created_by = (select auth.uid())
+      and (l.coaching_id is null or private.is_live_coaching(l.coaching_id))));
 
 create policy "workout_sets: log author updates"
   on public.workout_sets for update
   to authenticated
   using (exists (
     select 1 from public.workout_log_exercises e join public.workout_logs l on l.id = e.log_id
-    where e.id = log_exercise_id and l.created_by = (select auth.uid())))
+    where e.id = log_exercise_id and l.created_by = (select auth.uid())
+      and (l.coaching_id is null or private.is_live_coaching(l.coaching_id))))
   with check (exists (
     select 1 from public.workout_log_exercises e join public.workout_logs l on l.id = e.log_id
-    where e.id = log_exercise_id and l.created_by = (select auth.uid())));
+    where e.id = log_exercise_id and l.created_by = (select auth.uid())
+      and (l.coaching_id is null or private.is_live_coaching(l.coaching_id))));
 
 create policy "workout_sets: log author deletes"
   on public.workout_sets for delete
   to authenticated
   using (exists (
     select 1 from public.workout_log_exercises e join public.workout_logs l on l.id = e.log_id
-    where e.id = log_exercise_id and l.created_by = (select auth.uid())));
+    where e.id = log_exercise_id and l.created_by = (select auth.uid())
+      and (l.coaching_id is null or private.is_live_coaching(l.coaching_id))));
 
 grant select, delete on table public.workout_sets to authenticated;
 grant insert (id, log_exercise_id, position, reps, weight_kg, duration_s, distance_m, rpe, is_warmup)
@@ -294,12 +316,15 @@ grant update (position, reps, weight_kg, duration_s, distance_m, rpe, is_warmup)
 
 -- personal_records
 
--- The client reads all own records. Anyone else reads a record only when they can read the set that holds it
--- (R43): a trainer sees records set in their pair logs, or in self logs while workouts is shared, and never a
--- record set in another trainer's pair. Written only by the recompute triggers.
-create policy "personal_records: client and readers of the set read"
+-- The cache holds one best per client over every log of the client, including logs a trainer may not see
+-- (self logs not shared, other trainers' pairs). Showing a trainer a row only when its set is visible still
+-- leaked: the trainer controls a competing set and learns whether it became the record (a binary search over
+-- the value and the date). So only the client reads the cache. Trainers and break-glass admins read
+-- public.visible_personal_records, which computes the bests over the sets they can see (R43).
+-- Written only by the recompute triggers.
+create policy "personal_records: client reads own"
   on public.personal_records for select
   to authenticated
-  using (client_id = (select auth.uid()) or exists (select 1 from public.workout_sets s where s.id = set_id));
+  using (client_id = (select auth.uid()));
 
 grant select on table public.personal_records to authenticated;

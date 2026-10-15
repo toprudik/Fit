@@ -3,7 +3,7 @@
 -- Sessions are in 210_sessions.
 begin;
 \ir _helpers.psql
-select plan(94);
+select plan(100);
 
 -- Fixtures: C has live pairs to A and B, D a live pair to A, E an ended pair to A.
 select tests.create_trainer('trainer_a');
@@ -467,10 +467,36 @@ select is_empty(
   'recurrences: A cannot update B''s repeat (0 rows)'
 );
 
+-- The online link of a repeat is the trainer's (SCHED-21): not granted for SELECT, read through a function.
+select lives_ok(
+  $$ update public.recurrences set mode = 'online', meeting_url = 'https://meet.example.com/a-room'
+     where title = 'C twice a week' $$,
+  'recurrences: A sets an online link on own repeat'
+);
+select throws_ok(
+  $$ select meeting_url from public.recurrences $$,
+  '42501', null, 'recurrences: meeting_url is not readable directly, not even by A'
+);
+select results_eq(
+  $$ select public.recurrence_meeting_url(id) from public.recurrences where title = 'C twice a week' $$,
+  $$ values ('https://meet.example.com/a-room'::text) $$,
+  'recurrences: A reads the link through recurrence_meeting_url'
+);
+
 select tests.authenticate_as('client_c');
 select set_eq(
   $$ select title from public.recurrences $$, array['C twice a week'],
   'recurrences: C reads the personal repeat of own pair, not group repeats'
+);
+select throws_ok(
+  $$ select meeting_url from public.recurrences $$,
+  '42501', null, 'recurrences: C cannot read the link of the repeat (no confirmed booking needed to see the repeat)'
+);
+select throws_ok($$ select * from public.recurrences $$, '42501', null, 'recurrences: select * fails for C');
+select results_eq(
+  $$ select public.recurrence_meeting_url(id) from public.recurrences where title = 'C twice a week' $$,
+  $$ values (null::text) $$,
+  'recurrences: recurrence_meeting_url gives C NULL'
 );
 select is_empty(
   $$ update public.recurrences set title = 'Mine' where title = 'C twice a week' returning 1 $$,

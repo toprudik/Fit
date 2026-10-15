@@ -10,11 +10,13 @@ drop policy "profiles: users read own row" on public.profiles;
 
 revoke all on table public.profiles from anon, authenticated;
 
--- Column grant: telegram_id (identity), the bot status columns, the admin block and claimed_by stay
--- server-only. select * therefore fails with 42501; the app lists columns or reads public_profiles.
+-- Column grant: telegram_id (identity), the bot status columns, the admin block, claimed_by and last_seen_at
+-- stay server-only. Other users must not learn when someone was last online; admin tooling reads last_seen_at
+-- through definer functions later. select * therefore fails with 42501; the app lists columns or reads
+-- public_profiles.
 grant select (
   id, username, first_name, last_name, photo_url, language_code, display_name, avatar_path, time_zone,
-  managed_by_trainer_id, last_seen_at, created_at, updated_at
+  managed_by_trainer_id, created_at, updated_at
 ) on table public.profiles to authenticated;
 
 -- Pair partners stay visible after a pair ends (history). Admins see ordinary accounts, but not a trainer's

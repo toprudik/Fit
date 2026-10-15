@@ -208,9 +208,15 @@ grant update (amount_minor, currency, method, paid_at, note, pass_id, status, vo
 
 -- Guard for direct API updates (contract §3.5): the UPDATE grant is the union of both sides' columns.
 -- The trainer changes only status and void_reason: the amounts are what the client reported or what the
--- trainer entered, and a wrong one is voided and entered again. The client changes the details of own report
--- and may withdraw it (status voided, with a reason, which the voided check requires). The trainer is checked
--- first; trainer_id <> client_id on the pair, so the actor is never both. Definer RPCs run as postgres.
+-- trainer entered, and a wrong one is voided and entered again. The trainer gives a void reason only in the
+-- update that voids. The client changes the details of own report and may withdraw it (status voided, with a
+-- reason, which the voided check requires). A voided payment is history: nobody rewrites its void details.
+-- The trainer is checked first; trainer_id <> client_id on the pair, so the actor is never both. Definer RPCs
+-- run as postgres.
+--
+-- A client may still change the amount of a reported payment while the trainer looks at it. The confirm must
+-- therefore be conditional on what the trainer saw: the app (or the later confirm RPC) sends
+-- "where id = ... and updated_at = <seen>" and shows "the client changed the report" when 0 rows come back.
 create function private.payments_guard_columns()
 returns trigger
 language plpgsql
@@ -222,6 +228,10 @@ begin
   if current_user <> 'authenticated' then
     return new;
   end if;
+  if old.status = 'voided'
+     and (new.void_reason is distinct from old.void_reason or new.voided_at is distinct from old.voided_at) then
+    raise exception 'forbidden' using errcode = '42501', detail = 'a voided payment keeps its void details';
+  end if;
   if v_uid = old.trainer_id then
     if new.amount_minor is distinct from old.amount_minor
        or new.currency is distinct from old.currency
@@ -231,6 +241,11 @@ begin
        or new.pass_id is distinct from old.pass_id then
       raise exception 'forbidden' using errcode = '42501',
         detail = 'the trainer may change only status and void_reason of a payment';
+    end if;
+    if new.void_reason is distinct from old.void_reason
+       and not (old.status <> 'voided' and new.status = 'voided') then
+      raise exception 'forbidden' using errcode = '42501',
+        detail = 'the trainer may give a void reason only when voiding';
     end if;
   elsif v_uid = old.client_id then
     if new.status is distinct from old.status and new.status <> 'voided' then
@@ -248,7 +263,8 @@ begin
 end $$;
 
 comment on function private.payments_guard_columns() is
-  'Guard trigger for signed-in callers: the trainer changes only status and void_reason, the client only own report.';
+  'Guard trigger for signed-in callers: the trainer changes only status and void_reason (the reason only when '
+  'voiding), the client only own report; a voided payment keeps its void details.';
 revoke all on function private.payments_guard_columns() from public;
 
 create trigger payments_guard_columns
@@ -257,11 +273,15 @@ create trigger payments_guard_columns
 
 -- payment_links
 
--- Clients of the trainer in any pair status see where to pay (R81, MONEY-11).
+-- Clients of the trainer in any pair status see where to pay (R81, MONEY-11), but only live links: an
+-- archived link is history for the trainer, not a place to send money (as with packages).
 create policy "payment_links: trainer and their clients read"
   on public.payment_links for select
   to authenticated
-  using (trainer_id = (select auth.uid()) or trainer_id in (select private.trainer_ids_visible()));
+  using (
+    trainer_id = (select auth.uid())
+    or (archived_at is null and trainer_id in (select private.trainer_ids_visible()))
+  );
 
 create policy "payment_links: trainer inserts"
   on public.payment_links for insert

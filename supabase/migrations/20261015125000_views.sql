@@ -1,5 +1,6 @@
 -- Derived data (data-model §3.2, §5.1, contract §1.5 file 25): public_profiles, pass_balances,
--- coaching_balances, coaching_stats, price_grid, plus two definer read functions for sessions.
+-- coaching_balances, coaching_stats, price_grid, visible_personal_records, plus definer read functions for
+-- sessions and repeats.
 -- Every view is security_invoker, so it shows exactly the rows and columns the caller may read in the tables
 -- under it: no view widens access, and an ended pair keeps its accounting (passes, ledger, payments) for both
 -- sides. Nothing here is stored; balances are sums over the append-only ledger (data-model §3.1).
@@ -298,6 +299,51 @@ comment on column public.price_grid.is_best_value is
 revoke all on table public.price_grid from anon, authenticated;
 grant select on table public.price_grid to authenticated;
 
+-- visible_personal_records
+
+-- R43: the best values per client and exercise over the sets the caller can see. personal_records itself is
+-- the client's cache over every log and only the client reads it; computing a trainer's view from that cache
+-- leaked the client's hidden bests (a trainer could probe it with a set of their own). Here the RLS of
+-- workout_logs, workout_log_exercises and workout_sets limits the input, so a trainer gets the bests of their
+-- pair logs plus the shared self logs, and an admin only what a live break-glass grant opens. The rules match
+-- private.recompute_personal_records: warm-ups never count, max_reps only without weight, ties go to the
+-- earliest set. The deleted-client stub is left out, as in the cache.
+create view public.visible_personal_records
+with (security_invoker = true)
+as
+select distinct on (c.client_id, c.exercise_id, c.record_type)
+  c.client_id,
+  c.exercise_id,
+  c.record_type,
+  c.value,
+  c.set_id,
+  c.performed_at as achieved_at
+from (
+  select
+    l.client_id, e.exercise_id, v.record_type, v.value, s.id as set_id, l.performed_at, l.id as log_id,
+    e.position as exercise_position, s.position as set_position
+  from public.workout_logs l
+  join public.workout_log_exercises e on e.log_id = l.id
+  join public.workout_sets s on s.log_exercise_id = e.id
+  cross join lateral (values
+    ('max_weight'::public.pr_type, case when s.weight_kg > 0 then s.weight_kg end),
+    ('max_reps'::public.pr_type, case when s.reps > 0 and coalesce(s.weight_kg, 0) = 0 then s.reps::numeric end),
+    ('max_duration'::public.pr_type, case when s.duration_s > 0 then s.duration_s::numeric end)
+  ) as v (record_type, value)
+  where not s.is_warmup and v.value is not null and l.client_id <> private.deleted_client_id()
+) c
+order by c.client_id, c.exercise_id, c.record_type, c.value desc, c.performed_at, c.log_id, c.exercise_position,
+  c.set_position;
+
+comment on view public.visible_personal_records is
+  'Personal records computed over the workout sets the caller can see; trainer screens and break-glass read this.';
+comment on column public.visible_personal_records.value is 'kg for max_weight, reps for max_reps, seconds for max_duration.';
+comment on column public.visible_personal_records.set_id is 'Earliest visible set that reached the value.';
+comment on column public.visible_personal_records.achieved_at is 'performed_at of the workout with that set.';
+
+revoke all on table public.visible_personal_records from anon, authenticated;
+grant select on table public.visible_personal_records to authenticated;
+
 -- session_occupancy
 
 -- Seats taken on a session (R18: requested, confirmed, attended and no_show hold a seat). Definer, because a
@@ -357,3 +403,24 @@ comment on function public.session_meeting_url(uuid) is
   'Online link of a session for its trainer and for clients with a confirmed or attended booking; else NULL.';
 revoke all on function public.session_meeting_url(uuid) from public, anon;
 grant execute on function public.session_meeting_url(uuid) to authenticated, service_role;
+
+-- recurrence_meeting_url
+
+-- recurrences.meeting_url is not granted for SELECT either. Only the trainer (wave 3: a schedule
+-- delegate) gets the link of a repeat, for the edit form; clients get each session's link through
+-- session_meeting_url once their booking is confirmed. Anyone else gets NULL.
+create function public.recurrence_meeting_url(p_recurrence_id uuid)
+returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select r.meeting_url
+  from public.recurrences r
+  where r.id = p_recurrence_id and private.acts_for_trainer(r.trainer_id, 'schedule')
+$$;
+
+comment on function public.recurrence_meeting_url(uuid) is 'Online link of a repeat, for its trainer only; else NULL.';
+revoke all on function public.recurrence_meeting_url(uuid) from public, anon;
+grant execute on function public.recurrence_meeting_url(uuid) to authenticated, service_role;
