@@ -31,7 +31,7 @@ services:
       WEBAPP_URL: ${WEBAPP_URL:?}
       BOT_MODE: webhook
       BOT_WEBHOOK_URL: ${BOT_WEBHOOK_URL:?}
-      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:?}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-} # optional; empty means derived from the token
     ports:
       - "127.0.0.1:8080:8080"
     restart: unless-stopped

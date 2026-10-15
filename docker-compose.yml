@@ -21,6 +21,7 @@ services:
       WATCHPACK_POLLING: "true" # reliable file watching on Windows/macOS bind mounts
 
   bot:
+    # TELEGRAM_BOT_TOKEN in .env.local is your own dev bot, never @fitconnection_bot: the bot stops if it is (ADR 0002 §5).
     build:
       context: ./apps/bot
     env_file:
@@ -28,7 +29,7 @@ services:
         required: true
     environment:
       BOT_MODE: polling
-    restart: unless-stopped
+    restart: "no"
 
   tunnel:
     profiles: ["tunnel"]

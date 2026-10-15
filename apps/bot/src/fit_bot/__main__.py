@@ -1,73 +1,72 @@
-"""Entry point: `python -m fit_bot`. Polling for local dev, webhook (with secret token) for production."""
+"""`python -m fit_bot [run]`: the bot in the mode BOT_MODE names (Docker). `python -m fit_bot setup`: webhook and
+profile setup (workflow "Bot setup"). Exit codes: 0 success, 1 setup checks failed, 2 invalid settings or polling
+refused."""
 
+import argparse
 import asyncio
 import logging
 import sys
+from collections.abc import Sequence
 
-from aiogram import Bot, Dispatcher
-from aiogram.client.default import DefaultBotProperties
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
-from aiohttp import web
-
-from fit_bot.config import WEBHOOK_PATH, Settings, SettingsError, load_settings
-from fit_bot.handlers import build_router
-from fit_bot.keyboards import menu_button
+from fit_bot.bot_setup import run_setup
+from fit_bot.config import PRODUCTION_BOT_USERNAME, SettingsError, load_settings
+from fit_bot.polling import PollingRefusedError, run_polling
 
 log = logging.getLogger("fit_bot")
 
-
-def build(settings: Settings) -> tuple[Bot, Dispatcher]:
-    bot = Bot(settings.telegram_bot_token.get_secret_value(), default=DefaultBotProperties(parse_mode="HTML"))
-    dp = Dispatcher(settings=settings)
-    dp.include_router(build_router())
-
-    @dp.startup()
-    async def _set_menu_button(bot: Bot) -> None:
-        await bot.set_chat_menu_button(menu_button=menu_button(str(settings.webapp_url)))
-
-    return bot, dp
+_LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
 
 
-async def run_polling(settings: Settings) -> None:
-    bot, dp = build(settings)
-    await bot.delete_webhook(drop_pending_updates=False)
-    log.info("starting in polling mode")
-    await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="python -m fit_bot", description="DaFit Telegram bot")
+    commands = parser.add_subparsers(dest="command")
+    commands.add_parser("run", help="run the bot in the mode BOT_MODE names (default)")
+    setup = commands.add_parser("setup", help="register the webhook and sync the bot profile")
+    setup.add_argument("--check-only", action="store_true", help="only read and probe, change nothing")
+    setup.add_argument(
+        "--bot-username",
+        default=PRODUCTION_BOT_USERNAME,
+        help=f"the bot the token must belong to (default @{PRODUCTION_BOT_USERNAME})",
+    )
+    args = parser.parse_args(argv)
+    if args.command == "setup":
+        return _setup(check_only=args.check_only, bot_username=args.bot_username)
+    return _run()
 
 
-def run_webhook(settings: Settings) -> None:
-    assert settings.bot_webhook_url and settings.telegram_webhook_secret  # guaranteed by Settings validation
-    bot, dp = build(settings)
-    secret = settings.telegram_webhook_secret.get_secret_value()
-    url = str(settings.bot_webhook_url).rstrip("/") + WEBHOOK_PATH
-
-    @dp.startup()
-    async def _register_webhook(bot: Bot) -> None:
-        await bot.set_webhook(url, secret_token=secret, allowed_updates=dp.resolve_used_update_types())
-        log.info("webhook registered")
-
-    app = web.Application()
-    app.router.add_get("/healthz", lambda _: web.json_response({"ok": True}))
-    # Rejects requests without the matching X-Telegram-Bot-Api-Secret-Token header.
-    SimpleRequestHandler(dispatcher=dp, bot=bot, secret_token=secret).register(app, path=WEBHOOK_PATH)
-    setup_application(app, dp, bot=bot)
-    log.info("starting in webhook mode on port %s", settings.port)
-    web.run_app(app, host="0.0.0.0", port=settings.port, print=None)  # noqa: S104 — inside container
-
-
-def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+def _run() -> int:
+    logging.basicConfig(level=logging.INFO, format=_LOG_FORMAT)
     try:
         settings = load_settings()
+        if settings.bot_mode == "webhook":
+            settings = load_settings(require={"bot_webhook_url"})
     except SettingsError as error:
         log.error("%s", error)
-        sys.exit(2)
+        return 2
 
     if settings.bot_mode == "webhook":
-        run_webhook(settings)
-    else:
+        from fit_bot.aiohttp_app import run_webhook_server
+
+        run_webhook_server(settings)
+        return 0
+    try:
         asyncio.run(run_polling(settings))
+    except PollingRefusedError as error:
+        log.error("%s", error)
+        return 2
+    return 0
+
+
+def _setup(*, check_only: bool, bot_username: str) -> int:
+    logging.basicConfig(level=logging.WARNING, format=_LOG_FORMAT)  # only the report prints
+    try:
+        settings = load_settings(require={"bot_webhook_url"})
+    except SettingsError as error:
+        log.error("%s", error)
+        return 2
+    expected = bot_username.removeprefix("@").lower()
+    return asyncio.run(run_setup(settings, check_only=check_only, expected_username=expected))
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
