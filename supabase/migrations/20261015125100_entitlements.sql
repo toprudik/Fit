@@ -111,7 +111,9 @@ revoke all on function private.active_client_count(uuid) from public;
 grant execute on function private.active_client_count(uuid) to authenticated, service_role;
 
 -- Every RPC that creates a live pair calls this first (PLAN-1). The row lock on trainer_profiles serializes
--- concurrent joins of the same trainer, so two clients cannot both take the last free place.
+-- concurrent joins of the same trainer, so two clients cannot both take the last free place. FOR NO KEY UPDATE
+-- does that without conflicting with the FK KEY SHARE locks that other inserts of the trainer hold. The count
+-- after the lock needs READ COMMITTED (or SERIALIZABLE); REPEATABLE READ is refused.
 create function private.assert_can_add_client(p_trainer uuid)
 returns void
 language plpgsql
@@ -122,7 +124,11 @@ as $$
 declare
   v_limit integer;
 begin
-  perform 1 from public.trainer_profiles t where t.user_id = p_trainer for update;
+  if pg_catalog.current_setting('transaction_isolation') = 'repeatable read' then
+    raise exception 'unsupported_isolation' using errcode = 'P0001',
+      detail = 'pairs are created in read committed or serializable transactions';
+  end if;
+  perform 1 from public.trainer_profiles t where t.user_id = p_trainer for no key update;
   if not found then
     raise exception 'not_a_trainer' using errcode = 'P0001';
   end if;

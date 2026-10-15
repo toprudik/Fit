@@ -2,7 +2,7 @@
 -- contract §1.4 file 24, §1.5 file 26, §6 800_plans; decisions Q56-Q59, R57-R59, R85).
 begin;
 \ir _helpers.psql
-select plan(97);
+select plan(103);
 
 -- Fixtures: A is on Pro and has C and D live and E ended; B is Free with C on trial. F is a Free trainer with
 -- C on trial, D active, its card N, E ended and an anonymized pair (stub). P, X, R and U hold client Premium
@@ -401,6 +401,36 @@ select results_eq(
 delete from auth.users where id = tests.u('premium_p');
 select is_empty($$ select 1 from public.plan_grants where id = tests.i('grant_p') $$,
   'deleting the holder''s account removes its grants by cascade');
+
+-- A revocation is written once, also for server code: plan history is not rewritten.
+select tests.authenticate_as_service_role();
+select throws_ok(
+  $$ update public.plan_grants set revoked_at = null, revoke_reason = null, revoked_by = null where id = tests.i('grant_r') $$,
+  'P0001', 'append_only', 'server code cannot undo a revocation'
+);
+select throws_ok(
+  $$ update public.plan_grants set revoke_reason = 'rewritten later' where id = tests.i('grant_r') $$,
+  'P0001', 'append_only', 'server code cannot rewrite the revoke reason'
+);
+select throws_ok(
+  $$ update public.plan_grants set revoked_at = now() - interval '1 year' where id = tests.i('grant_r') $$,
+  'P0001', 'append_only', 'server code cannot move the revocation time'
+);
+select throws_ok(
+  $$ update public.plan_grants set revoked_by = null where id = tests.i('grant_r') $$,
+  'P0001', 'append_only', 'server code cannot erase who revoked a grant'
+);
+select throws_ok(
+  $$ update public.plan_grants set revoke_reason = 'not yet' where id = tests.i('grant_u') $$,
+  'P0001', 'append_only', 'a revoke reason is written only together with the revocation'
+);
+select tests.clear_authentication();
+delete from auth.users where id = tests.u('admin_x');
+select results_eq(
+  $$ select revoked_by, revoke_reason, revoked_at is not null from public.plan_grants where id = tests.i('grant_r') $$,
+  $$ values (null::uuid, 'granted by mistake', true) $$,
+  'deleting the revoking admin clears revoked_by and keeps the revocation'
+);
 
 -- ---------------------------------------------------------------------------------------------------------
 -- Catalog

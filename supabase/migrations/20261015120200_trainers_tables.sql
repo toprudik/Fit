@@ -97,7 +97,9 @@ create table public.trainer_profiles (
   constraint trainer_profiles_verified_at_check check (verified_at is null or verification_status = 'verified')
 );
 
-comment on table public.trainer_profiles is 'Trainer side of an account: showcase data and scheduling defaults.';
+comment on table public.trainer_profiles is
+  'Trainer side of an account: showcase data and scheduling defaults. Deleting the row removes every pair, pass, '
+  'payment and ledger row of the trainer, so only account deletion does it; taking trainer status away never does.';
 comment on column public.trainer_profiles.is_public is
   'Showcase reachable by link/QR; verification does not affect it (decisions Q55).';
 comment on column public.trainer_profiles.verification_status is
@@ -138,7 +140,10 @@ create trigger trainer_certificates_set_updated_at
   for each row execute function public.set_updated_at();
 
 -- Definer: it counts every row of the trainer whatever RLS shows, and locks the profile so that two
--- parallel uploads cannot both pass the count.
+-- parallel uploads cannot both pass the count. FOR NO KEY UPDATE, not FOR UPDATE: it still serializes the
+-- uploads, but does not wait for every insert elsewhere that holds the profile row's FK KEY SHARE lock.
+-- The lock-then-count only works in READ COMMITTED (or SERIALIZABLE): under REPEATABLE READ the count would use
+-- the old snapshot, so that isolation level is refused.
 create function private.trainer_certificates_limit()
 returns trigger
 language plpgsql
@@ -146,7 +151,11 @@ security definer
 set search_path = ''
 as $$
 begin
-  perform 1 from public.trainer_profiles t where t.user_id = new.trainer_id for update;
+  if pg_catalog.current_setting('transaction_isolation') = 'repeatable read' then
+    raise exception 'unsupported_isolation' using errcode = 'P0001',
+      detail = 'certificates are added in read committed or serializable transactions';
+  end if;
+  perform 1 from public.trainer_profiles t where t.user_id = new.trainer_id for no key update;
   if (select count(*) from public.trainer_certificates c where c.trainer_id = new.trainer_id) >= 5 then
     raise exception 'certificate_limit' using errcode = 'P0001',
       detail = 'a trainer keeps at most 5 certificates';

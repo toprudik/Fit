@@ -399,8 +399,9 @@ declare
   v_exercise uuid;
 begin
   if tg_op = 'DELETE' then
+    -- In exercise order, so two writers of one client take the advisory locks in the same order.
     for v_exercise in
-      select r.exercise_id from public.personal_records r where r.client_id = old.client_id
+      select r.exercise_id from public.personal_records r where r.client_id = old.client_id order by r.exercise_id
     loop
       perform private.recompute_personal_records(old.client_id, v_exercise);
     end loop;
@@ -409,7 +410,7 @@ begin
 
   -- UPDATE: the children are still there, and only this log's exercises can change, for both clients.
   for v_exercise in
-    select distinct e.exercise_id from public.workout_log_exercises e where e.log_id = new.id
+    select distinct e.exercise_id from public.workout_log_exercises e where e.log_id = new.id order by 1
   loop
     perform private.recompute_personal_records(old.client_id, v_exercise);
     if new.client_id is distinct from old.client_id then

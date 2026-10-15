@@ -906,13 +906,11 @@ select results_eq(
   'personal_records: H''s cache holds the bests over every own log'
 );
 
--- Deleting a trainer who wrote pair logs, in the order the account deletion job uses when the rows were
--- written in the same transaction: the trainer profile first (pairs, passes and notes go while the profile
--- still exists), then the account (contract §7.1).
+-- Deleting a trainer who wrote pair logs in this transaction (tests.delete_trainer: profile first, then the
+-- account).
 select tests.clear_authentication();
 select lives_ok(
-  $$ delete from public.trainer_profiles where user_id = tests.u('trainer_g');
-     delete from auth.users where id = tests.u('trainer_g') $$,
+  $$ select tests.delete_trainer('trainer_g') $$,
   'workout_logs: a trainer who wrote a pair log is deleted (profile first, then the account)'
 );
 select results_eq(

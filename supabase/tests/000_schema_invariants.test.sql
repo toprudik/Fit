@@ -2,7 +2,7 @@
 -- objects exist, so it holds while migrations are added and checks every new table, view and function.
 begin;
 \ir _helpers.psql
-select plan(12);
+select plan(13);
 
 select is(
   array(
@@ -145,6 +145,27 @@ select is(
 select ok(
   not has_schema_privilege('authenticated', 'private', 'USAGE'),
   'authenticated has no USAGE on schema private'
+);
+
+-- A cascade delete looks up the child rows by the foreign key, so its leading column needs an index (a partial
+-- one only when its predicate is "col is not null"). bookings.trainer_id and payments.trainer_id cascade only
+-- when a trainer account is deleted, after the pair cascade already removed the rows; an index on these hot
+-- tables would cost every insert.
+select is(
+  array(
+    select c.conrelid::regclass::text || '.' || a.attname
+    from pg_catalog.pg_constraint c
+    join pg_catalog.pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+    where c.contype = 'f' and c.connamespace = 'public'::regnamespace and c.confdeltype = 'c'
+      and not exists (
+        select 1 from pg_catalog.pg_index i
+        where i.indrelid = c.conrelid and i.indkey[0] = c.conkey[1]
+          and (i.indpred is null or pg_get_expr(i.indpred, i.indrelid) = '(' || quote_ident(a.attname) || ' IS NOT NULL)'))
+      and c.conrelid::regclass::text || '.' || a.attname not in ('bookings.trainer_id', 'payments.trainer_id')
+    order by 1
+  ),
+  '{}'::text[],
+  'every ON DELETE CASCADE foreign key has an index on its leading column'
 );
 
 -- A function added by a later migration starts closed: nobody but the owner (and service_role in public)

@@ -146,7 +146,7 @@ cross join lateral (
 ) a
 -- Debt: charges without a pass that are neither waived nor covered by a settlement. A settlement undone by a
 -- settlement_reversal no longer covers its charge (data-model §3.2); the waiver check alone already covers that
--- case in practice, because a reversal is written only together with a waiver (R34).
+-- case, because ledger_entries_validate accepts a reversal only after a waiver of the same charge (R34).
 cross join lateral (
   select
     coalesce(sum(dc.n), 0)::integer as debt_sessions,

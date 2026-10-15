@@ -3,7 +3,7 @@
 -- (R28) and the cross-row validation trigger (data-model §3, R84).
 begin;
 \ir _helpers.psql
-select plan(78);
+select plan(88);
 
 -- Fixtures: C has live pairs to A and B, D a live pair to A, E an ended pair to A with a pass; Z wrote a ledger
 -- row and later deletes the account.
@@ -271,6 +271,14 @@ select lives_ok(
 select throws_ok(
   $$ select tests.ledger('pair_ac', 'settlement', -1, p_pass => 'pass_ac2', p_related => 'debt2', p_amount => 1000, p_currency => 'RUB') $$,
   '23505', null, 'uniques: a second settlement of one charge raises 23505');
+-- A reversal only follows a waiver of the same charge (R34): waive_charge writes the waiver first.
+select throws_ok(
+  $$ select tests.ledger('pair_ac', 'settlement_reversal', 1, p_pass => 'pass_ac', p_related => 'debt2', p_amount => -1000,
+                         p_currency => 'RUB') $$,
+  'P0001', 'ledger_invalid', 'validation: a reversal without a waiver of its charge raises ledger_invalid');
+select lives_ok(
+  $$ select tests.ledger('pair_ac', 'waiver', 1, p_related => 'debt2', p_amount => -1000, p_currency => 'RUB') $$,
+  'validation: the settled debt charge is waived');
 select throws_ok(
   $$ select tests.ledger('pair_ac', 'settlement_reversal', 1, p_pass => 'pass_ac', p_related => 'debt2', p_amount => -500,
                          p_currency => 'RUB') $$,
@@ -287,11 +295,14 @@ select throws_ok(
 -- =========================================================================================================
 -- Validation (ledger_entries_validate): rules that span rows.
 
+insert into tests.ids values
+  ('charge3', tests.ledger('pair_ac', 'charge', -1, p_pass => 'pass_ac', p_booking => 'bk3', p_amount => 1000,
+                           p_currency => 'RUB', p_reason => 'attended'));
 select throws_ok(
   $$ select tests.ledger('pair_ac', 'adjustment', 1, p_pass => 'pass_ad', p_note => 'wrong pass') $$,
   '23503', null, 'validation: a pass of another pair raises 23503');
 select throws_ok(
-  $$ select tests.ledger('pair_ad', 'waiver', 1, p_related => 'debt2') $$,
+  $$ select tests.ledger('pair_ad', 'waiver', 1, p_related => 'charge3') $$,
   '23503', null, 'validation: a waiver of another pair''s charge raises 23503');
 select throws_ok(
   $$ select tests.ledger('pair_ac', 'waiver', 1, p_pass => 'pass_ac', p_related => 'grant_ac') $$,
@@ -300,9 +311,6 @@ select throws_ok(
   $$ select tests.ledger('pair_ac', 'settlement', -1, p_pass => 'pass_ac2', p_related => 'charge1', p_amount => 1000,
                          p_currency => 'RUB') $$,
   'P0001', 'ledger_invalid', 'validation: a settlement of a pass-backed charge raises ledger_invalid');
-insert into tests.ids values
-  ('charge3', tests.ledger('pair_ac', 'charge', -1, p_pass => 'pass_ac', p_booking => 'bk3', p_amount => 1000,
-                           p_currency => 'RUB', p_reason => 'attended'));
 select throws_ok(
   $$ select tests.ledger('pair_ac', 'waiver', 1, p_pass => 'pass_ac', p_related => 'charge3', p_amount => -500, p_currency => 'RUB') $$,
   'P0001', 'ledger_invalid', 'validation: a waiver with the wrong amount raises ledger_invalid');
@@ -326,6 +334,52 @@ select lives_ok(
 select throws_ok(
   $$ select tests.ledger('pair_ad', 'adjustment', -1, p_pass => 'pass_ad', p_note => 'one more') $$,
   'P0001', 'pass_overdrawn', 'validation: an empty pass cannot go below zero');
+
+-- A waived debt is forgiven: settling it from a pass would make the client pay for it after all.
+insert into tests.ids values
+  ('debt_m', tests.ledger('pair_ac', 'charge', -1, p_reason => 'manual', p_note => 'old debt', p_amount => 500,
+                          p_currency => 'RUB'));
+select lives_ok(
+  $$ select tests.ledger('pair_ac', 'waiver', 1, p_related => 'debt_m', p_amount => -500, p_currency => 'RUB') $$,
+  'validation: the manual debt charge is waived');
+select throws_ok(
+  $$ select tests.ledger('pair_ac', 'settlement', -1, p_pass => 'pass_ac2', p_related => 'debt_m', p_amount => 500,
+                         p_currency => 'RUB') $$,
+  'P0001', 'ledger_invalid', 'validation: settling a waived debt charge raises ledger_invalid');
+
+-- A waiver of a debt charge (no pass, so no pass currency to compare with) keeps the charge currency.
+insert into tests.ids values
+  ('debt_rub', tests.ledger('pair_ac', 'charge', -1, p_reason => 'manual', p_note => 'debt in roubles', p_amount => 2000,
+                            p_currency => 'RUB'));
+select throws_ok(
+  $$ select tests.ledger('pair_ac', 'waiver', 1, p_related => 'debt_rub', p_amount => -2000, p_currency => 'USD') $$,
+  'P0001', 'ledger_invalid', 'validation: a waiver of a RUB debt charge written in USD raises ledger_invalid');
+
+-- One grant per pass, and it gives exactly the sessions of the pass.
+select throws_ok(
+  $$ select tests.ledger('pair_ac', 'grant', 10, p_pass => 'pass_ac') $$,
+  '23505', null, 'uniques: a second grant on a pass raises 23505');
+insert into public.passes (id, coaching_id, title, sessions_total, price_minor, currency, starts_on)
+values (gen_random_uuid(), tests.i('pair_ac'), 'No grant yet', 3, 0, 'RUB', current_date);
+insert into tests.ids select 'pass_ng', id from public.passes where title = 'No grant yet';
+select throws_ok(
+  $$ select tests.ledger('pair_ac', 'grant', 5, p_pass => 'pass_ng') $$,
+  'P0001', 'ledger_invalid', 'validation: a grant other than sessions_total of its pass raises ledger_invalid');
+select lives_ok(
+  $$ select tests.ledger('pair_ac', 'grant', 3, p_pass => 'pass_ng') $$,
+  'validation: the grant of exactly sessions_total passes');
+
+-- Only an attended, no_show or late_cancelled booking is charged (data-model §3.3).
+insert into tests.ids values ('s5', tests.create_session('trainer_a', now() + interval '1 day'));
+insert into tests.ids values ('bk_req', tests.create_booking(tests.i('s5'), 'trainer_a', 'client_c', 'requested', 'client_slot'));
+select throws_ok(
+  $$ select tests.ledger('pair_ac', 'charge', -1, p_pass => 'pass_ac2', p_booking => 'bk_req', p_reason => 'attended') $$,
+  'P0001', 'ledger_invalid', 'validation: a charge on a requested booking raises ledger_invalid');
+update public.bookings set status = 'confirmed', confirmed_at = now() where id = tests.i('bk_req');
+update public.bookings set status = 'no_show', attendance_marked_at = now() where id = tests.i('bk_req');
+select lives_ok(
+  $$ select tests.ledger('pair_ac', 'charge', -1, p_pass => 'pass_ac2', p_booking => 'bk_req', p_reason => 'no_show') $$,
+  'validation: a charge on a no_show booking passes');
 
 -- =========================================================================================================
 -- Immutability (R28): no role may change or delete a row; the pair may move and the creator may disappear.

@@ -27,7 +27,7 @@ comment on column public.packages.price_minor is 'Price of the whole pack in min
 comment on column public.packages.validity_days is 'Days a pass from this pack is valid; null = no expiry.';
 comment on column public.packages.price_updated_at is 'Last change of price_minor or sessions_count; set by a trigger.';
 
-create index packages_trainer_id_idx on public.packages (trainer_id) where archived_at is null;
+create index packages_trainer_id_idx on public.packages (trainer_id);
 -- One drop-in price per currency and session type among live packages.
 create unique index packages_one_drop_in on public.packages (trainer_id, currency, applies_to)
   where sessions_count = 1 and archived_at is null;
@@ -291,7 +291,7 @@ create table public.payment_links (
 
 comment on table public.payment_links is 'A link where the trainer takes payments; shown to the trainer clients.';
 
-create index payment_links_trainer_id_idx on public.payment_links (trainer_id) where archived_at is null;
+create index payment_links_trainer_id_idx on public.payment_links (trainer_id);
 
 create trigger payment_links_set_updated_at
   before update on public.payment_links

@@ -114,6 +114,10 @@ create trigger bookings_status_transition
 
 -- Seats (R18): requested, confirmed, attended and no_show take a seat; late_cancelled frees it.
 -- AFTER, so the new row is counted. Locking the session row serializes parallel bookings of one session.
+-- The lock is FOR NO KEY UPDATE: by now the foreign key check holds FOR KEY SHARE on the session row, and
+-- FOR UPDATE would conflict with the KEY SHARE of a parallel booking, so two bookings would deadlock instead
+-- of waiting for each other. The count after the lock sees committed rows only in READ COMMITTED; under
+-- REPEATABLE READ it would use the old snapshot and overbook, so that level is refused (SERIALIZABLE is safe).
 -- Definer: it counts every booking of the session, not only the ones the caller can see.
 create function private.bookings_check_capacity()
 returns trigger
@@ -134,7 +138,11 @@ begin
     return null;   -- already held a seat on this session
   end if;
 
-  select s.capacity into v_capacity from public.sessions s where s.id = new.session_id for update;
+  if pg_catalog.current_setting('transaction_isolation') = 'repeatable read' then
+    raise exception 'unsupported_isolation' using errcode = 'P0001',
+      detail = 'bookings are written in read committed or serializable transactions';
+  end if;
+  select s.capacity into v_capacity from public.sessions s where s.id = new.session_id for no key update;
   if not found then
     return null;   -- the foreign key reports a missing session
   end if;
@@ -160,7 +168,8 @@ alter table public.bookings enable row level security;
 revoke all on table public.bookings from anon, authenticated;
 
 -- A session cannot shrink below the seats already taken (PRD 2.6.3-4). The UPDATE already holds the
--- session row lock, so a parallel booking waits in bookings_check_capacity. Definer: counts every booking.
+-- session row lock (FOR NO KEY UPDATE), so a parallel booking waits in bookings_check_capacity.
+-- Definer: counts every booking.
 create function private.sessions_check_capacity()
 returns trigger
 language plpgsql
@@ -189,6 +198,42 @@ revoke all on function private.sessions_check_capacity() from public;
 create trigger sessions_check_capacity
   before update of capacity on public.sessions
   for each row execute function private.sessions_check_capacity();
+
+-- Bookings are history (data-model §1.5): cancelled by status, never deleted directly, by any role. A booking
+-- leaves only through a cascade (its pair or its trainer is deleted), which takes its ledger rows and events
+-- along. A direct delete would erase the charge and its events and silently give the session back to the pass.
+create trigger bookings_delete_guard
+  before delete on public.bookings
+  for each row execute function private.enforce_append_only('{}', '{}', 'true');
+
+-- A session with bookings is cancelled, never deleted: the delete would cascade into the bookings, their
+-- charges and events. A session nobody booked may be deleted (for example by a later cleanup of generated
+-- sessions). The trainer account deletion cascades through here (pg_trigger_depth() > 1).
+-- Definer: it must see every booking of the session.
+create function private.sessions_delete_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if pg_catalog.pg_trigger_depth() > 1 then
+    return old;
+  end if;
+  if exists (select 1 from public.bookings b where b.session_id = old.id) then
+    raise exception 'session_in_use' using errcode = 'P0001',
+      detail = 'a session with bookings is cancelled, not deleted';
+  end if;
+  return old;
+end $$;
+
+comment on function private.sessions_delete_guard() is
+  'Trigger: a session can be deleted directly only while it has no bookings; cascades always pass.';
+revoke all on function private.sessions_delete_guard() from public;
+
+create trigger sessions_delete_guard
+  before delete on public.sessions
+  for each row execute function private.sessions_delete_guard();
 
 -- booking_events: why and by whom each booking changed (Q21). Append-only.
 create table public.booking_events (
@@ -288,6 +333,8 @@ comment on column public.ledger_entries.related_entry_id is
 comment on column public.ledger_entries.created_by is 'Who wrote the row; stamped from the signed-in caller, null = system.';
 
 create unique index ledger_one_charge_per_booking on public.ledger_entries (booking_id) where entry_type = 'charge';
+-- A pass has exactly one grant (create_pass writes it); a retried or duplicated step cannot multiply the balance.
+create unique index ledger_one_grant_per_pass_uniq on public.ledger_entries (pass_id) where entry_type = 'grant';
 create unique index ledger_one_waiver_per_charge on public.ledger_entries (related_entry_id) where entry_type = 'waiver';
 -- One settlement per charge, and one reversal per charge (R34): a reversal only follows a final waiver.
 create unique index ledger_one_settlement_per_charge on public.ledger_entries (related_entry_id)
@@ -322,6 +369,9 @@ create trigger ledger_entries_no_truncate
 -- foreign keys then report their own errors first, and only a structurally valid row reaches these rules.
 -- The new row is visible here, so the pass sum already includes it. Rows of another pair are looked up within
 -- the pair only, so the trigger reveals nothing about them. Definer: it reads rows the caller may not see.
+-- The pass lock is FOR NO KEY UPDATE: the FK check already holds FOR KEY SHARE on the pass row, and FOR UPDATE
+-- would deadlock two parallel charges instead of serializing them. Rows are written in READ COMMITTED (or
+-- SERIALIZABLE): under REPEATABLE READ the balance and the waiver lookups would use the old snapshot.
 create function private.ledger_entries_validate()
 returns trigger
 language plpgsql
@@ -330,19 +380,32 @@ set search_path = ''
 as $$
 declare
   v_pass_currency public.currency_code;
+  v_pass_sessions smallint;
   v_pass_found    boolean := false;
   v_charge        public.ledger_entries;
   v_settlement    public.ledger_entries;
   v_starts_at     timestamptz;
+  v_booking_status public.booking_status;
   v_balance       bigint;
 begin
+  if pg_catalog.current_setting('transaction_isolation') = 'repeatable read' then
+    raise exception 'unsupported_isolation' using errcode = 'P0001',
+      detail = 'ledger rows are written in read committed or serializable transactions';
+  end if;
+
   -- 1. Lock the pass: parallel rows of one pass are checked one after another.
   if new.pass_id is not null then
-    select p.currency into v_pass_currency
+    select p.currency, p.sessions_total into v_pass_currency, v_pass_sessions
     from public.passes p
     where p.id = new.pass_id and p.coaching_id = new.coaching_id
-    for update;
+    for no key update;
     v_pass_found := found;
+  end if;
+
+  -- 1a. The grant gives exactly the sessions of the pass.
+  if new.entry_type = 'grant' and v_pass_found and new.sessions_delta <> v_pass_sessions then
+    raise exception 'ledger_invalid' using errcode = 'P0001',
+      detail = 'a grant gives exactly sessions_total of its pass';
   end if;
 
   if new.entry_type in ('waiver', 'settlement', 'settlement_reversal') then
@@ -355,10 +418,18 @@ begin
         detail = pg_catalog.format('%s must refer to a charge of the same pair', new.entry_type);
     end if;
 
-    -- 3. Only a debt charge (no pass) is settled from a new pass.
+    -- 3. Only an open debt charge (no pass, not waived) is settled from a new pass: a forgiven debt is not
+    -- paid for again.
     if new.entry_type = 'settlement' and v_charge.pass_id is not null then
       raise exception 'ledger_invalid' using errcode = 'P0001',
         detail = 'settlement must refer to a debt charge without a pass';
+    end if;
+    if new.entry_type = 'settlement' and exists (
+      select 1 from public.ledger_entries w
+      where w.related_entry_id = v_charge.id and w.coaching_id = new.coaching_id and w.entry_type = 'waiver'
+    ) then
+      raise exception 'ledger_invalid' using errcode = 'P0001',
+        detail = 'a waived debt charge cannot be settled';
     end if;
 
     -- 4. A waiver mirrors its charge.
@@ -370,7 +441,16 @@ begin
         detail = 'waiver must have the pass, the opposite amount and the currency of its charge';
     end if;
 
-    -- 5. A reversal mirrors the settlement of the same charge.
+    -- 5. A reversal mirrors the settlement of the same charge, and only follows a waiver of that charge
+    -- (R34): waive_charge writes the waiver first, then the reversal, in one transaction. Without the waiver
+    -- the reversal would reopen the debt, and one settlement per charge would keep it open for good.
+    if new.entry_type = 'settlement_reversal' and not exists (
+      select 1 from public.ledger_entries w
+      where w.related_entry_id = v_charge.id and w.coaching_id = new.coaching_id and w.entry_type = 'waiver'
+    ) then
+      raise exception 'ledger_invalid' using errcode = 'P0001',
+        detail = 'settlement_reversal follows a waiver of the same charge';
+    end if;
     if new.entry_type = 'settlement_reversal' then
       select * into v_settlement
       from public.ledger_entries e
@@ -390,15 +470,21 @@ begin
       detail = 'an amount on a pass must be in the pass currency';
   end if;
 
-  -- 7. A booking charge happens at the session start.
+  -- 7. A booking charge happens at the session start, for a booking that is attended, no_show or
+  -- late_cancelled (data-model §3.3). The RPC sets the status first; a later attended <-> no_show correction
+  -- does not touch the charge.
   if new.entry_type = 'charge' and new.booking_id is not null then
-    select s.starts_at into v_starts_at
+    select s.starts_at, b.status into v_starts_at, v_booking_status
     from public.bookings b
     join public.sessions s on s.id = b.session_id
     where b.id = new.booking_id and b.coaching_id = new.coaching_id;
     if found and new.occurred_at is distinct from v_starts_at then
       raise exception 'ledger_invalid' using errcode = 'P0001',
         detail = 'a booking charge must occur at the session start';
+    end if;
+    if found and v_booking_status not in ('attended', 'no_show', 'late_cancelled') then
+      raise exception 'ledger_invalid' using errcode = 'P0001',
+        detail = 'only an attended, no_show or late_cancelled booking is charged';
     end if;
   end if;
 
@@ -417,7 +503,8 @@ begin
 end $$;
 
 comment on function private.ledger_entries_validate() is
-  'Trigger: cross-row ledger rules (what a waiver, settlement or reversal may refer to, currencies, charge time, no overdraft).';
+  'Trigger: cross-row ledger rules (grant size, what a waiver, settlement or reversal may refer to, currencies, '
+  'charge time and booking status, no overdraft).';
 revoke all on function private.ledger_entries_validate() from public;
 
 create trigger ledger_entries_validate

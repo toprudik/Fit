@@ -1,7 +1,7 @@
 -- Base migration: domains, immutable helpers and generic trigger functions (contract §1.3 file 1).
 begin;
 \ir _helpers.psql
-select plan(40);
+select plan(47);
 
 -- Domains. Values go through a table column, as in real writes (an explicit ::char(3) cast would truncate).
 create table tests.domain_probe (tz public.iana_tz, cur public.currency_code);
@@ -10,6 +10,24 @@ select lives_ok($$ insert into tests.domain_probe (tz) values ('Europe/Moscow') 
 select throws_ok($$ insert into tests.domain_probe (tz) values ('Mars/Phobos') $$, '23514', null, 'iana_tz rejects Mars/Phobos');
 select throws_ok($$ insert into tests.domain_probe (tz) values ('europe/moscow') $$, '23514', null, 'iana_tz is case-sensitive');
 select lives_ok($$ insert into tests.domain_probe (tz) values (null) $$, 'iana_tz lets NULL through like any CHECK');
+select throws_ok($$ insert into tests.domain_probe (tz) values ('MSK') $$, '23514', null,
+  'iana_tz rejects a zone abbreviation');
+select throws_ok($$ insert into tests.domain_probe (tz) values ('UTC+3') $$, '23514', null,
+  'iana_tz rejects a POSIX offset');
+select is(private.is_valid_tz(null), false, 'is_valid_tz(NULL) is false, not NULL');
+select is(
+  array(select z.name from pg_catalog.pg_timezone_names z where not private.is_valid_tz(z.name) order by 1),
+  '{}'::text[],
+  'is_valid_tz knows every zone of pg_timezone_names'
+);
+-- The check runs on every sign-in and profile write, so it must not scan the zone files (about 17 ms a call):
+-- 2000 checks fit easily into the time limit, where the old scan needed more than 30 seconds.
+set local statement_timeout = '3s';
+select lives_ok(
+  $$ select count(*) from generate_series(1, 2000) g where private.is_valid_tz(case when g > 0 then 'Europe/Moscow' end) $$,
+  'is_valid_tz is a constant lookup: 2000 checks take well under 3 seconds'
+);
+set local statement_timeout = 0;
 
 select lives_ok($$ insert into tests.domain_probe (cur) values ('RUB') $$, 'currency_code accepts RUB');
 select throws_ok($$ insert into tests.domain_probe (cur) values ('rub') $$, '23514', null, 'currency_code rejects lower case');
@@ -48,27 +66,33 @@ select is(
   'deleted_client_id() is immutable'
 );
 
--- enforce_append_only on a throwaway pair of tables: free column, clear-only column, cascade deletes.
+-- enforce_append_only on throwaway tables: free column, clear-only column (an author FK with set null),
+-- cascade deletes.
 create table tests.ao_parent (id integer primary key);
+create table tests.ao_author (id integer primary key);
 create table tests.ao_child (
   id        integer primary key,
   parent_id integer references tests.ao_parent (id) on delete cascade,
   free_col  text,
   fixed_col text,
-  clear_col text
+  clear_col integer references tests.ao_author (id) on delete set null
 );
 create trigger ao_child_append_only
   before update or delete on tests.ao_child
   for each row execute function private.enforce_append_only('{free_col}', '{clear_col}', 'true');
 insert into tests.ao_parent values (1), (2);
-insert into tests.ao_child values (1, 1, 'a', 'a', 'a'), (2, 2, 'b', 'b', 'b');
+insert into tests.ao_author values (1), (2), (3);
+insert into tests.ao_child values (1, 1, 'a', 'a', 1), (2, 2, 'b', 'b', 2);
 
 select lives_ok($$ update tests.ao_child set free_col = 'changed' where id = 1 $$, 'append-only: a free column may change');
 select throws_ok($$ update tests.ao_child set fixed_col = 'changed' where id = 1 $$, 'P0001', 'append_only',
   'append-only: any other column may not change');
-select throws_ok($$ update tests.ao_child set clear_col = 'changed' where id = 1 $$, 'P0001', 'append_only',
+select throws_ok($$ update tests.ao_child set clear_col = 3 where id = 1 $$, 'P0001', 'append_only',
   'append-only: a clear-only column may not get a new value');
-select lives_ok($$ update tests.ao_child set clear_col = null where id = 1 $$, 'append-only: a clear-only column may be cleared');
+select throws_ok($$ update tests.ao_child set clear_col = null where id = 1 $$, 'P0001', 'append_only',
+  'append-only: a clear-only column is not cleared directly, not even by the owner');
+select lives_ok($$ delete from tests.ao_author where id = 1 $$, 'append-only: deleting the author clears the column (FK set null)');
+select is((select clear_col from tests.ao_child where id = 1), null::integer, 'append-only: the set-null cleared it');
 select throws_ok($$ delete from tests.ao_child where id = 1 $$, 'P0001', 'append_only', 'append-only: a direct delete raises');
 select lives_ok($$ delete from tests.ao_parent where id = 2 $$, 'append-only: a cascade delete passes');
 select is((select count(*)::integer from tests.ao_child where id = 2), 0, 'append-only: the cascade removed the row');

@@ -3,7 +3,7 @@
 -- keys, seat capacity (R18), the status machine (R93), booking_events and moving pairs to the stub.
 begin;
 \ir _helpers.psql
-select plan(64);
+select plan(70);
 
 -- Fixtures: C has live pairs to A and B; D and F live pairs to A; E an ended pair to A; M is A's card;
 -- N is a real user without a pair; Z is a user who acted on a booking and later deletes the account.
@@ -185,14 +185,54 @@ select results_eq(
   $$ values (null::uuid, 'test') $$,
   'booking_events: deleting the actor''s profile sets actor_id NULL and keeps the event'
 );
-insert into tests.ids values ('s_del', tests.create_session('trainer_a', now() + interval '9 days'));
-insert into tests.ids values ('bk_del', tests.create_booking(tests.i('s_del'), 'trainer_a', 'client_c'));
+
+-- Bookings and booked sessions are history (data-model §1.5): no role deletes them directly, because the delete
+-- would take the charge and the events along and give the session back to the pass. They leave only with
+-- their pair or their trainer.
+select tests.create_user('client_g');
+select tests.create_pair('trainer_a', 'client_g');
+insert into tests.ids values
+  ('pair_ag', tests.pair_id('trainer_a', 'client_g')),
+  ('s_del', tests.create_session('trainer_a', now() - interval '9 days')),
+  ('s_empty', tests.create_session('trainer_a', now() + interval '9 days')),
+  ('pass_ag', tests.create_pass('trainer_a', 'client_g', 5));
+insert into tests.ids values ('bk_del', tests.create_booking(tests.i('s_del'), 'trainer_a', 'client_g', 'attended'));
 select tests.add_event('bk_del', 'trainer_a', 'trainer');
-delete from public.sessions where id = tests.i('s_del');
+insert into public.ledger_entries (coaching_id, entry_type, pass_id, booking_id, sessions_delta, charge_reason, occurred_at)
+values (tests.i('pair_ag'), 'charge', tests.i('pass_ag'), tests.i('bk_del'), -1, 'attended',
+        (select starts_at from public.sessions where id = tests.i('s_del')));
+select throws_ok(
+  $$ delete from public.bookings where id = tests.i('bk_del') $$,
+  'P0001', 'append_only', 'bookings: a direct delete raises append_only as postgres'
+);
+select throws_ok(
+  $$ delete from public.sessions where id = tests.i('s_del') $$,
+  'P0001', 'session_in_use', 'sessions: deleting a session with bookings raises session_in_use as postgres'
+);
+select tests.authenticate_as_service_role();
+select throws_ok(
+  $$ delete from public.bookings where id = tests.i('bk_del') $$,
+  'P0001', 'append_only', 'bookings: a direct delete raises append_only as service_role'
+);
+select throws_ok(
+  $$ delete from public.sessions where id = tests.i('s_del') $$,
+  'P0001', 'session_in_use', 'sessions: deleting a session with bookings raises session_in_use as service_role'
+);
+select lives_ok(
+  $$ delete from public.sessions where id = tests.i('s_empty') $$,
+  'sessions: a session nobody booked may be deleted'
+);
+select tests.clear_authentication();
+select is(
+  (select coalesce(sum(sessions_delta), 0)::integer from public.ledger_entries where pass_id = tests.i('pass_ag')), 4,
+  'bookings: the charge stays, so the pass keeps its balance'
+);
+delete from public.coachings where id = tests.i('pair_ag');
 select is_empty(
   $$ select 1 from public.booking_events where booking_id = tests.i('bk_del')
-     union all select 1 from public.bookings where id = tests.i('bk_del') $$,
-  'booking_events: deleting the session cascades to its bookings and their events'
+     union all select 1 from public.bookings where id = tests.i('bk_del')
+     union all select 1 from public.ledger_entries where booking_id = tests.i('bk_del') $$,
+  'booking_events: deleting the pair cascades to its bookings, their events and charges'
 );
 
 -- =========================================================================================================

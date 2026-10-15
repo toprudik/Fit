@@ -436,6 +436,23 @@ begin
 end;
 $$;
 
+-- Deletes a trainer's account the way the account deletion job must when it also wrote rows of that trainer
+-- in the same transaction: the trainer profile first (pairs, passes, freezes, notes and logs go while the
+-- profile still exists), then the auth user. A single "delete from auth.users" fails with 23503 when the
+-- same transaction wrote a note, a freeze or a pair log of the trainer: the set-null of the author column
+-- re-checks the row's other foreign keys (Postgres does that for rows the current transaction wrote) after
+-- the cascade already removed their parent. GoTrue deletes a user in its own transaction, so that path is safe.
+create or replace function tests.delete_trainer(p_handle text)
+returns void
+language plpgsql
+set search_path = ''
+as $$
+begin
+  delete from public.trainer_profiles where user_id = tests.user_id(p_handle);
+  delete from auth.users where id = tests.user_id(p_handle);
+end;
+$$;
+
 -- A break-glass grant of the admin on the target user. Backdate p_created_at (and p_expires_at) to build
 -- an expired grant: the table allows at most one hour between the two.
 create or replace function tests.create_break_glass(

@@ -192,7 +192,7 @@ create table public.managed_client_claims (
 comment on table public.managed_client_claims is
   'Request to the trainer to merge a card into a user who just joined. Written only by RPCs.';
 
-create index managed_client_claims_trainer_id_idx on public.managed_client_claims (trainer_id) where status = 'pending';
+create index managed_client_claims_trainer_id_idx on public.managed_client_claims (trainer_id);
 create unique index managed_client_claims_one_pending_uniq on public.managed_client_claims (new_coaching_id)
   where status = 'pending';
 create index managed_client_claims_claimant_id_idx on public.managed_client_claims (claimant_id);

@@ -129,8 +129,7 @@ comment on column public.break_glass_grants.categories is 'Data categories priva
 comment on column public.break_glass_grants.reason is 'Why access was needed; at least 20 characters. The target user sees it.';
 comment on column public.break_glass_grants.expires_at is 'End of access, at most one hour after created_at.';
 
-create index break_glass_grants_admin_id_target_user_id_idx on public.break_glass_grants (admin_id, target_user_id)
-  where revoked_at is null;
+create index break_glass_grants_admin_id_target_user_id_idx on public.break_glass_grants (admin_id, target_user_id);
 create index break_glass_grants_target_user_id_idx on public.break_glass_grants (target_user_id);
 
 -- A revoked grant stays revoked, for every role: revoked_at is written once and never cleared or moved, so

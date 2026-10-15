@@ -2,7 +2,7 @@
 -- notification outbox (ADR 0006) and calendar feeds without token_hash (R50).
 begin;
 \ir _helpers.psql
-select plan(33);
+select plan(34);
 
 -- Fixtures: C and D are clients of A; C has a confirmed booking on a session of A.
 select tests.create_trainer('trainer_a');
@@ -136,11 +136,16 @@ select throws_ok(
   '23514', null, 'notification_outbox: a payload that is not an object violates the check'
 );
 
--- Deleting a booking removes its reminders, and only those.
-delete from public.bookings where id = tests.i('booking_c');
+-- A booking is never deleted directly; when its pair goes (trainer account deletion), the reminders go too,
+-- and only those.
+select throws_ok(
+  $$ delete from public.bookings where id = tests.i('booking_c') $$,
+  'P0001', 'append_only', 'bookings: a direct delete raises, so reminders never lose their booking that way'
+);
+delete from public.coachings where id = tests.pair_id('trainer_a', 'client_c');
 select is(
   (select count(*)::integer from public.notification_outbox where user_id = tests.u('client_c')), 0,
-  'notification_outbox: deleting a booking cascades its reminders'
+  'notification_outbox: deleting the pair cascades through the booking to its reminders'
 );
 select is(
   (select count(*)::integer from public.notification_outbox where user_id = tests.u('client_d')), 2,

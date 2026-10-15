@@ -4,7 +4,7 @@
 -- keeps its accounting, and the admin sees no money rows, not even with break-glass access.
 begin;
 \ir _helpers.psql
-select plan(142);
+select plan(144);
 
 -- Fixtures: C has live pairs to A and B, D a live pair to A, E an ended pair to A.
 select tests.create_trainer('trainer_a');
@@ -785,6 +785,36 @@ select is_empty(
 );
 select tests.authenticate_as('stranger_s');
 select is_empty($$ select id from public.payment_links $$, 'payment_links: a stranger reads 0 rows');
+
+-- =========================================================================================================
+-- Deleting a trainer whose freezes and notes were written in the same transaction (tests.delete_trainer: the
+-- trainer profile first, then the account), as the account deletion job does.
+
+select tests.clear_authentication();
+select tests.create_trainer('trainer_t');
+select tests.create_user('client_u');
+select tests.create_pair('trainer_t', 'client_u');
+insert into tests.ids values
+  ('pair_tu', tests.pair_id('trainer_t', 'client_u')),
+  ('pass_tu', tests.create_pass('trainer_t', 'client_u', 5)),
+  ('session_t', tests.create_session('trainer_t', now() - interval '1 day'));
+select tests.set_claims('trainer_t');
+insert into public.pass_freezes (pass_id, period, reason)
+values (tests.i('pass_tu'), daterange(current_date + 3, current_date + 5), 'holiday');
+insert into public.coaching_notes (coaching_id, author_id, session_id, body)
+values (tests.i('pair_tu'), tests.u('trainer_t'), tests.i('session_t'), 'Knee feels better');
+select tests.clear_authentication();
+select lives_ok(
+  $$ select tests.delete_trainer('trainer_t') $$,
+  'account deletion: a trainer with freezes and notes written in this transaction is deleted'
+);
+select is_empty(
+  $$ select 1 from public.passes where id = tests.i('pass_tu')
+     union all select 1 from public.pass_freezes where pass_id = tests.i('pass_tu')
+     union all select 1 from public.coaching_notes where coaching_id = tests.i('pair_tu')
+     union all select 1 from public.coachings where id = tests.i('pair_tu') $$,
+  'account deletion: the pair, its pass, freeze and notes are gone'
+);
 
 select tests.clear_authentication();
 select * from finish();

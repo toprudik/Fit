@@ -58,7 +58,8 @@ comment on table public.plan_grants is
 comment on column public.plan_grants.expires_at is 'Exclusive end of the grant; null = no end. Expiry is checked by time, without a job.';
 comment on column public.plan_grants.revoked_at is 'Set when an admin revokes the grant, together with revoked_by and revoke_reason.';
 
-create index plan_grants_active_idx on public.plan_grants (user_id, plan_code) where revoked_at is null;
+-- Full, not partial: it also serves the policy (user_id = auth.uid()) and the cascade from profiles.
+create index plan_grants_user_id_plan_code_idx on public.plan_grants (user_id, plan_code);
 create index plan_grants_plan_code_idx on public.plan_grants (plan_code);
 
 -- Only a revocation may change a grant; granted_by may be cleared when that admin's account goes; rows leave
@@ -66,6 +67,39 @@ create index plan_grants_plan_code_idx on public.plan_grants (plan_code);
 create trigger plan_grants_append_only
   before update or delete on public.plan_grants
   for each row execute function private.enforce_append_only('{revoked_at,revoked_by,revoke_reason}', '{granted_by}', 'true');
+
+-- A revocation is written once, for every role: revoked_at, revoked_by and revoke_reason are set together,
+-- and afterwards revoked_at and revoke_reason never change; revoked_by is only cleared when that admin's
+-- account is deleted. Plans are paid rights, so their history is not rewritten (data-model §1.7).
+create function private.plan_grants_keep_revocation()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if old.revoked_at is not null then
+    if new.revoked_at is distinct from old.revoked_at
+       or new.revoke_reason is distinct from old.revoke_reason
+       or (new.revoked_by is distinct from old.revoked_by
+           and (new.revoked_by is not null or pg_catalog.pg_trigger_depth() <= 1)) then
+      raise exception 'append_only' using errcode = 'P0001',
+        detail = 'a revoked plan grant keeps its revocation';
+    end if;
+  elsif new.revoked_at is null
+        and (new.revoked_by is distinct from old.revoked_by or new.revoke_reason is distinct from old.revoke_reason) then
+    raise exception 'append_only' using errcode = 'P0001',
+      detail = 'revoked_by and revoke_reason are written together with revoked_at';
+  end if;
+  return new;
+end $$;
+
+comment on function private.plan_grants_keep_revocation() is
+  'Trigger: a plan grant revocation is written once; only an account deletion clears revoked_by.';
+revoke all on function private.plan_grants_keep_revocation() from public;
+
+create trigger plan_grants_keep_revocation
+  before update of revoked_at, revoked_by, revoke_reason on public.plan_grants
+  for each row execute function private.plan_grants_keep_revocation();
 
 create trigger plan_grants_no_truncate
   before truncate on public.plan_grants
@@ -93,6 +127,8 @@ comment on column public.access_requests.feature is 'Feature code the user tried
 
 -- One open request per user and plan (R57; the data-model index cast timestamptz to date and did not compile).
 create unique index access_requests_one_open_uniq on public.access_requests (user_id, plan_code) where status = 'open';
+-- The unique index is partial, so the policy (user_id = auth.uid()) and the cascade from profiles need this one.
+create index access_requests_user_id_idx on public.access_requests (user_id);
 create index access_requests_plan_code_idx on public.access_requests (plan_code);
 
 alter table public.access_requests enable row level security;

@@ -106,17 +106,28 @@ create type public.access_request_status as enum ('open', 'granted', 'declined')
 -- Immutable helpers. Checks, domains, defaults and generated columns run as the writing role, so signed-in
 -- users and service_role get EXECUTE. They do not get USAGE on schema private, which EXECUTE does not need.
 
--- Declared immutable on purpose: the zone list changes only when Postgres itself is upgraded.
-create function private.is_valid_tz(tz text)
-returns boolean
-language sql
-immutable
-set search_path = ''
-as $$
-  select exists (select 1 from pg_catalog.pg_timezone_names where name = tz)
-$$;
+-- Declared immutable on purpose: the zone list changes only when Postgres or its tzdata is upgraded. The names
+-- are copied from pg_timezone_names into the function body when this migration runs, so a check is a lookup
+-- in a constant array; reading pg_timezone_names scans the zone files on disk (about 17 ms per call, on every
+-- sign-in and profile write). No table either: a domain check that reads a table breaks restoring a dump.
+-- After a Postgres upgrade that adds zones, a migration runs this block again with "create or replace".
+do $do$
+begin
+  execute pg_catalog.format(
+    $f$
+      create function private.is_valid_tz(tz text)
+      returns boolean
+      language sql
+      immutable
+      set search_path = ''
+      as $body$ select coalesce(tz = any (%L::text[]), false) $body$
+    $f$,
+    (select pg_catalog.array_agg(z.name order by z.name) from pg_catalog.pg_timezone_names z));
+end
+$do$;
 
-comment on function private.is_valid_tz(text) is 'True when the text is an IANA time zone name known to Postgres (case-sensitive).';
+comment on function private.is_valid_tz(text) is
+  'True when the text is an IANA time zone name known to Postgres when the migration ran (case-sensitive).';
 revoke all on function private.is_valid_tz(text) from public;
 grant execute on function private.is_valid_tz(text) to authenticated, service_role;
 
@@ -225,7 +236,8 @@ comment on domain public.currency_code is 'ISO 4217 currency code in upper case,
 
 -- BEFORE UPDATE OR DELETE, FOR EACH ROW. Arguments (all optional, text):
 --   tg_argv[0]  columns that may change freely ('{client_id,coaching_id}'), for reassignment
---   tg_argv[1]  columns that may change only to NULL ('{created_by}'), for FK ON DELETE SET NULL
+--   tg_argv[1]  columns that may change only to NULL ('{created_by}'), and only by an FK ON DELETE SET NULL
+--               (pg_trigger_depth() > 1): nobody erases who wrote a row while that account still exists
 --   tg_argv[2]  'true' = DELETE allowed when it comes from an FK cascade (pg_trigger_depth() > 1)
 -- updated_at is always ignored. Applies to every role, including postgres and service_role.
 create function private.enforce_append_only()
@@ -252,16 +264,18 @@ begin
   end if;
   foreach v_col in array v_nullable loop
     if (pg_catalog.to_jsonb(new) -> v_col) is distinct from (pg_catalog.to_jsonb(old) -> v_col)
-       and (pg_catalog.to_jsonb(new) ->> v_col) is not null then
+       and ((pg_catalog.to_jsonb(new) ->> v_col) is not null or pg_catalog.pg_trigger_depth() <= 1) then
       raise exception 'append_only' using errcode = 'P0001',
-        detail = pg_catalog.format('%I.%I.%I may only be cleared', tg_table_schema, tg_table_name, v_col);
+        detail = pg_catalog.format('%I.%I.%I is only cleared when that account is deleted',
+                                   tg_table_schema, tg_table_name, v_col);
     end if;
   end loop;
   return new;
 end $$;
 
 comment on function private.enforce_append_only() is
-  'Trigger: rows may not change or be deleted, except the listed free columns, columns cleared by FK set-null and FK cascade deletes.';
+  'Trigger: rows may not change or be deleted, except the listed free columns, columns cleared by an FK set-null '
+  'and FK cascade deletes.';
 revoke all on function private.enforce_append_only() from public;
 
 -- BEFORE TRUNCATE, FOR EACH STATEMENT.

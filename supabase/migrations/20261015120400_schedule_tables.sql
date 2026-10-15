@@ -60,6 +60,7 @@ comment on column public.week_templates.buffer_min is 'Minutes left free between
 comment on column public.week_templates.generated_until is 'Last local date with generated slots; written by the generator.';
 
 create unique index week_templates_one_active_uniq on public.week_templates (trainer_id) where is_active;
+create index week_templates_trainer_id_idx on public.week_templates (trainer_id);
 
 create trigger week_templates_set_updated_at
   before update on public.week_templates
