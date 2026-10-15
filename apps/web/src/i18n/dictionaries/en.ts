@@ -132,6 +132,10 @@ export const en: Dictionary = {
     text: "The link may be out of date.",
     action: "Go to the main screen",
   },
+  botMessages: {
+    open: "Open DaFit",
+    botTest: "Done, DaFit can now message you here. Session reminders and other notifications will come to this chat.",
+  },
   toast: {
     region: "Notifications",
   },

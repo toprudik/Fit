@@ -57,7 +57,7 @@ afterEach(() => {
 });
 
 describe("signInWithTelegram", () => {
-  it("writes the profile from Telegram with the sign-in time and nothing else", async () => {
+  it("writes the profile from Telegram with the sign-in time, clears the blocked-bot mark and nothing else", async () => {
     await expect(signInWithTelegram(identity)).resolves.toEqual({ userId: USER_ID });
 
     // user_settings comes from the database trigger on profiles, so profiles is the only table written.
@@ -73,6 +73,7 @@ describe("signInWithTelegram", () => {
           photo_url: "https://t.me/i/userpic/sam.jpg",
           language_code: "en",
           last_seen_at: "2026-10-15T09:30:00.000Z",
+          bot_blocked_at: null,
         },
         options: { onConflict: "id" },
       },

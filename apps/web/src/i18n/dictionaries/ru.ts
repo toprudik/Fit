@@ -135,6 +135,12 @@ export const ru = {
     text: "Возможно, ссылка устарела.",
     action: "Открыть главный экран",
   },
+  /** Bot messages from the notification outbox, in the recipient's DaFit language (ADR 0006, Q66). */
+  botMessages: {
+    open: "Открыть DaFit",
+    /** AUTH-7: the test message after the user allows the bot to write. */
+    botTest: "Готово, теперь DaFit может писать тебе здесь. В этот чат придут напоминания о занятиях и другие уведомления.",
+  },
   toast: {
     /** Screen reader name of the area where toasts appear. */
     region: "Уведомления",

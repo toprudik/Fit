@@ -2293,11 +2293,19 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "effective_plan":
+            "claim_outbox":
+{ Args: { "p_limit"?: number }; Returns: {
+              "attempt": number,"chat_id": number,"chat_target": string,"kind": Database["public"]['Enums']["notification_type"],"locale": Database["public"]['Enums']["app_locale"],"outbox_id": number,"payload": Json,"silent": boolean,"time_zone": string
+            }[]
+                           },
+"effective_plan":
 { Args: { "p_side": Database["public"]['Enums']["plan_side"],"p_user": string }; Returns: string
                            },
 "has_entitlement":
 { Args: { "p_feature": string,"p_pair"?: string,"p_user": string }; Returns: boolean
+                           },
+"record_outbox_result":
+{ Args: { "p_error"?: string,"p_id": number,"p_outcome": string,"p_retry_after_s"?: number,"p_telegram_message_id"?: number }; Returns: Database["public"]['Enums']["outbox_status"]
                            },
 "recurrence_meeting_url":
 { Args: { "p_recurrence_id": string }; Returns: string
