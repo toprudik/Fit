@@ -4,7 +4,7 @@ import type { Dictionary } from "./ru";
 export const en: Dictionary = {
   meta: {
     appName: "DaFit",
-    description: "DaFit helps personal trainers run their schedule, passes, and client progress.",
+    description: "DaFit helps personal trainers manage their schedule and keep track of client passes and progress.",
   },
   common: {
     back: "Back",
@@ -45,7 +45,7 @@ export const en: Dictionary = {
       },
       schedule: {
         emptyTitle: "Your schedule is empty",
-        emptyText: "Sessions and open slots for the day and the week will show up here.",
+        emptyText: "Your sessions and open slots will show up here, by day or by week.",
       },
       clients: {
         emptyTitle: "No clients yet",
@@ -58,18 +58,18 @@ export const en: Dictionary = {
         detail: "Payment details will open here",
       },
       more: {
-        emptyTitle: "Your showcase and links will be here",
-        emptyText: "This is where your showcase with a QR code, client links, and trainer settings will live.",
+        emptyTitle: "No showcase yet",
+        emptyText: "Your showcase with its QR code, client links, and trainer settings will show up here.",
       },
     },
     client: {
       home: {
         emptyTitle: "No sessions yet",
-        emptyText: "Your next session, pass balance, and goals for the day will show up here.",
+        emptyText: "Your next session, pass balance, and plan for the day will show up here.",
       },
       sessions: {
         emptyTitle: "No bookings yet",
-        emptyText: "Your past and upcoming session bookings will show up here.",
+        emptyText: "Your upcoming and past bookings will show up here.",
         detail: "Booking details will open here",
       },
       diary: {
@@ -78,11 +78,11 @@ export const en: Dictionary = {
       },
       progress: {
         emptyTitle: "No measurements yet",
-        emptyText: "Your weight, measurements, progress photos, and records will show up here.",
+        emptyText: "Your weight, measurements, progress photos, and personal records will show up here.",
       },
       trainers: {
-        emptyTitle: "You don't train with anyone yet",
-        emptyText: "Ask your trainer for a link or QR code, and they'll appear here.",
+        emptyTitle: "You don't have a trainer yet",
+        emptyText: "Your trainer will appear here once you open their link or scan their QR code.",
         detail: "A trainer's card will open here",
       },
     },
@@ -113,17 +113,17 @@ export const en: Dictionary = {
   },
   login: {
     title: "Log in",
-    description: "We use your Telegram account, no passwords or email.",
+    description: "You don't need a password or email, just your Telegram account.",
     action: "Log in with Telegram",
     errors: {
       expired: "The login took too long. Try again.",
-      denied: "The login was cancelled in Telegram.",
-      state: "We couldn't verify the login request. Try again.",
-      failed: "We couldn't log you in with Telegram.",
+      denied: "The login was canceled in Telegram. Try again.",
+      state: "We couldn't verify the login. Try again.",
+      failed: "We couldn't log you in with Telegram. Try again.",
     },
   },
   telegram: {
-    signInFailed: "We couldn't log you in with Telegram",
+    signInFailed: "Couldn't log you in. Reopen the app.",
   },
   notFound: {
     title: "This page doesn't exist",
