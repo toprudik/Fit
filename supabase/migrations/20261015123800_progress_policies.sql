@@ -12,10 +12,11 @@ revoke all on table public.measurements, public.progress_photos, public.mileston
 -- Measurements belong to the client, not to a pair (PRD 2.11 edge cases): each trainer of a live pair reads all
 -- of them, whoever entered them, while that pair shares measurements. Turning the share off hides even the
 -- trainer's own entries (PRIV-4); an ended pair hides everything.
+-- viewable_client_ids is can_view as an array computed once, so the client_id index serves the read.
 create policy "measurements: client, sharing trainers, break-glass read"
   on public.measurements for select
   to authenticated
-  using (private.can_view(client_id, 'measurements'));
+  using (client_id = any ((select private.viewable_client_ids('measurements'))::uuid[]));
 
 -- The client enters own values; a trainer enters values for a client of a live pair that shares measurements
 -- (a card shares everything). entered_by is stamped from auth.uid() before this check runs and is not granted.
@@ -51,7 +52,7 @@ grant update (kind, value, measured_at, local_date, note) on table public.measur
 create policy "progress_photos: client, sharing trainers, break-glass read"
   on public.progress_photos for select
   to authenticated
-  using (private.can_view(client_id, 'photos'));
+  using (client_id = any ((select private.viewable_client_ids('photos'))::uuid[]));
 
 -- Free photo limit (decisions §11 and Q57/Q58, ADR 0014, PRD 2.14-2 and 2.14-6, PLAN-3): checked in the
 -- database, not only in the app. R82 is still open with the owner; until then this is the most restrictive

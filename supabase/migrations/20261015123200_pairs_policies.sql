@@ -17,11 +17,12 @@ from anon, authenticated;
 -- coachings
 
 -- Both sides read the pair in any status: an ended pair keeps its history (sessions, payments, ledger).
--- No admin branch: admins see pairs only as aggregates through admin functions.
+-- No admin branch: admins see pairs only as aggregates through admin functions. Array helper, so the views
+-- over coachings (coaching_balances, coaching_stats) use the indexes instead of a per-row call.
 create policy "coachings: members read"
   on public.coachings for select
   to authenticated
-  using (client_id = (select auth.uid()) or private.is_coaching_trainer(id));
+  using (client_id = (select auth.uid()) or id = any ((select private.trainer_coaching_ids())::uuid[]));
 
 -- Each side edits its own settings; which columns belong to which side is checked by coachings_guard_columns.
 -- Ending a pair (status, ended_at, ended_by, end_reason) goes through the end_coaching RPC.

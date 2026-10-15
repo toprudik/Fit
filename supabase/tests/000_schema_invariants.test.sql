@@ -2,7 +2,7 @@
 -- objects exist, so it holds while migrations are added and checks every new table, view and function.
 begin;
 \ir _helpers.psql
-select plan(13);
+select plan(14);
 
 select is(
   array(
@@ -166,6 +166,24 @@ select is(
   ),
   '{}'::text[],
   'every ON DELETE CASCADE foreign key has an index on its leading column'
+);
+
+-- The read policies of the large tables never call a helper with a row column: such a call runs once per row
+-- and keeps the planner from using an index, so an unfiltered read scanned every tenant's rows. They compare
+-- columns with arrays the helpers compute once (trainer_coaching_ids, viewable_client_ids, ...).
+select is(
+  array(
+    select p.polrelid::regclass::text || ': ' || p.polname from pg_catalog.pg_policy p
+    where p.polrelid in ('public.coachings'::regclass, 'public.bookings'::regclass, 'public.ledger_entries'::regclass,
+                         'public.passes'::regclass, 'public.payments'::regclass, 'public.money_events'::regclass,
+                         'public.sessions'::regclass, 'public.measurements'::regclass, 'public.progress_photos'::regclass)
+      and p.polcmd in ('r', '*')
+      and pg_get_expr(p.polqual, p.polrelid)
+          ~ '(is_coaching_trainer|is_coaching_client|is_coaching_member|can_view|acts_for_trainer|is_session_participant|trainer_ids_visible)\('
+    order by 1
+  ),
+  '{}'::text[],
+  'read policies of the large tables use array helpers, not per-row helper calls'
 );
 
 -- A function added by a later migration starts closed: nobody but the owner (and service_role in public)

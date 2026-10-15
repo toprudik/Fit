@@ -14,14 +14,14 @@ revoke all on sequence public.booking_events_id_seq from anon, authenticated;
 
 -- The client reads own bookings only, so in a group session nobody learns who else is booked (seat counts come
 -- from public.session_occupancy()). The owner trainer reads every booking of own pairs; wave 3 adds delegates
--- with the schedule or attendance scope through the same helper.
+-- with the schedule or attendance scope through the same helper. Both arms use an index (the helper array is
+-- computed once), so an unfiltered read does not scan other tenants' rows.
 create policy "bookings: client and pair trainer read"
   on public.bookings for select
   to authenticated
   using (
     client_id = (select auth.uid())
-    or private.is_coaching_trainer(coaching_id, 'schedule')
-    or private.is_coaching_trainer(coaching_id, 'attendance')
+    or coaching_id = any ((select private.trainer_coaching_ids('{schedule,attendance}'))::uuid[])
   );
 
 comment on policy "bookings: client and pair trainer read" on public.bookings is
@@ -51,8 +51,7 @@ create policy "ledger_entries: client and pair trainer read"
   to authenticated
   using (
     client_id = (select auth.uid())
-    or private.is_coaching_trainer(coaching_id, 'passes')
-    or private.is_coaching_trainer(coaching_id, 'attendance')
+    or coaching_id = any ((select private.trainer_coaching_ids('{passes,attendance}'))::uuid[])
   );
 
 comment on policy "ledger_entries: client and pair trainer read" on public.ledger_entries is

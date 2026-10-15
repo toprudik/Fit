@@ -51,7 +51,7 @@ grant update (title, sessions_count, price_minor, currency, validity_days, appli
 create policy "passes: client and trainer read"
   on public.passes for select
   to authenticated
-  using (client_id = (select auth.uid()) or private.is_coaching_trainer(coaching_id, 'passes'));
+  using (client_id = (select auth.uid()) or coaching_id = any ((select private.trainer_coaching_ids('{passes}'))::uuid[]));
 
 -- The trainer edits title and note of an active pass. A cancelled pass is history. Cancelling goes through the
 -- cancel_pass RPC, which also writes the refund row. The expiry is not granted: extending a pass (PRD 2.8-8)
@@ -173,7 +173,7 @@ create trigger pass_freezes_guard_started
 create policy "payments: client and trainer read"
   on public.payments for select
   to authenticated
-  using (client_id = (select auth.uid()) or private.is_coaching_trainer(coaching_id, 'payments'));
+  using (client_id = (select auth.uid()) or coaching_id = any ((select private.trainer_coaching_ids('{payments}'))::uuid[]));
 
 -- The trainer enters a payment as confirmed. The client only reports an incoming payment ("I paid"); refunds
 -- are the trainer's. payments_fill_pair fills trainer_id and client_id from the pair before this check runs,
@@ -311,8 +311,8 @@ create policy "money_events: client and pair trainer read"
   to authenticated
   using (
     client_id = (select auth.uid())
-    or (payment_id is null and private.is_coaching_trainer(coaching_id, 'passes'))
-    or (payment_id is not null and private.is_coaching_trainer(coaching_id, 'payments'))
+    or (payment_id is null and coaching_id = any ((select private.trainer_coaching_ids('{passes}'))::uuid[]))
+    or (payment_id is not null and coaching_id = any ((select private.trainer_coaching_ids('{payments}'))::uuid[]))
   );
 
 comment on policy "money_events: client and pair trainer read" on public.money_events is

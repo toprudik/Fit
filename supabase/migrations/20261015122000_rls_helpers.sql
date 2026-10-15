@@ -189,3 +189,88 @@ comment on function private.own_logged_exercise_ids() is
   'RLS helper: ids of the exercises used in the caller''s own workout logs (as the client), pair logs included.';
 revoke all on function private.own_logged_exercise_ids() from public;
 grant execute on function private.own_logged_exercise_ids() to authenticated, service_role;
+
+-- Array helpers for policies on large tables. A policy that calls a definer helper with a row column runs it
+-- once per row and keeps the planner from using an index, so every unfiltered read scanned all tenants.
+-- "col = any ((select private.<helper>(...))::uuid[])" is evaluated once as an InitPlan, and the comparison with the
+-- array can use the column's index (BitmapOr with the own-row arm). Wave 1 bodies check only the owner; wave 3
+-- adds delegates with create or replace (same signatures). The scope array holds every scope that opens the
+-- table, so a policy never needs to change for delegates. All return an array, never NULL.
+
+create function private.trainer_coaching_ids(p_scopes public.delegation_scope[] default null) returns uuid[]
+language sql stable security definer set search_path = '' as $$
+  select coalesce(pg_catalog.array_agg(c.id), '{}') from public.coachings c where c.trainer_id = auth.uid()
+$$;
+
+comment on function private.trainer_coaching_ids(public.delegation_scope[]) is
+  'RLS helper: ids of the pairs the caller works on as their trainer, in any status. The scopes are for wave 3 '
+  'delegates and are ignored now.';
+revoke all on function private.trainer_coaching_ids(public.delegation_scope[]) from public;
+grant execute on function private.trainer_coaching_ids(public.delegation_scope[]) to authenticated, service_role;
+
+create function private.acting_trainer_ids(p_scopes public.delegation_scope[] default null) returns uuid[]
+language sql stable security definer set search_path = '' as $$
+  select case when auth.uid() is null then '{}'::uuid[] else array[auth.uid()] end
+$$;
+
+comment on function private.acting_trainer_ids(public.delegation_scope[]) is
+  'RLS helper: ids of the trainers the caller acts for on trainer-owned rows (wave 1: the caller). The scopes '
+  'are for wave 3 delegates.';
+revoke all on function private.acting_trainer_ids(public.delegation_scope[]) from public;
+grant execute on function private.acting_trainer_ids(public.delegation_scope[]) to authenticated, service_role;
+
+create function private.client_trainer_ids(p_live_only boolean default false) returns uuid[]
+language sql stable security definer set search_path = '' as $$
+  select coalesce(pg_catalog.array_agg(t.id), '{}') from private.trainer_ids_visible(p_live_only) t (id)
+$$;
+
+comment on function private.client_trainer_ids(boolean) is
+  'RLS helper: trainer_ids_visible as an array (the trainers of the caller''s pairs; live pairs only with p_live_only).';
+revoke all on function private.client_trainer_ids(boolean) from public;
+grant execute on function private.client_trainer_ids(boolean) to authenticated, service_role;
+
+create function private.own_booked_session_ids() returns uuid[]
+language sql stable security definer set search_path = '' as $$
+  select coalesce(pg_catalog.array_agg(distinct b.session_id), '{}') from public.bookings b where b.client_id = auth.uid()
+$$;
+
+comment on function private.own_booked_session_ids() is
+  'RLS helper: ids of the sessions the caller has a booking on, in any status (array form of is_session_participant).';
+revoke all on function private.own_booked_session_ids() from public;
+grant execute on function private.own_booked_session_ids() to authenticated, service_role;
+
+create function private.viewable_client_ids(p_category public.share_category) returns uuid[]
+language sql stable security definer set search_path = '' as $$
+  select coalesce(pg_catalog.array_agg(distinct x.id), '{}')
+  from (
+    select auth.uid() as id
+    union all
+    select c.client_id
+    from public.coachings c
+    join public.data_shares d on d.coaching_id = c.id
+    where c.trainer_id = auth.uid() and c.status in ('trial', 'active')
+      and case p_category
+            when 'nutrition'    then d.nutrition
+            when 'measurements' then d.measurements
+            when 'photos'       then d.photos
+            when 'steps'        then d.steps
+            when 'intake'       then d.intake
+            when 'workouts'     then d.workouts
+          end
+    union all
+    select g.target_user_id
+    from public.break_glass_grants g
+    join public.user_roles r on r.user_id = g.admin_id and r.role = 'admin'
+    where g.admin_id = auth.uid()
+      and g.revoked_at is null and g.expires_at > pg_catalog.now()
+      and p_category = any (g.categories)
+  ) x
+  where x.id is not null
+$$;
+
+comment on function private.viewable_client_ids(public.share_category) is
+  'RLS helper: the clients whose data of this category the caller may see, as an array: the caller, clients of '
+  'the caller''s live pairs that share it, and targets of a live break-glass grant (array form of can_view).';
+revoke all on function private.viewable_client_ids(public.share_category) from public;
+grant execute on function private.viewable_client_ids(public.share_category) to authenticated, service_role;
+

@@ -186,13 +186,15 @@ grant update (
 -- meeting_url is not granted for SELECT (R25): the column grant is per role, not per row, so it would show
 -- the link to every client who sees an open session. public.session_meeting_url() returns it to the trainer
 -- and to confirmed or attended participants. Clients must list columns: select=* fails with 42501.
+-- Every arm compares a column with an array computed once, so a calendar read without a trainer filter uses
+-- the indexes instead of calling a helper for every session of every trainer.
 create policy "sessions: trainer, participants and live clients read"
   on public.sessions for select
   to authenticated
   using (
-    (open_for_booking and status = 'scheduled' and trainer_id in (select private.trainer_ids_visible(true)))
-    or private.acts_for_trainer(trainer_id, 'schedule')
-    or private.is_session_participant(id)
+    trainer_id = any ((select private.acting_trainer_ids('{schedule}'))::uuid[])
+    or id = any ((select private.own_booked_session_ids())::uuid[])
+    or (open_for_booking and status = 'scheduled' and trainer_id = any ((select private.client_trainer_ids(true))::uuid[]))
   );
 
 -- Trial sessions come only from book_trial, and every session starts scheduled. Links to slots, repeats and

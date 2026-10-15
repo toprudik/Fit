@@ -4,7 +4,7 @@
 -- expected false also fails on NULL.
 begin;
 \ir _helpers.psql
-select plan(109);
+select plan(118);
 
 -- Fixtures: C has a live pair to A and a trial pair to B, D a live pair to A, E an ended pair to A.
 select tests.create_trainer('trainer_a');
@@ -43,11 +43,15 @@ create function tests.u(p_handle text) returns uuid language sql stable set sear
   select tests.user_id(p_handle)
 $$;
 
--- Categories the caller may view for the client, in enum order.
+-- Categories the caller may view for the client, in enum order. The policies on large tables use the array
+-- form viewable_client_ids; when it disagrees with can_view for any category, this returns NULL, so every
+-- assertion below checks both helpers at once.
 create function tests.viewable(p_client text) returns public.share_category[] language sql stable set search_path = '' as $$
-  select coalesce(array_agg(c order by c), '{}')
+  select case
+    when bool_and((tests.user_id(p_client) = any (private.viewable_client_ids(c))) = private.can_view(tests.user_id(p_client), c))
+      then coalesce(array_agg(c order by c) filter (where private.can_view(tests.user_id(p_client), c)), '{}')
+  end
   from unnest(enum_range(null::public.share_category)) c
-  where private.can_view(tests.user_id(p_client), c)
 $$;
 
 -- Shares exactly one category of the pair, as postgres.
@@ -84,12 +88,18 @@ insert into tests.helpers (sig) values
   ('private.is_session_participant(uuid)'),
   ('private.trainer_ids_visible(boolean)'),
   ('private.pair_partner_ids()'),
-  ('private.attended_count(uuid)');
+  ('private.attended_count(uuid)'),
+  ('private.own_logged_exercise_ids()'),
+  ('private.trainer_coaching_ids(public.delegation_scope[])'),
+  ('private.acting_trainer_ids(public.delegation_scope[])'),
+  ('private.client_trainer_ids(boolean)'),
+  ('private.own_booked_session_ids()'),
+  ('private.viewable_client_ids(public.share_category)');
 update tests.helpers set fn = to_regprocedure(sig);
 
 select is(
   array(select sig from tests.helpers where fn is null order by sig), '{}'::text[],
-  'all 14 RLS helpers exist with the contract signatures'
+  'every RLS helper exists with the contract signature'
 );
 select is(
   array(select h.sig from tests.helpers h join pg_proc p on p.oid = h.fn where not p.prosecdef order by 1), '{}'::text[],
@@ -165,6 +175,11 @@ select is(private.can_manage_session(tests.i('session_a')), false, 'anonymous: c
 select is(private.is_session_participant(tests.i('session_a')), false, 'anonymous: is_session_participant is false');
 select is_empty($$ select private.trainer_ids_visible() $$, 'anonymous: trainer_ids_visible returns no rows');
 select is_empty($$ select private.pair_partner_ids() $$, 'anonymous: pair_partner_ids returns no rows');
+select ok(
+  private.trainer_coaching_ids() = '{}' and private.acting_trainer_ids() = '{}' and private.client_trainer_ids() = '{}'
+    and private.own_booked_session_ids() = '{}' and private.viewable_client_ids('photos') = '{}',
+  'anonymous: the array helpers return empty arrays, never NULL'
+);
 
 -- Helpers that do not look at the caller.
 select is(private.is_live_coaching(tests.i('pair_ac')), true, 'is_live_coaching: an active pair is live');
@@ -203,6 +218,13 @@ select is(private.can_manage_session(tests.i('session_a')), true, 'trainer: can_
 select is(private.can_manage_session(tests.i('session_b')), false, 'trainer: can_manage_session of another trainer''s session is false');
 select is(private.is_session_participant(tests.i('session_a')), false, 'trainer: is_session_participant of own session is false');
 select is_empty($$ select private.trainer_ids_visible() $$, 'trainer: trainer_ids_visible is empty without pairs as a client');
+select is(
+  tests.sorted(private.trainer_coaching_ids('{schedule,attendance}')),
+  tests.sorted(array[tests.i('pair_ac'), tests.i('pair_ad'), tests.i('pair_ae')]),
+  'trainer: trainer_coaching_ids lists every own pair, the ended one too, never B''s'
+);
+select is(private.acting_trainer_ids('{schedule}'), array[tests.u('trainer_a')], 'trainer: acting_trainer_ids is the trainer');
+select is(private.own_booked_session_ids(), '{}'::uuid[], 'trainer: own_booked_session_ids is empty without own bookings');
 select is(
   tests.sorted(array(select private.pair_partner_ids())),
   tests.sorted(array[tests.u('client_c'), tests.u('client_d'), tests.u('client_e')]),
@@ -262,10 +284,17 @@ select is(
   tests.sorted(array[tests.u('trainer_a'), tests.u('trainer_b')]),
   'client: pair_partner_ids lists both trainers'
 );
+select is(private.trainer_coaching_ids(), '{}'::uuid[], 'client: trainer_coaching_ids is empty for a client');
+select is(private.own_booked_session_ids(), array[tests.i('session_a')], 'client: own_booked_session_ids lists the booked session');
+select is(
+  tests.sorted(private.client_trainer_ids()), tests.sorted(array(select private.trainer_ids_visible())),
+  'client: client_trainer_ids is trainer_ids_visible as an array'
+);
 
 -- Client D: a cancelled booking still makes a participant.
 select tests.set_claims('client_d');
 select is(private.is_session_participant(tests.i('session_a')), true, 'client: is_session_participant with a cancelled booking is true');
+select is(private.own_booked_session_ids(), array[tests.i('session_a')], 'client: own_booked_session_ids counts a cancelled booking too');
 
 -- Client E: the ended pair.
 select tests.set_claims('client_e');
@@ -275,6 +304,10 @@ select is(
   'client: trainer_ids_visible() includes the trainer of an ended pair'
 );
 select is_empty($$ select private.trainer_ids_visible(true) $$, 'client: trainer_ids_visible(true) excludes an ended pair');
+select ok(
+  private.client_trainer_ids() = array[tests.u('trainer_a')] and private.client_trainer_ids(true) = '{}',
+  'client: client_trainer_ids keeps the ended pair''s trainer, client_trainer_ids(true) does not'
+);
 select is(array(select private.pair_partner_ids()), array[tests.u('trainer_a')], 'client: pair_partner_ids includes an ended pair');
 
 -- ---------------------------------------------------------------------------------------------------------
