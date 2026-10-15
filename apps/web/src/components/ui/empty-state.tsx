@@ -23,7 +23,7 @@ export function EmptyState({ icon: Icon, title, description, action, headingLeve
         <Icon size={28} strokeWidth={1.75} />
       </div>
       <Heading className="text-title-3 text-balance">{title}</Heading>
-      {description ? <p className="mb-2 max-w-[300px] text-subhead text-ink-2">{description}</p> : null}
+      {description ? <p className="mb-2 max-w-[300px] text-subhead text-pretty text-ink-2">{description}</p> : null}
       {action}
     </div>
   );

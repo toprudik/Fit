@@ -11,6 +11,7 @@ import { I18nProvider } from "@/i18n/client";
 import { isLocale, LOCALES } from "@/i18n/config";
 import { getDictionary } from "@/i18n/server";
 import { themeInitScript } from "@/lib/theme/init-script";
+import { ThemeSync } from "@/lib/theme/theme-sync";
 import "../globals.css";
 
 export async function generateStaticParams() {
@@ -54,6 +55,7 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
             <TooltipProvider>{children}</TooltipProvider>
           </TelegramProvider>
           <Toaster />
+          <ThemeSync />
           <NavigationTracker />
           {/* The only per-request part of the page: who is signed in. Everything else is prerendered. */}
           <Suspense fallback={null}>

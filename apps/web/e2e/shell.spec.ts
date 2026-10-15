@@ -45,10 +45,6 @@ for (const scheme of SCHEMES) {
 
     for (const screen of SCREENS) {
       test(`${screen.path} renders, passes axe and is captured`, async ({ page }, testInfo) => {
-        // Known bug: an unknown path is served as Next's "__next_error__" shell and the whole
-        // document renders on the client, where the inline themeInitScript never runs, so the page
-        // stays in the dark default on a light system. Remove this line once that is fixed.
-        test.fail(screen.status === 404 && scheme === "light", "not-found ignores the light scheme");
         const errors = collectErrors(page, screen.status === 404 ? [/Failed to load resource.*404/] : []);
         const response = await page.goto(screen.path, { waitUntil: "networkidle" });
 
@@ -65,8 +61,8 @@ for (const scheme of SCHEMES) {
       });
     }
 
+    // The phone opens the profile from the avatar in the header, the desktop from the side menu.
     test("the profile sheet opened from the avatar passes axe", async ({ page }, testInfo) => {
-      test.skip(!isPhone(testInfo), "On a phone the avatar sits in the header; the desktop opens the profile from the side menu.");
       await page.goto("/trainer", { waitUntil: "networkidle" });
 
       await page.getByRole("button", { name: "Профиль", exact: true }).click();

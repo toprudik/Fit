@@ -65,6 +65,14 @@ function subscribe(listener: () => void) {
   };
 }
 
+/**
+ * Puts the store's theme on <html>. The pre-paint script normally did that already; this covers
+ * documents React renders on the client (Next's 404 shell), where inline scripts never run.
+ */
+export function applyThemeAttribute() {
+  document.documentElement.setAttribute("data-theme", current().theme);
+}
+
 /** Saves the user's choice in a cookie (read by the pre-paint script) and applies it right away. */
 export function setThemePreference(preference: ThemePreference) {
   document.cookie = preferenceCookie(THEME_COOKIE, preference);
