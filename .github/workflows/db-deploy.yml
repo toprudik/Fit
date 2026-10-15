@@ -1,0 +1,50 @@
+name: Database deploy
+
+# Applies supabase/migrations to the hosted project "fit" (ref zxwabddqqtitybtsdeqp) once they land on main,
+# then runs the Supabase advisors against it. The only input is the repository secret SUPABASE_DB_URL: the
+# Session pooler connection string from the Supabase dashboard (Connect → Session pooler), password
+# percent-encoded. GitHub runners have no IPv6, so the direct db.<ref>.supabase.co host does not work here.
+
+on:
+  push:
+    branches: [main]
+    paths: ["supabase/migrations/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.repository == 'toprudik/Fit'
+    runs-on: ubuntu-latest
+    environment: supabase-fit
+    timeout-minutes: 15
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.121.0
+      - name: Check the connection secret
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::Repository secret SUPABASE_DB_URL is not set (Supabase dashboard → Connect → Session pooler)."
+            exit 1
+          fi
+      - name: Migrations that will be applied
+        run: supabase db push --db-url "$SUPABASE_DB_URL" --skip-vault --dry-run
+      - name: Apply migrations
+        run: supabase db push --db-url "$SUPABASE_DB_URL" --skip-vault --yes
+      # The schema already passes the advisors at warn level in CI (job "db"). Here they also see the hosted
+      # project's own settings (e.g. leaked password protection, which DaFit does not use: sign-in is Telegram
+      # only), so only errors fail the deploy and warnings stay in the log.
+      - name: Security advisors
+        run: supabase db advisors --db-url "$SUPABASE_DB_URL" --type security --fail-on error
+      - name: Performance advisors
+        run: supabase db advisors --db-url "$SUPABASE_DB_URL" --type performance --fail-on error

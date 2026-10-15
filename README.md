@@ -57,6 +57,8 @@ supabase stop          # when done
 
 After you add or edit a migration, `supabase db reset` rebuilds the database from all migrations. Commit the regenerated `database.types.ts` as the CLI wrote it, without reformatting: CI fails when it differs from the schema.
 
+Migrations reach the hosted project `fit` only through `main`: when a push to `main` changes `supabase/migrations/`, the workflow `Database deploy` runs `supabase db push` and the advisors against it (it can also be started by hand). It reads one repository secret, `SUPABASE_DB_URL`: the Session pooler connection string from the Supabase dashboard (Connect), with the password percent-encoded. Never edit the hosted schema by hand.
+
 ## Docs
 
 - `CLAUDE.md`: rules for coding agents
