@@ -8,7 +8,7 @@ from typing import Any
 import aiohttp
 import pytest
 from aiogram import Bot
-from aiogram.exceptions import TelegramRetryAfter
+from aiogram.exceptions import TelegramNetworkError, TelegramRetryAfter, TelegramUnauthorizedError
 from aiogram.methods import (
     GetChatMenuButton,
     GetMe,
@@ -50,6 +50,14 @@ class FakeTelegram(RecordingSession):
         self.webhook: dict[str, Any] = {"url": "", "has_custom_certificate": False, "pending_update_count": 0}
         #: Merged into getWebhookInfo answers, for states setWebhook cannot produce.
         self.webhook_override: dict[str, Any] = {}
+        #: Raised by the next getMe calls, one per call, before getMe answers normally.
+        self.get_me_failures: list[Exception] = []
+
+    async def make_request(self, bot: Bot, method: TelegramMethod[Any], timeout: int | None = None) -> Any:  # noqa: ASYNC109 (BaseSession signature)
+        if isinstance(method, GetMe) and self.get_me_failures:
+            self.requests.append(method)
+            raise self.get_me_failures.pop(0)
+        return await super().make_request(bot, method, timeout)
 
     def result_for(self, method: TelegramMethod[Any]) -> Any:
         match method:
@@ -161,6 +169,7 @@ class Harness:
                         bot=Bot(TOKEN, session=self.telegram),
                         http=http,
                         settle_seconds=0,
+                        network_retry_delays=(0, 0),
                         out=self.out,
                     )
             finally:
@@ -270,6 +279,43 @@ def test_username_mismatch_stops_before_anything(harness: Harness) -> None:
     assert harness.deployment.posts == []
     assert "the token belongs to @someone_else_bot, expected @fitconnection_bot" in harness.report
     assert harness.report.endswith("Result: FAILED\n")
+
+
+def network_error(cause: Exception) -> TelegramNetworkError:
+    """As aiogram raises it: wrapping the client error, whose text can hold the token URL."""
+    try:
+        raise TelegramNetworkError(
+            GetMe(), f"{type(cause).__name__}: https://api.telegram.org/bot{TOKEN}/getMe"
+        ) from cause
+    except TelegramNetworkError as error:
+        return error
+
+
+def test_get_me_is_retried_after_network_errors(harness: Harness) -> None:
+    harness.telegram.get_me_failures = [network_error(TimeoutError()), network_error(ConnectionResetError())]
+    assert harness.run() == 0, harness.report
+    assert harness.telegram.names()[:3] == ["GetMe", "GetMe", "GetMe"]
+    assert harness.status("bot") == "ok"
+
+
+def test_get_me_gives_up_after_three_tries(harness: Harness) -> None:
+    harness.telegram.get_me_failures = [network_error(TimeoutError()) for _ in range(3)]
+    assert harness.run() == 1
+    assert harness.telegram.names() == ["GetMe", "GetMe", "GetMe"]
+    assert harness.deployment.posts == []
+    assert (harness.status("bot"), harness.detail("bot")) == (
+        "failed",
+        "TelegramNetworkError (TimeoutError) after 3 tries",
+    )
+    assert TOKEN not in harness.report
+    assert TOKEN_SECRET_PART not in harness.report
+
+
+def test_other_get_me_errors_are_not_retried(harness: Harness) -> None:
+    harness.telegram.fail_on[GetMe] = TelegramUnauthorizedError(GetMe(), "Unauthorized")
+    assert harness.run() == 1
+    assert harness.telegram.names() == ["GetMe"]
+    assert harness.detail("bot") == "TelegramUnauthorizedError: Unauthorized"
 
 
 def test_expected_username_is_case_insensitive(harness: Harness) -> None:

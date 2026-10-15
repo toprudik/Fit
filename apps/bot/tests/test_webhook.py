@@ -250,13 +250,27 @@ def test_describe_error() -> None:
     )
     assert (
         describe_error(TelegramNetworkError(SEND, "ClientConnectorError: https://api.telegram.org/bot<token>"))
-        == "TelegramNetworkError"
+        == "TelegramNetworkError (ClientConnectorError)"
     )
+    assert describe_error(TelegramNetworkError(SEND, "Request timeout error")) == "TelegramNetworkError (TimeoutError)"
+    assert describe_error(TelegramNetworkError(SEND, "https://api.telegram.org/bot<token>")) == "TelegramNetworkError"
     assert (
         describe_error(TelegramRetryAfter(SendMessage(chat_id=42, text="x"), "Too Many Requests", 3))
         == "TelegramRetryAfter"
     )
     assert describe_error(decode_error(True)) == "ClientDecodeError"
+
+
+def test_describe_error_names_the_wrapped_cause_only() -> None:
+    try:
+        try:
+            raise OSError(f"cannot reach https://api.telegram.org/bot{TOKEN}/sendMessage")
+        except OSError as cause:
+            raise TelegramNetworkError(SEND, f"ClientOSError: {cause}") from cause
+    except TelegramNetworkError as error:
+        described = describe_error(error)
+    assert described == "TelegramNetworkError (OSError)"
+    assert TOKEN not in described
 
 
 def test_no_leaks_in_any_scenario(settings: Settings, caplog: pytest.LogCaptureFixture) -> None:

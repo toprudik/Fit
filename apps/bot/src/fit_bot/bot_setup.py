@@ -18,7 +18,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 import aiohttp
 from aiogram import Bot, Dispatcher
-from aiogram.exceptions import TelegramRetryAfter
+from aiogram.exceptions import TelegramNetworkError, TelegramRetryAfter
 from aiogram.types import BotCommand, MenuButtonWebApp, User
 
 from fit_bot.config import (
@@ -36,6 +36,10 @@ from fit_bot.webhook import SECRET_HEADER, describe_error, make_bot
 MAX_CONNECTIONS: Final = 10
 PROBE_TIMEOUT_SECONDS: Final = 15
 SETTLE_SECONDS: Final = 5.0
+#: Setup is not latency-bound, so its Bot API calls get more time than the webhook's.
+SETUP_API_TIMEOUT: Final = 30.0
+#: Pauses before getMe is retried after a network error (three tries in all).
+NETWORK_RETRY_DELAYS: Final = (5.0, 15.0)
 MAX_PENDING_UPDATES: Final = 10
 CHECK_ERROR_WINDOW: Final = timedelta(hours=1)
 _PLAIN: Final = re.compile(r"[A-Za-z0-9._-]{1,64}")
@@ -68,12 +72,27 @@ def probe_update_body() -> bytes:
     return json.dumps(update).encode()
 
 
-async def check_identity(bot: Bot, expected_username: str) -> tuple[Step, User | None]:
-    """getMe; the user is None when the step failed (setup stops then)."""
-    try:
-        me = await bot.get_me()
-    except Exception as error:
-        return Step("bot", "failed", describe_error(error)), None
+async def check_identity(
+    bot: Bot, expected_username: str, retry_delays: Sequence[float] = NETWORK_RETRY_DELAYS
+) -> tuple[Step, User | None]:
+    """getMe; the user is None when the step failed (setup stops then).
+
+    getMe is the first request of a run, so a network error here is retried after each delay: a runner's first
+    connection to Telegram can stall, and nothing has been written yet.
+    """
+    me: User | None = None
+    for attempt, delay in enumerate((*retry_delays, None)):
+        try:
+            me = await bot.get_me()
+            break
+        except TelegramNetworkError as error:
+            if delay is None:
+                tries = f"{attempt + 1} tries" if attempt else "1 try"
+                return Step("bot", "failed", f"{describe_error(error)} after {tries}"), None
+            await asyncio.sleep(delay)
+        except Exception as error:
+            return Step("bot", "failed", describe_error(error)), None
+    assert me is not None
     username = me.username or ""
     if username.lower() != expected_username.lower():
         return Step("bot", "failed", f"the token belongs to @{username}, expected @{expected_username}"), None
@@ -382,6 +401,7 @@ async def run_setup(
     bot: Bot | None = None,
     http: aiohttp.ClientSession | None = None,
     settle_seconds: float = SETTLE_SECONDS,
+    network_retry_delays: Sequence[float] = NETWORK_RETRY_DELAYS,
     out: TextIO = sys.stdout,
 ) -> int:
     """Runs every step of section 4.1, prints the report and returns the exit code (0 ok, 1 a step failed)."""
@@ -395,13 +415,15 @@ async def run_setup(
     own_bot = bot is None
     own_http = http is None
     if bot is None:
-        bot = make_bot(settings)
+        bot = make_bot(settings, timeout=SETUP_API_TIMEOUT)
     if http is None:
         http = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=PROBE_TIMEOUT_SECONDS))
     dp = build_dispatcher()
     steps: list[Step] = []
     try:
-        await _run_steps(steps, bot, dp, http, settings, check_only, expected_username, settle_seconds)
+        await _run_steps(
+            steps, bot, dp, http, settings, check_only, expected_username, settle_seconds, network_retry_delays
+        )
     finally:
         if own_http:
             await http.close()
@@ -424,8 +446,9 @@ async def _run_steps(
     check_only: bool,
     expected_username: str,
     settle_seconds: float,
+    network_retry_delays: Sequence[float],
 ) -> None:
-    identity, me = await check_identity(bot, expected_username)
+    identity, me = await check_identity(bot, expected_username, network_retry_delays)
     steps.append(identity)
     if me is None:
         return
