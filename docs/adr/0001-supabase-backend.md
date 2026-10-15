@@ -11,7 +11,7 @@ Fit is a new web application deployed on Vercel. It needs a Postgres database, u
 
 Use Supabase (Postgres, Auth, Storage) as the backend.
 
-- Project: `fit` (ref `zxwabddqqtitybtsdeqp`), organization Strax, region `us-east-1` — same region as Vercel's default functions to keep latency low.
+- Project: `fit` (ref `zxwabddqqtitybtsdeqp`), organization Strax, region `us-east-1`, the same region as Vercel's default functions, to keep latency low.
 - API URL: `https://zxwabddqqtitybtsdeqp.supabase.co`.
 - Clients use the **publishable key** (`sb_publishable_...`), not the legacy `anon` JWT key.
 - The secret / service-role key is server-only: it lives in Vercel environment variables and local `.env.local`, never in the repo or in client bundles.
