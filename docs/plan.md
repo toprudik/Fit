@@ -15,6 +15,19 @@
 
 Волна 4: январь–февраль 2027, отдельный план после первых итогов беты.
 
+## Где мы сейчас (15.10.2026)
+
+Неделя 0 почти закрыта. Сделано и работает в продакшене:
+- оболочка, дизайн-система, темы и RU/EN на `https://dafit-web-eight.vercel.app`, вход через Telegram на сайте и в Mini App ([#1](https://github.com/toprudik/Fit/pull/1));
+- схема волны 1 с RLS и pgTAP-тестами применена к Supabase `fit` ([#3](https://github.com/toprudik/Fit/pull/3)), решения владельца Q60–Q65 ([#4](https://github.com/toprudik/Fit/pull/4)); миграции из `main` применяет workflow «Database deploy»;
+- бот @fitconnection_bot на Vercel (проект `dafit-bot`, вебхук, `/start`, `/help`, RU/EN), настройку делает workflow «Bot setup» ([#5](https://github.com/toprudik/Fit/pull/5), [#6](https://github.com/toprudik/Fit/pull/6), Q66).
+
+Осталось в неделе 0, по порядку:
+1. Outbox уведомлений: отправка из `notification_outbox` защищённым маршрутом web, вызов раз в минуту через `pg_cron` и `pg_net`, тихие часы, повторы и учёт доставки (ADR 0006).
+2. Перенос языка, темы и последней зоны из cookie в `user_settings`.
+
+Потом неделя 1 «Люди» по таблице выше.
+
 ## Честная оценка рисков
 
 - **Главный риск: волны 2–3 за ~2 недели.** Волна 1 приоритетна и не режется; в декабрь, вероятно, переедет часть волны 3 (геймификация, делегирование).
@@ -28,10 +41,10 @@
 |---|---|---|
 | Sam | Утвердить документацию и ответить на открытые вопросы | 14–15 окт |
 | Sam | Утвердить дизайн-систему и макеты | до 19 окт |
-| Sam | Supabase → Auth: выключить «Allow new users to sign up» (ADR 0004) | сейчас |
+| Sam | Supabase → Auth: выключить «Allow new users to sign up» (ADR 0004) | сделано 15 окт |
 | Sam | @BotFather → Login Widget: добавить URL превью и `…/auth/telegram/callback`, получить Client ID/Secret | после деплоя превью (неделя 0) |
 | Sam | Подключить репозиторий к Vercel (GitHub App Vercel с доступом к `toprudik/Fit`) и вставить секреты в Environment Variables | неделя 0 |
-| Sam | Бот: проект Vercel `dafit-bot` и его переменные, секрет репозитория `TELEGRAM_BOT_TOKEN`, в @BotFather адрес Mini App и аватар (шаги в README) | неделя 0 |
+| Sam | Бот: проект Vercel `dafit-bot` и его переменные, секрет репозитория `TELEGRAM_BOT_TOKEN`, в @BotFather адрес Mini App и аватар (шаги в README) | сделано 15 окт, кроме проверки адреса Mini App |
 | Давид | Список 5 тренеров, их формат работы (офлайн/онлайн, группы, цены), 1–2 тренера для репетиции | до 26 окт |
 | Давид | Закрытая Telegram-группа беты | до 17 ноя |
 | Sam / Давид | Выдать Pro всем 5 тренерам беты при онбординге (админка → «Тарифы и выдачи»); Premium клиентам по решению | 24 ноя |
