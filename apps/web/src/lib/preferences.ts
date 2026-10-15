@@ -1,11 +1,37 @@
+import type { Locale } from "@/i18n/config";
+import type { Zone } from "@/lib/navigation/zones";
+import type { ThemePreference } from "@/lib/theme/theme";
 import { cookieAttributes, cookieAttributesString, SECURE_COOKIES } from "./cookie-attributes";
 
 /**
- * Device-level interface preferences (language, theme, last zone) live in plain cookies so the
- * proxy and the pre-paint script can read them. They hold no personal data. Once user_settings
- * exists (docs/architecture/data-model.md) the server will also persist them per account.
- * The server and the browser write them with the same attributes (lib/cookie-attributes.ts).
+ * Interface preferences (language, theme, last zone) live in plain cookies so the proxy and the
+ * pre-paint script can read them. They hold no personal data. The server also saves each choice to
+ * the account (user_settings), and sign-in brings the account's choices to the device (ADR 0015).
+ * The server and the browser write the cookies with the same attributes (lib/cookie-attributes.ts).
  */
+export type Preferences = { locale: Locale; theme: ThemePreference; lastZone: Zone };
+
+/** Route handler that saves preferences to the signed-in user's account. */
+export const PREFERENCES_ENDPOINT = "/api/settings/preferences";
+
+/**
+ * Saves choices to the account. Never throws: signed out, offline or slow, the cookie the caller
+ * already wrote keeps the choice on this device. keepalive lets it finish while the page unloads.
+ */
+export async function saveAccountPreferences(patch: Partial<Preferences>, timeoutMs = 5000): Promise<void> {
+  try {
+    await fetch(PREFERENCES_ENDPOINT, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+      keepalive: true,
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch {
+    // The cookie still holds the choice on this device.
+  }
+}
+
 export const PREFERENCE_MAX_AGE = 60 * 60 * 24 * 365;
 
 export const preferenceCookieOptions = {

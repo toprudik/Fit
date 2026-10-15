@@ -3,7 +3,7 @@
 import { createContext, use, useMemo } from "react";
 import { LOCALE_COOKIE, type Locale } from "./config";
 import { dictionaries, type Dictionary } from "./dictionaries";
-import { preferenceCookie } from "@/lib/preferences";
+import { preferenceCookie, saveAccountPreferences } from "@/lib/preferences";
 
 type I18nValue = { locale: Locale; t: Dictionary };
 
@@ -23,9 +23,12 @@ export function useI18n(): I18nValue {
 
 /**
  * Saves the language choice and reloads: the proxy picks the locale from this cookie, and a full
- * reload swaps every server-rendered string, <html lang> and the client router cache at once.
+ * reload swaps every server-rendered string, <html lang> and the client router cache at once. The
+ * reload waits for the account to save it: the Mini App's sign-in on the next page load brings the
+ * account's language back to the device.
  */
-export function switchLocale(locale: Locale) {
+export async function switchLocale(locale: Locale) {
   document.cookie = preferenceCookie(LOCALE_COOKIE, locale);
+  await saveAccountPreferences({ locale });
   window.location.reload();
 }

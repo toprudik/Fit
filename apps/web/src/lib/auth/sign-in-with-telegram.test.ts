@@ -9,12 +9,13 @@ const USER_ID = "8d0c6f6e-2f7a-4a43-9a4e-4a8f0f6b1c11";
 const admin = vi.hoisted(() => ({
   upserts: [] as { table: string; row: Record<string, unknown>; options: unknown }[],
   upsertError: null as { code: string } | null,
+  createError: null as { code: string } | null,
 }));
 vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: () => ({
     auth: {
       admin: {
-        createUser: async () => ({ data: {}, error: null }),
+        createUser: async () => ({ data: {}, error: admin.createError }),
         generateLink: async () => ({
           data: { user: { id: USER_ID, app_metadata: { telegram_id: 42 } }, properties: { hashed_token: "hashed" } },
           error: null,
@@ -48,6 +49,7 @@ const identity: TelegramIdentity = {
 beforeEach(() => {
   admin.upserts = [];
   admin.upsertError = null;
+  admin.createError = null;
   verifyOtp.mockClear();
   vi.useFakeTimers({ now: new Date("2026-10-15T09:30:00.000Z"), toFake: ["Date"] });
 });
@@ -57,8 +59,13 @@ afterEach(() => {
 });
 
 describe("signInWithTelegram", () => {
+  it("says the account was there already when its email exists", async () => {
+    admin.createError = { code: "email_exists" };
+    await expect(signInWithTelegram(identity)).resolves.toEqual({ userId: USER_ID, newAccount: false });
+  });
+
   it("writes the profile from Telegram with the sign-in time, clears the blocked-bot mark and nothing else", async () => {
-    await expect(signInWithTelegram(identity)).resolves.toEqual({ userId: USER_ID });
+    await expect(signInWithTelegram(identity)).resolves.toEqual({ userId: USER_ID, newAccount: true });
 
     // user_settings comes from the database trigger on profiles, so profiles is the only table written.
     expect(admin.upserts).toEqual([

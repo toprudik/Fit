@@ -65,6 +65,17 @@ test.describe("theme inside Telegram", () => {
     await expect(html(page)).toHaveAttribute("data-theme", "dark");
   });
 
+  test("Светлая saved to the account on another device applies as soon as the sign-in answers", async ({ page }) => {
+    const errors = collectErrors(page);
+    await openInTelegram(page, "/settings", { theme: "dark", signIn: { status: 200, body: { ok: true, fresh: false, theme: "light" } } });
+    await expectMiniAppReady(page);
+
+    await expect(html(page)).toHaveAttribute("data-theme", "light");
+    await expect(radio(page, "Светлая")).toHaveAttribute("aria-checked", "true");
+    await expectChrome(page, BG.light);
+    expect(errors()).toEqual([]);
+  });
+
   test("Тёмная pinned in a light Telegram paints the chrome black", async ({ page }) => {
     await openInTelegram(page, "/settings", { theme: "light" });
     await expectMiniAppReady(page);

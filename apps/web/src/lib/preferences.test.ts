@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { cookieAttributes } from "./cookie-attributes";
-import { PREFERENCE_MAX_AGE, preferenceCookie, preferenceCookieOptions, readCookie } from "./preferences";
+import {
+  PREFERENCE_MAX_AGE,
+  PREFERENCES_ENDPOINT,
+  preferenceCookie,
+  preferenceCookieOptions,
+  readCookie,
+  saveAccountPreferences,
+} from "./preferences";
 
 describe("preference cookies", () => {
   it("last a year", () => {
@@ -82,5 +89,21 @@ describe("readCookie", () => {
       const pair = preferenceCookie("pref", value, false).split("; ")[0];
       expect(readCookie(`other=1; ${pair}`, "pref")).toBe(value);
     }
+  });
+});
+
+describe("saveAccountPreferences", () => {
+  it("sends the patch to the account and survives a failed request", async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await saveAccountPreferences({ theme: "light" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      PREFERENCES_ENDPOINT,
+      expect.objectContaining({ method: "PATCH", body: '{"theme":"light"}', keepalive: true }),
+    );
+
+    fetchMock.mockRejectedValueOnce(new TypeError("offline"));
+    await expect(saveAccountPreferences({ locale: "en" })).resolves.toBeUndefined();
+    vi.unstubAllGlobals();
   });
 });

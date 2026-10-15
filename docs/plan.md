@@ -17,16 +17,14 @@
 
 ## Где мы сейчас (15.10.2026)
 
-Неделя 0 почти закрыта. Сделано и работает в продакшене:
+Неделя 0 закрыта. Сделано и работает в продакшене:
 - оболочка, дизайн-система, темы и RU/EN на `https://dafit-web-eight.vercel.app`, вход через Telegram на сайте и в Mini App ([#1](https://github.com/toprudik/Fit/pull/1));
 - схема волны 1 с RLS и pgTAP-тестами применена к Supabase `fit` ([#3](https://github.com/toprudik/Fit/pull/3)), решения владельца Q60–Q65 ([#4](https://github.com/toprudik/Fit/pull/4)); миграции из `main` применяет workflow «Database deploy»;
 - бот @fitconnection_bot на Vercel (проект `dafit-bot`, вебхук, `/start`, `/help`, RU/EN), настройку делает workflow «Bot setup» ([#5](https://github.com/toprudik/Fit/pull/5), [#6](https://github.com/toprudik/Fit/pull/6), Q66);
-- outbox уведомлений: маршрут `POST /api/cron/notifications`, вызов раз в минуту через `pg_cron` и `pg_net`, тихие часы, повторы и учёт доставки (ADR 0006). Сообщения начнут уходить, когда в Vercel `dafit-web` появится `CRON_SECRET`, а в Supabase будет выполнен `private.configure_notification_dispatch` (шаги в ADR 0006). Тексты сообщений добавляются вместе с фичами, которые их ставят в очередь; сейчас есть только тестовое сообщение `bot_test`.
+- outbox уведомлений: маршрут `POST /api/cron/notifications`, вызов раз в минуту через `pg_cron` и `pg_net`, тихие часы, повторы и учёт доставки (ADR 0006). `CRON_SECRET` и `private.configure_notification_dispatch` настроены, тестовое сообщение дошло ([#8](https://github.com/toprudik/Fit/pull/8)). Тексты сообщений добавляются вместе с фичами, которые их ставят в очередь; сейчас есть только тестовое сообщение `bot_test`.
+- язык, тема и последняя зона сохраняются в аккаунте (`user_settings`) и переезжают на другие устройства при входе; cookie остались быстрым путём для proxy и скрипта темы (ADR 0015).
 
-Осталось в неделе 0:
-1. Перенос языка, темы и последней зоны из cookie в `user_settings`.
-
-Потом неделя 1 «Люди» по таблице выше.
+Дальше неделя 1 «Люди» по таблице выше.
 
 ## Честная оценка рисков
 
