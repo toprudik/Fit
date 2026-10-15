@@ -32,7 +32,7 @@ Two ways to **prove** a Telegram identity, one way to **create a session**:
 
 - Authentication → Sign In / Providers: **Allow new users to sign up = off** (admin `createUser` still works); no password or social providers enabled.
 - Secure email change on. Users must not be able to sign up or change email to a `tg…@users.fit.invalid` address.
-- `signInWithTelegram()` additionally refuses any account whose `app_metadata.provider/telegram_id` don't match the verified identity.
+- `signInWithTelegram()` additionally refuses any account whose `app_metadata.telegram_id` doesn't match the verified identity. `app_metadata.provider` is not checked: Supabase Auth owns it and rewrites it to `email` when the magic-link token is redeemed.
 
 ## Hardening in code
 

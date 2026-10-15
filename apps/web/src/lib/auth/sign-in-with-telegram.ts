@@ -2,6 +2,7 @@ import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { TelegramIdentity } from "@/lib/telegram/identity";
+import { isTelegramAccount } from "./telegram-account";
 
 /**
  * Supabase identity for a Telegram user. Telegram has no email, so each user gets a
@@ -31,7 +32,8 @@ export async function signInWithTelegram(identity: TelegramIdentity): Promise<{ 
   const created = await admin.auth.admin.createUser({
     email,
     email_confirm: true,
-    app_metadata: { provider: "telegram", telegram_id: identity.telegramId },
+    // Only our own key: Supabase Auth owns app_metadata.provider and rewrites it on sign-in.
+    app_metadata: { telegram_id: identity.telegramId },
     user_metadata: metadata,
   });
   if (created.error && created.error.code !== "email_exists") {
@@ -46,8 +48,7 @@ export async function signInWithTelegram(identity: TelegramIdentity): Promise<{ 
 
   // The account behind this email must be OUR Telegram account for this user. Guards against anyone
   // pre-registering tg<id>@… through another path (public sign-ups must also be disabled in Supabase).
-  const appMeta = link.data.user.app_metadata ?? {};
-  if (appMeta.provider !== "telegram" || appMeta.telegram_id !== identity.telegramId) {
+  if (!isTelegramAccount(link.data.user.app_metadata, identity.telegramId)) {
     throw new Error("Supabase user does not belong to this Telegram account");
   }
 
