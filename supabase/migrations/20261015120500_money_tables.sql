@@ -329,7 +329,7 @@ revoke all on table public.payment_links from anon, authenticated;
 
 -- money_events: who changed a pass, a freeze or a payment, when, what and why (PRD line 27, decisions Q21
 -- «История с причинами», PRD 2.8-13). Bookings have booking_events and the ledger is its own history; passes,
--- freezes and payments are written directly by users too, so AFTER triggers fill this table for every writer.
+-- freezes and payments are written directly by users too, so BEFORE triggers on them fill this table for every writer.
 -- Append-only. pass_id, payment_id and freeze_id carry no foreign key: the history outlives a deleted pass or
 -- freeze. client_id and coaching_id move with the pair (account deletion, card merge), like the ledger (R28).
 create table public.money_events (
