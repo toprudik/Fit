@@ -96,6 +96,7 @@ comment on column public.week_template_items.meeting_url is
   'Online link for sessions booked from these slots; copied to the session by the booking RPC, never shown on slots.';
 
 create index week_template_items_template_id_idx on public.week_template_items (template_id);
+create index week_template_items_location_id_idx on public.week_template_items (location_id);
 
 create trigger week_template_items_set_updated_at
   before update on public.week_template_items
@@ -162,6 +163,7 @@ comment on column public.slots.template_item_id is 'Template item that generated
 
 create index slots_trainer_id_starts_at_idx on public.slots (trainer_id, starts_at);
 create index slots_starts_at_idx on public.slots (starts_at) where status = 'open';
+create index slots_template_item_id_idx on public.slots (template_item_id);
 
 create trigger slots_set_updated_at
   before update on public.slots

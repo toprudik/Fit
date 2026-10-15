@@ -265,6 +265,7 @@ comment on column public.contact_requests.status is
 create index contact_requests_recipient_id_status_idx on public.contact_requests (recipient_id, status);
 create index contact_requests_requester_id_recipient_id_created_at_idx
   on public.contact_requests (requester_id, recipient_id, created_at desc);
+create index contact_requests_coaching_id_idx on public.contact_requests (coaching_id);
 
 create trigger contact_requests_set_updated_at
   before update on public.contact_requests

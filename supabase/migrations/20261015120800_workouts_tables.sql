@@ -166,6 +166,7 @@ comment on column public.workout_logs.created_by is 'Author of the log; stamped 
 create index workout_logs_client_id_performed_at_idx on public.workout_logs (client_id, performed_at desc);
 create index workout_logs_coaching_id_performed_at_idx on public.workout_logs (coaching_id, performed_at desc);
 create index workout_logs_created_by_idx on public.workout_logs (created_by);
+create index workout_logs_template_id_idx on public.workout_logs (template_id) where template_id is not null;
 
 create trigger workout_logs_set_updated_at
   before update on public.workout_logs

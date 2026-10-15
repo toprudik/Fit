@@ -6,7 +6,7 @@ create table public.plans (
   code        text primary key check (code ~ '^[a-z]+_[a-z]+$'),   -- 'trainer_free', 'trainer_pro', 'client_free', 'client_premium'
   side        public.plan_side not null,
   rank        smallint not null check (rank >= 0),                   -- 0 = free, 1 = paid; a higher rank gives more
-  title       jsonb not null check (title ? 'ru' and title ? 'en'),
+  title       jsonb not null check (jsonb_typeof(title) = 'object' and title ? 'ru' and title ? 'en'),
   limits      jsonb not null default '{}' check (jsonb_typeof(limits) = 'object'),
   features    text[] not null default '{}',
   price_minor bigint,                                                -- null during the beta

@@ -2,7 +2,7 @@
 -- contract §1.4 file 24, §1.5 file 26, §6 800_plans; decisions Q56-Q59, R57-R59, R85).
 begin;
 \ir _helpers.psql
-select plan(96);
+select plan(97);
 
 -- Fixtures: A is on Pro and has C and D live and E ended; B is Free with C on trial. F is a Free trainer with
 -- C on trial, D active, its card N, E ended and an anonymized pair (stub). P, X, R and U hold client Premium
@@ -90,6 +90,13 @@ select throws_ok($$ update public.plans set rank = 5 where code = 'trainer_pro' 
 
 select tests.authenticate_as_anon();
 select throws_ok($$ select code from public.plans $$, '42501', null, 'anon cannot read plans');
+
+select tests.clear_authentication();
+select throws_ok(
+  $$ insert into public.plans (code, side, rank, title) values ('client_gold', 'client', 2, '["ru", "en"]') $$,
+  '23514', 'new row for relation "plans" violates check constraint "plans_title_check"',
+  'a plan title must be an object with ru and en, not an array of the keys'
+);
 
 -- ---------------------------------------------------------------------------------------------------------
 -- plan_grants
