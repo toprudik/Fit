@@ -1,47 +1,76 @@
-import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
-import { cva, type VariantProps } from "class-variance-authority";
-
+import { cva } from "class-variance-authority";
+import type { LucideIcon } from "lucide-react";
+import { ButtonBase } from "@/components/ui/button-base";
 import { cn } from "@/lib/utils";
 
+/**
+ * Button look (docs/design/components/Button). Also styles links directly:
+ * `<Link className={buttonVariants({ variant: "secondary" })}>`.
+ */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 aria-invalid:border-destructive",
+  [
+    "relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap select-none",
+    "transition-[scale,background-color,opacity] duration-[var(--duration-instant)] ease-standard active:scale-[0.97]",
+    // A loading button is disabled too, but keeps full color: the spinner says what's going on.
+    "disabled:cursor-default disabled:not-aria-busy:opacity-(--opacity-disabled)",
+    "aria-disabled:pointer-events-none aria-disabled:not-aria-busy:opacity-(--opacity-disabled)",
+    "motion-reduce:transition-none motion-reduce:active:scale-100",
+  ],
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
-        destructive: "bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20",
-        outline: "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        primary: "bg-accent text-on-accent",
+        secondary: "bg-surface-2 text-ink hover:bg-surface-3",
+        ghost: "bg-transparent text-accent-ink hover:bg-surface-3",
+        destructive: "bg-danger-soft text-danger",
       },
       size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
-        icon: "size-9",
+        sm: "h-9 rounded-sm px-4 text-subhead font-semibold",
+        md: "h-11 rounded-md px-5 text-headline",
+        lg: "h-13 rounded-md px-6 text-headline",
+      },
+      block: {
+        true: "w-full",
+        false: "",
       },
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
+    // Ghost buttons sit in headers and rows, so they keep tight padding at every size.
+    compoundVariants: [{ variant: "ghost", className: "px-3" }],
+    defaultVariants: { variant: "primary", size: "md", block: false },
   },
 );
 
-function Button({
-  className,
-  variant,
-  size,
-  asChild = false,
-  ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-  }) {
-  const Comp = asChild ? Slot : "button";
-  return <Comp data-slot="button" className={cn(buttonVariants({ variant, size, className }))} {...props} />;
+type ButtonProps = React.ComponentProps<"button"> & {
+  /** One `primary` per screen; `destructive` only for actions that can't be undone. */
+  variant?: "primary" | "secondary" | "ghost" | "destructive";
+  /** 36, 44 or 52 px tall; `lg` is the bottom button of a screen. */
+  size?: "sm" | "md" | "lg";
+  /** Full width. */
+  block?: boolean;
+  /** Spinner in place of the icon; the button keeps its width and ignores presses. */
+  loading?: boolean;
+  /** Lucide icon before the label. */
+  icon?: LucideIcon;
+  /** Gives the button look to the single child element, e.g. a `Link`. */
+  asChild?: boolean;
+};
+
+/**
+ * DaFit button. The label is a verb that says what happens ("Записаться"). Pressing the primary
+ * button vibrates lightly in Telegram.
+ */
+function Button({ variant = "primary", size = "md", block = false, loading = false, icon: Icon, className, ...props }: ButtonProps) {
+  return (
+    <ButtonBase
+      data-slot="button"
+      data-variant={variant}
+      className={cn(buttonVariants({ variant, size, block }), className)}
+      icon={Icon ? <Icon aria-hidden size={20} strokeWidth={1.75} /> : null}
+      loading={loading}
+      haptic={variant === "primary"}
+      {...props}
+    />
+  );
 }
 
 export { Button, buttonVariants };

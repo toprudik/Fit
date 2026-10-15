@@ -36,6 +36,7 @@ Web on Vercel; the bot runs serverless on Vercel in webhook mode, and notificati
 
 ```bash
 cd apps/web && npm run lint && npm run typecheck && npm test && npm run build
+cd apps/web && npm run e2e   # after build: Playwright + axe, phone and desktop, both themes
 cd apps/bot && uv run ruff check . && uv run pytest
 ```
 

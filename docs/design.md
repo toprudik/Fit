@@ -41,9 +41,10 @@ Sam в целом одобрил дизайн 14 октября 2026 года. �
 
 ## Как это попадает в код
 
-Перенос делаем отдельным изменением в `apps/web`:
+Перенос сделан 14 октября 2026 года (ADR 0015 описывает язык и настройки). Правила, по которым он сделан и по которым меняем код дальше:
 
 1. В `src/app/globals.css` объявляем CSS-переменные из `docs/design/tokens.json` под теми же именами (`--surface-1`, `--accent`, `--ink-2` и так далее). Тему переключает атрибут `data-theme` на `<html>`. Переменные shadcn (`--background`, `--primary`, `--ring` и другие) ссылаются на токены DaFit. Сопоставление с `--tg-theme-*` убираем (ADR 0010).
 2. Шрифты Onest и Tektur Narrow подключаем как локальные файлы через `next/font/local` вместо пакета `geist`, с `font-display: swap`.
 3. Компоненты собираем на shadcn/ui и Tailwind по правилам из `docs/design/components/<Имя>/README.md`. Бандл `docs/design/components/bundle.js` служит эталоном вида и поведения, приложение от него не зависит. Вид сверяем со скриншотами в `docs/design/mockups/`.
 4. Иконки берём из `lucide-react`. Да-момент анимируем через `motion/react` и выключаем при `prefers-reduced-motion`.
+5. Компоненты лежат в `apps/web/src/components/ui`, оболочка (шапка, таб-бар, боковое меню, раскладка «список и карточка») в `apps/web/src/components/shell`. Строки интерфейса хранятся только в `apps/web/src/i18n/dictionaries`. Пока перенесены компоненты, которые нужны оболочке. Chip, Switch, TextField, Badge, TierLock, DaRing, StatTile, PassCard и SessionRow пишем вместе с первыми экранами, которым они понадобятся.

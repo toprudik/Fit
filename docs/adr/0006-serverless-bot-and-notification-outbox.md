@@ -1,6 +1,6 @@
 # 6. Bot runs serverless; notifications go through a database outbox
 
-- Status: accepted — supersedes the "bot runs as a Docker container" part of ADR 0003
+- Status: accepted; supersedes the "bot runs as a Docker container" part of ADR 0003
 - Date: 2026-10-13
 
 The beta must cost nothing, and long-running bot hosts are not free. So in deployed environments the aiogram bot runs as a **Python serverless function on Vercel in webhook mode** (aiogram feeds each update from the request; the `X-Telegram-Bot-Api-Secret-Token` check stays). Docker (`docker compose`) remains the local development environment, where the bot uses polling. `docker-compose.prod.yml` stays as the self-hosting path for after the beta.

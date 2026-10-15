@@ -1,12 +1,12 @@
-# DaFit — модель данных
+# DaFit: модель данных
 
 - Статус: проект (до первой миграции схемы домена)
 - Дата: 2026-10-13
 - Источники: [`docs/decisions.md`](../decisions.md) (первоисточник), [`CONTEXT.md`](../../CONTEXT.md) (словарь и имена в коде), [`docs/prd/README.md`](../prd/README.md) (волны), [`docs/prd/wave-2.md`](../prd/wave-2.md), ADR [0001](../adr/0001-supabase-backend.md), [0002](../adr/0002-secrets-handling.md), [0004](../adr/0004-telegram-auth.md), миграция `supabase/migrations/20261012204303_profiles.sql`.
 
-Документ — основа для миграций. Блоки SQL ниже — **спецификация**, а не готовые миграции: порядок создания, `comment on`, триггеры `set_updated_at` и гранты дописываются при переносе в `supabase/migrations/`. Если документ расходится с `decisions.md`, прав журнал. Решения, которых в журнале нет, собраны в разделе «Допущения» в конце.
+По этому документу пишутся миграции. Блоки SQL ниже задают **спецификацию** и готовыми миграциями не считаются. Порядок создания, `comment on`, триггеры `set_updated_at` и гранты дописываются при переносе в `supabase/migrations/`. Если документ расходится с `decisions.md`, прав журнал. Решения, которых в журнале нет, собраны в разделе «Допущения» в конце.
 
-Имена таблиц — английские, во множественном числе, от имён из `CONTEXT.md`: `coaching` → `coachings`, `pass` → `passes`, `set` → `workout_sets` (`set` — ключевое слово SQL), `charge`/`waiver` → строки `ledger_entries`.
+Имена таблиц английские, во множественном числе, от имён из `CONTEXT.md`: `coaching` → `coachings`, `pass` → `passes`, `set` → `workout_sets` (`set` занято как ключевое слово SQL), `charge`/`waiver` → строки `ledger_entries`.
 
 ---
 
@@ -15,68 +15,68 @@
 ### 1.1. Платформа и RLS
 
 - Supabase Postgres (ADR 0001). PostgREST открывает схемы `public` и `graphql_public`. Всё, что клиент не должен вызывать или читать напрямую, живёт в **неэкспонированных** схемах:
-  - `private` — вспомогательные функции для RLS, триггерные функции, внутренние таблицы (outbox-курсоры и т. п.);
-  - `analytics` — материализованные представления для админ-аналитики.
-- **RLS включён на каждой таблице в `public`**, политики явные; по умолчанию запрещено всё. Таблица без политик на запись — значит, писать в неё может только серверный код или SECURITY DEFINER-функция (так уже сделано для `profiles`).
-- В политиках `auth.uid()` всегда пишется как `(select auth.uid())`, а функции-помощники — как `(select private.fn(...))`, где это возможно: Postgres вычисляет их один раз на запрос (initPlan), а не на каждую строку.
+  - `private`: вспомогательные функции для RLS, триггерные функции, внутренние таблицы (outbox-курсоры и т. п.);
+  - `analytics`: материализованные представления для админ-аналитики.
+- **RLS включён на каждой таблице в `public`**, политики явные; по умолчанию запрещено всё. Если у таблицы нет политик на запись, писать в неё может только серверный код или SECURITY DEFINER-функция (так уже сделано для `profiles`).
+- В политиках `auth.uid()` всегда пишется как `(select auth.uid())`, а функции-помощники как `(select private.fn(...))`, где это возможно: Postgres вычисляет их один раз на запрос (initPlan), а не на каждую строку.
 - Каждый столбец, на который ссылается политика (`trainer_id`, `client_id`, `coaching_id`, `session_id`, `user_id`), проиндексирован.
 - Анонимной роли (`anon`) доступны только SECURITY DEFINER-функции витрины (`get_trainer_showcase`, `get_trial_link`), не таблицы.
-- После каждой DDL-миграции — Supabase security advisors (CLAUDE.md).
+- После каждой DDL-миграции запускаются Supabase security advisors (CLAUDE.md).
 
 ### 1.2. Идентификаторы и общие столбцы
 
-- Первичный ключ — `uuid default gen_random_uuid()`. Исключение — объёмные журналы, где нужен только порядок (`admin_audit_log`, `notification_outbox`, `booking_events`, `product_events`): `bigint generated always as identity`.
-- `created_at timestamptz not null default now()`; изменяемым таблицам — `updated_at timestamptz not null default now()` + триггер `public.set_updated_at()` (уже есть в миграции profiles).
-- Внешние ключи на пользователя указывают на `public.profiles(id)` (а он — на `auth.users(id) on delete cascade`). Поэтому удаление пользователя из `auth.users` каскадно удаляет его личные данные; учётные таблицы тренера (`coachings`, `bookings`, `passes`, `ledger_entries`, `payments`) ссылаются на клиента с `on delete restrict` и до удаления переназначаются на «Удалённого клиента» (см. 1.6).
+- Первичный ключ: `uuid default gen_random_uuid()`. Исключение: объёмные журналы, где нужен только порядок (`admin_audit_log`, `notification_outbox`, `booking_events`, `product_events`), там `bigint generated always as identity`.
+- `created_at timestamptz not null default now()`; изменяемым таблицам добавляется `updated_at timestamptz not null default now()` + триггер `public.set_updated_at()` (уже есть в миграции profiles).
+- Внешние ключи на пользователя указывают на `public.profiles(id)` (а `profiles` ссылается на `auth.users(id) on delete cascade`). Поэтому удаление пользователя из `auth.users` каскадно удаляет его личные данные; учётные таблицы тренера (`coachings`, `bookings`, `passes`, `ledger_entries`, `payments`) ссылаются на клиента с `on delete restrict` и до удаления переназначаются на «Удалённого клиента» (см. 1.6).
 
 ### 1.3. Время
 
-- Все моменты времени — `timestamptz` (хранится в UTC). `timestamp without time zone` не используется нигде, кроме локального времени правила повтора (`recurrences.dtstart_local`), где это и есть смысл значения.
+- Все моменты времени имеют тип `timestamptz` (хранится в UTC). `timestamp without time zone` не используется нигде, кроме локального времени правила повтора (`recurrences.dtstart_local`), где это и есть смысл значения.
 - **Часовой пояс IANA** хранится:
-  - у пользователя — `user_settings.time_zone` (отображение, «день» клиента для дневника и активности, тихие часы, время утренней сводки, напоминания домашних заданий);
-  - у правил расписания — `week_templates.time_zone`, `recurrences.time_zone` (копируется из пояса тренера при создании), чтобы разворачивание «пн/ср/пт 8:00» давало 8:00 местного времени и через переход на летнее/зимнее время;
+  - у пользователя: `user_settings.time_zone` (отображение, «день» клиента для дневника и активности, тихие часы, время утренней сводки, напоминания домашних заданий);
+  - у правил расписания: `week_templates.time_zone`, `recurrences.time_zone` (копируется из пояса тренера при создании), чтобы разворачивание «пн/ср/пт 8:00» давало 8:00 местного времени и через переход на летнее/зимнее время;
   - аналитика тренера считает календарные периоды в поясе тренера (`user_settings.time_zone` тренера).
-- Валидация пояса: домен `public.iana_tz` (`text`, проверка через `private.is_valid_tz(text)`, которая ищет имя в `pg_timezone_names`; функция объявлена `immutable` осознанно — список поясов меняется только при обновлении Postgres).
-- «Дни» (дневник питания, активность, замеры, домашние задания) хранятся как `date` — дата **в поясе клиента на момент записи** (wave-2). Рядом, где нужно, — точный момент `timestamptz`.
-- Длительности — `integer` в минутах/секундах с суффиксом (`duration_min`, `duration_s`), не `interval`: проще для API и типов.
+- Валидация пояса: домен `public.iana_tz` (`text`, проверка через `private.is_valid_tz(text)`, которая ищет имя в `pg_timezone_names`; функция объявлена `immutable` осознанно, потому что список поясов меняется только при обновлении Postgres).
+- «Дни» (дневник питания, активность, замеры, домашние задания) хранятся как `date`: дата **в поясе клиента на момент записи** (wave-2). Где нужно, рядом хранится точный момент `timestamptz`.
+- Длительности хранятся как `integer` в минутах/секундах с суффиксом (`duration_min`, `duration_s`), без `interval`: так проще для API и типов.
 
 ### 1.4. Деньги и единицы
 
-- Сумма — `bigint` в минимальных единицах (`*_minor`: копейки/центы) + `currency public.currency_code` (`char(3)`, проверка `^[A-Z]{3}$`, ISO 4217). Плавающая точка и `numeric` для денег не используются.
+- Сумма хранится как `bigint` в минимальных единицах (`*_minor`: копейки/центы) + `currency public.currency_code` (`char(3)`, проверка `^[A-Z]{3}$`, ISO 4217). Плавающая точка и `numeric` для денег не используются.
 - Суммы разных валют никогда не складываются в БД: агрегаты группируются по `currency` (wave-2, мультивалютность без конвертации).
-- Физические величины хранятся в метрике: вес — `numeric(6,2)` кг, длины — `numeric(6,1)` см, вода — мл (`integer`), сон — минуты, расстояние — метры. Имперские единицы — только в интерфейсе (`user_settings.unit_system`).
+- Физические величины хранятся в метрике: вес в кг (`numeric(6,2)`), длины в см (`numeric(6,1)`), вода в мл (`integer`), сон в минутах, расстояние в метрах. Имперские единицы бывают только в интерфейсе (`user_settings.unit_system`).
 
 ### 1.5. Удаление: soft vs hard
 
 | Класс данных | Политика | Почему |
 |---|---|---|
 | Личные данные клиента (замеры, фото, дневник, активность, анкета, цель, свои продукты) | **Hard delete** владельцем в любой момент | Данные принадлежат клиенту; история не нужна никому, кроме него |
-| Деньги и учёт: `ledger_entries`, `payments`, `bookings`, `booking_events`, `sessions` | **Никогда не удаляются** пользователем. Отмена — статусом (`cancelled`, `voided`), исправление — новой строкой (сторно) | Журнал, на котором держатся остаток, долг и выручка; «История с причинами» (Q21) |
+| Деньги и учёт: `ledger_entries`, `payments`, `bookings`, `booking_events`, `sessions` | **Никогда не удаляются** пользователем. Отмена делается статусом (`cancelled`, `voided`), исправление новой строкой (сторно) | Журнал, на котором держатся остаток, долг и выручка; «История с причинами» (Q21) |
 | Справочники, на которые ссылается история: `packages`, `locations`, `exercises` (свои), `workout_templates`, `groups`, `payment_links`, `client_invites`, `trial_links`, `referral_offers` | **Soft delete**: `archived_at timestamptz` | Старые абонементы/занятия/логи должны продолжать показывать название пакета, локации, упражнения |
 | Пара `coachings` | Не удаляется; `status = 'ended'` | История занятий и оплат остаётся видна обеим сторонам |
 | Модерируемый контент (`reviews`, W4 `posts`) | Soft delete (`deleted_at`), окончательно стирается при удалении аккаунта автора | Нужен для разбора споров админом |
-| Объекты Storage | Hard delete вместе со строкой (серверная задача, т. к. Storage не каскадится от FK) | — |
+| Объекты Storage | Hard delete вместе со строкой (серверная задача, т. к. Storage не каскадится от FK) | См. столбец «Политика» |
 
 ### 1.6. Удаление аккаунта (30 дней, Q44)
 
 1. Пользователь вызывает `request_account_deletion()` → строка в `account_deletions` (`scheduled_for = now() + interval '30 days'`).
-2. Сразу: будущие записи пользователя отменяются бесплатно (`cancelled`, `cancelled_by_role = 'system'`); уведомления ему больше не отправляются; тренеры видят метку «клиент удаляет аккаунт». Если он тренер — его будущие занятия отменяются, клиенты получают уведомление.
+2. Сразу: будущие записи пользователя отменяются бесплатно (`cancelled`, `cancelled_by_role = 'system'`); уведомления ему больше не отправляются; тренеры видят метку «клиент удаляет аккаунт». Если он тренер, его будущие занятия отменяются, клиенты получают уведомление.
 3. В течение 30 дней вход разрешён только для отмены удаления (`cancel_account_deletion()`); экспорт данных доступен.
-4. Через 30 дней cron (серверный код с секретным ключом) выполняет **обезличивание**, а не полный каскад (решение владельца продукта):
+4. Через 30 дней cron (серверный код с секретным ключом) выполняет **обезличивание** вместо полного каскада (решение владельца продукта):
    - удаляются объекты Storage пользователя и все личные данные: `user_settings`, `body_profiles`, `client_goals`, `intakes`, `measurements`, `progress_photos`, `food_diary_entries`, свои продукты, `activity_entries`, `nutrition_targets`, свои `workout_logs` (без `coaching_id`), `coaching_notes` о нём, `data_shares`, токены, `calendar_feeds`, `reviews`, участие в W3/W4;
-   - учётные строки, принадлежащие тренеру, **сохраняются**: `coachings` (статус `ended`), `sessions`, `bookings`, `booking_events`, `passes`, `ledger_entries`, `payments` — ссылка на клиента переводится на системный профиль-заглушку «Удалённый клиент» (`private.deleted_client_id()`, один на всю БД; `coachings.client_alias` обнуляется). Поскольку на заглушку может указывать несколько пар одного тренера, `unique (trainer_id, client_id)` у `coachings` проверяется только для `client_id <> deleted_client_id()` (частичный уникальный индекс вместо ограничения);
-   - затем `auth.admin.deleteUser(id)`; FK на `profiles` у сохраняемых учётных таблиц — `on delete restrict`, поэтому удаление без предварительного переназначения падает, а не стирает учёт тренера.
+   - учётные строки, принадлежащие тренеру, **сохраняются**: `coachings` (статус `ended`), `sessions`, `bookings`, `booking_events`, `passes`, `ledger_entries`, `payments`. Ссылка на клиента переводится на системный профиль-заглушку «Удалённый клиент» (`private.deleted_client_id()`, один на всю БД; `coachings.client_alias` обнуляется). Поскольку на заглушку может указывать несколько пар одного тренера, `unique (trainer_id, client_id)` у `coachings` проверяется только для `client_id <> deleted_client_id()` (частичный уникальный индекс вместо ограничения);
+   - затем `auth.admin.deleteUser(id)`; у сохраняемых учётных таблиц FK на `profiles` объявлен с `on delete restrict`, поэтому удаление без предварительного переназначения падает с ошибкой и не стирает учёт тренера.
    Аналитика тренера продолжает учитывать эти занятия и деньги как «Удалённый клиент».
 5. В `admin_audit_log` остаётся запись о факте удаления (идентификатор без FK, без персональных данных).
 
 ### 1.7. Журнал действий админа
 
-`admin_audit_log` — append-only (триггер запрещает `update`/`delete` всем, включая `service_role`; очистка — только миграцией). Пишется **в той же транзакции**, что и действие: все админские действия идут через SECURITY DEFINER-функции `admin_*`, вызываемые с сессией самого админа, поэтому `actor_id = auth.uid()` нельзя подделать. Логируются: выдача/отзыв инвайтов, решения по верификации, решения по жалобам и отзывам, выдача/снятие роли, аварийный доступ, открытие карточки конкретного тренера в аналитике (wave-2 §8).
+`admin_audit_log` работает как append-only (триггер запрещает `update`/`delete` всем, включая `service_role`; очистить его можно только миграцией). Пишется **в той же транзакции**, что и действие: все админские действия идут через SECURITY DEFINER-функции `admin_*`, вызываемые с сессией самого админа, поэтому `actor_id = auth.uid()` нельзя подделать. Логируются: выдача/отзыв инвайтов, решения по верификации, решения по жалобам и отзывам, выдача/снятие роли, аварийный доступ, открытие карточки конкретного тренера в аналитике (wave-2 §8).
 
 ### 1.8. Как `auth.uid()` связан с профилем
 
-- Вход — ADR 0004: сервер создаёт пользователя Supabase Auth (`app_metadata.telegram_id`) и делает upsert в `public.profiles`. `profiles.id = auth.users.id = auth.uid()`.
-- Значит, в политиках «я» = `(select auth.uid())`, и любой `user_id`/`client_id`/`trainer_id` сравнивается с ним напрямую — без join на profiles.
+- Вход описан в ADR 0004: сервер создаёт пользователя Supabase Auth (`app_metadata.telegram_id`) и делает upsert в `public.profiles`. `profiles.id = auth.users.id = auth.uid()`.
+- Значит, в политиках «я» = `(select auth.uid())`, и любой `user_id`/`client_id`/`trainer_id` сравнивается с ним напрямую, без join на profiles.
 - «Я тренер» = существует `trainer_profiles` с `user_id = auth.uid()`. «Я админ» = строка в `user_roles` с `role = 'admin'`. «Я клиент тренера X» = существует `coachings(trainer_id = X, client_id = auth.uid())`.
 - `profiles` по-прежнему пишет только сервер при входе. Всё, что пользователь меняет сам, вынесено в `user_settings` (1:1).
 
@@ -84,9 +84,9 @@
 
 Три пути записи, по убыванию предпочтения:
 
-1. **Напрямую через RLS** (клиент Supabase с сессией пользователя, `lib/supabase/server.ts`) — когда запись затрагивает одну таблицу и инвариант выражается политикой `with check`: настройки, свои замеры, дневник, логи тренировок, справочники тренера (локации, пакеты, шаблоны), заметки, группы.
-2. **Доменные RPC** — `security definer` функции в `public` с `set search_path = ''`, `revoke execute ... from public, anon`, `grant execute ... to authenticated`. Первая строка тела определяет `v_uid := auth.uid()` и проверяет права явно. Используются, когда операция трогает несколько таблиц или требует блокировок: запись на занятие, отмена/перенос, отметка посещения, списание/прощение, создание абонемента, присоединение по ссылке, лист ожидания, выпуск токенов, все `admin_*`. Таблицы, в которые пишут только RPC (`bookings`, `ledger_entries`, `booking_events`), не имеют политик insert/update/delete вовсе.
-3. **Сервер с секретным ключом** (`lib/supabase/admin.ts`) — только там, где нет пользовательской сессии или нужно обойти RLS ради системной работы (ADR 0002 п. 6):
+1. **Напрямую через RLS** (клиент Supabase с сессией пользователя, `lib/supabase/server.ts`). Подходит, когда запись затрагивает одну таблицу и инвариант выражается политикой `with check`: настройки, свои замеры, дневник, логи тренировок, справочники тренера (локации, пакеты, шаблоны), заметки, группы.
+2. **Доменные RPC**: `security definer` функции в `public` с `set search_path = ''`, `revoke execute ... from public, anon`, `grant execute ... to authenticated`. Первая строка тела определяет `v_uid := auth.uid()` и проверяет права явно. Используются, когда операция трогает несколько таблиц или требует блокировок: запись на занятие, отмена/перенос, отметка посещения, списание/прощение, создание абонемента, присоединение по ссылке, лист ожидания, выпуск токенов, все `admin_*`. Таблицы, в которые пишут только RPC (`bookings`, `ledger_entries`, `booking_events`), не имеют политик insert/update/delete вовсе.
+3. **Сервер с секретным ключом** (`lib/supabase/admin.ts`) применяется только там, где нет пользовательской сессии или нужно обойти RLS ради системной работы (ADR 0002 п. 6):
    - вход через Telegram: upsert `profiles`, создание `auth.users`;
    - диспетчер уведомлений (outbox → Telegram) и обработчик webhook бота;
    - cron-задачи: материализация повторов и шаблонов недели, автозавершение занятий, утренняя сводка, дневные сводки питания, флаги оттока, обновление MV, очистка удалённых аккаунтов;
@@ -100,19 +100,19 @@
 
 | Bucket | Доступ | Путь | Правила |
 |---|---|---|---|
-| `avatars` | public read (неугадываемый путь) | `{user_id}/{uuid}.webp` | Запись/удаление — только владелец (`(storage.foldername(name))[1] = auth.uid()::text`). ≤ 2 МБ, `image/webp`, `image/jpeg`, `image/png` |
-| `certificates` | private | `{trainer_id}/{certificate_id}.{ext}` | Запись — владелец-тренер; чтение — владелец и админ (через signed URL). ≤ 10 МБ, изображения и PDF |
-| `progress-photos` | private | `{client_id}/{photo_id}.webp` | Загружается **только уже размытая** на устройстве версия (Q24/Q30); оригинал не покидает устройство. Запись/удаление — только клиент-владелец. Чтение — политика `storage.objects` через `private.can_view(owner, 'photos')`; клиент приложения получает **signed URL на 5 минут**. ≤ 5 МБ, `image/webp`, `image/jpeg` |
-| `exercise-media` | public read | `wger/{wger_id}/…`, `custom/{owner_id}/{uuid}.webp` | Запись wger — сервер; custom — владелец |
-| `feedback` | private | `{user_id}/{feedback_id}/{n}.webp` | Запись — автор; чтение — автор и админ |
-| `exports` | private | `{user_id}/{export_id}.zip` | Запись — сервер; чтение — владелец, signed URL на 15 мин; объект удаляется через 7 дней |
-| W4 `post-media` | public read | `{user_id}/{post_id}/{n}.webp` | Запись — автор; модерация — админ |
+| `avatars` | public read (неугадываемый путь) | `{user_id}/{uuid}.webp` | Запись/удаление: только владелец (`(storage.foldername(name))[1] = auth.uid()::text`). ≤ 2 МБ, `image/webp`, `image/jpeg`, `image/png` |
+| `certificates` | private | `{trainer_id}/{certificate_id}.{ext}` | Запись: владелец-тренер; чтение: владелец и админ (через signed URL). ≤ 10 МБ, изображения и PDF |
+| `progress-photos` | private | `{client_id}/{photo_id}.webp` | Загружается **только уже размытая** на устройстве версия (Q24/Q30); оригинал не покидает устройство. Запись/удаление: только клиент-владелец. Чтение: политика `storage.objects` через `private.can_view(owner, 'photos')`; клиент приложения получает **signed URL на 5 минут**. ≤ 5 МБ, `image/webp`, `image/jpeg` |
+| `exercise-media` | public read | `wger/{wger_id}/…`, `custom/{owner_id}/{uuid}.webp` | Запись wger: сервер; custom: владелец |
+| `feedback` | private | `{user_id}/{feedback_id}/{n}.webp` | Запись: автор; чтение: автор и админ |
+| `exports` | private | `{user_id}/{export_id}.zip` | Запись: сервер; чтение: владелец, signed URL на 15 мин; объект удаляется через 7 дней |
+| W4 `post-media` | public read | `{user_id}/{post_id}/{n}.webp` | Запись: автор; модерация: админ |
 
 ---
 
 ## 2. Схема по волнам
 
-Обозначения: `PK`, `FK`, `UQ`, `IX` (индекс), `CK` (check). Если nullability не указана — `not null`. Общие столбцы `created_at`/`updated_at` опущены, где они стандартные.
+Обозначения: `PK`, `FK`, `UQ`, `IX` (индекс), `CK` (check). Если nullability не указана, столбец `not null`. Общие столбцы `created_at`/`updated_at` опущены, где они стандартные.
 
 ### 2.0. Расширения, домены, общие enum
 
@@ -145,7 +145,7 @@ create type public.share_category as enum ('nutrition', 'measurements', 'photos'
 
 ---
 
-### 2.1. Волна 1 — «Тренер ведёт клиентов» (полностью)
+### 2.1. Волна 1: «Тренер ведёт клиентов» (полностью)
 
 #### Люди и доступ
 
@@ -162,7 +162,7 @@ grant select (id, username, first_name, last_name, photo_url, language_code, cre
   on public.profiles to authenticated;
 ```
 
-**`user_settings`** — всё, что пользователь меняет сам (1:1, создаётся сервером при первом входе).
+**`user_settings`**: всё, что пользователь меняет сам (1:1, создаётся сервером при первом входе).
 
 ```sql
 create table public.user_settings (
@@ -183,7 +183,7 @@ create table public.user_settings (
 );
 ```
 
-**`notification_preferences`** — только переопределения; отсутствие строки = значение по умолчанию из кода.
+**`notification_preferences`**: только переопределения; если строки нет, действует значение по умолчанию из кода.
 
 ```sql
 create type public.notification_type as enum (
@@ -220,9 +220,9 @@ create table public.user_roles (
 );
 ```
 
-Тренер — это не роль, а наличие `trainer_profiles` (одна учётная запись, две зоны, Q13).
+Тренером пользователя делает наличие `trainer_profiles`, отдельной роли для этого нет (одна учётная запись, две зоны, Q13).
 
-**`consents`** — бета-согласие при первом входе (Q44), append-only.
+**`consents`**: бета-согласие при первом входе (Q44), append-only.
 
 ```sql
 create type public.consent_kind as enum ('beta_terms', 'privacy_policy', 'contact_share');
@@ -368,7 +368,7 @@ create table public.trial_links (
 create index on public.trial_links (trainer_id);
 ```
 
-Токены клиентских ссылок хранятся открыто: это не секрет, а адрес (их печатают в QR и показывают многократно); раскрытие токена даёт только возможность стать клиентом этого тренера — это и есть назначение ссылки. Код инвайта тренера, наоборот, даёт привилегию и хранится хешем.
+Токены клиентских ссылок хранятся открыто: это адрес, а не секрет (их печатают в QR и показывают многократно). Раскрытие токена даёт только возможность стать клиентом этого тренера, а ссылка ровно для этого и нужна. Код инвайта тренера, наоборот, даёт привилегию и хранится хешем.
 
 #### Пара, разрешения, заметки, анкета, связь
 
@@ -412,7 +412,7 @@ create unique index coachings_trainer_client_uniq on public.coachings (trainer_i
 
 Повторное присоединение к тому же тренеру после `ended` реактивирует ту же строку (`coachings_trainer_client_uniq`), история сохраняется.
 
-**Карточка клиента без аккаунта** (`managed_client`, журнал решений §4, было O1). Чтобы не делать `client_id` nullable в десятке таблиц (`bookings`, `passes`, `ledger_entries`, `payments`, `measurements`, `workout_logs` …), карточка — это обычная строка `profiles` без возможности входа:
+**Карточка клиента без аккаунта** (`managed_client`, журнал решений §4, было O1). Чтобы не делать `client_id` nullable в десятке таблиц (`bookings`, `passes`, `ledger_entries`, `payments`, `measurements`, `workout_logs` …), карточка хранится как обычная строка `profiles` без возможности входа:
 
 ```sql
 alter table public.profiles
@@ -432,10 +432,10 @@ create table public.managed_client_claims (       -- запрос тренеру
 create index on public.managed_client_claims (trainer_id) where status = 'pending';
 ```
 
-- Создание: RPC `create_managed_client(display_name, note)` (тренер) — серверный код создаёт пользователя Supabase Auth **без** `telegram_id` (синтетический email `managed-<uuid>@users.fit.invalid`, `banned_until = 'infinity'`), строку `profiles` с `managed_by_trainer_id = uid`, пару `coachings(source = 'manual')` и `data_shares` со всеми категориями `true` (данные вносит тренер; разрешения клиента не применимы, пока клиента нет). Войти под карточкой невозможно: `signInWithTelegram()` ищет только по `app_metadata.telegram_id` (ADR 0004).
+- Создание: RPC `create_managed_client(display_name, note)` (тренер). Серверный код создаёт пользователя Supabase Auth **без** `telegram_id` (синтетический email `managed-<uuid>@users.fit.invalid`, `banned_until = 'infinity'`), строку `profiles` с `managed_by_trainer_id = uid`, пару `coachings(source = 'manual')` и `data_shares` со всеми категориями `true` (данные вносит тренер; разрешения клиента не применимы, пока клиента нет). Войти под карточкой невозможно: `signInWithTelegram()` ищет только по `app_metadata.telegram_id` (ADR 0004).
 - Уведомления: `private.enqueue_notification()` пропускает получателей с `managed_by_trainer_id is not null`; запись на слоты и напоминания для пары-карточки недоступны.
 - RLS: карточку видят только её тренер и его делегаты (политика `profiles` через `managed_by_trainer_id = uid` / `is_coaching_trainer`); в остальном работают обычные политики пары.
-- Переход (claim): `join_by_invite` / `join_by_code` создают пару как обычно и, если у тренера есть карточки без аккаунта, — строку `managed_client_claims (pending)` и уведомление тренеру. RPC `resolve_managed_client_claim(claim_id, managed_client_id | null)` (тренер) в одной транзакции: переносит все строки карточки на `claimant_id` (`update … set client_id = claimant` в `coachings`, `sessions`/`bookings`, `passes`, `ledger_entries`, `payments`, `coaching_notes`, `measurements`, `workout_logs`, `personal_records` …), объединяет пару карточки с новой парой (история переносится в пару карточки, новая пара удаляется, `coachings.source` остаётся `manual`, сохраняется `started_at` карточки), сбрасывает `data_shares` на умолчания клиента (`intake = false`, `intake_decided_at = null` → клиенту показывается шаг согласия), ставит `profiles.claimed_by`, пишет `booking_events`/журнал пары и удаляет пользователя Auth карточки. `null` → `rejected`, карточка остаётся. Слияние необратимо.
+- Переход (claim): `join_by_invite` / `join_by_code` создают пару как обычно, а если у тренера есть карточки без аккаунта, ещё и строку `managed_client_claims (pending)` и уведомление тренеру. RPC `resolve_managed_client_claim(claim_id, managed_client_id | null)` (тренер) в одной транзакции: переносит все строки карточки на `claimant_id` (`update … set client_id = claimant` в `coachings`, `sessions`/`bookings`, `passes`, `ledger_entries`, `payments`, `coaching_notes`, `measurements`, `workout_logs`, `personal_records` …), объединяет пару карточки с новой парой (история переносится в пару карточки, новая пара удаляется, `coachings.source` остаётся `manual`, сохраняется `started_at` карточки), сбрасывает `data_shares` на умолчания клиента (`intake = false`, `intake_decided_at = null` → клиенту показывается шаг согласия), ставит `profiles.claimed_by`, пишет `booking_events`/журнал пары и удаляет пользователя Auth карточки. `null` → `rejected`, карточка остаётся. Слияние необратимо.
 
 
 ```sql
@@ -686,9 +686,9 @@ create table public.booking_events (            -- история с причи�
 create index on public.booking_events (booking_id, id);
 ```
 
-«Запрос на запись» (`booking_request` в словаре) — это `bookings.status = 'requested'`, отдельной таблицы нет: подтверждённый запрос становится той же записью, история — в `booking_events`.
+«Запрос на запись» (`booking_request` в словаре) хранится как `bookings.status = 'requested'`, отдельной таблицы нет: подтверждённый запрос становится той же записью, а история лежит в `booking_events`.
 
-Вместимость: RPC записи берёт `select ... from sessions where id = $1 for update`, считает живые записи (`requested` не занимают место; `confirmed` занимают) и отказывает при `count >= capacity`. Это же правило — у листа ожидания (W2), отсюда тест конкурентности wave-2 9.5.
+Вместимость: RPC записи берёт `select ... from sessions where id = $1 for update`, считает живые записи (`requested` не занимают место; `confirmed` занимают) и отказывает при `count >= capacity`. То же правило действует для листа ожидания (W2), отсюда тест конкурентности wave-2 9.5.
 
 #### Деньги
 
@@ -758,7 +758,7 @@ create table public.pass_freezes (
 );
 ```
 
-**Журнал списаний** — см. раздел 3 (точные правила).
+**Журнал списаний**. Точные правила см. в разделе 3.
 
 ```sql
 create type public.ledger_entry_type as enum (
@@ -861,7 +861,7 @@ create index on public.payment_links (trainer_id) where archived_at is null;
 
 #### Уведомления, напоминания, календарь
 
-Отдельной таблицы «напоминаний» нет: **настройки** — в `coachings.client_reminder_offsets` (клиент, на пару), `trainer_profiles.default_client_reminder_offsets` (значения по умолчанию для новых пар) и `trainer_profiles.own_reminder_offsets` (самому тренеру); **запланированные** напоминания — строки outbox с типом `session_reminder`.
+Отдельной таблицы «напоминаний» нет. **Настройки** хранятся в `coachings.client_reminder_offsets` (клиент, на пару), `trainer_profiles.default_client_reminder_offsets` (значения по умолчанию для новых пар) и `trainer_profiles.own_reminder_offsets` (самому тренеру); **запланированные** напоминания хранятся как строки outbox с типом `session_reminder`.
 
 ```sql
 create type public.outbox_status as enum ('pending', 'processing', 'sent', 'failed', 'skipped', 'cancelled');
@@ -892,9 +892,9 @@ create index on public.notification_outbox (broadcast_id);
 
 Механика (бот serverless, Q11):
 
-- Постановка в очередь — внутри доменных RPC и триггеров, в той же транзакции, что и изменение (transactional outbox): подтверждение записи создаёт строки напоминаний по `client_reminder_offsets` и `own_reminder_offsets`; отмена/перенос переводит их в `cancelled` (по `booking_id`) и ставит новые.
-- Проверка `notification_preferences` и `profiles.bot_blocked_at` — при отправке (строка уходит в `skipped`), чтобы смена настроек действовала и на уже запланированное.
-- Тихие часы (ADR 0006): если `scheduled_for` попадает в тихие часы получателя — напоминание о занятии (`session_reminder`) уходит **в своё время** (`deliver_after = scheduled_for`), но беззвучно: диспетчер при отправке передаёт `disable_notification = true`; остальные (несрочные) типы — `deliver_after` = конец тихих часов.
+- Постановка в очередь происходит внутри доменных RPC и триггеров, в той же транзакции, что и изменение (transactional outbox): подтверждение записи создаёт строки напоминаний по `client_reminder_offsets` и `own_reminder_offsets`; отмена/перенос переводит их в `cancelled` (по `booking_id`) и ставит новые.
+- `notification_preferences` и `profiles.bot_blocked_at` проверяются при отправке (строка уходит в `skipped`), чтобы смена настроек действовала и на уже запланированное.
+- Тихие часы (ADR 0006): если `scheduled_for` попадает в тихие часы получателя, напоминание о занятии (`session_reminder`) уходит **в своё время** (`deliver_after = scheduled_for`), но беззвучно: диспетчер при отправке передаёт `disable_notification = true`; для остальных (несрочных) типов `deliver_after` = конец тихих часов.
 - Диспетчер: `pg_cron` раз в минуту вызывает через `pg_net` защищённый маршрут Vercel `POST /api/cron/notifications` (секрет в заголовке; секрет хранится в Supabase Vault и в env Vercel). Маршрут с секретным ключом забирает пачку `private.claim_outbox(limit 50)` (`for update skip locked`, ставит `processing` и `locked_until`), отправляет через Bot API с учётом лимитов Telegram, фиксирует результат. Ошибка 403 → `profiles.bot_blocked_at`, `skipped`. Повтор с экспоненциальной задержкой до 5 попыток, затем `failed`.
 - Утренняя сводка: cron раз в 15 минут ставит строки `morning_summary` тренерам, у которых `morning_summary_time` в их поясе попадает в текущее окно (`dedupe_key` по дате защищает от дублей).
 - Хранение: `sent/skipped/cancelled` старше 90 дней удаляются cron-задачей.
@@ -912,7 +912,7 @@ create table public.calendar_feeds (            -- календарный фид
 create unique index on public.calendar_feeds (user_id, zone) where revoked_at is null;
 ```
 
-ICS-маршрут `GET /api/calendar/{token}.ics`: хеш → `user_id` (секретный ключ), затем выборка ровно того, что этот пользователь видит в своей зоне; в событии — время, тип, локация/ссылка, имя второй стороны; без заметок и данных тела.
+ICS-маршрут `GET /api/calendar/{token}.ics`: хеш → `user_id` (секретный ключ), затем выборка ровно того, что этот пользователь видит в своей зоне; в событие попадают время, тип, локация/ссылка, имя второй стороны; заметок и данных тела в нём нет.
 
 #### Тренировки
 
@@ -1034,7 +1034,7 @@ create table public.personal_records (            -- поддерживаетс�
 );
 ```
 
-`personal_records` — кеш: SECURITY DEFINER-триггер `private.refresh_personal_records()` после insert/update/delete подхода пересчитывает рекорды для пары (клиент, упражнение) по разминочным-исключённым подходам. `est_1rm` — формула Эпли `w × (1 + reps/30)` для `reps ≤ 12`. «Прошлые результаты» — обычный запрос к последним `workout_log_exercises` по упражнению.
+`personal_records` служит кешем: SECURITY DEFINER-триггер `private.refresh_personal_records()` после insert/update/delete подхода пересчитывает рекорды для пары (клиент, упражнение) по разминочным-исключённым подходам. `est_1rm` считается по формуле Эпли `w × (1 + reps/30)` для `reps ≤ 12`. «Прошлые результаты» берутся обычным запросом к последним `workout_log_exercises` по упражнению.
 
 #### Прогресс
 
@@ -1086,7 +1086,7 @@ create table public.milestones (                 -- зафиксированны
 );
 ```
 
-«До/после» — выбор двух фото одного ракурса в интерфейсе, отдельной таблицы нет. «Вместе с …» считается из `coachings.started_at`, «проведено N» — из `coaching_stats` (раздел 5). Веха создаётся триггером при переходе записи в `attended`; при откате (`attended → no_show`) веха не удаляется.
+Для «До/после» в интерфейсе выбирают два фото одного ракурса, отдельной таблицы нет. «Вместе с …» считается из `coachings.started_at`, «проведено N» берётся из `coaching_stats` (раздел 5). Веха создаётся триггером при переходе записи в `attended`; при откате (`attended → no_show`) веха не удаляется.
 
 #### Обратная связь, жалобы, аудит, аварийный доступ
 
@@ -1152,7 +1152,7 @@ create table public.break_glass_grants (         -- логируемый ава�
 create index on public.break_glass_grants (admin_id, target_user_id) where revoked_at is null;
 ```
 
-`admin_open_break_glass(target_user, categories, reason)` — единственный путь создания гранта: проверяет `is_admin()`, пишет `admin_audit_log` и ставит пользователю уведомление о факте доступа (новый тип `break_glass` в `notification_type`, см. Допущения, п. 26). Пока грант действует, `private.can_view()` возвращает `true` для этого админа и этих категорий.
+Грант создаётся только через `admin_open_break_glass(target_user, categories, reason)`. Функция проверяет `is_admin()`, пишет `admin_audit_log` и ставит пользователю уведомление о факте доступа (новый тип `break_glass` в `notification_type`, см. Допущения, п. 26). Пока грант действует, `private.can_view()` возвращает `true` для этого админа и этих категорий.
 
 ---
 
@@ -1207,7 +1207,7 @@ create unique index access_requests_one_open_per_day on public.access_requests (
 - тренер Pro: `trainer.unlimited_clients`, `trainer.analytics`, `trainer.finance`, `trainer.groups`, `trainer.broadcasts`, `trainer.client_nutrition`, `trainer.delegation`, `trainer.referral_offers`, `trainer.showcase_custom`, `trainer.export`;
 - клиент Premium: `client.trends`, `client.nutrition_advanced`, `client.progress_photos_unlimited`, `client.self_training`, позже `client.ai`, `client.community_perks`.
 
-**Проверка прав** — одна функция, используется в RLS/RPC и сервером для интерфейса:
+**Проверка прав**: одна функция, её используют RLS/RPC и сервер для интерфейса:
 
 ```sql
 -- SECURITY DEFINER, search_path = ''. true, если:
@@ -1219,12 +1219,12 @@ create function public.has_entitlement(p_user uuid, p_feature text, p_pair uuid 
 create function public.effective_plan(p_user uuid, p_side public.plan_side) returns text ...;   -- для «Мой тариф»
 ```
 
-- **Лимит Free-тренера** проверяется внутри `redeem_client_invite`, `create_managed_client`, `accept_trial_booking` и любых функций, создающих активную пару: если `effective_plan(trainer,'trainer') = 'trainer_free'` и активных пар ≥ `limits.max_active_clients` — ошибка `plan_limit_reached`. Запись в `coachings` напрямую через RLS запрещена.
-- **Понижение тарифа:** данные не удаляются; функции Pro проверяют `has_entitlement` на запись, чтение ранее созданных данных остаётся (группы, отчёты — «только чтение»).
-- **RLS:** `plans` — читают все аутентифицированные; `plan_grants` — пользователь видит свои, админ — все через `admin_grant_plan()` / `admin_revoke_plan()` (SECURITY DEFINER, проверка `is_admin()`, запись в `admin_audit_log`, постановка уведомления в outbox); `access_requests` — пользователь создаёт и видит свои, админ решает через RPC.
-- Истечение — по времени в `has_entitlement`, без cron; уведомление «тариф заканчивается через 3 дня» ставит ежедневный cron в outbox.
+- **Лимит Free-тренера** проверяется внутри `redeem_client_invite`, `create_managed_client`, `accept_trial_booking` и любых функций, создающих активную пару: если `effective_plan(trainer,'trainer') = 'trainer_free'` и активных пар ≥ `limits.max_active_clients`, возвращается ошибка `plan_limit_reached`. Запись в `coachings` напрямую через RLS запрещена.
+- **Понижение тарифа:** данные не удаляются; функции Pro проверяют `has_entitlement` на запись, чтение ранее созданных данных остаётся (группы, отчёты: «только чтение»).
+- **RLS:** `plans` читают все аутентифицированные; в `plan_grants` пользователь видит свои выдачи, админ: все, через `admin_grant_plan()` / `admin_revoke_plan()` (SECURITY DEFINER, проверка `is_admin()`, запись в `admin_audit_log`, постановка уведомления в outbox); в `access_requests` пользователь создаёт и видит свои запросы, админ решает их через RPC.
+- Истечение проверяется по времени в `has_entitlement`, без cron; уведомление «тариф заканчивается через 3 дня» ставит ежедневный cron в outbox.
 
-### 2.2. Волна 2 — «Питание и аналитика»
+### 2.2. Волна 2: «Питание и аналитика»
 
 ```sql
 create type public.goal_type as enum ('lose', 'gain', 'maintain');
@@ -1281,7 +1281,7 @@ create unique index on public.nutrition_targets (client_id) where source = 'calc
 create index on public.nutrition_targets (client_id, effective_from);
 ```
 
-Активная норма клиента на дату — функция `private.active_nutrition_target(client, date)` по приоритету wave-2 §2.10: индивидуальная норма тренера (из пары `preferred_target_coaching_id`, иначе последняя заданная, только при активной паре и разрешении `nutrition`) → норма основной группы по питанию → калькулятор. Итог дня фиксируется в `nutrition_daily_summaries.target_id`, поэтому «попадание в норму» за прошлые дни не меняется при смене нормы.
+Активную норму клиента на дату возвращает функция `private.active_nutrition_target(client, date)` по приоритету wave-2 §2.10: индивидуальная норма тренера (из пары `preferred_target_coaching_id`, иначе последняя заданная, только при активной паре и разрешении `nutrition`) → норма основной группы по питанию → калькулятор. Итог дня фиксируется в `nutrition_daily_summaries.target_id`, поэтому «попадание в норму» за прошлые дни не меняется при смене нормы.
 
 ```sql
 create type public.food_source as enum ('off', 'custom');
@@ -1409,7 +1409,7 @@ create unique index on public.activity_entries (client_id, local_date, metric, s
 create index on public.activity_entries (client_id, metric, local_date);
 ```
 
-Шаги за день: значение `manual`, если есть, иначе `ios_shortcut` (ручной ввод приоритетнее, wave-2 §4.3). Вода: сумма строк дня (каждое нажатие «+250 мл» — строка). Одна таблица с полем `metric`, а не три столбца в одной строке, потому что разные метрики закрыты разными разрешениями (вода — `nutrition`, шаги и сон — `steps`), а RLS работает по строкам.
+Шаги за день: значение `manual`, если есть, иначе `ios_shortcut` (ручной ввод приоритетнее, wave-2 §4.3). Вода: сумма строк дня (каждое нажатие «+250 мл» даёт отдельную строку). Метрики лежат в одной таблице с полем `metric`, а не в трёх столбцах одной строки, потому что разные метрики закрыты разными разрешениями (вода: `nutrition`; шаги и сон: `steps`), а RLS работает по строкам.
 
 ```sql
 create table public.ingest_tokens (              -- личный токен iOS Shortcuts (Q37)
@@ -1469,7 +1469,7 @@ create index on public.broadcasts (trainer_id, created_at);
 alter table public.notification_outbox add foreign key (broadcast_id) references public.broadcasts(id) on delete set null;
 ```
 
-Статистика рассылки — агрегат `notification_outbox` по `broadcast_id` и `status`. Лимит 5 в сутки проверяет RPC `send_broadcast`.
+Статистика рассылки считается агрегатом `notification_outbox` по `broadcast_id` и `status`. Лимит 5 в сутки проверяет RPC `send_broadcast`.
 
 Лист ожидания, домашние задания, отзывы, флаги оттока, события продукта:
 
@@ -1579,7 +1579,7 @@ create index on public.product_events (user_id, occurred_at);
 
 ---
 
-### 2.3. Волна 3 — «Команда и вовлечение»
+### 2.3. Волна 3: «Команда и вовлечение»
 
 ```sql
 create type public.delegation_kind as enum ('assistant', 'substitute');
@@ -1687,7 +1687,7 @@ create table public.challenge_participants (
 create index on public.challenge_participants (user_id);
 ```
 
-Лидерборд — не таблица: SECURITY DEFINER-функция `get_challenge_leaderboard(challenge_id)` возвращает имя (`display_name`), аватар и `score` только участников с `show_on_leaderboard`; вызвать могут участники и тренер челленджа. Счёт — агрегат, сырых данных (шагов по дням, питания) функция не отдаёт.
+Лидерборд не хранится в таблице: SECURITY DEFINER-функция `get_challenge_leaderboard(challenge_id)` возвращает имя (`display_name`), аватар и `score` только участников с `show_on_leaderboard`; вызвать могут участники и тренер челленджа. Счёт отдаётся агрегатом, сырых данных (шагов по дням, питания) функция не отдаёт.
 
 Рефералка:
 
@@ -1761,13 +1761,13 @@ create table public.check_ins (                    -- QR-чек-ин
 );
 ```
 
-QR в зале — ротируемый токен `HMAC(secret, location_id, 5-минутное окно)`, генерируется сервером, в БД не хранится. Чек-ин ставит `bookings.status = 'attended'` досрочно (с обычным списанием при завершении занятия).
+QR в зале содержит ротируемый токен `HMAC(secret, location_id, 5-минутное окно)`; его генерирует сервер, в БД он не хранится. Чек-ин ставит `bookings.status = 'attended'` досрочно (с обычным списанием при завершении занятия).
 
-Месячный отчёт клиента и карточки для сторис строятся на лету из существующих таблиц; кеш при необходимости — `monthly_reports(user_id, coaching_id, month date, payload jsonb, generated_at)`, без новых источников данных.
+Месячный отчёт клиента и карточки для сторис строятся на лету из существующих таблиц; кеш при необходимости: `monthly_reports(user_id, coaching_id, month date, payload jsonb, generated_at)`, без новых источников данных.
 
 ---
 
-### 2.4. Волна 4 — зарезервировано (создаётся в январе 2027, модель фиксируется сейчас)
+### 2.4. Волна 4: зарезервировано (создаётся в январе 2027, модель фиксируется сейчас)
 
 Требования к ядру W1–W3, которые уже соблюдены, чтобы W4 ничего не переписывал: пользователь один (`profiles`), публичные поля профиля отделены колоночными грантами, витрина тренера (`slug`, `is_public`), `locations.club_id`, `reviews` уже собираются, `reports.target_type` включает `post`/`club`/`buddy_profile`, `birth_date` уже есть в `body_profiles`.
 
@@ -1841,7 +1841,7 @@ alter table public.locations add foreign key (club_id) references public.clubs(i
 
 Точная позиция пользователя не хранится нигде: «тренеры рядом» и бадди считаются по координате, которую клиент присылает в запросе, а в БД попадает только ячейка сетки.
 
-### 2.5. После беты — зарезервировано
+### 2.5. После беты: зарезервировано
 
 ```sql
 -- Студии (Q18: в модели, без реализации)
@@ -1887,12 +1887,12 @@ alter table public.referrals add foreign key (qualifying_subscription_id) refere
 Остаток и долг **не хранятся** в изменяемых полях. Есть один append-only журнал `ledger_entries`; остаток абонемента = сумма `sessions_delta` его строк, долг = непокрытые списания. Причины:
 
 - **История с причинами** (Q21) получается бесплатно: каждая единица остатка объяснена строкой с занятием, автором и временем.
-- **Прощение** — это не «вернуть +1 в счётчик», а строка, ссылающаяся на конкретное списание: видно, что именно прощено, и нельзя простить дважды (уникальный индекс).
-- **Гонки**: два параллельных изменения счётчика теряют обновление; две вставки в журнал — нет. Уникальный индекс «одно списание на запись» делает автозавершение и ручную отметку идемпотентными.
-- **Выручка** (wave-2: «заработано») — та же сумма `amount_minor` по журналу за период; не нужно восстанавливать её из истории изменений счётчика.
-- Исправление ошибки — сторно, а не правка: сверка и аудит не ломаются.
+- **Прощение** устроено не как «вернуть +1 в счётчик», а как строка, которая ссылается на конкретное списание. Видно, что именно прощено, и простить дважды нельзя (уникальный индекс).
+- **Гонки**: два параллельных изменения счётчика теряют обновление, а две вставки в журнал его не теряют. Уникальный индекс «одно списание на запись» делает автозавершение и ручную отметку идемпотентными.
+- **Выручка** (wave-2: «заработано») считается той же суммой `amount_minor` по журналу за период; восстанавливать её из истории изменений счётчика не нужно.
+- Ошибку исправляют сторно, строку не правят, поэтому сверка и аудит не ломаются.
 
-Объём мал (≈ десятки строк на клиента в месяц), поэтому производные считаются представлениями без кеша. Если понадобится, кеш-столбец `passes.remaining_cached` поддерживается триггером и сверяется ночным cron — журнал остаётся источником истины.
+Объём мал (≈ десятки строк на клиента в месяц), поэтому производные считаются представлениями без кеша. Если понадобится, кеш-столбец `passes.remaining_cached` поддерживается триггером и сверяется ночным cron; источником истины остаётся журнал.
 
 ### 3.2. Производные величины
 
@@ -1918,7 +1918,7 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
                                  + sum(… direction = 'refund')
 ```
 
-«Оплачен» абонемент или нет, и долг по занятиям — две разные вещи: тренер может продать абонемент в долг по деньгам (оплата позже), а долг по занятиям возникает, когда занятия проведены сверх остатка (Q22, CONTEXT `debt`).
+Оплачен ли абонемент и есть ли долг по занятиям, это разные вещи: тренер может продать абонемент в долг по деньгам (оплата позже), а долг по занятиям возникает, когда занятия проведены сверх остатка (Q22, CONTEXT `debt`).
 
 ### 3.3. Какое событие пишет какую строку
 
@@ -1926,24 +1926,24 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
 
 | Событие | Запись `bookings` | Строка журнала |
 |---|---|---|
-| Оформлен абонемент (`create_pass`) | — | `grant +N` (`amount_minor = 0`), затем погашение долга (3.4) |
+| Оформлен абонемент (`create_pass`) | нет | `grant +N` (`amount_minor = 0`), затем погашение долга (3.4) |
 | Разовое занятие | создаётся абонемент `is_drop_in`, `sessions_total = 1`, цена из пакета на 1 | `grant +1` |
 | Клиент отменил ≥ дедлайна до начала | `cancelled`, `cancelled_by_role = 'client'` | нет |
 | Клиент отменил < дедлайна | `late_cancelled` | `charge −1`, `charge_reason = 'late_cancel'` |
 | Перенос клиентом ≥ дедлайна | старая `rescheduled` → новая `confirmed`/`requested` | нет |
-| Перенос клиентом < дедлайна | запрещён RPC; доступна отмена со списанием или просьба тренеру | — |
-| Тренер отменил/перенёс | `cancelled`/`rescheduled`, роль `trainer` | нет; если по записи уже был charge — автоматический `waiver` |
+| Перенос клиентом < дедлайна | запрещён RPC; доступна отмена со списанием или просьба тренеру | нет |
+| Тренер отменил/перенёс | `cancelled`/`rescheduled`, роль `trainer` | нет; если по записи уже был charge, пишется автоматический `waiver` |
 | Занятие завершилось (cron в `ends_at`) | `confirmed → attended` (кто не отмечен иначе) | `charge −1`, `'attended'` |
-| Тренер отметил неявку | `no_show` | `charge −1`, `'no_show'` (если был `attended`-charge — строка не меняется, см. ниже) |
-| Тренер исправил `attended ↔ no_show` | статус меняется, событие в `booking_events` | **нет** — сумма та же; разбивка «проведено/неявка» в аналитике берётся из `bookings.status` |
-| Тренер «простил» (`waive_charge`) | статус не меняется | `waiver +1` → `related_entry_id` = charge, `amount_minor = −charge.amount_minor`; если charge был покрыт settlement — ещё `settlement_reversal +1` на тот абонемент |
+| Тренер отметил неявку | `no_show` | `charge −1`, `'no_show'` (если был `attended`-charge, строка не меняется, см. ниже) |
+| Тренер исправил `attended ↔ no_show` | статус меняется, событие в `booking_events` | **нет**: сумма та же; разбивка «проведено/неявка» в аналитике берётся из `bookings.status` |
+| Тренер «простил» (`waive_charge`) | статус не меняется | `waiver +1` → `related_entry_id` = charge, `amount_minor = −charge.amount_minor`; если charge был покрыт settlement, ещё и `settlement_reversal +1` на тот абонемент |
 | Запрос (`requested`) отменён, отклонён, истёк | `cancelled`/`declined`/`expired` | никогда |
 | Бесплатное пробное (`trial_links.price_minor = 0`) | `attended` | нет (у пробного нет списания) |
 | Платное пробное | абонемент `is_drop_in` с ценой ссылки | `grant +1`, затем `charge` как обычно |
 | Отмена абонемента тренером | `passes.status = 'cancelled'` | `refund −remaining` (остаток обнуляется; деньги возвращаются отдельной `payments.direction = 'refund'`) |
-| Ручная корректировка | — | `adjustment ±k` с обязательным `note` |
+| Ручная корректировка | нет | `adjustment ±k` с обязательным `note` |
 
-Правило дедлайна: `deadline_at = session.starts_at − bookings.cancel_deadline_hours * interval '1 hour'`; отмена бесплатна, если `now() <= deadline_at` (граница — бесплатно). Снимок часов берётся при создании записи: `coalesce(coachings.cancellation_deadline_hours, trainer_profiles.cancellation_deadline_hours)`. Если тренер переносит занятие, дедлайн считается от нового начала, снимок часов не меняется. Принятие места из листа ожидания позже дедлайна — запись создаётся, но отмена сразу будет поздней (wave-2 9.4, предупреждение в интерфейсе).
+Правило дедлайна: `deadline_at = session.starts_at − bookings.cancel_deadline_hours * interval '1 hour'`; отмена бесплатна, если `now() <= deadline_at` (граница тоже бесплатна). Снимок часов берётся при создании записи: `coalesce(coachings.cancellation_deadline_hours, trainer_profiles.cancellation_deadline_hours)`. Если тренер переносит занятие, дедлайн считается от нового начала, снимок часов не меняется. Если место из листа ожидания принято позже дедлайна, запись создаётся, но отмена сразу будет поздней (wave-2 9.4, предупреждение в интерфейсе).
 
 Частичных списаний нет (Q21): `sessions_delta` у charge всегда −1.
 
@@ -1951,13 +1951,13 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
 
 При `charge` функция `private.post_charge(booking_id, reason)` выбирает абонемент:
 
-1. Кандидаты: абонементы пары с `status = 'active'` (производный — не исчерпан, не истёк на момент **начала занятия**, не заморожен в дату занятия), `applies_to` совпадает с `sessions.kind` (`any` подходит всем; `trial` считается `personal`).
-2. Сначала `bookings.reserved_pass_id`, если он ещё подходит; иначе — ближайший `effective_expires_at` (бессрочные последними), затем самый ранний `starts_on`.
-3. Нашёлся — `charge` с этим `pass_id`. Нет — **долговое** `charge` с `pass_id = null` — **всегда** (Q22, было O2); автоматического превращения в разовое «не оплачено» нет.
+1. Кандидаты: абонементы пары с `status = 'active'` (производный: не исчерпан, не истёк на момент **начала занятия**, не заморожен в дату занятия), `applies_to` совпадает с `sessions.kind` (`any` подходит всем; `trial` считается `personal`).
+2. Сначала `bookings.reserved_pass_id`, если он ещё подходит; иначе ближайший `effective_expires_at` (бессрочные последними), затем самый ранний `starts_on`.
+3. Если абонемент нашёлся, пишется `charge` с этим `pass_id`. Если нет, **всегда** пишется **долговое** `charge` с `pass_id = null` (Q22, было O2); автоматического превращения в разовое «не оплачено» нет.
 
-`amount_minor` для charge по абонементу — справедливая доля с распределением остатка копеек: для k-го нетто-списания абонемента (k = 1 + число непрощённых charge/settlement этого абонемента) `amount = floor(price·k/N) − floor(price·(k−1)/N)`; сумма по всем N занятиям ровно равна цене. Для долгового charge — цена разового занятия тренера в валюте пары (пакет `sessions_count = 1`, `applies_to` по типу занятия); нет такого пакета — `amount_minor = 0` и долг показывается только в занятиях.
+`amount_minor` для charge по абонементу равен справедливой доле с распределением остатка копеек: для k-го нетто-списания абонемента (k = 1 + число непрощённых charge/settlement этого абонемента) `amount = floor(price·k/N) − floor(price·(k−1)/N)`; сумма по всем N занятиям ровно равна цене. Для долгового charge берётся цена разового занятия тренера в валюте пары (пакет `sessions_count = 1`, `applies_to` по типу занятия); если такого пакета нет, `amount_minor = 0` и долг показывается только в занятиях.
 
-Погашение: при `grant` нового абонемента функция проходит долговые charge пары по возрастанию `occurred_at` и для каждого, пока остаток > 0 и тип подходит, пишет `settlement −1` (`pass_id` = новый, `related_entry_id` = charge, `amount_minor` = доля абонемента по той же формуле, а у исходного charge сумма не меняется). Выручка за такое занятие в аналитике = `amount_minor` settlement (если он есть), иначе charge — так долговое занятие, оплаченное позже абонементом, учитывается по цене абонемента, а не разового.
+Погашение: при `grant` нового абонемента функция проходит долговые charge пары по возрастанию `occurred_at` и для каждого, пока остаток > 0 и тип подходит, пишет `settlement −1` (`pass_id` = новый, `related_entry_id` = charge, `amount_minor` = доля абонемента по той же формуле, а у исходного charge сумма не меняется). Выручка за такое занятие в аналитике = `amount_minor` settlement (если он есть), иначе charge. Так долговое занятие, оплаченное позже абонементом, учитывается по цене абонемента, а не разового.
 
 ### 3.5. Автоподтверждение и долг
 
@@ -1965,11 +1965,11 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
 
 - `confirmed`, если у пары есть подходящий абонемент с `available ≥ 1` (ставится `reserved_pass_id`);
 - иначе `confirmed`, если тренер разрешил этому клиенту запись в долг (`coachings.self_book_on_debt`) и `debt_sessions < coalesce(debt_limit_sessions, ∞)`;
-- иначе `requested` — тренер подтверждает (занятие при списании уйдёт в долг, либо тренер сразу оформляет разовое или абонемент) или отклоняет.
+- иначе `requested`: тренер подтверждает (занятие при списании уйдёт в долг, либо тренер сразу оформляет разовое или абонемент) или отклоняет.
 
-Для пары-карточки без аккаунта самостоятельной записи нет — занятия создаёт тренер.
+Для пары-карточки без аккаунта самостоятельной записи нет, занятия создаёт тренер.
 
-Тренер, назначающий занятие сам, всегда создаёт `confirmed` (Q20) — наличие абонемента ему лишь показывается.
+Тренер, назначающий занятие сам, всегда создаёт `confirmed` (Q20), а наличие абонемента ему только показывается.
 
 ---
 
@@ -1977,27 +1977,27 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
 
 ### 4.1. Функции-помощники
 
-Все — в схеме `private` (не экспонируется PostgREST, их нельзя вызвать как RPC), `language sql stable security definer set search_path = ''`, все имена схемно-квалифицированы, владелец — `postgres`, `revoke execute on function … from public, anon; grant execute … to authenticated`.
+Все функции лежат в схеме `private` (не экспонируется PostgREST, их нельзя вызвать как RPC), объявлены как `language sql stable security definer set search_path = ''`, все имена схемно-квалифицированы, владелец `postgres`, права: `revoke execute on function … from public, anon; grant execute … to authenticated`.
 
 | Функция | Возвращает `true`, если текущий пользователь… |
 |---|---|
 | `private.is_admin()` | имеет `user_roles.role = 'admin'` |
 | `private.is_trainer()` | имеет `trainer_profiles` |
 | `private.is_coaching_client(coaching_id)` | клиент этой пары (любой статус) |
-| `private.is_coaching_trainer(coaching_id, scope delegation_scope default null)` | тренер-владелец пары; **или** активный делегат (`status = 'active'`, `now()` в `[starts_at, ends_at)`), у которого пара покрыта (`all_clients`, `delegation_clients` или подмена на занятие с записью этой пары) и `scope = any(scopes)` (при `scope is null` — любое делегирование) |
+| `private.is_coaching_trainer(coaching_id, scope delegation_scope default null)` | тренер-владелец пары; **или** активный делегат (`status = 'active'`, `now()` в `[starts_at, ends_at)`), у которого пара покрыта (`all_clients`, `delegation_clients` или подмена на занятие с записью этой пары) и `scope = any(scopes)` (при `scope is null` подходит любое делегирование) |
 | `private.is_coaching_member(coaching_id)` | клиент или тренер/делегат пары |
 | `private.is_trainer_of(client_id, scope default null)` | тренер/делегат хотя бы одной пары с этим клиентом в статусе `trial`/`active` |
-| `private.can_view(client_id, category share_category)` | это сам клиент; **или** тренер пары `trial`/`active` с `data_shares.<category> = true` (для делегата — ещё scope: `progress` для `measurements`/`photos`, `nutrition` для `nutrition`/`steps`, `notes` для `intake`, `workouts` для `workouts`); **или** админ с действующим `break_glass_grants` на эту категорию |
-| `private.can_manage_session(session_id, scope default 'schedule')` | тренер занятия или делегат (помощник с scope; подмена — на это занятие) |
-| `private.trainer_ids_visible()` | `setof uuid` — тренеры, с которыми у пользователя есть пара (для справочников: пакеты, ссылки на оплату, упражнения, локации) |
-| `private.attended_count(coaching_id)` | (число) проведённых записей пары — для отзывов (≥ 3) и вех |
+| `private.can_view(client_id, category share_category)` | это сам клиент; **или** тренер пары `trial`/`active` с `data_shares.<category> = true` (для делегата нужен ещё scope: `progress` для `measurements`/`photos`, `nutrition` для `nutrition`/`steps`, `notes` для `intake`, `workouts` для `workouts`); **или** админ с действующим `break_glass_grants` на эту категорию |
+| `private.can_manage_session(session_id, scope default 'schedule')` | тренер занятия или делегат (помощник с scope; подмена: на это занятие) |
+| `private.trainer_ids_visible()` | `setof uuid`: тренеры, с которыми у пользователя есть пара (для справочников: пакеты, ссылки на оплату, упражнения, локации) |
+| `private.attended_count(coaching_id)` | (число) проведённых записей пары, нужно для отзывов (≥ 3) и вех |
 
 **Почему SECURITY DEFINER и фиксированный `search_path`.**
 
-1. **Рекурсия RLS.** Политика `bookings` спрашивает про `coachings`, политика `coachings` — про `delegations`, политика `delegations` — про `coachings`. Если помощники выполняются с правами вызывающего, каждая такая проверка снова включает RLS и цепочка либо зацикливается («infinite recursion detected in policy»), либо работает медленно. DEFINER-функция читает служебные таблицы без RLS ровно один раз и возвращает только `boolean` о **текущем** пользователе — ничего лишнего не утекает.
+1. **Рекурсия RLS.** Политика `bookings` спрашивает про `coachings`, политика `coachings` про `delegations`, политика `delegations` про `coachings`. Если помощники выполняются с правами вызывающего, каждая такая проверка снова включает RLS и цепочка либо зацикливается («infinite recursion detected in policy»), либо работает медленно. DEFINER-функция читает служебные таблицы без RLS ровно один раз и возвращает только `boolean` о **текущем** пользователе, поэтому ничего лишнего не утекает.
 2. **Производительность и одна точка правды.** Правило «кто тренер пары с учётом делегирования и разрешений клиента» записано один раз, а не скопировано в 40 политик; в политиках оно вызывается как `(select private.fn(...))` или с индексированными аргументами.
 3. **`set search_path = ''`.** DEFINER-функция работает с правами владельца; без фиксированного пути злоумышленник может создать в доступной ему схеме объект с тем же именем (`coachings`, оператор `=`), и функция выполнит его с повышенными правами. Пустой путь + полные имена (`public.coachings`, `pg_catalog.now()`) закрывают эту атаку; Supabase advisor `function_search_path_mutable` проверяет именно это.
-4. **Схема `private`.** Функции не попадают в REST API (`/rpc/...`), поэтому их нельзя дёргать перебором чужих идентификаторов — хотя и сами ответы касаются только вызывающего.
+4. **Схема `private`.** Функции не попадают в REST API (`/rpc/...`), поэтому их нельзя дёргать перебором чужих идентификаторов (хотя и сами ответы касаются только вызывающего).
 
 Пример политик:
 
@@ -2019,99 +2019,99 @@ create policy "coaching_notes: client sees flagged" on public.coaching_notes for
 
 ### 4.2. Матрица
 
-Обозначения: **C** — клиент (сам пользователь / клиент пары), **T** — тренер-владелец пары, **D[scope]** — делегат с этим scope (W3), **A** — админ, **S** — только сервер с секретным ключом или SECURITY DEFINER-RPC/триггер, **pub** — через публичную DEFINER-функцию, **—** — никто. «share:X» — плюс разрешение клиента `data_shares.X` в паре `trial`/`active`. Если D не указан — делегату недоступно. A не имеет доступа ни к чему, что не указано явно; персональные данные — только через break-glass (**BG**).
+Обозначения: **C**: клиент (сам пользователь / клиент пары), **T**: тренер-владелец пары, **D[scope]**: делегат с этим scope (W3), **A**: админ, **S**: только сервер с секретным ключом или SECURITY DEFINER-RPC/триггер, **pub**: через публичную DEFINER-функцию, **никто**: доступа нет ни у кого. «share:X» означает, что нужно ещё разрешение клиента `data_shares.X` в паре `trial`/`active`. Если D не указан, делегату недоступно. A не имеет доступа ни к чему, что не указано явно; персональные данные он видит только через break-glass (**BG**).
 
 | Таблица | SELECT | INSERT | UPDATE | DELETE |
 |---|---|---|---|---|
 | `profiles` | сам; T/C общих пар (вкл. завершённые); D покрытых пар; A. Без `telegram_id` (колоночный грант) | S | S | S (удаление аккаунта) |
-| `user_settings` | сам; остальные — только `display_name`, `avatar_path` через вью `public_profiles` | S (при входе) | сам | — (каскад) |
+| `user_settings` | сам; остальные: только `display_name`, `avatar_path` через вью `public_profiles` | S (при входе) | сам | никто (каскад) |
 | `notification_preferences` | сам | сам | сам | сам |
-| `user_roles` | сам; A | A через `admin_grant_role` (S-RPC) | — | A через `admin_revoke_role` |
-| `consents` | сам; A (факт, без содержания пользователя) | сам (только `accepted_at = now()`) | сам: только `revoked_at` | — |
+| `user_roles` | сам; A | A через `admin_grant_role` (S-RPC) | никто | A через `admin_revoke_role` |
+| `consents` | сам; A (факт, без содержания пользователя) | сам (только `accepted_at = now()`) | сам: только `revoked_at` | никто |
 | `account_deletions` | сам; A | S-RPC `request_account_deletion` | S-RPC `cancel_account_deletion` | S |
 | `data_exports` | сам | S-RPC `request_data_export` | S | S |
-| `trainer_profiles` | сам; клиенты (любые пары); D; A; anon/прочие — **pub** `get_trainer_showcase(slug)` (не отдаёт витрину при `verification_status = 'rejected'`, Q15/Q55); зона «Тренер» и `is_trainer()` — при наличии `trainer_profiles` (доступ не зависит от верификации и тарифа, Q55) | S-RPC `redeem_trainer_invite` | сам (кроме `verification_status`, `verified_at`, `trainer_invite_id` — колоночные гранты); A через `admin_decide_verification` | — |
+| `trainer_profiles` | сам; клиенты (любые пары); D; A; anon/прочие: **pub** `get_trainer_showcase(slug)` (не отдаёт витрину при `verification_status = 'rejected'`, Q15/Q55); зона «Тренер» и `is_trainer()` доступны при наличии `trainer_profiles` (доступ не зависит от верификации и тарифа, Q55) | S-RPC `redeem_trainer_invite` | сам (кроме `verification_status`, `verified_at`, `trainer_invite_id`: колоночные гранты); A через `admin_decide_verification` | никто |
 | `trainer_certificates` | сам; A | сам | сам | сам |
-| `trainer_verifications` | сам; A | A через RPC; сам — повторная подача (`decision = 'pending'`) через RPC | — | — |
-| `trainer_invites` | A | A через `admin_create_trainer_invite` | A (отзыв), S-RPC (погашение) | — |
-| `client_invites` | T; **pub** по токену/коду (`resolve_client_invite`) | T | T | — (архив) |
-| `trial_links` | T; **pub** `get_trial_link(token)` | T | T | — (архив) |
-| `coachings` | C; T; D (покрытые); — A (только агрегаты) | S-RPC `join_by_invite`, `join_by_code`, `book_trial`, `create_managed_client` | T: `client_alias`, `cancellation_deadline_hours`, `self_book_on_debt`, `debt_limit_sessions`, `churn_hidden_until`, `primary_nutrition_group_id`; C: `client_reminder_offsets`, `broadcasts_muted`; завершение — RPC `end_coaching` (любая сторона) | — |
-| `data_shares` | C; T; D | S (вместе с парой) | **только C** (у карточки без аккаунта — никто, все `true`) | — |
-| `managed_client_claims` | T (свои) | S-RPC `join_by_invite`/`join_by_code` | T через `resolve_managed_client_claim` | — |
-| `coaching_notes` | T; D[notes]; C — только `visible_to_client` | T; D[notes] (`author_id = uid`) | автор | автор |
-| `intakes` | C; T/D[notes] только при share:intake (по умолчанию `false`, ставит клиент шагом согласия); BG | C | — (новая версия) | C |
-| `contact_requests` | requester; recipient | S-RPC `request_contact` (участник пары) | recipient через RPC (принять/отклонить) | — |
-| `locations` | T; D[schedule]; клиенты тренера | T | T | — (архив) |
+| `trainer_verifications` | сам; A | A через RPC; сам: повторная подача (`decision = 'pending'`) через RPC | никто | никто |
+| `trainer_invites` | A | A через `admin_create_trainer_invite` | A (отзыв), S-RPC (погашение) | никто |
+| `client_invites` | T; **pub** по токену/коду (`resolve_client_invite`) | T | T | никто (архив) |
+| `trial_links` | T; **pub** `get_trial_link(token)` | T | T | никто (архив) |
+| `coachings` | C; T; D (покрытые); A напрямую не видит (только агрегаты) | S-RPC `join_by_invite`, `join_by_code`, `book_trial`, `create_managed_client` | T: `client_alias`, `cancellation_deadline_hours`, `self_book_on_debt`, `debt_limit_sessions`, `churn_hidden_until`, `primary_nutrition_group_id`; C: `client_reminder_offsets`, `broadcasts_muted`; завершение через RPC `end_coaching` (любая сторона) | никто |
+| `data_shares` | C; T; D | S (вместе с парой) | **только C** (у карточки без аккаунта никто, все `true`) | никто |
+| `managed_client_claims` | T (свои) | S-RPC `join_by_invite`/`join_by_code` | T через `resolve_managed_client_claim` | никто |
+| `coaching_notes` | T; D[notes]; C: только `visible_to_client` | T; D[notes] (`author_id = uid`) | автор | автор |
+| `intakes` | C; T/D[notes] только при share:intake (по умолчанию `false`, ставит клиент шагом согласия); BG | C | никто (новая версия) | C |
+| `contact_requests` | requester; recipient | S-RPC `request_contact` (участник пары) | recipient через RPC (принять/отклонить) | никто |
+| `locations` | T; D[schedule]; клиенты тренера | T | T | никто (архив) |
 | `week_templates`, `week_template_items` | T; D[schedule] | T; D[schedule] | T; D[schedule] | T; D[schedule] |
-| `slots` | T; D[schedule]; клиенты тренера — `status = 'open'` и `starts_at > now()`; пробные — **pub** через `get_trial_link` | T; D[schedule]; S (шаблон недели) | T; D[schedule] | T; D[schedule] — только `open`/`closed` без занятия |
-| `recurrences` | T; D[schedule]; C — свои (`coaching_id`) | T; D[schedule] | T; D[schedule] | — (`ended_at`) |
-| `sessions` | T; D[schedule]/подмена; C — с живой записью; клиенты тренера — `open_for_booking and status = 'scheduled'` | T; D[schedule]; S (повторы) | T; D[schedule] (через RPC при изменении времени/отмене, т. к. затрагивает записи и outbox) | — |
-| `bookings` | C (свои); T; D[schedule]/[attendance] | **только S-RPC** (`book_slot`, `book_session`, `assign_client`, `waitlist_accept`) | **только S-RPC** (`confirm`, `decline`, `cancel_booking`, `reschedule`, `mark_attendance`) | — |
-| `booking_events` | как `bookings` | S (внутри RPC) | — | — |
-| `packages` | T; клиенты тренера (не архив); **pub** витрина (`is_public`) | T | T | — (архив) |
-| `passes` | C; T; D[passes] | S-RPC `create_pass` (T, D[passes]) — пишет `grant` | T, D[passes]: `title`, `expires_at`, `note`; отмена — RPC `cancel_pass` | — |
+| `slots` | T; D[schedule]; клиенты тренера: `status = 'open'` и `starts_at > now()`; пробные: **pub** через `get_trial_link` | T; D[schedule]; S (шаблон недели) | T; D[schedule] | T; D[schedule], только `open`/`closed` без занятия |
+| `recurrences` | T; D[schedule]; C: свои (`coaching_id`) | T; D[schedule] | T; D[schedule] | никто (`ended_at`) |
+| `sessions` | T; D[schedule]/подмена; C: с живой записью; клиенты тренера: `open_for_booking and status = 'scheduled'` | T; D[schedule]; S (повторы) | T; D[schedule] (через RPC при изменении времени/отмене, т. к. затрагивает записи и outbox) | никто |
+| `bookings` | C (свои); T; D[schedule]/[attendance] | **только S-RPC** (`book_slot`, `book_session`, `assign_client`, `waitlist_accept`) | **только S-RPC** (`confirm`, `decline`, `cancel_booking`, `reschedule`, `mark_attendance`) | никто |
+| `booking_events` | как `bookings` | S (внутри RPC) | никто | никто |
+| `packages` | T; клиенты тренера (не архив); **pub** витрина (`is_public`) | T | T | никто (архив) |
+| `passes` | C; T; D[passes] | S-RPC `create_pass` (T, D[passes]), пишет `grant` | T, D[passes]: `title`, `expires_at`, `note`; отмена через RPC `cancel_pass` | никто |
 | `pass_freezes` | C; T; D[passes] | T; D[passes] | T; D[passes] | T; D[passes] (будущие) |
-| `ledger_entries` | C; T; D[passes]/[attendance] | **только S-RPC/триггеры** (`post_charge`, `waive_charge` — T, D[attendance]; `adjust_balance` — T) | — (триггер запрещает) | — |
-| `payments` | C; T; D[payments] | T/D[payments]: `status = 'confirmed'`; C: `status = 'reported'`, `reported_by = uid` | T/D[payments]: `status`, `confirmed_*`, `voided_at`, `void_reason`; C: свою `reported` до подтверждения | — |
-| `payment_links` | T; клиенты тренера | T | T | — (архив) |
-| `notification_outbox` | — | S | S | S |
-| `calendar_feeds` | сам (без `token_hash`) | S-RPC `create_calendar_feed` | S-RPC `revoke_calendar_feed` | — |
-| `exercises` | wger — все authenticated; custom — владелец, его клиенты, его делегаты | custom — тренер (`owner_id = uid`); wger — S | владелец; wger — S | — (архив) |
+| `ledger_entries` | C; T; D[passes]/[attendance] | **только S-RPC/триггеры** (`post_charge`, `waive_charge`: T, D[attendance]; `adjust_balance`: T) | никто (триггер запрещает) | никто |
+| `payments` | C; T; D[payments] | T/D[payments]: `status = 'confirmed'`; C: `status = 'reported'`, `reported_by = uid` | T/D[payments]: `status`, `confirmed_*`, `voided_at`, `void_reason`; C: свою `reported` до подтверждения | никто |
+| `payment_links` | T; клиенты тренера | T | T | никто (архив) |
+| `notification_outbox` | никто | S | S | S |
+| `calendar_feeds` | сам (без `token_hash`) | S-RPC `create_calendar_feed` | S-RPC `revoke_calendar_feed` | никто |
+| `exercises` | wger: все authenticated; custom: владелец, его клиенты, его делегаты | custom: тренер (`owner_id = uid`); wger: S | владелец; wger: S | никто (архив) |
 | `exercise_translations` | как `exercises` | владелец (custom); S (wger) | то же | то же |
-| `workout_templates`, `workout_template_items` | владелец; D[workouts]; клиенты владельца — шаблоны, привязанные к их домашним заданиям | владелец | владелец | владелец |
-| `workout_logs`, `workout_log_exercises`, `workout_sets` | C; T/D[workouts] пары лога; для `coaching_id is null` — T активных пар клиента с share:workouts (Q38) | C (свои); T/D[workouts] (с `coaching_id` своей пары) | автор лога; C | автор лога; C |
+| `workout_templates`, `workout_template_items` | владелец; D[workouts]; клиенты владельца: шаблоны, привязанные к их домашним заданиям | владелец | владелец | владелец |
+| `workout_logs`, `workout_log_exercises`, `workout_sets` | C; T/D[workouts] пары лога; для `coaching_id is null`: T активных пар клиента с share:workouts (Q38) | C (свои); T/D[workouts] (с `coaching_id` своей пары) | автор лога; C | автор лога; C |
 | `personal_records` | C; T/D[workouts] (`is_trainer_of`) | S (триггер) | S | S |
 | `measurements` | share:measurements (`can_view`); BG | C; T/D[progress] share:measurements (`entered_by = uid`) | автор записи | автор записи; C |
 | `progress_photos` (+ Storage) | share:photos (по умолчанию **выкл**); BG | **только C** | C (`note`, `angle`) | C |
-| `milestones` | C; T; D | S (триггер) | — | — |
-| `feedback` | автор; A | автор | A (`status`, `github_issue_url`) | — |
-| `reports` | автор; A | любой authenticated (по объекту, к которому есть доступ — проверка в RPC `create_report`) | A через `admin_resolve_report` | — |
-| `admin_audit_log` | A | S (внутри `admin_*`) | — (триггер) | — (триггер) |
-| `break_glass_grants` | A (свои); целевой пользователь видит факт | A через `admin_open_break_glass` | A: `revoked_at` | — |
-| **W2** `client_goals` | C; T/D share:nutrition | C | — | C |
+| `milestones` | C; T; D | S (триггер) | никто | никто |
+| `feedback` | автор; A | автор | A (`status`, `github_issue_url`) | никто |
+| `reports` | автор; A | любой authenticated (по объекту, к которому есть доступ; проверка в RPC `create_report`) | A через `admin_resolve_report` | никто |
+| `admin_audit_log` | A | S (внутри `admin_*`) | никто (триггер) | никто (триггер) |
+| `break_glass_grants` | A (свои); целевой пользователь видит факт | A через `admin_open_break_glass` | A: `revoked_at` | никто |
+| **W2** `client_goals` | C; T/D share:nutrition | C | никто | C |
 | `body_profiles` | C; T/D share:nutrition; BG | C | C | C |
-| `nutrition_targets` | C (свои и групп, где состоит); T — свои пары и группы; другой тренер клиента видит только факт «активна норма другого тренера» через функцию; D[nutrition] | T/D[nutrition] (source trainer/group, `low_kcal_confirmed_at` обязателен при низкой норме — проверяет RPC `set_nutrition_target`); C (calculator) | — (неизменяемые; закрытие периода — RPC) | — |
-| `foods` | OFF — все authenticated; custom — владелец | custom — владелец; OFF — S | владелец; OFF — S | — (архив) |
+| `nutrition_targets` | C (свои и групп, где состоит); T: свои пары и группы; другой тренер клиента видит только факт «активна норма другого тренера» через функцию; D[nutrition] | T/D[nutrition] (source trainer/group, `low_kcal_confirmed_at` обязателен при низкой норме, это проверяет RPC `set_nutrition_target`); C (calculator) | никто (неизменяемые; закрытие периода через RPC) | никто |
+| `foods` | OFF: все authenticated; custom: владелец | custom: владелец; OFF: S | владелец; OFF: S | никто (архив) |
 | `food_dish_items`, `food_favorites` | владелец | владелец | владелец | владелец |
 | `food_diary_entries` | share:nutrition; BG | **только C** | C | C |
 | `food_day_comments` | C (без `hidden_by_client_at`-скрытых в UI); автор; T/D[nutrition] share:nutrition | T/D[nutrition] share:nutrition | автор: `body`; C: `hidden_by_client_at` | автор |
 | `nutrition_daily_summaries` | share:nutrition | S (cron) | S | S |
 | `activity_entries` | `metric = 'water'` → share:nutrition; `steps`/`sleep` → share:steps; BG | C (manual); S (ios_shortcut через ingest) | C | C |
-| `ingest_tokens` | сам (без `token_hash`) | S-RPC `create_ingest_token` | S-RPC (отзыв), S (счётчики) | — |
-| `groups` | T; D[schedule]; C — свои группы (только `name`, `goal` через вью `my_groups`) | T | T | — (архив) |
-| `group_members` | T; C — свои строки | T (пара своя — `with check`) | — | T |
-| `broadcasts` | T; C — получатель (через outbox payload, не таблицу) | S-RPC `send_broadcast` (T) | T: `deleted_at` | — |
-| `waitlist_entries` | C (свои + позиция через RPC); T; D[schedule] | S-RPC `join_waitlist` | S-RPC (`leave`, `accept`, `decline`, офферы cron) | — |
-| `homework`, `homework_exercises` | C; T; D[homework] | T; D[homework] | T; D[homework] | — (архив) |
-| `homework_occurrences` | C; T; D[homework] | S (развёртка повтора) | C: `done_at`, `comment`, `workout_log_id` (снятие ≤ 24 ч — RPC) | — |
-| `reviews` | автор; тренер; A (W4: публично только `published` и `publish_consent = true`, Q53) | C при `attended_count ≥ 3` (`with check`) | C: `rating`, `body`, `deleted_at`, `publish_consent`; T: `trainer_reply*`; A: `status`, `hidden_reason` через RPC | — (soft) |
-| `review_revisions` | A | S (триггер) | — | — |
+| `ingest_tokens` | сам (без `token_hash`) | S-RPC `create_ingest_token` | S-RPC (отзыв), S (счётчики) | никто |
+| `groups` | T; D[schedule]; C: свои группы (только `name`, `goal` через вью `my_groups`) | T | T | никто (архив) |
+| `group_members` | T; C: свои строки | T (пара своя, `with check`) | никто | T |
+| `broadcasts` | T; C: получатель (через outbox payload, не таблицу) | S-RPC `send_broadcast` (T) | T: `deleted_at` | никто |
+| `waitlist_entries` | C (свои + позиция через RPC); T; D[schedule] | S-RPC `join_waitlist` | S-RPC (`leave`, `accept`, `decline`, офферы cron) | никто |
+| `homework`, `homework_exercises` | C; T; D[homework] | T; D[homework] | T; D[homework] | никто (архив) |
+| `homework_occurrences` | C; T; D[homework] | S (развёртка повтора) | C: `done_at`, `comment`, `workout_log_id` (снятие ≤ 24 ч через RPC) | никто |
+| `reviews` | автор; тренер; A (W4: публично только `published` и `publish_consent = true`, Q53) | C при `attended_count ≥ 3` (`with check`) | C: `rating`, `body`, `deleted_at`, `publish_consent`; T: `trainer_reply*`; A: `status`, `hidden_reason` через RPC | никто (soft) |
+| `review_revisions` | A | S (триггер) | никто | никто |
 | `churn_flags` | T | S (cron) | S | S |
-| `product_events` | — (только агрегаты A) | S | — | S (retention) |
-| **W3** `delegations` | owner; delegate; клиенты покрытых пар — факт и имя делегата | owner | owner (`revoked_at`, `scopes`); delegate — принять/отклонить через RPC | — |
-| `delegation_clients` | owner; delegate | owner | — | owner |
-| `badges` | все authenticated | — (миграции) | — | — |
+| `product_events` | никто (только агрегаты A) | S | никто | S (retention) |
+| **W3** `delegations` | owner; delegate; клиенты покрытых пар: факт и имя делегата | owner | owner (`revoked_at`, `scopes`); delegate: принять/отклонить через RPC | никто |
+| `delegation_clients` | owner; delegate | owner | никто | owner |
+| `badges` | все authenticated | никто (миграции) | никто | никто |
 | `user_badges`, `streaks` | сам; T/D активных пар | S | S | S |
-| `challenges` | T; участники | T | T | — |
-| `challenge_participants` | T; сам; лидерборд — **pub-для-участников** `get_challenge_leaderboard` | C (вступить в челлендж своей группы); T | C: `show_on_leaderboard`; S: `score` | C (выйти); T |
-| `referral_codes` | сам | S | — | — |
-| `referral_offers` | T; клиенты тренера | T | T | — (архив) |
-| `referrals`, `bonuses` | referrer; referee; T пары; A | S (при присоединении по реф-коду) | S (триггер оплаты) | — |
-| `check_ins` | C; T; D[attendance] | S-RPC `check_in_by_qr` (C), T/D[attendance] | — | T |
+| `challenges` | T; участники | T | T | никто |
+| `challenge_participants` | T; сам; лидерборд: **pub-для-участников** `get_challenge_leaderboard` | C (вступить в челлендж своей группы); T | C: `show_on_leaderboard`; S: `score` | C (выйти); T |
+| `referral_codes` | сам | S | никто | никто |
+| `referral_offers` | T; клиенты тренера | T | T | никто (архив) |
+| `referrals`, `bonuses` | referrer; referee; T пары; A | S (при присоединении по реф-коду) | S (триггер оплаты) | никто |
+| `check_ins` | C; T; D[attendance] | S-RPC `check_in_by_qr` (C), T/D[attendance] | никто | T |
 | **W4** `posts` | по `visibility` + `follows` − `user_blocks`; модерация A | автор | автор; A (`moderation_status`) | автор (soft) |
-| `follows`, `user_blocks` | участники связи | follower / user | — | follower / user |
-| `buddy_profiles` | сам; другим — через RPC поиска (без точных координат, только расстояние, 18+) | сам | сам | сам |
-| `buddy_interests` | from; to (только при взаимности) | from | — | from |
+| `follows`, `user_blocks` | участники связи | follower / user | никто | follower / user |
+| `buddy_profiles` | сам; другим: через RPC поиска (без точных координат, только расстояние, 18+) | сам | сам | сам |
+| `buddy_interests` | from; to (только при взаимности) | from | никто | from |
 | `clubs`, `club_trainers` | все (`approved`); автор; A | тренер | автор (pending); A | A |
-| **Later** `studios`, `studio_members`, `plans`, `plan_subscriptions` | по членству / все (`plans`) / тренер | owner / — / S | owner / S | owner / S |
+| **Later** `studios`, `studio_members`, `plans`, `plan_subscriptions` | по членству / все (`plans`) / тренер | owner / никто / S | owner / S | owner / S |
 
 ### 4.3. Как закодированы правила приватности
 
-- **Тренер видит только свои пары**: любая политика тренера идёт через `is_coaching_trainer(coaching_id)` / `is_trainer_of(client_id)`; у таблиц без `coaching_id` (личные данные клиента) — через `can_view(client_id, category)`, которая ищет пару именно с текущим пользователем.
+- **Тренер видит только свои пары**: любая политика тренера идёт через `is_coaching_trainer(coaching_id)` / `is_trainer_of(client_id)`; у таблиц без `coaching_id` (личные данные клиента) она идёт через `can_view(client_id, category)`, которая ищет пару именно с текущим пользователем.
 - **Разрешения на данные**: `data_shares` пишет только клиент; `can_view` проверяет флаг категории в момент запроса, поэтому отзыв мгновенно закрывает и историю (wave-2). Фото по умолчанию `false`. После завершения пары (`ended`) персональные данные закрыты, а учёт (занятия, оплаты, журнал) остаётся виден обеим сторонам.
 - **Заметки тренера скрыты**: политика клиента на `coaching_notes` требует `visible_to_client`.
-- **Админ не видит персональные данные**: ни одна политика на `measurements`, `progress_photos`, `food_diary_entries`, `activity_entries`, `nutrition_*`, `body_profiles`, `client_goals`, `intakes`, `coaching_notes` не упоминает `is_admin()` — только `can_view`, которая для админа истинна лишь при действующем `break_glass_grants`, выданном с записью в журнал. Админская аналитика читает только `analytics.*` через `admin_*`-функции.
+- **Админ не видит персональные данные**: ни одна политика на `measurements`, `progress_photos`, `food_diary_entries`, `activity_entries`, `nutrition_*`, `body_profiles`, `client_goals`, `intakes`, `coaching_notes` не упоминает `is_admin()`, только `can_view`, которая для админа истинна лишь при действующем `break_glass_grants`, выданном с записью в журнал. Админская аналитика читает только `analytics.*` через `admin_*`-функции.
 - **Делегат не видит больше владельца**: `can_view` для делегата требует и флаг клиента в паре владельца, и scope делегирования.
 - **`initDataUnsafe` и присланные id не используются**: каждая политика сравнивает с `auth.uid()`; RPC берут идентичность только из `auth.uid()`.
 
@@ -2132,37 +2132,37 @@ create policy "coaching_notes: client sees flagged" on public.coaching_notes for
 
 Плюс DEFINER-функции, отдающие счётчики без чужих персональных данных: `session_occupancy(session_id)` (занято/вместимость для клиента группового занятия), `waitlist_position(session_id)`.
 
-### 5.2. Аналитика тренера — живые запросы (SECURITY INVOKER-функции)
+### 5.2. Аналитика тренера: живые запросы (SECURITY INVOKER-функции)
 
 Объём беты мал (цель wave-2: ≤ 1,5 с при 50 клиентах и 1000 записей), поэтому финансы и посещаемость считаются по запросу из журнала и записей с индексами `(trainer_id, occurred_at)` / `(trainer_id, paid_at)`. Функции выполняются с правами вызывающего, RLS ограничивает их своими парами.
 
-- `trainer_attendance(p_from, p_to, p_bucket)` — проведено, неявки, отмены (бесплатные/со списанием/тренером), явка % = attended / (attended + no_show); корзины `date_trunc(p_bucket, starts_at at time zone tz)`.
-- `trainer_revenue(p_bucket 'week'|'month'|'quarter'|'year', p_from, p_to)` — по `currency`: **заработано** = Σ `amount_minor` строк `charge` (по покрытому — сумма `settlement`, см. 3.4) минус `waiver`, по `occurred_at` (дата занятия); **поступления** = Σ `payments` `confirmed` по `paid_at` (`refund` с минусом); **средняя цена занятия** = заработано / число непрощённых списаний; сравнение с предыдущим периодом.
-- `trainer_debts()`, `trainer_expiring_passes()` — поверх `coaching_balances`/`pass_balances`.
-- `trainer_slot_utilization(p_weeks)` — для подсказки «загрузка ≥ 85%».
-- `trainer_price_simulator(p_increase_pct, p_churn_pct)` — чистая функция поверх средней выручки за 3 месяца; ничего не пишет.
-- CSV — сервер вызывает те же функции с сессией тренера.
+- `trainer_attendance(p_from, p_to, p_bucket)`: проведено, неявки, отмены (бесплатные/со списанием/тренером), явка % = attended / (attended + no_show); корзины `date_trunc(p_bucket, starts_at at time zone tz)`.
+- `trainer_revenue(p_bucket 'week'|'month'|'quarter'|'year', p_from, p_to)` считает по каждой `currency`: **заработано** = Σ `amount_minor` строк `charge` (по покрытому берётся сумма `settlement`, см. 3.4) минус `waiver`, по `occurred_at` (дата занятия); **поступления** = Σ `payments` `confirmed` по `paid_at` (`refund` с минусом); **средняя цена занятия** = заработано / число непрощённых списаний; сравнение с предыдущим периодом.
+- `trainer_debts()`, `trainer_expiring_passes()` работают поверх `coaching_balances`/`pass_balances`.
+- `trainer_slot_utilization(p_weeks)`: для подсказки «загрузка ≥ 85%».
+- `trainer_price_simulator(p_increase_pct, p_churn_pct)`: чистая функция поверх средней выручки за 3 месяца; ничего не пишет.
+- CSV: сервер вызывает те же функции с сессией тренера.
 
 ### 5.3. Предрасчёт по расписанию (pg_cron → таблицы с RLS)
 
 | Таблица | Когда | Почему не живой запрос |
 |---|---|---|
 | `nutrition_daily_summaries` | каждые 15 мин закрывает дни клиентов, у которых в их поясе наступила полночь; + очередь пересчёта при правках | «норма того дня» должна фиксироваться; попадание за 7/30/90 дней = быстрый агрегат по готовым дням |
-| `churn_flags` | ночью (03:00 UTC) | правила с окнами 8 недель и «2 из 4 последних» дороги на каждом открытии; скрытие на 30 дней — `coachings.churn_hidden_until` |
+| `churn_flags` | ночью (03:00 UTC) | правила с окнами 8 недель и «2 из 4 последних» дороги на каждом открытии; скрытие на 30 дней хранится в `coachings.churn_hidden_until` |
 | `personal_records`, `streaks`, `challenge_participants.score`, `milestones` | триггеры / каждый час | кеши для лент и бейджей |
 
-Это обычные таблицы с RLS, а не материализованные представления: MV в Supabase не поддерживают RLS и в схеме `public` были бы доступны через API без ограничений.
+Это обычные таблицы с RLS. Материализованные представления здесь не подходят: MV в Supabase не поддерживают RLS и в схеме `public` были бы доступны через API без ограничений.
 
-### 5.4. Аналитика админов — материализованные представления в `analytics`
+### 5.4. Аналитика админов: материализованные представления в `analytics`
 
-Схема `analytics` не экспонируется. MV обновляются `refresh materialized view concurrently` ночью (и по кнопке через `admin_refresh_analytics()`), у каждой — уникальный индекс для `concurrently`. Доступ — только `admin_*` DEFINER-функции с проверкой `is_admin()`; открытие среза по конкретному тренеру пишет `admin_audit_log`.
+Схема `analytics` не экспонируется. MV обновляются `refresh materialized view concurrently` ночью (и по кнопке через `admin_refresh_analytics()`), у каждой есть уникальный индекс для `concurrently`. Доступ только через `admin_*` DEFINER-функции с проверкой `is_admin()`; открытие среза по конкретному тренеру пишет `admin_audit_log`.
 
 | MV | Ключ | Поля (без значений тела/питания) |
 |---|---|---|
 | `analytics.platform_daily` | `day` | новые пользователи, тренеры (инвайт → регистрация → верификация → первый клиент → первое занятие), активные 1/7/30 дней, занятия, записи, отмены/неявки, доля занятий без ручных правок (`sessions.manually_adjusted_at is null`), доля открытий из напоминаний (`product_events.entry = 'reminder'`) |
 | `analytics.trainer_daily` | `trainer_id, day, currency` | клиентов, занятий, явка, заработано/поступления, заканчивающихся абонементов, активность в приложении, флаги использования функций |
 | `analytics.user_feature_usage` | `user_id, day` | только булевы флаги: вёл дневник / активность / есть норма / логировал тренировку / открыл приложение; число пар; последний вход |
-| `analytics.beta_metrics` | `day` | три показателя Q26 за скользящие 14 дней (определения — wave-2 §8.6 и «Допущения») |
+| `analytics.beta_metrics` | `day` | три показателя Q26 за скользящие 14 дней (определения: wave-2 §8.6 и «Допущения») |
 
 Агрегаты по данным тела и питания (средний вес и т. п.) админу не считаются вовсе (wave-2 §8.5). Будущее «сравнение с рынком» строится из `analytics.trainer_daily` с порогом ≥ 10 тренеров в срезе и только процентилями.
 
@@ -2230,42 +2230,42 @@ erDiagram
 
 Места, где `decisions.md` (и PRD) молчит, и что выбрано здесь:
 
-1. **Настройки отдельно от `profiles`.** `profiles` остаётся «серверным» (как в существующей миграции); всё, что меняет пользователь, — в `user_settings` 1:1. `telegram_id` скрыт от других пользователей колоночным грантом.
+1. **Настройки отдельно от `profiles`.** `profiles` остаётся «серверным» (как в существующей миграции); всё, что меняет пользователь, лежит в `user_settings` 1:1. `telegram_id` скрыт от других пользователей колоночным грантом.
 2. **Пояс по умолчанию** `Europe/Moscow` (бета в основном РФ, Q3), уточняется при первом входе из браузера/устройства. Расписание разворачивается в поясе, скопированном в шаблон/повтор при создании.
-3. **Единицы**: `unit_system = null` значит «по локали», хранение — всегда метрика (как в wave-2).
-4. **Напоминания клиента — на пару** (`coachings.client_reminder_offsets`), а не глобально: у клиента двух тренеров могут быть разные. По умолчанию для новых пар `{1440, 60}` (1 день и 1 час); тренеру самому себе — `{60}`. Отдельной таблицы reminders нет — запланированные напоминания живут в outbox.
-5. **Тихие часы** — не допущение, а ADR 0006: напоминание о занятии отправляется в своё время беззвучно (`disable_notification`), остальные уведомления ждут окончания тихих часов.
-6. **Диспетчер уведомлений** (ADR 0006): бот — serverless-функция на Vercel (webhook), Docker — только локальная разработка; Vercel Hobby не даёт поминутный cron, поэтому outbox разгребается вызовом из `pg_cron` + `pg_net` раз в минуту.
+3. **Единицы**: `unit_system = null` значит «по локали», храним всегда в метрике (как в wave-2).
+4. **Напоминания клиента: на пару** (`coachings.client_reminder_offsets`), а не глобально: у клиента двух тренеров могут быть разные. По умолчанию для новых пар `{1440, 60}` (1 день и 1 час); тренеру самому себе: `{60}`. Отдельной таблицы reminders нет: запланированные напоминания живут в outbox.
+5. **Тихие часы** решены в ADR 0006, это не допущение: напоминание о занятии отправляется в своё время беззвучно (`disable_notification`), остальные уведомления ждут окончания тихих часов.
+6. **Диспетчер уведомлений** (ADR 0006): бот работает как serverless-функция на Vercel (webhook), Docker нужен только для локальной разработки; Vercel Hobby не даёт поминутный cron, поэтому outbox разгребается вызовом из `pg_cron` + `pg_net` раз в минуту.
 7. **Код инвайта тренера хранится хешем** и показывается админу один раз; токены ссылок клиента/пробного хранятся открыто (это адреса, а не секреты). У ссылки клиента есть короткий код из 6 символов для экрана «Введите код тренера».
-8. **Статусы пары**: `trial` (пришёл по ссылке на пробное) → `active` автоматически после проведённого пробного или оформления абонемента; `ended` — любой стороной. Повторное присоединение реактивирует ту же строку.
-9. **Анкета** — одна на пользователя (версионируется). Видимость — решение Q38 (было O3): `data_shares.intake` по умолчанию `false`, ставится клиентом на шаге согласия при создании пары, меняется позже. PAR-Q хранится отдельно с флагом `parq_flagged`; без разрешения тренер не видит и флаг.
+8. **Статусы пары**: `trial` (пришёл по ссылке на пробное) → `active` автоматически после проведённого пробного или оформления абонемента; `ended` ставит любая сторона. Повторное присоединение реактивирует ту же строку.
+9. **Анкета**: одна на пользователя (версионируется). Видимость задана решением Q38 (было O3): `data_shares.intake` по умолчанию `false`, ставится клиентом на шаге согласия при создании пары, меняется позже. PAR-Q хранится отдельно с флагом `parq_flagged`; без разрешения тренер не видит и флаг.
 10. **После завершения пары** тренер теряет доступ к персональным данным клиента, но видит историю занятий, абонементов и оплат этой пары.
 11. **Слот = одно окно на одно персональное занятие** (вместимость 1). Групповые занятия создаются тренером как `sessions` с `open_for_booking`. Слоты не пересекаются (exclusion); занятия могут, с предупреждением.
 12. **Автозавершение**: в `ends_at` cron переводит `confirmed` → `attended` и пишет списания (иначе «80% занятий без ручных правок» недостижимо); тренер исправляет на `no_show` в любое время, это не меняет журнал.
-13. **Перенос клиентом после дедлайна запрещён** — только отмена со списанием или просьба тренеру. Граница дедлайна — бесплатно (`now() <= deadline`). Снимок часов дедлайна хранится в записи.
+13. **Перенос клиентом после дедлайна запрещён**: остаётся только отмена со списанием или просьба тренеру. Отмена ровно в дедлайн бесплатна (`now() <= deadline`). Снимок часов дедлайна хранится в записи.
 14. **Прощение окончательное** (решение; одно на списание); повторно списать можно только ручной корректировкой (`adjustment`) тренера с комментарием. Отмена тренером уже списанного занятия автоматически прощает списание.
 15. **Разовое занятие = абонемент на 1** из пакета с `sessions_count = 1`; цена разового на валюту и тип занятия одна.
 16. **Выбор абонемента при списании**: подходящий по типу, ближайший к истечению; срок и заморозка проверяются на дату занятия.
-17. **Долг гасится автоматически** из следующего оформленного абонемента (самые старые долговые занятия первыми). Денежная оценка долгового занятия — цена разового; после погашения выручка за него считается по цене абонемента.
-18. **Распределение копеек**: доля k-го занятия — `floor(P·k/N) − floor(P·(k−1)/N)`, чтобы сумма по абонементу точно равнялась цене.
+17. **Долг гасится автоматически** из следующего оформленного абонемента (самые старые долговые занятия первыми). Долговое занятие оценивается в деньгах по цене разового; после погашения выручка за него считается по цене абонемента.
+18. **Распределение копеек**: доля k-го занятия равна `floor(P·k/N) − floor(P·(k−1)/N)`, чтобы сумма по абонементу точно равнялась цене.
 19. **Заморозка** только останавливает срок и делает абонемент неподходящим для списаний в эти даты; ставит её тренер; лимитов нет.
-20. **Оплата «я оплатил»**: клиент может создать `payments.status = 'reported'`, тренер подтверждает; в выручку («поступления») идут только `confirmed`. Отмена оплаты — `voided`, без удаления.
+20. **Оплата «я оплатил»**: клиент может создать `payments.status = 'reported'`, тренер подтверждает; в выручку («поступления») идут только `confirmed`. Отменённая оплата получает статус `voided` и не удаляется.
 21. **Свои упражнения** может создавать только тренер (`owner_id` указывает на profiles, чтобы позже разрешить клиентам без миграции). Самостоятельные тренировки клиента (без пары) видны тренеру по `data_shares.workouts` (по умолчанию включено, Q38).
 22. **Рекорды**: разминочные подходы не учитываются; `est_1rm` по Эпли для ≤ 12 повторов.
 23. **Фото прогресса загружает только клиент**; сервер не может проверить размытие, поэтому клиент подтверждает его флагом `face_blurred` (обязателен) и `blur_method`. Signed URL живёт 5 минут (решение).
 24. **Вехи** фиксируются один раз и не отзываются при исправлении посещаемости; добавлена веха `first_session`.
-25. **Удаление аккаунта**: в течение 30 дней аккаунт заморожен (будущие записи отменены бесплатно, уведомления не идут, вход — только чтобы отменить удаление). Через 30 дней — обезличивание по §1.6 (решение): личные данные удаляются, учёт тренера (занятия, журнал, оплаты) остаётся за «Удалённым клиентом».
+25. **Удаление аккаунта**: в течение 30 дней аккаунт заморожен (будущие записи отменены бесплатно, уведомления не идут, войти можно, только чтобы отменить удаление). Через 30 дней аккаунт обезличивается по §1.6 (решение): личные данные удаляются, учёт тренера (занятия, журнал, оплаты) остаётся за «Удалённым клиентом».
 26. **Аварийный доступ** (ADR 0007): есть с волны 1 как функция `admin_open_break_glass`, **без интерфейса в бете**; грант на категории до 1 часа, причина ≥ 20 символов, запись в журнал, **уведомление пользователя** о факте доступа (тип `break_glass`).
-27. **Админ не читает бизнес-таблицы напрямую** (пары, занятия, оплаты) — только агрегаты `analytics.*` через функции; в списке пользователей видит профили, роли, последний вход.
+27. **Админ не читает бизнес-таблицы напрямую** (пары, занятия, оплаты), только агрегаты `analytics.*` через функции; в списке пользователей видит профили, роли, последний вход.
 28. **Продуктовая телеметрия** (`product_events`) нужна для метрик беты «открытия из напоминаний» и «использование функций»; хранится 180 дней, без значений пользовательских данных.
-29. **Метрика «ведёт всё расписание 2 недели»**: тренер провёл занятия в каждой из двух последних недель, и у всех его занятий за 14 дней есть итог (`completed`/`cancelled`) — приближение, уточнить с Давидом.
+29. **Метрика «ведёт всё расписание 2 недели»**: тренер провёл занятия в каждой из двух последних недель, и у всех его занятий за 14 дней есть итог (`completed`/`cancelled`). Это приближение, уточнить с Давидом.
 30. **Календарный фид**: токен на зону (тренер/клиент), показывается один раз, перевыпуск отзывает старый; в событиях нет заметок и данных тела.
-31. **Рефералка**: бонус клиенту — бонусный абонемент на N занятий с ценой 0; аннулирование квалифицирующей оплаты в течение 14 дней отзывает бонус, если он ещё не использован, иначе бонус сохраняется (решение, как в wave-3). Тренер за тренера (Q15): реферал создаётся при переходе по реферальной ссылке тренера, зона приглашённого открывается сразу (Q55); бонус `pending` до покупки тарифа (после беты, `plan_subscriptions`).
-32. **Лидерборд** показывает только агрегированный счёт участников, явно включивших показ; согласие на лидерборд — и глобальное (`user_settings`), и на челлендж.
-33. **Чек-ин по QR** — ротируемый HMAC-токен без хранения; чек-ин досрочно отмечает посещение.
+31. **Рефералка**: бонус клиенту выдаётся бонусным абонементом на N занятий с ценой 0; аннулирование квалифицирующей оплаты в течение 14 дней отзывает бонус, если он ещё не использован, иначе бонус сохраняется (решение, как в wave-3). Тренер за тренера (Q15): реферал создаётся при переходе по реферальной ссылке тренера, зона приглашённого открывается сразу (Q55); бонус `pending` до покупки тарифа (после беты, `plan_subscriptions`).
+32. **Лидерборд** показывает только агрегированный счёт участников, явно включивших показ; согласие на лидерборд нужно и глобальное (`user_settings`), и на челлендж.
+33. **Чек-ин по QR**: ротируемый HMAC-токен без хранения; чек-ин досрочно отмечает посещение.
 34. **Месячный отчёт и карточки для сторис** строятся на лету, без таблиц (кеш по необходимости).
-35. **W4-гео**: бадди хранит только центр ячейки сетки ~2 км; клубы — точную точку (публичные места). PostGIS включается в W4.
-36. **Студии**: столбцы `studio_id` не создаются заранее (добавление nullable-столбца в Postgres мгновенно и ничего не переписывает), но владение везде выражено через `trainer_id`, а проверки — через `is_coaching_trainer`, которую достаточно расширить.
-37. **Поиск по названиям** упражнений и продуктов — `pg_trgm` (расширение нужно включить вместе с первой миграцией тренировок).
-38. **Хранение outbox** — 90 дней для обработанных строк; экспорт — 7 дней.
-39. **Карточка клиента без аккаунта** — профиль без входа (пользователь Auth без `telegram_id`, заблокирован), а не nullable `client_id`; так все политики и журнал работают без изменений, а слияние — один перенос `client_id`. Подсказка совпадения при переходе — по имени; слияние необратимо.
+35. **W4-гео**: бадди хранит только центр ячейки сетки ~2 км; клубы хранят точную точку (публичные места). PostGIS включается в W4.
+36. **Студии**: столбцы `studio_id` не создаются заранее (добавление nullable-столбца в Postgres мгновенно и ничего не переписывает), но владение везде выражено через `trainer_id`, а проверки идут через `is_coaching_trainer`, которую достаточно расширить.
+37. **Поиск по названиям** упражнений и продуктов идёт через `pg_trgm` (расширение нужно включить вместе с первой миграцией тренировок).
+38. **Хранение outbox**: 90 дней для обработанных строк; экспорт хранится 7 дней.
+39. **Карточка клиента без аккаунта**: профиль без входа (пользователь Auth без `telegram_id`, заблокирован), а не nullable `client_id`; так все политики и журнал работают без изменений, а слияние сводится к одному переносу `client_id`. Подсказка совпадения при переходе ищет по имени; слияние необратимо.
