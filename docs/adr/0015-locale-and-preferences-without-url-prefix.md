@@ -19,4 +19,4 @@ Routes in `docs/architecture/screens.md`, bot buttons and QR codes use plain pat
 
 - These cookies belong to the device and hold no personal data. Wave 1 adds `user_settings` (locale, theme, last_zone), and from then on the server also saves each choice to the account, so it follows the user to other devices (PRD wave 1 AUTH-2, AUTH-3). The cookies stay as the fast path for the proxy and the pre-paint script.
 - Client code must not render from `usePathname()` during hydration, because the server sees `/ru/…`. Active navigation state comes from layout segments.
-- Unknown paths fall into `app/[lang]/[...rest]` and render the localized not-found page.
+- Unknown paths fall into `app/[lang]/[...rest]` and render the localized not-found page. The exceptions are `/api/*` and `/auth/*`, which belong to route handlers and keep Next's plain 404, and the files in `apps/web/public`.

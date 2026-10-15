@@ -39,7 +39,9 @@ function record(url: string) {
   poppedTo = null;
   goingUp = false;
   if (popped) {
-    // Back or forward: move to the nearest matching entry, looking back first.
+    // Back or forward: move to the nearest matching entry, looking back first. popstate doesn't say
+    // which way it went, so a Forward to a URL that is also behind us counts as a Back (it plays as a
+    // pop); history.state belongs to Next.js, so we don't store our own index there.
     const back = index > 0 ? entries.lastIndexOf(url, index - 1) : -1;
     const forward = entries.indexOf(url, index + 1);
     const found = back !== -1 ? back : forward;

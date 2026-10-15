@@ -16,14 +16,7 @@ export type Shell = {
 /** Provided by AppShell around every screen in the (zones) group. Kept apart so headers don't pull in the whole shell. */
 export const ShellContext = createContext<Shell | null>(null);
 
-/** The shell around the current screen. Only inside AppShell (its screens and their sheets). */
-export function useShell(): Shell {
-  const shell = use(ShellContext);
-  if (!shell) throw new Error("useShell must be used inside AppShell");
-  return shell;
-}
-
-/** Like useShell, but null on screens outside the shell, such as sign-in or the not-found page. */
+/** The shell around the current screen, or null outside it (sign-in, the not-found page). */
 export function useOptionalShell(): Shell | null {
   return use(ShellContext);
 }

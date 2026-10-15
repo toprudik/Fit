@@ -322,9 +322,12 @@
     background-color: var(--bg);
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
-    /* Focus and in-page jumps never land under the sticky header bar or the tab bar (WCAG 2.4.11). */
+    /*
+     * Focus and in-page jumps never land under the sticky header bar or the tab bar (WCAG 2.4.11);
+     * the 1px is the tab bar's top border. The header bar's own buttons opt out (ScreenHeader).
+     */
     scroll-padding-top: calc(var(--size-header) + var(--safe-top));
-    scroll-padding-bottom: calc(var(--size-tabbar) + var(--safe-bottom));
+    scroll-padding-bottom: calc(var(--size-tabbar) + 1px + var(--safe-bottom));
   }
   @media (min-width: 48rem) {
     /* From 768px there is no header bar or tab bar over the content. */
@@ -348,5 +351,7 @@
   :focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
+    /* Room for that ring when focus scrolls an element into view. */
+    scroll-margin-block: var(--space-1);
   }
 }

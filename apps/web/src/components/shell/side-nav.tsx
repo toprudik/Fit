@@ -26,6 +26,8 @@ type SideNavProps = {
   /** The settings screen is open: its item is the current page. */
   settingsActive?: boolean;
   onSelect?: TabSelectHandler;
+  /** Called when the Настройки item starts a navigation, so the shell treats it like a tab switch. */
+  onSelectSettings?: () => void;
   onOpenProfile: () => void;
 };
 
@@ -51,7 +53,7 @@ type NavItemProps = {
  * switch and the zone's sections with labels, as in docs/design/mockups/desktop-*.png. Settings sit
  * at the bottom in both.
  */
-export function SideNav({ zone, activeId, settingsActive = false, onSelect, onOpenProfile }: SideNavProps) {
+export function SideNav({ zone, activeId, settingsActive = false, onSelect, onSelectSettings, onOpenProfile }: SideNavProps) {
   const { t } = useI18n();
   const router = useRouter();
   const account = useAccount();
@@ -160,7 +162,15 @@ export function SideNav({ zone, activeId, settingsActive = false, onSelect, onOp
           </ul>
         ) : null}
         <ul className="mt-auto flex flex-col pt-4">
-          <li>{navItem({ href: "/settings", label: t.profile.settings, icon: Settings, active: settingsActive })}</li>
+          <li>
+            {navItem({
+              href: "/settings",
+              label: t.profile.settings,
+              icon: Settings,
+              active: settingsActive,
+              onNavigate: onSelectSettings ? () => onSelectSettings() : undefined,
+            })}
+          </li>
         </ul>
       </nav>
     </div>

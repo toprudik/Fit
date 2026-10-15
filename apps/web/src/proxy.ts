@@ -20,7 +20,9 @@ export async function proxy(request: NextRequest) {
     localeCookie: request.cookies.get(LOCALE_COOKIE)?.value,
     zoneCookie: request.cookies.get(ZONE_COOKIE)?.value,
     acceptLanguage: request.headers.get("accept-language"),
-    isDocument: request.headers.get("sec-fetch-dest") === "document",
+    // Browsers without Fetch Metadata (WebKit before 16.4) send no Sec-Fetch-Dest: count those as
+    // document loads, so a deep link there still remembers its zone.
+    isDocument: (request.headers.get("sec-fetch-dest") ?? "document") === "document",
   });
   if (decision.kind === "redirect") return NextResponse.redirect(new URL(decision.location, request.url));
 

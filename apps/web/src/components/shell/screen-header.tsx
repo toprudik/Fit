@@ -98,8 +98,18 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
 
   return (
     <>
-      {/* 8px above the 44px row make the 52px size-header; the focus ring of its buttons stays on screen. */}
-      <div className="material sticky top-0 z-[var(--z-header)] -mx-4 px-4 pt-[calc(var(--safe-top)+var(--space-2))] md:hidden">
+      {/*
+       * 8px above the 44px row make the 52px size-header; the focus ring of its buttons stays on screen.
+       * Fixed, not sticky: the page's scroll-padding keeps focused content clear of this bar, and a
+       * browser never scrolls to bring a fixed element into view, so focusing the avatar or Back
+       * (keyboard, or a tap on Android) leaves the page where it was. The spacer below holds its place.
+       */}
+      <div
+        className={cn(
+          "material fixed inset-x-0 top-0 z-[var(--z-header)] md:hidden",
+          "pt-[calc(var(--safe-top)+var(--space-2))] pr-[calc(var(--safe-right)+var(--space-4))] pl-[calc(var(--safe-left)+var(--space-4))]",
+        )}
+      >
         <div className="relative flex min-h-11 items-center justify-between gap-2">
           <div className="flex min-w-0 items-center">{leading}</div>
           <p
@@ -116,6 +126,7 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
         </div>
       </div>
 
+      <div aria-hidden className="h-[calc(var(--size-header)+var(--safe-top))] md:hidden" />
       <header
         data-slot="screen-title"
         // On a phone the band goes on under the bar, edge to edge, and ends 12px below the subtitle.

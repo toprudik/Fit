@@ -69,10 +69,11 @@ function play(element: HTMLElement, transition: Transition): AnimationPlaybackCo
         )
       : animate(
           element,
-          { opacity: [0, 1], transform: [transition === "push" ? "translateX(30%)" : "translateX(-30%)", "translateX(0)"] },
+          // Ends at `none`, not translateX(0): motion may commit the final value inline after the
+          // cleanup below, and only `none` leaves position: fixed descendants tied to the viewport.
+          { opacity: [0, 1], transform: [transition === "push" ? "translateX(30%)" : "translateX(-30%)", "none"] },
           { duration: DURATION.slow, ease: EASE_STANDARD },
         );
-  // Nothing stays inline afterwards: a transform left on the wrapper would trap position: fixed descendants.
   void controls.then(() => {
     element.style.removeProperty("transform");
     element.style.removeProperty("opacity");
@@ -134,6 +135,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pendingScroll = useRef<number | null>(null);
   const intent = useRef<"tab" | "pop" | null>(null);
 
+  // The side menu's Настройки is a destination like a tab (screens.md §1.3): crossfade, and the tab
+  // being left keeps its screen and scroll for the way back.
+  const selectSettings = () => {
+    if (tabId) memory.current.set(tabId, { href: currentUrl(), scrollY: window.scrollY });
+    intent.current = "tab";
+  };
+
   const selectTab: TabSelectHandler = (tab, event) => {
     event.preventDefault();
     if (tab.id === tabId) {
@@ -179,8 +187,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const target = transition === "zone" ? frameRef.current : screenRef.current;
     if (!transition || !target) return;
     // Finishing the previous transition first guarantees nothing is left half transparent or shifted.
+    // Only one still running: complete() on finished controls would restart a filled animation.
     running.current?.complete();
-    running.current = play(target, transition);
+    const controls = play(target, transition);
+    running.current = controls;
+    void controls.then(() => {
+      if (running.current === controls) running.current = null;
+    });
   }, [route, zone, tabId]);
 
   // Next.js hides the shell (React Activity) when a navigation leaves it, e.g. for sign-in.
@@ -204,6 +217,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           activeId={tabId}
           settingsActive={first === SETTINGS_SEGMENT}
           onSelect={selectTab}
+          onSelectSettings={selectSettings}
           onOpenProfile={openProfile}
         />
         {/*

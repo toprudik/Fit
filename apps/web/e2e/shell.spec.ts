@@ -276,6 +276,26 @@ test.describe("push and pop", () => {
     await page.getByRole("button", { name: "Назад" }).click();
     await expect(page).toHaveURL(/\/trainer$/);
     await expect.poll(async () => screenSlideStart(await takeAnimations(page))).toBeLessThan(0);
+
+    // Nothing is left on the screen wrapper: a transform there would trap position: fixed elements.
+    await settle(page);
+    await expect.poll(() => page.locator("main#main > div").evaluate((element) => getComputedStyle(element).transform)).toBe("none");
+  });
+
+  test("the side menu's Настройки switches like a tab: a crossfade, no slide", async ({ page }, testInfo) => {
+    test.skip(isPhone(testInfo), "the side menu is the layout from 768px");
+    await recordAnimations(page);
+    await page.goto("/trainer", { waitUntil: "networkidle" });
+    await takeAnimations(page);
+
+    await page.getByRole("link", { name: "Настройки", exact: true }).click();
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect.poll(async () => (await takeAnimations(page)).some((animation) => animation.screen)).toBe(true);
+    await page.getByRole("link", { name: "Сегодня", exact: true }).click();
+    await expect(page).toHaveURL(/\/trainer$/);
+    await settle(page);
+    // Neither direction slides; both are the tab crossfade.
+    expect(screenSlideStart(await takeAnimations(page))).toBeNull();
   });
 
   test.describe("with reduced motion", () => {
@@ -297,6 +317,82 @@ test.describe("push and pop", () => {
         expect(animation.duration).toBeLessThanOrEqual(100);
       }
     });
+  });
+});
+
+test.describe("focus and the bars", () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(!isPhone(testInfo), "the header bar and the tab bar are the phone layout");
+  });
+
+  /** Makes the screen long, with a focusable row in the middle, and scrolls to `y`. */
+  const tallScreen = (page: Page, y: number) =>
+    page.evaluate((top) => {
+      const main = document.querySelector<HTMLElement>("main#main")!;
+      if (!document.getElementById("probe-row")) {
+        const row = document.createElement("button");
+        row.id = "probe-row";
+        row.textContent = "probe";
+        row.style.cssText = "display:block;width:100%;height:52px;margin:1500px 0 3000px";
+        main.append(row);
+      }
+      (document.activeElement as HTMLElement | null)?.blur();
+      window.scrollTo(0, top);
+    }, y);
+  const scrollY = (page: Page) => page.evaluate(() => window.scrollY);
+
+  test("focusing the header bar's own buttons doesn't scroll the page", async ({ page }) => {
+    await page.goto("/trainer", { waitUntil: "networkidle" });
+    await tallScreen(page, 1200);
+    await expect.poll(() => scrollY(page)).toBe(1200);
+    await page.getByRole("button", { name: "Профиль", exact: true }).focus();
+    expect(await scrollY(page)).toBe(1200);
+
+    await page.goto("/settings", { waitUntil: "networkidle" });
+    await tallScreen(page, 1200);
+    await expect.poll(() => scrollY(page)).toBe(1200);
+    await page.getByRole("button", { name: "Назад" }).focus();
+    expect(await scrollY(page)).toBe(1200);
+  });
+
+  test("focused content moves clear of the header bar and the tab bar", async ({ page }) => {
+    await page.goto("/trainer", { waitUntil: "networkidle" });
+    const row = page.locator("#probe-row");
+    const bars = () =>
+      page.evaluate(() => ({
+        headerBottom: document.querySelector("main#main .material.fixed")!.getBoundingClientRect().bottom,
+        tabBarTop: document.querySelector("nav.fixed")!.getBoundingClientRect().top,
+      }));
+
+    // Half under the header bar.
+    await tallScreen(page, 0);
+    await tallScreen(page, await row.evaluate((element) => element.getBoundingClientRect().top + window.scrollY - 20));
+    await row.focus();
+    const { headerBottom, tabBarTop } = await bars();
+    expect((await row.boundingBox())!.y).toBeGreaterThanOrEqual(headerBottom);
+
+    // Half under the tab bar.
+    await tallScreen(page, 0);
+    await tallScreen(page, await row.evaluate((element) => element.getBoundingClientRect().top + window.scrollY - 844 + 20));
+    await row.focus();
+    const box = (await row.boundingBox())!;
+    expect(box.y + box.height).toBeLessThanOrEqual(tabBarTop);
+  });
+});
+
+test.describe("browser theme-color", () => {
+  test.use({ colorScheme: "dark" });
+
+  test("follows a theme pinned against the system, across navigations", async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: "dafit-theme", value: "light", url: baseURL! }]);
+    const colors = () =>
+      page.evaluate(() => [...document.querySelectorAll('meta[name="theme-color"]')].map((meta) => meta.getAttribute("content")));
+
+    await page.goto("/trainer", { waitUntil: "networkidle" });
+    await expect.poll(colors).toEqual(["#f2f3f5"]);
+    await page.getByRole("link", { name: "Клиенты", exact: true }).click();
+    await expect(page).toHaveURL(/\/trainer\/clients$/);
+    await expect.poll(colors).toEqual(["#f2f3f5"]);
   });
 });
 

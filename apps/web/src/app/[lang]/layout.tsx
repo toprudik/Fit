@@ -10,7 +10,6 @@ import { onest, tekturNarrow } from "@/fonts";
 import { I18nProvider } from "@/i18n/client";
 import { isLocale, LOCALES } from "@/i18n/config";
 import { getDictionary } from "@/i18n/server";
-import { THEME_BG } from "@/lib/theme/colors";
 import { themeInitScript } from "@/lib/theme/init-script";
 import { ThemeSync } from "@/lib/theme/theme-sync";
 import "../globals.css";
@@ -33,11 +32,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  // Browser chrome starts from the system scheme; ThemeSync repaints it when a theme is pinned.
-  themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: THEME_BG.dark },
-    { media: "(prefers-color-scheme: light)", color: THEME_BG.light },
-  ],
+  // No themeColor here: ThemeSync renders it, so it follows a pinned theme across navigations.
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
