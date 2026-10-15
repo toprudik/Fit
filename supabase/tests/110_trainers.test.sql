@@ -446,14 +446,15 @@ select is_empty($$ select id from public.trial_links $$, 'trial_links: A''s clie
 select tests.clear_authentication();
 
 -- R16 (decisions Q60): a rejected verification hides the public showcase. Nothing reads is_public yet; the
--- column comment carries the rule for the later get_trainer_showcase.
+-- column comment carries the rule as a requirement for the later get_trainer_showcase.
 select matches(
   col_description(
     'public.trainer_profiles'::regclass,
     (select a.attnum::integer from pg_catalog.pg_attribute a
      where a.attrelid = 'public.trainer_profiles'::regclass and a.attname = 'is_public')),
-  'A rejected verification hides the showcase too \(R16, decisions Q60\)',
-  'trainer_profiles.is_public: the comment says a rejected verification hides the showcase (R16)'
+  'A rejected verification hides the showcase too \(R16, decisions Q60\)\. Nothing reads this column yet: the '
+    'later public get_trainer_showcase must answer unavailable',
+  'trainer_profiles.is_public: the comment states the R16 rule as a requirement for get_trainer_showcase'
 );
 
 select * from finish();

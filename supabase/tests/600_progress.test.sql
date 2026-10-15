@@ -3,7 +3,7 @@
 -- break-glass on both (ADM-15) and milestones (PROG-8).
 begin;
 \ir _helpers.psql
-select plan(106);
+select plan(120);
 
 -- Fixtures: C has live pairs to A and B, D a live pair to A, E an ended pair to A, M is A's card.
 -- admin_x and admin_y are admins; S is a plain user.
@@ -473,16 +473,16 @@ select is((select count(*)::integer from public.measurements where client_id = t
 -- =========================================================================================================
 -- Photo sets and the Free photo limit (R82, decisions Q57 and Q64, PRD 2.14-6). A set is the photos of one
 -- taken_on date, at most one per angle, on every plan. A Free client starts one new set per calendar month of
--- upload; Premium or a live pair with a paid trainer lifts the limit. A retake replaces the photo: the client
--- deletes the old row, then inserts the new one (UPDATE grants only note and angle).
+-- upload; Premium or a live pair with a paid trainer lifts the limit. A retake goes through
+-- replace_progress_photo (delete and insert in one call), an angle swap through set_progress_photo_angle.
 
 select tests.clear_authentication();
 select results_eq(
   $$ select c.conname::text collate "default", pg_get_constraintdef(c.oid) from pg_catalog.pg_constraint c
      where c.conrelid = 'public.progress_photos'::regclass and c.contype = 'u' order by 1 $$,
-  $$ values ('progress_photos_client_id_taken_on_angle_key', 'UNIQUE (client_id, taken_on, angle)'),
+  $$ values ('progress_photos_client_id_taken_on_angle_key', 'UNIQUE (client_id, taken_on, angle) DEFERRABLE'),
             ('progress_photos_storage_path_key', 'UNIQUE (storage_path)') $$,
-  'photo set: progress_photos is unique per client, date and angle (R82)'
+  'photo set: progress_photos is unique per client, date and angle, checked at the end of each statement (R82)'
 );
 select hasnt_index('public', 'progress_photos', 'progress_photos_client_id_taken_on_idx',
   'photo set: the old (client_id, taken_on) index is dropped, the unique index serves its reads');
@@ -498,9 +498,20 @@ select matches(
   'one per angle \(R82, decisions Q64\)',
   'photo set: the comment of can_add_progress_photo describes the decided set'
 );
+select results_eq(
+  $$ select p.proname::text collate "default", p.prosecdef, p.proconfig = array['search_path=""']
+     from pg_catalog.pg_proc p
+     where p.pronamespace = 'public'::regnamespace
+       and p.proname in ('replace_progress_photo', 'set_progress_photo_angle')
+     order by 1 $$,
+  $$ values ('replace_progress_photo', false, true), ('set_progress_photo_angle', false, true) $$,
+  'photo set: the retake and angle functions run as the caller (security invoker), with an empty search_path'
+);
 
 select tests.create_user('client_f');
 select tests.create_user('client_g');
+select tests.create_user('client_k');
+select tests.create_user('client_l');
 select tests.create_trainer('trainer_p');
 select tests.create_pair('trainer_p', 'client_g');
 select tests.grant_plan('trainer_p', 'trainer_pro');
@@ -544,27 +555,56 @@ begin
   get diagnostics v_count = row_count;
   return v_count;
 end $$;
--- The replace path of R82, as the signed-in user: delete the photo of that date and angle, then insert a new
--- one. True when that date and angle then hold exactly the new photo.
-create function tests.replace_photo(p_client text, p_taken_on date, p_angle public.photo_angle)
+-- A full set of one date uploaded at p_created_at, written as postgres because created_at is not granted.
+create function tests.old_set(p_client text, p_taken_on date, p_created_at timestamptz)
+returns void language plpgsql set search_path = '' as $$
+begin
+  insert into public.progress_photos (id, client_id, angle, taken_on, storage_path, face_blurred, blur_method, width, height,
+                                      created_at)
+  select (r).id, (r).client_id, (r).angle, (r).taken_on, (r).storage_path, (r).face_blurred, (r).blur_method, (r).width, (r).height,
+         p_created_at
+  from (select tests.photo_row(p_client, p_taken_on, a) as r from unnest(enum_range(null::public.photo_angle)) a) x;
+end $$;
+-- A retake through public.replace_progress_photo, as the signed-in user: the photo of that client, date and
+-- angle that the caller sees is replaced by a new one. True when the slot then holds exactly the new photo.
+create function tests.retake(p_client text, p_taken_on date, p_angle public.photo_angle)
 returns boolean language plpgsql set search_path = '' as $$
 declare
   v_old uuid;
   v_new public.progress_photos := tests.photo_row(p_client, p_taken_on, p_angle);
 begin
   select p.id into v_old from public.progress_photos p
-  where p.client_id = v_new.client_id and p.taken_on = p_taken_on and p.angle = p_angle
-  order by p.created_at
-  limit 1;
-  delete from public.progress_photos p where p.id = v_old;
-  insert into public.progress_photos (id, client_id, angle, taken_on, storage_path, face_blurred, blur_method, width, height)
-  values (v_new.id, v_new.client_id, v_new.angle, v_new.taken_on, v_new.storage_path, v_new.face_blurred, v_new.blur_method,
-          v_new.width, v_new.height);
+  where p.client_id = v_new.client_id and p.taken_on = p_taken_on and p.angle = p_angle;
+  perform public.replace_progress_photo(v_old, v_new.id, v_new.storage_path, v_new.face_blurred, v_new.blur_method,
+                                        v_new.width, v_new.height);
   return array(
     select p.id from public.progress_photos p
     where p.client_id = v_new.client_id and p.taken_on = p_taken_on and p.angle = p_angle
   ) = array[v_new.id];
 end $$;
+-- Moves the photo of that date and angle to p_to through public.set_progress_photo_angle, as the signed-in
+-- user. True when it then has angle p_to and the photo that held p_to, if any, has angle p_from.
+create function tests.move_angle(p_client text, p_taken_on date, p_from public.photo_angle, p_to public.photo_angle)
+returns boolean language plpgsql set search_path = '' as $$
+declare
+  v_client uuid := tests.user_id(p_client);
+  v_moved  uuid;
+  v_other  uuid;
+begin
+  select p.id into v_moved from public.progress_photos p
+  where p.client_id = v_client and p.taken_on = p_taken_on and p.angle = p_from;
+  select p.id into v_other from public.progress_photos p
+  where p.client_id = v_client and p.taken_on = p_taken_on and p.angle = p_to;
+  perform public.set_progress_photo_angle(v_moved, p_to);
+  return (select p.angle from public.progress_photos p where p.id = v_moved) = p_to
+     and (v_other is null or (select p.angle from public.progress_photos p where p.id = v_other) = p_from);
+end $$;
+-- Ids of a client's photos of one date, by angle, as the signed-in user sees them.
+create function tests.photo_ids(p_client text, p_taken_on date) returns text language sql stable set search_path = '' as $$
+  select coalesce(string_agg(p.angle::text || '=' || p.id::text, ',' order by p.angle), '')
+  from public.progress_photos p
+  where p.client_id = tests.user_id(p_client) and p.taken_on = p_taken_on
+$$;
 
 select tests.authenticate_as('client_f');
 select is(tests.upload_angles('client_f', current_date, 'side'), 1, 'photo limit: a Free client starts a set');
@@ -596,8 +636,45 @@ select results_eq(
   $$ values (current_date, array['front', 'side', 'back']) $$,
   'photo set: the Free client has one set this month, one photo per angle'
 );
-select ok(tests.replace_photo('client_f', current_date, 'side'),
-  'photo set: the client replaces a photo: deletes the old row, then inserts the retake');
+select ok(tests.retake('client_f', current_date, 'side'),
+  'photo set: replace_progress_photo puts the retake in the slot of the old photo (Free, this month''s set)');
+select ok(tests.move_angle('client_f', current_date, 'front', 'side'),
+  'photo set: set_progress_photo_angle swaps two angles of a full set in one statement');
+select throws_ok(
+  $$ update public.progress_photos set angle = 'back'
+     where client_id = tests.u('client_f') and taken_on = current_date and angle = 'front' $$,
+  '23505', 'duplicate key value violates unique constraint "progress_photos_client_id_taken_on_angle_key"',
+  'photo set: a plain UPDATE into an angle the date already holds still fails'
+);
+
+-- K has a full set from 40 days ago and starts this month's set; L has the same old set and nothing this month.
+select tests.clear_authentication();
+select tests.old_set('client_k', current_date - 40, now() - interval '40 days');
+select tests.old_set('client_l', current_date - 40, now() - interval '40 days');
+select tests.authenticate_as('client_k');
+select is(tests.upload('client_k', current_date), 1, 'photo limit: K starts this month''s set');
+select throws_ok(
+  $$ select tests.retake('client_k', current_date - 40, 'front') $$,
+  '42501', 'new row violates row-level security policy for table "progress_photos"',
+  'photo limit: on Free, a retake in a set from an earlier month fails once this month''s set is used'
+);
+select is(
+  (select array_agg(angle::text order by angle) from public.progress_photos
+   where client_id = tests.u('client_k') and taken_on = current_date - 40),
+  array['front', 'side', 'back'],
+  'photo set: the refused retake loses nothing: the old set still has all three photos'
+);
+select ok(tests.move_angle('client_k', current_date - 40, 'front', 'back'),
+  'photo set: angles of an earlier month''s set swap on Free too: an UPDATE does not count against the limit');
+select tests.authenticate_as('client_l');
+select ok(tests.retake('client_l', current_date - 40, 'front'),
+  'photo limit: on Free, a retake in a set from an earlier month works while this month''s set is unused');
+select throws_ok(
+  $$ select tests.upload('client_l', current_date) $$,
+  '42501', 'new row violates row-level security policy for table "progress_photos"',
+  'photo limit: that retake used this month''s set, so a new date fails'
+);
+
 select tests.clear_authentication();
 select tests.create_user('client_h');
 select tests.authenticate_as('client_h');
@@ -614,17 +691,36 @@ select tests.authenticate_as('client_g');
 select is(tests.upload('client_g', current_date, current_date - 7, current_date - 14), 3,
   'photo limit: a client of a Pro trainer in a live pair has no limit (PLAN-3)');
 
--- Nobody else can replace a client's photo, not even a trainer who sees it: the delete matches nothing and the
--- insert is refused. The slot keeps G's photo, and one photo per date and angle holds without a Free limit too.
+-- Nobody else can replace, move or delete a client's photo, not even a trainer who sees it. Each write is its
+-- own statement here, so a policy that let one through would show up in G's rows afterwards.
 select tests.clear_authentication();
 select tests.set_share('trainer_p', 'client_g', 'photos', true);
+create table tests.photos_g as select tests.photo_ids('client_g', current_date) as ids;
+grant select on tests.photos_g to authenticated;
 select tests.authenticate_as('trainer_p');
+select is((select count(*)::integer from public.progress_photos where client_id = tests.u('client_g')), 3,
+  'photo set: G''s trainer sees G''s photos with share:photos on');
+select is_empty(
+  $$ delete from public.progress_photos where client_id = tests.u('client_g') returning id $$,
+  'photo set: G''s trainer deletes none of G''s photos'
+);
 select throws_ok(
-  $$ select tests.replace_photo('client_g', current_date, 'front') $$,
-  '42501', 'new row violates row-level security policy for table "progress_photos"',
-  'photo set: G''s trainer, who sees the photos, cannot replace one'
+  $$ select tests.retake('client_g', current_date, 'front') $$,
+  '42501', 'forbidden',
+  'photo set: G''s trainer cannot call replace_progress_photo on G''s photo'
+);
+select throws_ok(
+  $$ select tests.move_angle('client_g', current_date, 'front', 'side') $$,
+  '42501', 'forbidden',
+  'photo set: G''s trainer cannot call set_progress_photo_angle on G''s photo'
 );
 select tests.authenticate_as('client_g');
+select is(
+  tests.photo_ids('client_g', current_date), (select ids from tests.photos_g),
+  'photo set: G''s photo of the date is the same row as before, with the same angle'
+);
+select is((select count(*)::integer from public.progress_photos where client_id = tests.u('client_g')), 3,
+  'photo set: G still has all three photos');
 select throws_ok(
   $$ select tests.upload_angles('client_g', current_date, 'front') $$,
   '23505', 'duplicate key value violates unique constraint "progress_photos_client_id_taken_on_angle_key"',
