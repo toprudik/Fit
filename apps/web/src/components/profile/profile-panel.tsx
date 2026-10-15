@@ -5,25 +5,16 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLayoutEffect, useRef, useState } from "react";
 import { useAccount } from "@/components/account/account-store";
+import { useOptionalShell } from "@/components/shell/shell-context";
 import { PersonAvatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n/client";
-import { DEFAULT_ZONE, isZone, ZONE_COOKIE, ZONES, type Zone } from "@/lib/navigation/zones";
-import { readCookie } from "@/lib/preferences";
-import { useHydrated } from "@/lib/use-hydrated";
+import { DEFAULT_ZONE, ZONES, type Zone } from "@/lib/navigation/zones";
 
-/** The zone visited last (the proxy keeps it in a cookie); null during the server render and hydration. */
-function useLastZone(): Zone | null {
-  const hydrated = useHydrated();
-  if (!hydrated) return null;
-  const saved = readCookie(document.cookie, ZONE_COOKIE);
-  return isZone(saved) ? saved : DEFAULT_ZONE;
-}
-
-function SignedOut() {
+function SignedOut({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useI18n();
   // Only rendered once the account is known, which never happens on the server, so the path the
   // browser shows is safe to read here (the server would see the /<locale> rewrite instead).
@@ -37,13 +28,15 @@ function SignedOut() {
       </div>
       {/* Full width under the thumb on a phone; on wider screens a button the width of a page column looks lost. */}
       <Button asChild className="w-full md:w-fit md:self-start">
-        <Link href={`/login?next=${encodeURIComponent(pathname)}`}>{t.profile.signIn}</Link>
+        <Link href={`/login?next=${encodeURIComponent(pathname)}`} onClick={onNavigate}>
+          {t.profile.signIn}
+        </Link>
       </Button>
     </div>
   );
 }
 
-function AccountBlock() {
+function AccountBlock({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useI18n();
   const account = useAccount();
 
@@ -55,7 +48,7 @@ function AccountBlock() {
       </div>
     );
   }
-  if (account.status === "signed-out") return <SignedOut />;
+  if (account.status === "signed-out") return <SignedOut onNavigate={onNavigate} />;
   return (
     <div className="flex items-center gap-4">
       {/* The name is written next to it, so the photo needs no label of its own. */}
@@ -66,21 +59,25 @@ function AccountBlock() {
 }
 
 type ProfilePanelProps = {
-  /** Zone the profile was opened from. Null on /profile, which shows the zone visited last. */
-  zone: Zone | null;
-  /** Called when a choice here leaves the current screen, so a sheet can close. */
+  /**
+   * Called as a choice here starts a navigation (another zone, settings, sign-in), before the new
+   * screen arrives, so a sheet can close first.
+   */
   onNavigate?: () => void;
+  /** `raised` when the panel sits on surface-1 itself, as in the sheet: the list group steps up to surface-2. */
+  groupSurface?: "default" | "raised";
 };
 
 /**
- * Profile content shared by the sheet behind the header avatar and the /profile page
+ * Profile content shared by the sheet behind the avatar and the /profile page
  * (docs/architecture/screens.md §2.3): who is signed in, the zone switch, settings and sign-out.
+ * The zone switch shows the zone the shell shows.
  */
-export function ProfilePanel({ zone, onNavigate }: ProfilePanelProps) {
+export function ProfilePanel({ onNavigate, groupSurface = "default" }: ProfilePanelProps) {
   const { t } = useI18n();
   const router = useRouter();
   const account = useAccount();
-  const lastZone = useLastZone();
+  const known = useOptionalShell()?.zone ?? null;
   const signOutForm = useRef<HTMLFormElement>(null);
   // The zone just picked: the thumb moves right away, before the new zone's screen arrives.
   const [picked, setPicked] = useState<Zone | null>(null);
@@ -89,7 +86,6 @@ export function ProfilePanel({ zone, onNavigate }: ProfilePanelProps) {
   // hidden, so coming back shows the zone actually open, not the one picked last time.
   useLayoutEffect(() => () => setPicked(null), []);
 
-  const known = zone ?? lastZone;
   const zoneOptions = ZONES.map((value) => ({ value, label: t.zones[value] }));
 
   function pickZone(next: Zone) {
@@ -100,18 +96,18 @@ export function ProfilePanel({ zone, onNavigate }: ProfilePanelProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <AccountBlock />
+      <AccountBlock onNavigate={onNavigate} />
       <SegmentedControl
-        // On /profile the last zone is read in the browser only: remount once it is known, so the
-        // thumb starts there instead of sliding over from the default on every page load.
+        // On /profile opened directly the zone is read in the browser only: remount once it is known,
+        // so the thumb starts there instead of sliding over from the default on every page load.
         key={known ? "known" : "default"}
         label={t.zones.label}
         options={zoneOptions}
         value={picked ?? known ?? DEFAULT_ZONE}
         onValueChange={pickZone}
       />
-      <ListGroup>
-        <ListRow icon={Settings} title={t.profile.settings} href="/settings" />
+      <ListGroup surface={groupSurface}>
+        <ListRow icon={Settings} title={t.profile.settings} href="/settings" onClick={onNavigate} />
         {account.status === "signed-in" ? (
           // A plain POST, like the auth routes expect (same-origin check, then a redirect to /login).
           <form ref={signOutForm} method="post" action="/auth/sign-out">

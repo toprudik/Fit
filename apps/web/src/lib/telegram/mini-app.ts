@@ -1,4 +1,4 @@
-import { backButton, hapticFeedback } from "@tma.js/sdk-react";
+import { backButton, hapticFeedback, swipeBehavior } from "@tma.js/sdk-react";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
 /**
@@ -23,11 +23,32 @@ export function useInTelegram(): boolean {
   return useSyncExternalStore(subscribeReady, () => ready, () => false);
 }
 
-function safely(fn: () => void) {
+function report(error: unknown) {
+  // Production stays quiet: the app keeps working without the feature, as it does on the website.
+  if (process.env.NODE_ENV === "development") console.warn("[telegram]", error);
+}
+
+/**
+ * Runs a Telegram SDK call that may throw (a client too old for the method, a component that
+ * failed to mount, launch params the SDK can't read) and returns its result, or undefined if it
+ * threw. Failures are logged in development.
+ */
+export function safely<T>(fn: () => T): T | undefined {
   try {
-    fn();
-  } catch {
-    // Not supported by this Telegram client: skip.
+    return fn();
+  } catch (error) {
+    report(error);
+    return undefined;
+  }
+}
+
+/** `safely` for SDK calls that return a promise: resolves to undefined if the call fails. */
+export async function safelyAsync<T>(fn: () => PromiseLike<T>): Promise<T | undefined> {
+  try {
+    return await fn();
+  } catch (error) {
+    report(error);
+    return undefined;
   }
 }
 
@@ -40,12 +61,6 @@ export function hapticImpact() {
 /** Selection feedback: segmented controls, pickers, switches. */
 export function hapticSelection() {
   if (ready) safely(() => hapticFeedback.selectionChanged());
-}
-
-/** Result feedback: success, warning or error after an action. */
-export function hapticNotify(type: "success" | "warning" | "error") {
-  if (ready) safely(() => hapticFeedback.notificationOccurred(type));
-  else if (typeof navigator !== "undefined") navigator.vibrate?.(type === "success" ? 12 : [8, 40, 8]);
 }
 
 /*
@@ -69,8 +84,6 @@ function syncBackButton() {
   });
 }
 
-if (typeof window !== "undefined") readyListeners.add(syncBackButton);
-
 /**
  * Shows Telegram's BackButton while `onBack` is set and the component is mounted; pressing it calls
  * the latest `onBack`. Pass null to release the button (e.g. on a tab root or a closed sheet).
@@ -91,4 +104,41 @@ export function useTelegramBackButton(onBack: (() => void) | null) {
       syncBackButton();
     };
   }, [active]);
+}
+
+/*
+ * Telegram's swipe down to minimize the Mini App would take the drag that closes a sheet
+ * (screens.md §1.5 disableVerticalSwipes). Every open sheet holds a lock; swipes come back when
+ * the last one is released. The SDK posts only actual changes.
+ */
+let swipeLocks = 0;
+
+function syncVerticalSwipes() {
+  if (!ready) return;
+  safely(() => (swipeLocks > 0 ? swipeBehavior.disableVertical() : swipeBehavior.enableVertical()));
+}
+
+/** Keeps Telegram's vertical swipes off while `active` is true and the component is mounted. */
+export function useTelegramVerticalSwipeLock(active: boolean) {
+  useEffect(() => {
+    if (!active) return;
+    swipeLocks += 1;
+    syncVerticalSwipes();
+    return () => {
+      swipeLocks -= 1;
+      syncVerticalSwipes();
+    };
+  }, [active]);
+}
+
+if (typeof window !== "undefined") {
+  readyListeners.add(syncBackButton);
+  readyListeners.add(syncVerticalSwipes);
+}
+
+/** Test hook: back to the website state. Mounted hooks keep their stack entries and locks. */
+export function resetMiniAppForTests() {
+  ready = false;
+  detachClick?.();
+  detachClick = null;
 }

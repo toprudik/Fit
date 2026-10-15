@@ -62,11 +62,12 @@ function ProfileButton({ onOpen }: { onOpen: () => void }) {
 }
 
 /**
- * Screen header (docs/design/components/LargeTitle). On a phone a bar sticks to the top with the
- * avatar (tab roots) or "Back" (pushed screens) and up to two actions; the large title scrolls under
- * it and comes back as a small centered title. The bar is clear at the top and turns to `material`
- * once content slides under it. From 768px on there is no bar: the side menu holds the avatar, and
- * the title is a plain `title-1` row with the actions.
+ * Screen header (docs/design/components/LargeTitle, .df-header). On a phone the whole header (the
+ * bar with the avatar on tab roots or "Back" on pushed screens and up to two actions, the large
+ * title and the subtitle) sits on one edge-to-edge `material` band. The bar sticks at
+ * `size-header` (52px); the large title scrolls under it and comes back as a small centered title.
+ * From 768px on there is no bar: the side menu holds the avatar, and the title is a plain `title-1`
+ * row on `bg` with the actions.
  *
  * Render it as the first child of the screen's column: the bar sticks only within its parent.
  */
@@ -78,24 +79,17 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
   useTelegramBackButton(back ? goBack : null);
   const showBack = back !== undefined && !inTelegram;
 
-  const topRef = useRef<HTMLDivElement>(null);
   const titleEdgeRef = useRef<HTMLSpanElement>(null);
-  const [scrolled, setScrolled] = useState(false);
   const [titleHidden, setTitleHidden] = useState(false);
 
   useEffect(() => {
-    const top = topRef.current;
     const titleEdge = titleEdgeRef.current;
-    if (!top || !titleEdge || typeof IntersectionObserver === "undefined") return;
-    // Both markers are positioned in CSS, so the observers need no root margin: margins are ignored
-    // in cross-origin frames, and Telegram Web runs the Mini App in one.
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.target === top) setScrolled(!entry.isIntersecting);
-        else setTitleHidden(!entry.isIntersecting && entry.boundingClientRect.top < 0);
-      }
+    if (!titleEdge || typeof IntersectionObserver === "undefined") return;
+    // The marker is positioned in CSS, so the observer needs no root margin: margins are ignored in
+    // cross-origin frames, and Telegram Web runs the Mini App in one.
+    const observer = new IntersectionObserver(([entry]) => {
+      setTitleHidden(!entry.isIntersecting && entry.boundingClientRect.top < 0);
     });
-    observer.observe(top);
     observer.observe(titleEdge);
     return () => observer.disconnect();
   }, []);
@@ -104,17 +98,8 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
 
   return (
     <>
-      {/* Leaves the viewport as soon as the screen scrolls by a pixel. */}
-      <div ref={topRef} aria-hidden className="h-0" />
-      <div className="sticky top-0 z-[var(--z-header)] -mx-4 px-4 pt-[var(--safe-top)] md:hidden">
-        <div
-          aria-hidden
-          className={cn(
-            "material absolute inset-0 border-b border-line opacity-0",
-            "transition-opacity duration-[var(--duration-fast)] ease-standard motion-reduce:transition-none",
-            scrolled && "opacity-100",
-          )}
-        />
+      {/* 8px above the 44px row make the 52px size-header; the focus ring of its buttons stays on screen. */}
+      <div className="material sticky top-0 z-[var(--z-header)] -mx-4 px-4 pt-[calc(var(--safe-top)+var(--space-2))] md:hidden">
         <div className="relative flex min-h-11 items-center justify-between gap-2">
           <div className="flex min-w-0 items-center">{leading}</div>
           <p
@@ -131,10 +116,15 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
         </div>
       </div>
 
-      <header data-slot="screen-title" className="flex items-center justify-between gap-4 pt-0.5 pb-4 md:pt-8 md:pb-6">
+      <header
+        data-slot="screen-title"
+        // On a phone the band goes on under the bar, edge to edge, and ends 12px below the subtitle.
+        className="flex items-center justify-between gap-4 pb-3 max-md:material max-md:-mx-4 max-md:px-4 md:pt-6 md:pb-6"
+      >
         <div className="min-w-0">
           {showBack ? <BackButton onBack={goBack} className="mb-2 hidden md:inline-flex" /> : null}
-          <h1 className="relative text-large-title text-balance md:text-title-1">
+          {/* At 200% zoom one long word (Расписание, Настройки) wraps, hyphenated where the browser can, instead of overflowing. */}
+          <h1 className="relative text-large-title text-balance break-words hyphens-auto md:text-title-1">
             {title}
             {/*
              * Sits one bar height above the title's bottom edge, so it leaves the viewport exactly when
@@ -143,7 +133,7 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
             <span
               ref={titleEdgeRef}
               aria-hidden
-              className="absolute top-[calc(100%-var(--size-touch)-var(--safe-top))] left-0 h-px w-px"
+              className="absolute top-[calc(100%-var(--size-header)-var(--safe-top))] left-0 h-px w-px"
             />
           </h1>
           {subtitle ? <div className="mt-0.5 text-subhead text-ink-2">{subtitle}</div> : null}

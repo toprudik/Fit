@@ -16,17 +16,24 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 const LOCALES: readonly Locale[] = ["ru", "en"];
 
-function renderSideNav({ zone = "trainer", activeId = null, locale = "ru" }: { zone?: Zone; activeId?: TabId | null; locale?: Locale } = {}) {
+function renderSideNav({
+  zone = "trainer",
+  activeId = null,
+  settingsActive = false,
+  locale = "ru",
+}: { zone?: Zone | null; activeId?: TabId | null; settingsActive?: boolean; locale?: Locale } = {}) {
   const onOpenProfile = vi.fn();
   // The narrow menu labels its icons with tooltips, which need the provider from the root layout.
   renderWithProviders(
-    <TooltipProvider>
-      <SideNav zone={zone} activeId={activeId} onOpenProfile={onOpenProfile} />
+    <TooltipProvider delayDuration={0}>
+      <SideNav zone={zone} activeId={activeId} settingsActive={settingsActive} onOpenProfile={onOpenProfile} />
     </TooltipProvider>,
     { locale },
   );
   return { onOpenProfile };
 }
+
+const SETTINGS: Record<Locale, readonly [label: string, href: string]> = { ru: ["Настройки", "/settings"], en: ["Settings", "/settings"] };
 
 function sections(locale: Locale) {
   return screen.getByRole("navigation", { name: SECTIONS_LABEL[locale] });
@@ -35,6 +42,7 @@ function sections(locale: Locale) {
 afterEach(() => {
   push.mockReset();
   resetAccountStoreForTests();
+  vi.unstubAllGlobals();
 });
 
 describe("SideNav", () => {
@@ -42,12 +50,12 @@ describe("SideNav", () => {
     for (const zone of ZONES) {
       const expected = EXPECTED_TABS[locale][zone];
 
-      it(`lists the ${zone} zone's sections in ${locale}, linking to the tab roots`, () => {
+      it(`lists the ${zone} zone's sections in ${locale}, linking to the tab roots, and settings last`, () => {
         renderSideNav({ zone, locale });
 
         const links = within(sections(locale)).getAllByRole("link");
-        expect(links.map((link) => link.textContent)).toEqual(expected.map(([label]) => label));
-        expect(links.map((link) => link.getAttribute("href"))).toEqual(expected.map(([, href]) => href));
+        expect(links.map((link) => link.textContent)).toEqual([...expected, SETTINGS[locale]].map(([label]) => label));
+        expect(links.map((link) => link.getAttribute("href"))).toEqual([...expected, SETTINGS[locale]].map(([, href]) => href));
       });
     }
   }
@@ -59,6 +67,48 @@ describe("SideNav", () => {
       .getAllByRole("link")
       .filter((link) => link.getAttribute("aria-current") === "page");
     expect(current.map((link) => link.textContent)).toEqual(["Дневник"]);
+  });
+
+  it("marks settings as the current page on the settings screen, and no section", () => {
+    renderSideNav({ zone: "trainer", settingsActive: true });
+
+    const current = within(sections("ru"))
+      .getAllByRole("link")
+      .filter((link) => link.getAttribute("aria-current") === "page");
+    expect(current.map((link) => link.textContent)).toEqual(["Настройки"]);
+  });
+
+  it("shows no zone's sections or zone switch while the zone is unknown", () => {
+    renderSideNav({ zone: null, settingsActive: true });
+
+    expect(within(sections("ru")).getAllByRole("link").map((link) => link.textContent)).toEqual(["Настройки"]);
+    expect(screen.queryByRole("radiogroup", { name: "Зона" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Профиль" })).toBeTruthy();
+  });
+
+  it("shows a label's tooltip on keyboard focus, not on focus put back by a closing dialog", () => {
+    // Radix measures the open tooltip's arrow; jsdom has no ResizeObserver.
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    renderSideNav();
+    const settings = within(sections("ru")).getByRole("link", { name: "Настройки" });
+    const matches = vi.spyOn(settings, "matches");
+
+    // A dialog closed with the mouse returns focus to its opener: no :focus-visible.
+    matches.mockReturnValue(false);
+    act(() => settings.focus());
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    act(() => settings.blur());
+
+    matches.mockReturnValue(true);
+    act(() => settings.focus());
+    expect(screen.getByRole("tooltip").textContent).toBe("Настройки");
   });
 
   it("switches zones by opening the other zone's root", () => {

@@ -81,12 +81,15 @@ export function setThemePreference(preference: ThemePreference) {
 
 /** Called by the Telegram provider with the Mini App's color scheme (null outside Telegram). */
 export function setTelegramScheme(telegram: Theme | null) {
+  // Read the state before saving: initialState() reads sessionStorage, and if it ran after the write
+  // below it would already see the new scheme and skip the update.
+  const before = current().telegram;
   try {
     if (telegram) sessionStorage.setItem(TELEGRAM_SCHEME_KEY, telegram);
   } catch {
     // Storage blocked: the scheme still applies for this page view.
   }
-  if (current().telegram !== telegram) update({ telegram });
+  if (before !== telegram) update({ telegram });
 }
 
 /** Saved preference and the theme actually shown. Server render and hydration see the defaults. */

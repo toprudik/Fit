@@ -17,7 +17,7 @@ export default async function ClientTrainersPage() {
     <MasterDetail
       list={
         <Screen header={<ScreenHeader title={t.tabs.client.trainers} />}>
-          <EmptyState icon={UserRound} title={copy.emptyTitle} description={copy.emptyText} className="flex-1 justify-center" />
+          <EmptyState icon={UserRound} title={copy.emptyTitle} description={copy.emptyText} />
         </Screen>
       }
       detail={<DetailPlaceholder icon={UserRound} text={copy.detail} />}

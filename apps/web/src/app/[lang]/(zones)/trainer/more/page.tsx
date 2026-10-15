@@ -15,7 +15,7 @@ export default async function TrainerMorePage() {
   const copy = t.screens.trainer.more;
   return (
     <Screen header={<ScreenHeader title={t.tabs.trainer.more} />}>
-      <EmptyState icon={QrCode} title={copy.emptyTitle} description={copy.emptyText} className="flex-1 justify-center" />
+      <EmptyState icon={QrCode} title={copy.emptyTitle} description={copy.emptyText} />
     </Screen>
   );
 }

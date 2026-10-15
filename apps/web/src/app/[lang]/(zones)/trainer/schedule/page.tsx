@@ -15,7 +15,7 @@ export default async function TrainerSchedulePage() {
   const copy = t.screens.trainer.schedule;
   return (
     <Screen header={<ScreenHeader title={t.tabs.trainer.schedule} />}>
-      <EmptyState icon={CalendarDays} title={copy.emptyTitle} description={copy.emptyText} className="flex-1 justify-center" />
+      <EmptyState icon={CalendarDays} title={copy.emptyTitle} description={copy.emptyText} />
     </Screen>
   );
 }

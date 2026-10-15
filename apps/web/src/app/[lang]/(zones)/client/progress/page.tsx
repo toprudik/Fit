@@ -15,7 +15,7 @@ export default async function ClientProgressPage() {
   const copy = t.screens.client.progress;
   return (
     <Screen header={<ScreenHeader title={t.tabs.client.progress} />}>
-      <EmptyState icon={ChartLine} title={copy.emptyTitle} description={copy.emptyText} className="flex-1 justify-center" />
+      <EmptyState icon={ChartLine} title={copy.emptyTitle} description={copy.emptyText} />
     </Screen>
   );
 }

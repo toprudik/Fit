@@ -13,7 +13,10 @@ type ScreenProps = {
   className?: string;
 };
 
-/** Page column of a zone screen. At least one viewport tall above the tab bar, so short content can center. */
+/**
+ * Page column of a screen. At least one viewport tall above the tab bar, so a screen with little
+ * content still fills it. Content starts at the top: an empty state sits `space-10` under the header.
+ */
 export function Screen({ header, children, className }: ScreenProps) {
   return (
     <div
@@ -72,11 +75,22 @@ type DetailPlaceholderProps = {
   text: string;
 };
 
-/** The detail column before anything is chosen in the list. */
+/**
+ * The detail column before anything is chosen in the list. It lines up with the list's empty state:
+ * its 64px icon box starts where the empty state's tile does, below the desktop title row (space-6,
+ * a title-1 line, space-6, see ScreenHeader) and the empty state's own space-10.
+ */
 export function DetailPlaceholder({ icon: Icon, text }: DetailPlaceholderProps) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
-      <Icon aria-hidden size={32} strokeWidth={1.75} className="text-ink-3" />
+    <div
+      className={cn(
+        "flex flex-col items-center gap-3 px-8 text-center",
+        "pt-[calc(var(--space-6)+var(--text-title-1--line-height)+var(--space-6)+var(--space-10))]",
+      )}
+    >
+      <div aria-hidden className="mb-1 grid size-16 place-items-center text-ink-3">
+        <Icon size={32} strokeWidth={1.75} />
+      </div>
       <p className="max-w-[300px] text-callout text-ink-2">{text}</p>
     </div>
   );

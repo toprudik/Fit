@@ -17,7 +17,7 @@ export default async function TrainerMoneyPage() {
     <MasterDetail
       list={
         <Screen header={<ScreenHeader title={t.tabs.trainer.money} />}>
-          <EmptyState icon={Wallet} title={copy.emptyTitle} description={copy.emptyText} className="flex-1 justify-center" />
+          <EmptyState icon={Wallet} title={copy.emptyTitle} description={copy.emptyText} />
         </Screen>
       }
       detail={<DetailPlaceholder icon={Wallet} text={copy.detail} />}

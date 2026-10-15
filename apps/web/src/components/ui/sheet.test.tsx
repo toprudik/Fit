@@ -2,13 +2,14 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useTelegramBackButton } from "@/lib/telegram/mini-app";
+import { useTelegramBackButton, useTelegramVerticalSwipeLock } from "@/lib/telegram/mini-app";
 import { renderWithProviders } from "@/test/render";
 import { Sheet } from "./sheet";
 
 vi.mock("@/lib/telegram/mini-app", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/telegram/mini-app")>()),
   useTelegramBackButton: vi.fn(),
+  useTelegramVerticalSwipeLock: vi.fn(),
 }));
 
 // Long enough for the 400ms exit animation to finish and the content to unmount.
@@ -53,6 +54,7 @@ async function nextTick() {
 describe("Sheet", () => {
   beforeEach(() => {
     vi.mocked(useTelegramBackButton).mockClear();
+    vi.mocked(useTelegramVerticalSwipeLock).mockClear();
   });
 
   it("stays out of the page until opened, then shows a dialog named by its title", () => {
@@ -133,6 +135,20 @@ describe("Sheet", () => {
 
     expect(onOpenChange).toHaveBeenCalledExactlyOnceWith(false);
     expect(backHandler()).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull(), EXIT);
+  });
+
+  it("keeps Telegram's vertical swipes locked only while open", async () => {
+    renderWithProviders(<Harness />);
+    const locked = () => vi.mocked(useTelegramVerticalSwipeLock).mock.lastCall?.[0];
+
+    expect(locked()).toBe(false);
+
+    openSheet();
+    expect(locked()).toBe(true);
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    expect(locked()).toBe(false);
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull(), EXIT);
   });
 });

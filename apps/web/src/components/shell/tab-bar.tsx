@@ -46,7 +46,8 @@ export function TabBar({ zone, activeId, onSelect }: TabBarProps) {
                 aria-current={active ? "page" : undefined}
                 onNavigate={onSelect ? (event) => onSelect(tab, event) : undefined}
                 className={cn(
-                  "group flex h-[var(--size-tabbar)] flex-col items-center justify-center gap-0.5 px-0.5",
+                  // No side padding, as in .df-tab: at 360px a cell is 72px and «Расписание» needs all of it.
+                  "group flex h-[var(--size-tabbar)] flex-col items-center justify-center gap-0.5",
                   "text-caption text-ink-3 select-none",
                   // The ring stays inside the cell: the bar sits on the screen edge.
                   "focus-visible:-outline-offset-2",
@@ -63,6 +64,7 @@ export function TabBar({ zone, activeId, onSelect }: TabBarProps) {
                     active && "text-accent-ink",
                   )}
                 />
+                {/* The ellipsis is a last resort for a longer label or a larger system font. */}
                 <span className="max-w-full truncate">{tabLabel(t, tab.id)}</span>
               </Link>
             </li>

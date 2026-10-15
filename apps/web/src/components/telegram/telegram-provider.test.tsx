@@ -1,0 +1,282 @@
+// @vitest-environment jsdom
+import { act, screen, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resetMiniAppForTests, useInTelegram } from "@/lib/telegram/mini-app";
+import { THEME_BG } from "@/lib/theme/colors";
+import { resetThemeStoreForTests, setThemePreference } from "@/lib/theme/store";
+import { ThemeSync } from "@/lib/theme/theme-sync";
+import { TELEGRAM_SCHEME_KEY, THEME_COOKIE } from "@/lib/theme/theme";
+import { renderWithProviders } from "@/test/render";
+import { TelegramProvider } from "./telegram-provider";
+
+const sdk = vi.hoisted(() => {
+  /** Just enough of a tma.js signal: call it to read, `sub` to follow, `set` stands in for Telegram. */
+  function signal<T>(initial: T) {
+    let value = initial;
+    const listeners = new Set<(value: T) => void>();
+    return Object.assign(() => value, {
+      sub(listener: (value: T) => void) {
+        listeners.add(listener);
+        return () => void listeners.delete(listener);
+      },
+      set(next: T) {
+        value = next;
+        for (const listener of listeners) listener(next);
+      },
+    });
+  }
+  let onSettings: (() => void) | null = null;
+  return {
+    isTMA: vi.fn(() => true),
+    init: vi.fn(() => vi.fn()),
+    retrieveRawInitData: vi.fn<() => string | undefined>(),
+    miniApp: { mount: vi.fn(), ready: vi.fn(), setHeaderColor: vi.fn(), setBgColor: vi.fn(), setBottomBarColor: vi.fn() },
+    themeParams: { mount: vi.fn(), bgColor: signal<string | undefined>(undefined) },
+    backButton: { mount: vi.fn(), show: vi.fn(), hide: vi.fn(), onClick: vi.fn(() => () => {}) },
+    settingsButton: {
+      mount: vi.fn(),
+      show: vi.fn(),
+      onClick: vi.fn((listener: () => void) => {
+        onSettings = listener;
+        return () => {
+          onSettings = null;
+        };
+      }),
+      press: () => onSettings?.(),
+    },
+    swipeBehavior: { mount: vi.fn(), enableVertical: vi.fn(), disableVertical: vi.fn() },
+    viewport: { mount: vi.fn(() => Promise.resolve()), expand: vi.fn(), bindCssVars: vi.fn(() => () => {}) },
+    hapticFeedback: { impactOccurred: vi.fn(), selectionChanged: vi.fn() },
+  };
+});
+vi.mock("@tma.js/sdk-react", () => sdk);
+
+const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+
+const toast = vi.hoisted(() => ({ error: vi.fn() }));
+vi.mock("@/components/ui/sonner", () => ({ toast }));
+
+const DARK_TELEGRAM = "#17212b";
+const LIGHT_TELEGRAM = "#ffffff";
+
+const dataTheme = () => document.documentElement.getAttribute("data-theme");
+const telegramScheme = () => sessionStorage.getItem(TELEGRAM_SCHEME_KEY);
+/** The colors last sent for Telegram's header, background and bottom bar. */
+const chrome = () =>
+  [sdk.miniApp.setHeaderColor, sdk.miniApp.setBgColor, sdk.miniApp.setBottomBarColor].map((setter) => setter.mock.lastCall?.[0]);
+
+/** A system scheme for "Авто" on the website; inside Telegram it must not matter. */
+function systemPrefersLight(light: boolean) {
+  const media = { matches: light, addEventListener: vi.fn(), removeEventListener: vi.fn() };
+  Object.defineProperty(window, "matchMedia", { configurable: true, writable: true, value: vi.fn(() => media) });
+}
+
+let launches = 0;
+/** Each test launches with its own initData: the provider sends a given initData once per page load. */
+function launch({ bg = DARK_TELEGRAM }: { bg?: string } = {}) {
+  launches += 1;
+  const initData = `auth_date=1&hash=${launches}`;
+  sdk.retrieveRawInitData.mockReturnValue(initData);
+  sdk.themeParams.bgColor.set(bg);
+  return initData;
+}
+
+function signInResponse(body: unknown, ok = true) {
+  const fetch = vi.fn(async () => ({ ok, status: ok ? 200 : 401, json: async () => body }));
+  vi.stubGlobal("fetch", fetch);
+  return fetch;
+}
+
+function Probe() {
+  return <p>{useInTelegram() ? "telegram" : "website"}</p>;
+}
+
+/** As in the root layout: ThemeSync sits next to the provider and starts the theme store first. */
+function renderApp(options: { strict?: boolean } = {}) {
+  const app = (
+    <>
+      <TelegramProvider>
+        <Probe />
+      </TelegramProvider>
+      <ThemeSync />
+    </>
+  );
+  return renderWithProviders(options.strict ? <StrictMode>{app}</StrictMode> : app);
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  resetMiniAppForTests();
+  document.cookie = `${THEME_COOKIE}=; Path=/; Max-Age=0`;
+  sessionStorage.clear();
+  document.documentElement.setAttribute("data-theme", "dark");
+  resetThemeStoreForTests();
+  systemPrefersLight(false);
+  signInResponse({ ok: true, fresh: false });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  window.history.replaceState(null, "", "/");
+});
+
+describe("outside Telegram", () => {
+  it("leaves the website as it is", () => {
+    sdk.isTMA.mockReturnValue(false);
+    renderApp();
+
+    expect(screen.getByText("website")).toBeTruthy();
+    expect(sdk.init).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+    sdk.isTMA.mockReturnValue(true);
+  });
+
+  it("stays the website when the SDK can't read the launch params", () => {
+    launch();
+    sdk.init.mockImplementationOnce(() => {
+      throw new Error("Unable to retrieve launch parameters");
+    });
+    renderApp();
+
+    expect(screen.getByText("website")).toBeTruthy();
+    expect(sdk.miniApp.mount).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("stays the website when initData can't be read", () => {
+    launch();
+    const cleanup = vi.fn();
+    sdk.init.mockReturnValueOnce(cleanup);
+    sdk.retrieveRawInitData.mockImplementationOnce(() => {
+      throw new Error("Invalid launch params");
+    });
+    renderApp();
+
+    expect(screen.getByText("website")).toBeTruthy();
+    expect(cleanup).toHaveBeenCalledOnce();
+    expect(sdk.miniApp.mount).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("inside Telegram", () => {
+  it("goes live: components mounted, app marked ready, splash handed over after a frame", async () => {
+    launch();
+    renderApp();
+
+    expect(screen.getByText("telegram")).toBeTruthy();
+    for (const component of [sdk.miniApp, sdk.themeParams, sdk.backButton, sdk.settingsButton, sdk.swipeBehavior]) {
+      expect(component.mount).toHaveBeenCalledOnce();
+    }
+    expect(sdk.viewport.expand).toHaveBeenCalledOnce();
+    expect(sdk.viewport.bindCssVars).toHaveBeenCalledOnce();
+    await waitFor(() => expect(sdk.miniApp.ready).toHaveBeenCalledOnce());
+  });
+
+  it("follows a dark Telegram on Авто even when the system is light", () => {
+    systemPrefersLight(true);
+    launch({ bg: DARK_TELEGRAM });
+    renderApp();
+
+    expect(dataTheme()).toBe("dark");
+    expect(telegramScheme()).toBe("dark");
+    expect(chrome()).toEqual([THEME_BG.dark, THEME_BG.dark, THEME_BG.dark]);
+  });
+
+  it("follows a light Telegram, and theme_changed while it runs", () => {
+    launch({ bg: LIGHT_TELEGRAM });
+    renderApp();
+    expect(dataTheme()).toBe("light");
+    expect(chrome()).toEqual([THEME_BG.light, THEME_BG.light, THEME_BG.light]);
+
+    act(() => sdk.themeParams.bgColor.set(DARK_TELEGRAM));
+
+    expect(dataTheme()).toBe("dark");
+    expect(telegramScheme()).toBe("dark");
+  });
+
+  it("lets a pinned theme win without taking it for Telegram's scheme", async () => {
+    launch({ bg: DARK_TELEGRAM });
+    renderApp();
+
+    act(() => setThemePreference("light"));
+    expect(dataTheme()).toBe("light");
+    await waitFor(() => expect(chrome()).toEqual([THEME_BG.light, THEME_BG.light, THEME_BG.light]));
+    expect(telegramScheme()).toBe("dark");
+
+    act(() => setThemePreference("system"));
+    expect(dataTheme()).toBe("dark");
+    await waitFor(() => expect(chrome()).toEqual([THEME_BG.dark, THEME_BG.dark, THEME_BG.dark]));
+  });
+
+  it("keeps the scheme it had when Telegram sends no bg_color", () => {
+    sessionStorage.setItem(TELEGRAM_SCHEME_KEY, "light");
+    launch({ bg: "" });
+    sdk.themeParams.bgColor.set(undefined);
+    renderApp();
+
+    expect(telegramScheme()).toBe("light");
+  });
+
+  it("shows Telegram's Settings item and opens /settings from it", () => {
+    launch();
+    renderApp();
+    expect(sdk.settingsButton.show).toHaveBeenCalledOnce();
+
+    sdk.settingsButton.press();
+    expect(router.push).toHaveBeenCalledExactlyOnceWith("/settings");
+
+    window.history.replaceState(null, "", "/settings");
+    sdk.settingsButton.press();
+    expect(router.push).toHaveBeenCalledOnce();
+  });
+
+  it("keeps working when the client lacks a feature", () => {
+    launch();
+    sdk.settingsButton.show.mockImplementationOnce(() => {
+      throw new Error("unsupported in Mini Apps version 6.0");
+    });
+    sdk.miniApp.setBottomBarColor.mockImplementationOnce(() => {
+      throw new Error("unsupported in Mini Apps version 6.0");
+    });
+    renderApp();
+
+    expect(screen.getByText("telegram")).toBeTruthy();
+    expect(sdk.miniApp.setBgColor).toHaveBeenCalledWith(THEME_BG.dark);
+  });
+});
+
+describe("sign-in", () => {
+  it("sends initData once, even when React runs the effect twice", async () => {
+    const initData = launch();
+    const fetch = signInResponse({ ok: true, fresh: true });
+    renderApp({ strict: true });
+
+    await waitFor(() => expect(router.refresh).toHaveBeenCalledOnce());
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/auth/telegram/mini-app",
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ initData }) }),
+    );
+  });
+
+  it("leaves the page alone when the session already existed", async () => {
+    launch();
+    const fetch = signInResponse({ ok: true, fresh: false, locale: "ru" });
+    renderApp();
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+    expect(router.refresh).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("says so in a toast when it fails", async () => {
+    launch();
+    signInResponse({ ok: false }, false);
+    renderApp();
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledExactlyOnceWith("Не удалось войти, открой приложение заново"));
+  });
+});

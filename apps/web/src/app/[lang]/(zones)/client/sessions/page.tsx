@@ -17,7 +17,7 @@ export default async function ClientSessionsPage() {
     <MasterDetail
       list={
         <Screen header={<ScreenHeader title={t.tabs.client.sessions} />}>
-          <EmptyState icon={CalendarDays} title={copy.emptyTitle} description={copy.emptyText} className="flex-1 justify-center" />
+          <EmptyState icon={CalendarDays} title={copy.emptyTitle} description={copy.emptyText} />
         </Screen>
       }
       detail={<DetailPlaceholder icon={CalendarDays} text={copy.detail} />}

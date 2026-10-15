@@ -16,7 +16,7 @@ export default async function TrainerTodayPage() {
   const copy = t.screens.trainer.today;
   return (
     <Screen header={<ScreenHeader title={t.tabs.trainer.today} subtitle={<TodayDate />} />}>
-      <EmptyState icon={CalendarCheck} title={copy.emptyTitle} description={copy.emptyText} className="flex-1 justify-center" />
+      <EmptyState icon={CalendarCheck} title={copy.emptyTitle} description={copy.emptyText} />
     </Screen>
   );
 }

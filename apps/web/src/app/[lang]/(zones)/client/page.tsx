@@ -16,7 +16,7 @@ export default async function ClientHomePage() {
   const copy = t.screens.client.home;
   return (
     <Screen header={<ScreenHeader title={t.tabs.client.home} subtitle={<TodayDate />} />}>
-      <EmptyState icon={CalendarClock} title={copy.emptyTitle} description={copy.emptyText} className="flex-1 justify-center" />
+      <EmptyState icon={CalendarClock} title={copy.emptyTitle} description={copy.emptyText} />
     </Screen>
   );
 }

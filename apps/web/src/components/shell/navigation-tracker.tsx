@@ -11,16 +11,33 @@ import { Suspense, useCallback, useEffect } from "react";
  */
 const entries: string[] = [];
 let index = -1;
-/** Target of a browser back/forward in progress: popstate fires before the router renders the page. */
+/** Target of a browser back/forward whose popstate came before the router rendered the page. */
 let poppedTo: string | null = null;
+/** The popstate inside which the router already rendered and we recorded the page (see traversal). */
+let recordedPop: Event | null = null;
+/** Set by "Back" when it goes up to its fallback screen: a push in the history, a pop for the user. */
+let goingUp = false;
 
 function currentUrl() {
   return `${window.location.pathname}${window.location.search}`;
 }
 
+/**
+ * The popstate event being dispatched, if any. React renders a router transition started by popstate
+ * at once, inside the event (that keeps scroll restoration working), so the page is committed, and
+ * recorded, before our own popstate listener gets to run.
+ */
+function traversal(): Event | null {
+  const event = window.event;
+  return event?.type === "popstate" ? event : null;
+}
+
 function record(url: string) {
-  const popped = poppedTo === url;
+  const event = traversal();
+  const popped = poppedTo === url || event !== null;
+  if (event) recordedPop = event;
   poppedTo = null;
+  goingUp = false;
   if (popped) {
     // Back or forward: move to the nearest matching entry, looking back first.
     const back = index > 0 ? entries.lastIndexOf(url, index - 1) : -1;
@@ -41,21 +58,31 @@ function record(url: string) {
 }
 
 /**
- * How the current screen was reached, read while it mounts: "load" for the first page of this tab,
- * "pop" for the browser's back/forward, "push" for an in-app navigation. Push transitions only play
- * on "push".
+ * How the current screen was reached, read while it is committed (in a layout effect, before the
+ * tracker records it): "load" for the first page of this tab, "pop" for "Back" and the browser's back
+ * button, "push" for an in-app navigation and the browser's forward button, which opens again what
+ * "Back" closed.
  */
 export function arrival(): "load" | "push" | "pop" {
   if (entries.length === 0) return "load";
-  return poppedTo === currentUrl() ? "pop" : "push";
+  if (goingUp) return "pop";
+  const url = currentUrl();
+  if (poppedTo !== url && !traversal()) return "push";
+  const back = index > 0 ? entries.lastIndexOf(url, index - 1) : -1;
+  const forward = entries.indexOf(url, index + 1);
+  return back === -1 && forward !== -1 ? "push" : "pop";
 }
 
-/** Back to the previous screen if we came from one in this app, otherwise to `fallbackHref`. */
+/** Back to the previous screen if we came from one in this app, otherwise up to `fallbackHref`. */
 export function useBack(fallbackHref: string): () => void {
   const router = useRouter();
   return useCallback(() => {
-    if (index > 0) router.back();
-    else router.push(fallbackHref);
+    if (index > 0) {
+      router.back();
+      return;
+    }
+    goingUp = true;
+    router.push(fallbackHref);
   }, [router, fallbackHref]);
 }
 
@@ -63,8 +90,9 @@ function HistoryRecorder() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const onPopState = () => {
-      poppedTo = currentUrl();
+    const onPopState = (event: PopStateEvent) => {
+      // Already recorded if the router rendered the page inside this very event.
+      if (event !== recordedPop) poppedTo = currentUrl();
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);

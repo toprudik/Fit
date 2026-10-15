@@ -1,5 +1,22 @@
 import { expect, test, type Page } from "@playwright/test";
-import { collectErrors, expectAccessible, expectOpaque, expectTabs, isPhone, SCHEMES, screenshotPath, settle } from "./support";
+import {
+  collectErrors,
+  expectAccessible,
+  expectNoSheetLeft,
+  expectOpaque,
+  expectTabs,
+  isPhone,
+  NAV_LABEL,
+  recordAnimations,
+  SCHEMES,
+  screenshotPath,
+  screenSlideStart,
+  settle,
+  TABS,
+  takeAnimations,
+  type Locale,
+  type Zone,
+} from "./support";
 
 /*
  * The app shell from docs/architecture/screens.md §1–2 in both projects (phone, desktop) and both
@@ -119,6 +136,167 @@ test.describe("navigation", () => {
   test("URLs never show the locale", async ({ page }) => {
     await page.goto("/client/diary");
     await expect(page).toHaveURL(/\/client\/diary$/);
+  });
+});
+
+test.describe("tab bar at 360px", () => {
+  // The narrowest screen the product supports (screens.md §1.1), as a phone.
+  test.use({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+
+  const cases: readonly (readonly [Locale, Zone])[] = [
+    ["ru", "trainer"],
+    ["ru", "client"],
+    ["en", "trainer"],
+    ["en", "client"],
+  ];
+  for (const [locale, zone] of cases) {
+    test(`no ${zone} tab label is cut in ${locale}, whichever tab is active`, async ({ page, context, baseURL }, testInfo) => {
+      test.skip(!isPhone(testInfo), "the tab bar is the phone layout");
+      await context.addCookies([{ name: "dafit-locale", value: locale, url: baseURL }]);
+      const tabs = TABS[locale][zone];
+      await page.goto(tabs[0][1]);
+      const tabBar = page.getByRole("navigation", { name: NAV_LABEL[locale], exact: true });
+
+      // Every tab active once: the active label is semibold and wider than the regular one.
+      for (const [label, href] of tabs) {
+        await tabBar.getByRole("link", { name: label, exact: true }).click();
+        await expect(page).toHaveURL(new RegExp(`${href}$`));
+        await expect(tabBar.getByRole("link", { name: label, exact: true })).toHaveAttribute("aria-current", "page");
+        await page.evaluate(() => document.fonts.ready);
+        // `truncate` clips the label: a cut one is wider inside than its box.
+        const cut = await tabBar.getByRole("link").evaluateAll((links) =>
+          links
+            .filter((link) => {
+              const text = link.querySelector("span");
+              return text !== null && text.scrollWidth > text.clientWidth;
+            })
+            .map((link) => link.textContent),
+        );
+        expect(cut, `cut while ${label} is active`).toEqual([]);
+      }
+    });
+  }
+});
+
+test.describe("profile, settings and back", () => {
+  // The phone opens the profile from the avatar in the header, the desktop from the side menu.
+  const openProfile = async (page: Page) => {
+    await page.getByRole("button", { name: "Профиль", exact: true }).click();
+    const sheet = page.getByRole("dialog", { name: "Профиль" });
+    await expect(sheet).toBeVisible();
+    return sheet;
+  };
+
+  test("settings opened from the profile leave no sheet behind, with Back or the browser", async ({ page }) => {
+    const errors = collectErrors(page);
+    await page.goto("/trainer", { waitUntil: "networkidle" });
+
+    await (await openProfile(page)).getByRole("link", { name: "Настройки" }).click();
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Настройки" })).toBeVisible();
+    await expectNoSheetLeft(page);
+
+    await page.getByRole("button", { name: "Назад" }).click();
+    await expect(page).toHaveURL(/\/trainer$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Сегодня" })).toBeVisible();
+    await expectNoSheetLeft(page);
+
+    await (await openProfile(page)).getByRole("link", { name: "Настройки" }).click();
+    await expect(page).toHaveURL(/\/settings$/);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/trainer$/);
+    await expectNoSheetLeft(page);
+
+    // The screen still takes taps, and the profile opens again as usual.
+    await expect(await openProfile(page)).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expectNoSheetLeft(page);
+    expect(errors()).toEqual([]);
+  });
+
+  test("leaving the shell for sign-in, with the profile closed or still open, leaves no sheet behind", async ({ page }) => {
+    await page.goto("/trainer", { waitUntil: "networkidle" });
+
+    // Signed out in these tests: the profile offers to sign in, which leaves the shell for /login.
+    await (await openProfile(page)).getByRole("link", { name: "Войти через Telegram" }).click();
+    await expect(page).toHaveURL(/\/login\?next=%2Ftrainer$/);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/trainer$/);
+    await expectNoSheetLeft(page);
+
+    // The browser leaves while the profile is open: Next.js hides the shell with the sheet in it.
+    await openProfile(page);
+    await page.goForward();
+    await expect(page).toHaveURL(/\/login\?next=%2Ftrainer$/);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/trainer$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Сегодня" })).toBeVisible();
+    await expectNoSheetLeft(page);
+  });
+
+  test("on a wide screen settings keep the side menu, with Настройки as the current item", async ({ page }, testInfo) => {
+    test.skip(isPhone(testInfo), "the side menu is the layout from 768px");
+    await page.goto("/trainer/clients", { waitUntil: "networkidle" });
+    const menu = page.getByRole("navigation", { name: NAV_LABEL.ru, exact: true });
+
+    await menu.getByRole("link", { name: "Настройки", exact: true }).click();
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Настройки" })).toBeVisible();
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Настройки", exact: true })).toHaveAttribute("aria-current", "page");
+    // The zone shown before stays, with none of its sections current.
+    for (const [label, href] of TABS.ru.trainer) await expect(menu.getByRole("link", { name: label, exact: true })).toHaveAttribute("href", href);
+    await expect(page.locator('a[aria-current="page"]:visible')).toHaveCount(1);
+
+    // Opened directly, settings show the zone visited last.
+    await page.reload();
+    await expect(menu.getByRole("link", { name: "Настройки", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(menu.getByRole("link", { name: "Клиенты", exact: true })).toHaveAttribute("href", "/trainer/clients");
+
+    // On /profile no item is current.
+    await page.goto("/profile");
+    await expect(page.getByRole("heading", { level: 1, name: "Профиль" })).toBeVisible();
+    await expect(menu).toBeVisible();
+    await expect(page.locator('a[aria-current="page"]:visible')).toHaveCount(0);
+  });
+});
+
+test.describe("push and pop", () => {
+  test("settings slide in from the right, and Back brings the screen back from the left", async ({ page }) => {
+    await recordAnimations(page);
+    await page.goto("/trainer", { waitUntil: "networkidle" });
+    // A page load or a reload shows the screen at once.
+    expect(screenSlideStart(await takeAnimations(page))).toBeNull();
+
+    await page.getByRole("button", { name: "Профиль", exact: true }).click();
+    await page.getByRole("dialog", { name: "Профиль" }).getByRole("link", { name: "Настройки" }).click();
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect.poll(async () => screenSlideStart(await takeAnimations(page))).toBeGreaterThan(0);
+
+    await page.getByRole("button", { name: "Назад" }).click();
+    await expect(page).toHaveURL(/\/trainer$/);
+    await expect.poll(async () => screenSlideStart(await takeAnimations(page))).toBeLessThan(0);
+  });
+
+  test.describe("with reduced motion", () => {
+    test.use({ contextOptions: { reducedMotion: "reduce" } });
+
+    test("screens only fade, within 100ms", async ({ page }) => {
+      await recordAnimations(page);
+      await page.goto("/trainer", { waitUntil: "networkidle" });
+      await page.getByRole("button", { name: "Профиль", exact: true }).click();
+      await page.getByRole("dialog", { name: "Профиль" }).getByRole("link", { name: "Настройки" }).click();
+      await expect(page).toHaveURL(/\/settings$/);
+      await page.getByRole("button", { name: "Назад" }).click();
+      await expect(page).toHaveURL(/\/trainer$/);
+
+      const screen = (await takeAnimations(page)).filter((animation) => animation.screen);
+      expect(screen.length).toBeGreaterThanOrEqual(2);
+      for (const animation of screen) {
+        expect(animation.keyframes.every((keyframe) => keyframe.transform === undefined)).toBe(true);
+        expect(animation.duration).toBeLessThanOrEqual(100);
+      }
+    });
   });
 });
 

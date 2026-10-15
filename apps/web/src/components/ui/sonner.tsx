@@ -1,9 +1,11 @@
 "use client";
 
 import { Check, CircleAlert, Info } from "lucide-react";
-import { Toaster as Sonner, type ToasterProps } from "sonner";
+import { toast as sonnerToast, Toaster as Sonner, type ExternalToast, type ToasterProps } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { useI18n } from "@/i18n/client";
+import { useInTelegram } from "@/lib/telegram/mini-app";
+import { cn } from "@/lib/utils";
 
 // Tone is carried by the icon's shape and the words, never by color alone (Toast README).
 const ICON_PROPS = { "aria-hidden": true, size: 20, strokeWidth: 1.75 } as const;
@@ -15,8 +17,19 @@ const ICONS: ToasterProps["icons"] = {
   loading: <Spinner />,
 };
 
-// Below the status bar and Telegram's header.
-const TOP_OFFSET = "calc(var(--safe-top) + var(--space-3))";
+/*
+ * In the Mini App toasts come from the top, below the status bar and Telegram's header. On the
+ * website they rise from the bottom: above the tab bar on phones, near the edge from 768px on,
+ * where the side menu replaces the tab bar. Sonner switches to its mobile offsets below 600px, so
+ * both sets point at the same values and the 768px breakpoint lives in CSS (TOASTER below).
+ */
+const TOP = "calc(var(--safe-top) + var(--space-3))";
+const BOTTOM = "var(--toast-offset-bottom)";
+const OFFSET: ToasterProps["offset"] = { top: TOP, bottom: BOTTOM };
+// Edge to edge on phones, so the pill is centered on the screen.
+const MOBILE_OFFSET: ToasterProps["mobileOffset"] = { top: TOP, bottom: BOTTOM, left: 0, right: 0 };
+const TOASTER =
+  "[--toast-offset-bottom:calc(var(--size-tabbar)+var(--safe-bottom)+var(--space-3))] md:[--toast-offset-bottom:var(--space-6)]";
 
 // The action ("Отменить") is bold on-inverse text; a taller invisible hit area keeps the 44 px target.
 const TOAST_BUTTON =
@@ -25,17 +38,19 @@ const TOAST_BUTTON =
 
 /**
  * DaFit Toast (docs/design/components/Toast + `.df-toast`): an inverse pill with an icon and a few
- * words that repeat the button's verb ("Записано"), at the top center. Sonner keeps the queue,
- * swipe to dismiss and its polite live region; the look is ours (`unstyled`).
+ * words that repeat the button's verb ("Записано"), at the top center inside Telegram and at the
+ * bottom center on the website. Sonner keeps the queue, swipe to dismiss and its polite live
+ * region; the look is ours (`unstyled`). Show toasts with `toast` from this module.
  */
-function Toaster(props: ToasterProps) {
+function Toaster({ className, ...props }: ToasterProps) {
   const { t } = useI18n();
+  const inTelegram = useInTelegram();
   return (
     <Sonner
-      position="top-center"
-      offset={{ top: TOP_OFFSET }}
-      // Edge to edge on phones, so the pill is centered on the screen.
-      mobileOffset={{ top: TOP_OFFSET, left: 0, right: 0 }}
+      position={inTelegram ? "top-center" : "bottom-center"}
+      offset={OFFSET}
+      mobileOffset={MOBILE_OFFSET}
+      className={cn(TOASTER, className)}
       gap={8}
       containerAriaLabel={t.toast.region}
       icons={ICONS}
@@ -63,4 +78,24 @@ function Toaster(props: ToasterProps) {
   );
 }
 
-export { Toaster };
+/** A toast stays 4 s (Sonner's default), or 6 s when it has an action to take (Toast README). */
+export const ACTION_TOAST_DURATION = 6000;
+
+type Show = (message: Parameters<typeof sonnerToast.message>[0], data?: ExternalToast) => string | number;
+
+function withActionDuration(show: Show): Show {
+  return (message, data) =>
+    show(message, data?.action !== undefined && data.duration === undefined ? { ...data, duration: ACTION_TOAST_DURATION } : data);
+}
+
+/** Sonner's `toast`, with the longer default for toasts that carry an action. An explicit duration wins. */
+const toast: typeof sonnerToast = Object.assign(withActionDuration(sonnerToast), {
+  ...sonnerToast,
+  success: withActionDuration(sonnerToast.success),
+  info: withActionDuration(sonnerToast.info),
+  warning: withActionDuration(sonnerToast.warning),
+  error: withActionDuration(sonnerToast.error),
+  message: withActionDuration(sonnerToast.message),
+});
+
+export { Toaster, toast };

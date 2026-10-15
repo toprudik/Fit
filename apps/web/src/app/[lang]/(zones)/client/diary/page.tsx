@@ -15,7 +15,7 @@ export default async function ClientDiaryPage() {
   const copy = t.screens.client.diary;
   return (
     <Screen header={<ScreenHeader title={t.tabs.client.diary} />}>
-      <EmptyState icon={Dumbbell} title={copy.emptyTitle} description={copy.emptyText} className="flex-1 justify-center" />
+      <EmptyState icon={Dumbbell} title={copy.emptyTitle} description={copy.emptyText} />
     </Screen>
   );
 }

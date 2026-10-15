@@ -47,7 +47,8 @@ export const TABS: Record<Locale, Record<Zone, readonly (readonly [label: string
   },
 };
 
-const NAV_LABEL: Record<Locale, string> = { ru: "Разделы", en: "Sections" };
+/** Accessible name of the tab bar and of the side menu's navigation. */
+export const NAV_LABEL: Record<Locale, string> = { ru: "Разделы", en: "Sections" };
 
 export const isPhone = (testInfo: TestInfo) => testInfo.project.name === "phone";
 
@@ -129,4 +130,66 @@ export async function expectTabs(page: Page, testInfo: TestInfo, locale: Locale,
   const current = page.locator('a[aria-current="page"]:visible');
   await expect(current).toHaveCount(1);
   await expect(current).toHaveAccessibleName(active);
+}
+
+/** A Web Animation started on the page: motion/react runs its fades and slides on WAAPI. */
+export type RecordedAnimation = {
+  /** The shell's screen wrapper (the only child of <main>), where push, pop and tab transitions play. */
+  screen: boolean;
+  duration: number;
+  keyframes: { opacity?: string; transform?: string }[];
+};
+
+type RecordingWindow = Window & { __animations?: RecordedAnimation[] };
+
+/** From the next page load on, records every animation the page starts, so short ones can't be missed. */
+export async function recordAnimations(page: Page) {
+  await page.addInitScript(() => {
+    const recording = window as RecordingWindow;
+    recording.__animations = [];
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function (this: Element, ...args: Parameters<Element["animate"]>) {
+      const animation = animate.apply(this, args);
+      const timing = animation.effect?.getTiming();
+      recording.__animations?.push({
+        screen: this.parentElement?.id === "main",
+        duration: typeof timing?.duration === "number" ? timing.duration : 0,
+        keyframes: (animation.effect as KeyframeEffect | null)?.getKeyframes().map(({ opacity, transform }) => ({
+          opacity: opacity === undefined ? undefined : String(opacity),
+          transform: transform === undefined ? undefined : String(transform),
+        })) ?? [],
+      });
+      return animation;
+    };
+  });
+}
+
+/** The animations recorded since the last call (see recordAnimations). */
+export async function takeAnimations(page: Page): Promise<RecordedAnimation[]> {
+  return page.evaluate(() => (window as RecordingWindow).__animations?.splice(0) ?? []);
+}
+
+/**
+ * Where the screen started its slide, in percent of its width: positive from the right (push),
+ * negative from the left (pop), null when it did not move.
+ */
+export function screenSlideStart(animations: readonly RecordedAnimation[]): number | null {
+  for (const animation of animations) {
+    const match = animation.screen ? /translateX\((-?[\d.]+)%\)/.exec(animation.keyframes[0]?.transform ?? "") : null;
+    if (match) return Number(match[1]);
+  }
+  return null;
+}
+
+/**
+ * Nothing of a closed sheet is left over the screen: no dialog, no scroll lock, and the page is not
+ * hidden from assistive technology.
+ */
+export async function expectNoSheetLeft(page: Page) {
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator("[data-slot=sheet-scrim]")).toHaveCount(0);
+  await expect(page.locator("body")).not.toHaveAttribute("data-scroll-locked");
+  const main = page.locator("main#main");
+  await expect(main).toBeVisible();
+  expect(await main.evaluate((element) => element.closest('[aria-hidden="true"]') === null)).toBe(true);
 }

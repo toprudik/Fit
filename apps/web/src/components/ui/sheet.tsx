@@ -15,7 +15,7 @@ import { useRef } from "react";
 import { IconButton } from "@/components/ui/icon-button";
 import { useI18n } from "@/i18n/client";
 import { DURATION, EASE_EXIT, EASE_STANDARD } from "@/lib/motion";
-import { useTelegramBackButton } from "@/lib/telegram/mini-app";
+import { useTelegramBackButton, useTelegramVerticalSwipeLock } from "@/lib/telegram/mini-app";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
@@ -60,7 +60,8 @@ const DESKTOP_QUERY = "(min-width: 48rem)";
  * (docs/design/components/Sheet). From 768px on it turns into a centered 480px dialog.
  *
  * Built on Radix Dialog, so focus is trapped and Escape or a tap on the scrim closes it. On phones it
- * also closes when dragged down, and inside Telegram the BackButton closes it while it is open.
+ * also closes when dragged down, and inside Telegram the BackButton closes it while it is open
+ * (Telegram's own vertical swipes are off meanwhile).
  * The content stays mounted until its exit animation has played.
  */
 export function Sheet({ open, onOpenChange, title, description, children, actions }: SheetProps) {
@@ -73,6 +74,8 @@ export function Sheet({ open, onOpenChange, title, description, children, action
   const draggedRef = useRef(false);
 
   useTelegramBackButton(open ? () => onOpenChange(false) : null);
+  // Telegram's swipe down to minimize would take the drag that closes the sheet.
+  useTelegramVerticalSwipeLock(open);
 
   const panelMotion = reduceMotion ? FADE_REDUCED : desktop ? DIALOG : SHEET;
   const scrimMotion = reduceMotion ? FADE_REDUCED : desktop ? DIALOG_SCRIM : SHEET_SCRIM;
