@@ -8,6 +8,8 @@ export default async function NotFound() {
   const t = await getDictionary();
   return (
     <main className="flex min-h-dvh items-center justify-center px-4 pt-[var(--safe-top)] pb-[var(--safe-bottom)]">
+      {/* React hoists it into <head>; the page has no route of its own to export metadata from. */}
+      <title>{`${t.notFound.title} | ${t.meta.appName}`}</title>
       <EmptyState
         icon={SearchX}
         title={t.notFound.title}

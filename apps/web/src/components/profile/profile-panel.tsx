@@ -3,7 +3,7 @@
 import { LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useAccount } from "@/components/account/account-store";
 import { PersonAvatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -13,19 +13,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n/client";
 import { DEFAULT_ZONE, isZone, ZONE_COOKIE, ZONES, type Zone } from "@/lib/navigation/zones";
 import { readCookie } from "@/lib/preferences";
-
-const subscribeNever = () => () => {};
+import { useHydrated } from "@/lib/use-hydrated";
 
 /** The zone visited last (the proxy keeps it in a cookie); null during the server render and hydration. */
 function useLastZone(): Zone | null {
-  return useSyncExternalStore(
-    subscribeNever,
-    () => {
-      const saved = readCookie(document.cookie, ZONE_COOKIE);
-      return isZone(saved) ? saved : DEFAULT_ZONE;
-    },
-    () => null,
-  );
+  const hydrated = useHydrated();
+  if (!hydrated) return null;
+  const saved = readCookie(document.cookie, ZONE_COOKIE);
+  return isZone(saved) ? saved : DEFAULT_ZONE;
 }
 
 function SignedOut() {

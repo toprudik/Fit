@@ -70,7 +70,8 @@ export function SegmentedControl<T extends string>({
           value={option.value}
           className={cn(
             "relative min-w-0 cursor-pointer rounded-xs px-2 text-subhead font-semibold text-ink-2",
-            "transition-colors duration-[var(--duration-base)] ease-standard motion-reduce:transition-none",
+            // Only the text color eases: transition-colors would also fade the focus ring and borders in.
+            "transition-[color] duration-[var(--duration-base)] ease-standard motion-reduce:transition-none",
             "data-[state=on]:text-on-inverse data-[state=off]:hover:bg-surface-3",
             // The visual segment is 38px tall inside the track; the hit area covers the full 44px.
             "before:absolute before:inset-x-0 before:-inset-y-[3px]",

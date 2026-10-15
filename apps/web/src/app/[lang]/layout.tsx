@@ -10,6 +10,7 @@ import { onest, tekturNarrow } from "@/fonts";
 import { I18nProvider } from "@/i18n/client";
 import { isLocale, LOCALES } from "@/i18n/config";
 import { getDictionary } from "@/i18n/server";
+import { THEME_BG } from "@/lib/theme/colors";
 import { themeInitScript } from "@/lib/theme/init-script";
 import { ThemeSync } from "@/lib/theme/theme-sync";
 import "../globals.css";
@@ -32,10 +33,10 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  // Browser chrome follows the system scheme; the app itself may be pinned to a theme in settings.
+  // Browser chrome starts from the system scheme; ThemeSync repaints it when a theme is pinned.
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#000000" },
-    { media: "(prefers-color-scheme: light)", color: "#f2f3f5" },
+    { media: "(prefers-color-scheme: dark)", color: THEME_BG.dark },
+    { media: "(prefers-color-scheme: light)", color: THEME_BG.light },
   ],
 };
 

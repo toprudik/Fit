@@ -9,8 +9,12 @@ export type RouteInput = {
   /** Last opened zone (ZONE_COOKIE). */
   zoneCookie: string | null | undefined;
   acceptLanguage: string | null | undefined;
-  /** Router prefetches must not count as opening a zone. */
-  isPrefetch: boolean;
+  /**
+   * A browser document load (Sec-Fetch-Dest: document). Only those remember the zone: router
+   * prefetches must not, and Next strips its own prefetch headers before the proxy sees them.
+   * In-app navigations between zones are remembered by the shell in the browser.
+   */
+  isDocument: boolean;
 };
 
 export type RouteDecision =
@@ -19,13 +23,15 @@ export type RouteDecision =
   /** Serve /<locale><pathname>; rememberZone is set when the visit switches the last zone. */
   | { kind: "rewrite"; pathname: string; locale: Locale; rememberZone: Zone | null };
 
-/** Route handlers and framework internals are not pages: no locale rewrite for them. */
+/** Files in apps/web/public. Any other path is a page, so a mistyped URL still gets the app's 404. */
+export const PUBLIC_FILES: readonly string[] = ["/favicon.ico", "/icon.svg", "/apple-icon.png", "/robots.txt"];
+
+/** Route handlers, framework internals and public files are not pages: no locale rewrite for them. */
 function isPagePath(pathname: string): boolean {
   if (pathname.startsWith("/api/") || pathname.startsWith("/auth/") || pathname.startsWith("/_next/") || pathname.startsWith("/__")) {
     return false;
   }
-  const last = pathname.split("/").pop() ?? "";
-  return !last.includes(".");
+  return !PUBLIC_FILES.includes(pathname);
 }
 
 /**
@@ -43,6 +49,6 @@ export function routeRequest(input: RouteInput): RouteDecision {
 
   const locale = negotiateLocale({ saved: input.localeCookie, acceptLanguage: input.acceptLanguage });
   const zone = zoneFromPath(pathname);
-  const rememberZone = zone && !input.isPrefetch && zone !== input.zoneCookie ? zone : null;
+  const rememberZone = zone && input.isDocument && zone !== input.zoneCookie ? zone : null;
   return { kind: "rewrite", pathname: `/${locale}${pathname}`, locale, rememberZone };
 }

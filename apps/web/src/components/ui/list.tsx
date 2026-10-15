@@ -10,6 +10,8 @@ type ListGroupProps = {
   footer?: React.ReactNode;
   /** h2 on a screen under its h1; h3 inside a titled section or sheet. */
   headingLevel?: 2 | 3;
+  /** `raised` puts the group on surface-2, for a group inside a sheet or card that is surface-1 itself. */
+  surface?: "default" | "raised";
   children: React.ReactNode;
   className?: string;
 };
@@ -18,13 +20,18 @@ type ListGroupProps = {
  * Grouped list on `surface-1` (docs/design/components/ListGroup): settings, a client card, a
  * schedule. The group is the card, so don't put cards inside it.
  */
-function ListGroup({ header, footer, headingLevel = 2, children, className }: ListGroupProps) {
+function ListGroup({ header, footer, headingLevel = 2, surface = "default", children, className }: ListGroupProps) {
   const Heading = headingLevel === 3 ? "h3" : "h2";
   return (
     <section data-slot="list-group" className={cn("flex flex-col gap-1.5", className)}>
       {header ? <Heading className="px-4 text-footnote text-ink-2">{header}</Heading> : null}
       {/* overflow-hidden rounds the pressed rows and clips the first row's separator (see ListRow). */}
-      <div className="overflow-hidden rounded-lg bg-surface-1">{children}</div>
+      <div
+        data-surface={surface}
+        className={cn("group/list overflow-hidden rounded-lg", surface === "raised" ? "bg-surface-2" : "bg-surface-1")}
+      >
+        {children}
+      </div>
       {footer ? <div className="px-4 text-footnote text-ink-2">{footer}</div> : null}
     </section>
   );
@@ -46,7 +53,7 @@ type ListRowProps = {
   trailing?: React.ReactNode;
   /** Navigates with `next/link`. */
   href?: string;
-  /** Acts as a button. */
+  /** Acts as a button; with `href`, runs before the navigation (e.g. to close a sheet). */
   onClick?: () => void;
   /** Defaults to shown when the row leads somewhere (`href` or `onClick`). */
   chevron?: boolean;
@@ -115,13 +122,16 @@ function ListRow({
         <span className="shrink-0 text-body leading-[22px] whitespace-nowrap text-ink-2 tabular-nums">{value}</span>
       ) : null}
       {trailing}
-      {showChevron ? <ChevronRight aria-hidden size={20} strokeWidth={1.75} className="shrink-0 text-ink-3" /> : null}
+      {showChevron ? (
+        // ink-3 is meant for bg and surface-1 only; on a raised (surface-2) group the chevron takes ink-2.
+        <ChevronRight aria-hidden size={20} strokeWidth={1.75} className="shrink-0 text-ink-3 group-data-[surface=raised]/list:text-ink-2" />
+      ) : null}
     </>
   );
 
   if (href !== undefined) {
     return (
-      <Link data-slot="list-row" href={href} className={classes}>
+      <Link data-slot="list-row" href={href} onClick={onClick} className={classes}>
         {content}
       </Link>
     );

@@ -1,18 +1,11 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { switchLocale, useI18n } from "@/i18n/client";
 import { LOCALES } from "@/i18n/config";
 import { setThemePreference, useTheme } from "@/lib/theme/store";
+import { useHydrated } from "@/lib/use-hydrated";
 import type { ThemePreference } from "@/lib/theme/theme";
-
-const subscribeNever = () => () => {};
-
-/** False while the server HTML is hydrated, true once the client renders on its own. */
-function useHydrated() {
-  return useSyncExternalStore(subscribeNever, () => true, () => false);
-}
 
 /**
  * One setting: a caption, the control and an optional note. The segmented control is a filled

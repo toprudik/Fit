@@ -2,7 +2,7 @@
 
 import { animate } from "motion/react";
 import { useLayoutEffect, useRef } from "react";
-import { DURATION, EASE_STANDARD, prefersReducedMotion } from "./motion";
+import { DURATION, EASE_STANDARD, prefersReducedMotion } from "@/lib/motion";
 import { arrival } from "./navigation-tracker";
 
 /**

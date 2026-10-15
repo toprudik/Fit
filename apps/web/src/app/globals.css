@@ -3,7 +3,6 @@
 
 /* Theme comes from data-theme on <html> (set before first paint, see src/lib/theme). Dark is the default. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
-@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
 
 /*
  * DaFit design tokens. Names and values mirror docs/design/tokens.json (the contract);
@@ -323,6 +322,16 @@
     background-color: var(--bg);
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    /* Focus and in-page jumps never land under the sticky header bar or the tab bar (WCAG 2.4.11). */
+    scroll-padding-top: calc(var(--size-header) + var(--safe-top));
+    scroll-padding-bottom: calc(var(--size-tabbar) + var(--safe-bottom));
+  }
+  @media (min-width: 48rem) {
+    /* From 768px there is no header bar or tab bar over the content. */
+    html {
+      scroll-padding-top: var(--safe-top);
+      scroll-padding-bottom: var(--safe-bottom);
+    }
   }
   body {
     background-color: var(--bg);

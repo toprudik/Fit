@@ -9,7 +9,7 @@ import { activeTab, DEFAULT_ZONE, isTabRoot, isZone, ZONE_COOKIE, type TabId, ty
 import { preferenceCookie } from "@/lib/preferences";
 import { hapticImpact } from "@/lib/telegram/mini-app";
 import { cn } from "@/lib/utils";
-import { DURATION, EASE_STANDARD, prefersReducedMotion } from "./motion";
+import { DURATION, EASE_STANDARD, prefersReducedMotion } from "@/lib/motion";
 import { ShellContext, type Shell } from "./shell-context";
 import { SideNav } from "./side-nav";
 import { TabBar, type TabSelectHandler } from "./tab-bar";

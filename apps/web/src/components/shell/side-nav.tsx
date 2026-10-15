@@ -13,7 +13,7 @@ import { tabsForZone, ZONES, type TabId, type Zone } from "@/lib/navigation/zone
 import { cn } from "@/lib/utils";
 import { TAB_ICONS, tabLabel } from "./nav-items";
 import type { TabSelectHandler } from "./tab-bar";
-import { useMediaQuery } from "./use-media-query";
+import { useMediaQuery } from "@/lib/use-media-query";
 
 // Tailwind's xl breakpoint: from here on the menu shows its labels, so tooltips would only repeat them.
 const EXPANDED_QUERY = "(min-width: 80rem)";

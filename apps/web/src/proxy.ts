@@ -20,7 +20,7 @@ export async function proxy(request: NextRequest) {
     localeCookie: request.cookies.get(LOCALE_COOKIE)?.value,
     zoneCookie: request.cookies.get(ZONE_COOKIE)?.value,
     acceptLanguage: request.headers.get("accept-language"),
-    isPrefetch: request.headers.has("next-router-prefetch") || request.headers.get("sec-purpose")?.includes("prefetch") === true,
+    isDocument: request.headers.get("sec-fetch-dest") === "document",
   });
   if (decision.kind === "redirect") return NextResponse.redirect(new URL(decision.location, request.url));
 
@@ -52,6 +52,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except static files, images and the auth endpoints that manage the session themselves.
-  matcher: ["/((?!_next/static|_next/image|api/auth|auth/telegram|.*\\.[a-zA-Z0-9]+$).*)"],
+  // Everything except build assets, the public files and the auth endpoints that manage the session
+  // themselves. Other paths with a dot are pages too, so they get the app's localized 404.
+  matcher: ["/((?!_next/static|_next/image|api/auth|auth/telegram|favicon\\.ico$|icon\\.svg$|apple-icon\\.png$|robots\\.txt$).*)"],
 };

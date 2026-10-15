@@ -1,5 +1,7 @@
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { routeRequest, type RouteInput } from "./routing";
+import { PUBLIC_FILES, routeRequest, type RouteInput } from "./routing";
 
 function route(overrides: Partial<RouteInput>) {
   return routeRequest({
@@ -8,7 +10,7 @@ function route(overrides: Partial<RouteInput>) {
     localeCookie: null,
     zoneCookie: null,
     acceptLanguage: null,
-    isPrefetch: false,
+    isDocument: true,
     ...overrides,
   });
 }
@@ -70,8 +72,8 @@ describe("routeRequest: remembering the zone", () => {
     expect(route({ pathname: "/trainer/money", zoneCookie: "trainer" })).toMatchObject({ rememberZone: null });
   });
 
-  it("does not count prefetches as visits", () => {
-    expect(route({ pathname: "/trainer", isPrefetch: true })).toMatchObject({ kind: "rewrite", rememberZone: null });
+  it("remembers it only on document loads, not on router requests or prefetches", () => {
+    expect(route({ pathname: "/trainer", isDocument: false })).toMatchObject({ kind: "rewrite", rememberZone: null });
   });
 
   it("does not remember pages outside zones", () => {
@@ -91,12 +93,24 @@ describe("routeRequest: not pages", () => {
     "/favicon.ico",
     "/icon.svg",
     "/apple-icon.png",
-    "/fonts/onest.woff2",
+    "/robots.txt",
   ])("passes %s through untouched", (pathname) => {
     expect(route({ pathname, acceptLanguage: "en" })).toEqual({ kind: "pass" });
   });
 
-  it("does not redirect prefetches of / differently", () => {
-    expect(route({ pathname: "/", isPrefetch: true, zoneCookie: "trainer" })).toEqual({ kind: "redirect", location: "/trainer" });
+  it("does not redirect router requests for / differently", () => {
+    expect(route({ pathname: "/", isDocument: false, zoneCookie: "trainer" })).toEqual({ kind: "redirect", location: "/trainer" });
+  });
+
+  it("treats other paths with a dot as pages, so they get the localized 404", () => {
+    expect(route({ pathname: "/fonts/onest.woff2" })).toMatchObject({ kind: "rewrite", pathname: "/ru/fonts/onest.woff2" });
+    expect(route({ pathname: "/client.old" })).toMatchObject({ kind: "rewrite", pathname: "/ru/client.old" });
+  });
+});
+
+describe("PUBLIC_FILES", () => {
+  it("lists exactly the files in apps/web/public (the proxy matcher excludes the same names)", () => {
+    const files = readdirSync(join(__dirname, "../../../public")).map((name) => `/${name}`);
+    expect([...PUBLIC_FILES].sort()).toEqual(files.sort());
   });
 });

@@ -11,10 +11,12 @@ import {
   type Target,
 } from "motion/react";
 import { Dialog } from "radix-ui";
-import { useRef, useSyncExternalStore } from "react";
+import { useRef } from "react";
 import { IconButton } from "@/components/ui/icon-button";
 import { useI18n } from "@/i18n/client";
+import { DURATION, EASE_EXIT, EASE_STANDARD } from "@/lib/motion";
 import { useTelegramBackButton } from "@/lib/telegram/mini-app";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 type SheetProps = {
@@ -27,10 +29,6 @@ type SheetProps = {
   actions?: React.ReactNode;
 };
 
-// Motion tokens from docs/design/tokens.json: motion/react takes seconds and bezier arrays, not CSS variables.
-const DURATION = { instant: 0.1, base: 0.24, slow: 0.4 } as const;
-const EASE_STANDARD = [0.2, 0.8, 0.2, 1] as const;
-const EASE_EXIT = [0.4, 0, 1, 1] as const;
 
 // Drag-to-dismiss: how far down (px) or how fast (px/s) the sheet must be let go to close.
 const DISMISS_OFFSET = 120;
@@ -57,17 +55,6 @@ const DIALOG_SCRIM = presence({ opacity: 0 }, { opacity: 1 }, DURATION.base);
 // Tailwind's md breakpoint: below it the sheet comes from the bottom, from it on it is a centered dialog.
 const DESKTOP_QUERY = "(min-width: 48rem)";
 
-function subscribeDesktop(onChange: () => void) {
-  if (typeof window.matchMedia !== "function") return () => {};
-  const media = window.matchMedia(DESKTOP_QUERY);
-  media.addEventListener("change", onChange);
-  return () => media.removeEventListener("change", onChange);
-}
-
-function isDesktop() {
-  return typeof window.matchMedia === "function" && window.matchMedia(DESKTOP_QUERY).matches;
-}
-
 /**
  * Bottom sheet for a short action over the screen: a confirmation, a choice or a quick form
  * (docs/design/components/Sheet). From 768px on it turns into a centered 480px dialog.
@@ -79,7 +66,7 @@ function isDesktop() {
 export function Sheet({ open, onOpenChange, title, description, children, actions }: SheetProps) {
   const { t } = useI18n();
   const reduceMotion = useReducedMotion() ?? false;
-  const desktop = useSyncExternalStore(subscribeDesktop, isDesktop, () => false);
+  const desktop = useMediaQuery(DESKTOP_QUERY);
   const dragControls = useDragControls();
   const bodyRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);

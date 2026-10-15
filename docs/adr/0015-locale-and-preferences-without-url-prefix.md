@@ -12,7 +12,7 @@ Routes in `docs/architecture/screens.md`, bot buttons and QR codes use plain pat
 - Pages live under `app/[lang]/`. `src/proxy.ts` rewrites each page URL `/x` to `/<locale>/x`, so `lang` is a root param that any Server Component reads through `next/root-params`, and every page is prerendered once per locale. Users never see the prefix.
 - The locale comes from the `dafit-locale` cookie. Until the cookie is set, the person's primary language decides: Telegram's `language_code`, then the first `Accept-Language` entry. If that language is neither Russian nor English, the app uses Russian (ADR 0013, PRD wave 1 AUTH-1). The first sign-in writes the result to the cookie. Changing the language rewrites the cookie and reloads the page.
 - The static HTML always ships with the dark theme. An inline script in `<head>` applies the theme preference (`dafit-theme`: system, light or dark) before the first paint, so the page never flashes the wrong theme. In "system" mode the script follows Telegram's color scheme inside the Mini App and `prefers-color-scheme` on the website.
-- The proxy writes the last zone to `dafit-zone` on every visit to `/trainer/*` or `/client/*`, skipping prefetches, and `/` redirects there.
+- The last zone lives in `dafit-zone`, and `/` redirects there. The proxy writes it when a page of `/trainer/*` or `/client/*` loads as a document; the app shell writes it when the user switches zones inside the app. Router prefetches never change it.
 - Who is signed in streams into a single `<Suspense>` hole in the root layout; the rest of each page stays static.
 
 ## Consequences
