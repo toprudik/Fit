@@ -7,4 +7,4 @@ DaFit charges both sides: trainers (Free up to 3 clients / Pro) and clients (Fre
 
 Plans and limits are **enforced in the beta, but there is no purchase flow**: admins grant Pro/Premium from the admin panel (audit-logged, user notified), and locked features offer «Запросить доступ» without prices. This way we test the paywall boundaries with real users; turning on payments later only adds a grant source and needs no rewrite of features.
 
-Access, verification and plan are **independent axes** for a trainer: the trainer zone opens immediately on any valid invite; verification only gates the badge, catalog/map listing and ratings; a rejected trainer keeps access and may be on Pro.
+Access, verification and plan are **independent axes** for a trainer: the trainer zone opens immediately on any valid invite; verification gates the badge, catalog/map listing and ratings, and a rejection also takes the public showcase offline (decisions Q60); a rejected trainer keeps access, existing clients and the links they hand out, and may be on Pro.

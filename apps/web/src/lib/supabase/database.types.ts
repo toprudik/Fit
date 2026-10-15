@@ -2302,6 +2302,9 @@ isOneToOne: false
 "recurrence_meeting_url":
 { Args: { "p_recurrence_id": string }; Returns: string
                            },
+"replace_progress_photo":
+{ Args: { "p_blur_method": string,"p_face_blurred": boolean,"p_height": number,"p_new_id": string,"p_note"?: string,"p_photo_id": string,"p_storage_path": string,"p_width": number }; Returns: string
+                           },
 "session_meeting_url":
 { Args: { "p_session_id": string }; Returns: string
                            },
@@ -2309,6 +2312,9 @@ isOneToOne: false
 { Args: { "p_session_id": string }; Returns: {
               "capacity": number,"occupied": number
             }[]
+                           },
+"set_progress_photo_angle":
+{ Args: { "p_angle": Database["public"]['Enums']["photo_angle"],"p_photo_id": string }; Returns: undefined
                            }
           }
           Enums: {
