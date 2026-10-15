@@ -44,6 +44,7 @@ def test_production_bot_is_refused(settings: Settings, monkeypatch: pytest.Monke
         asyncio.run(run_polling(settings))
     assert "@fitconnection_bot" in str(info.value)
     assert "docs/adr/0002-secrets-handling.md §5" in str(info.value)
+    assert "deleteWebhook" not in str(info.value)  # never suggest removing the production webhook
     assert session.names() == ["GetMe"]
     assert started == []
     assert session.closed == 1
@@ -55,6 +56,11 @@ def test_bot_with_a_webhook_is_refused(settings: Settings, monkeypatch: pytest.M
     with pytest.raises(PollingRefusedError, match="has a webhook") as info:
         asyncio.run(run_polling(settings))
     assert "docs/adr/0002-secrets-handling.md §5" in str(info.value)
+    # The way out when it is your own dev bot: the code never deletes a webhook itself.
+    assert str(info.value).endswith(
+        "If this is your dev bot, remove its webhook first: open "
+        "https://api.telegram.org/bot<dev bot token>/deleteWebhook in a browser."
+    )
     assert session.names() == ["GetMe", "GetWebhookInfo"]
     assert writes(session) == []
     assert started == []

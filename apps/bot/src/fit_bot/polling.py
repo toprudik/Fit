@@ -19,6 +19,11 @@ _DEV_BOT_HINT = (
     "Local development uses its own dev bot (docs/adr/0002-secrets-handling.md §5): "
     "put that bot's token into .env.local."
 )
+# Only for a bot that is not @fitconnection_bot; polling itself never deletes a webhook.
+_REMOVE_WEBHOOK_HINT = (
+    "If this is your dev bot, remove its webhook first: open "
+    "https://api.telegram.org/bot<dev bot token>/deleteWebhook in a browser."
+)
 
 
 class PollingRefusedError(RuntimeError):
@@ -31,7 +36,9 @@ async def ensure_safe_to_poll(bot: Bot) -> None:
         raise PollingRefusedError(f"This is the production bot @{PRODUCTION_BOT_USERNAME}. {_DEV_BOT_HINT}")
     info = await bot.get_webhook_info()
     if info.url:
-        raise PollingRefusedError(f"This bot has a webhook, so polling would take its updates away. {_DEV_BOT_HINT}")
+        raise PollingRefusedError(
+            f"This bot has a webhook, so polling would take its updates away. {_DEV_BOT_HINT} {_REMOVE_WEBHOOK_HINT}"
+        )
 
 
 async def run_polling(settings: Settings) -> None:

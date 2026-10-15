@@ -50,3 +50,13 @@ def test_entrypoint_is_the_asgi_app_vercel_detects() -> None:
     ]
     assert len(required) == 3
     assert len(inspect.signature(app.__call__).parameters) == 3
+
+
+def test_setup_workflow_runs_only_pinned_code() -> None:
+    """The job that holds the production token installs an exact, checksummed uv and builds nothing."""
+    workflow = (ROOT.parents[1] / ".github" / "workflows" / "bot-setup.yml").read_text()
+    assert re.search(r'^\s+version: "\d+\.\d+\.\d+"$', workflow, re.MULTILINE)
+    assert re.search(r'^\s+checksum: "[0-9a-f]{64}"$', workflow, re.MULTILINE)
+    assert "uv sync --frozen --no-dev --no-install-project" in workflow
+    assert "PYTHONPATH: src" in workflow
+    assert "uv run --no-sync python -m fit_bot setup" in workflow

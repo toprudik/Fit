@@ -303,18 +303,56 @@ def test_failed_probe_stops_before_writing(harness: Harness, change: Any, messag
 
 
 def test_another_bots_token_in_vercel_is_caught_with_the_override_set() -> None:
-    harness = Harness(override=OVERRIDE)
+    harness = Harness(override=OVERRIDE)  # the override secret would match, so only the bot id can tell
     harness.deployment.health = (200, {"configured": True, "commit": "abc", "env": "production", "bot_id": 999})
     assert harness.run() == 1
-    assert (harness.status("webhook with secret"), harness.detail("webhook with secret")) == (
-        "ok",
-        "200",
-    )  # the override secret matches
     assert (
         "the token in Vercel belongs to bot 999, this token to 123456: put the @fitconnection_bot token"
         in harness.report
     )
     assert harness.telegram.writes() == []
+    assert [authenticated for authenticated, _ in harness.deployment.posts] == [False]
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda d: setattr(d, "health", (404, {"error": "DEPLOYMENT_NOT_FOUND"})),
+        lambda d: setattr(d, "health", (200, {"configured": True, "commit": None, "env": None, "bot_id": 999})),
+        lambda d: setattr(d, "health", (200, {"configured": False, "commit": None, "env": None, "bot_id": None})),
+        lambda d: setattr(d, "health", (302, None)),
+        lambda d: setattr(d, "unauthenticated_status", 200),
+        lambda d: setattr(d, "unauthenticated_status", 404),
+    ],
+    ids=["health-404", "other-bot", "unconfigured", "redirect", "no-secret-accepted", "no-secret-404"],
+)
+def test_unverified_deployment_never_gets_the_secret(harness: Harness, change: Any) -> None:
+    change(harness.deployment)
+    assert harness.run() == 1
+    assert [authenticated for authenticated, _ in harness.deployment.posts] == [False]
+    assert (harness.status("webhook with secret"), harness.detail("webhook with secret")) == (
+        "failed",
+        "skipped: the deployment was not verified",
+    )
+    assert harness.telegram.writes() == []
+
+
+def test_values_from_healthz_are_not_copied_into_the_report(harness: Harness) -> None:
+    forged = "\n::error title=Bot setup::forged"
+    harness.deployment.health = (
+        200,
+        {"configured": True, "commit": f"0123456{forged}", "env": f"production{forged}", "bot_id": BOT_ID},
+    )
+    assert harness.run() == 0, harness.report
+    assert "configured, commit unknown, env unknown" in harness.line("deployment /healthz")
+    harness.deployment.health = (
+        200,
+        {"configured": True, "commit": "0123456", "env": "production", "bot_id": f"1{forged}"},
+    )
+    assert harness.run() == 1
+    assert "the token in Vercel belongs to another bot, this token to 123456" in harness.line("deployment /healthz")
+    assert "forged" not in harness.report
+    assert not [line for line in harness.report.splitlines() if line.lstrip().startswith("::")]
 
 
 def test_override_secret_is_used(harness: Harness) -> None:
@@ -443,6 +481,16 @@ def test_report_never_contains_secrets(harness: Harness) -> None:
     harness.run()
     for secret in (TOKEN, TOKEN_SECRET_PART, webhook_secret(), derive_webhook_secret(TOKEN)):
         assert secret not in harness.report
+
+
+def test_render_report_keeps_one_line_per_step() -> None:
+    steps = [Step("webhook info", "failed", "Telegram cannot deliver updates: a\r\n::error::forged\nb")]
+    report = render_report(steps, mode="setup", redact=[])
+    assert report.splitlines() == [
+        "DaFit bot setup, mode setup",
+        "  webhook info                 failed     Telegram cannot deliver updates: a ::error::forged b",
+        "Result: FAILED",
+    ]
 
 
 def test_render_report_redacts() -> None:

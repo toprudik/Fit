@@ -7,6 +7,7 @@ the webhook secret.
 
 import asyncio
 import json
+import re
 import sys
 import time
 from collections.abc import Awaitable, Callable, Sequence
@@ -37,6 +38,7 @@ PROBE_TIMEOUT_SECONDS: Final = 15
 SETTLE_SECONDS: Final = 5.0
 MAX_PENDING_UPDATES: Final = 10
 CHECK_ERROR_WINDOW: Final = timedelta(hours=1)
+_PLAIN: Final = re.compile(r"[A-Za-z0-9._-]{1,64}")
 
 Status = Literal["ok", "updated", "unchanged", "differs", "postponed", "failed"]
 
@@ -85,13 +87,20 @@ async def probe_deployment(
     expected_bot_id: int,
     bot_username: str = PRODUCTION_BOT_USERNAME,
 ) -> list[Step]:
-    """GET /healthz, the webhook without and with the secret. Redirects are not followed."""
+    """GET /healthz, the webhook without and with the secret. Redirects are not followed.
+
+    The secret goes out only after the origin has shown it is this bot's deployment: /healthz names the same bot and
+    the webhook refuses a request without the secret. This catches a wrong or reassigned domain. A deliberate
+    impostor can copy the public bot id, so it is no defence against one.
+    """
     origin = _origin(settings)
-    return [
-        await _probe_health(http, origin + HEALTH_PATH, expected_bot_id, bot_username),
-        await _probe_without_secret(http, origin + WEBHOOK_PATH),
-        await _probe_with_secret(http, origin + WEBHOOK_PATH, settings.webhook_secret()),
-    ]
+    health = await _probe_health(http, origin + HEALTH_PATH, expected_bot_id, bot_username)
+    without_secret = await _probe_without_secret(http, origin + WEBHOOK_PATH)
+    if health.failed or without_secret.failed:
+        with_secret = Step("webhook with secret", "failed", "skipped: the deployment was not verified")
+    else:
+        with_secret = await _probe_with_secret(http, origin + WEBHOOK_PATH, settings.webhook_secret())
+    return [health, without_secret, with_secret]
 
 
 async def _probe_health(http: aiohttp.ClientSession, url: str, expected_bot_id: int, bot_username: str) -> Step:
@@ -113,18 +122,19 @@ async def _probe_health(http: aiohttp.ClientSession, url: str, expected_bot_id: 
             "the deployed bot has no valid settings: set TELEGRAM_BOT_TOKEN and WEBAPP_URL for Production in Vercel "
             "and redeploy",
         )
-    if data.get("bot_id") != expected_bot_id:
+    bot_id = data.get("bot_id")
+    if bot_id != expected_bot_id:
+        # Only an int is shown: the answer may come from someone else's server and must not shape the log.
+        owner = f"bot {bot_id}" if type(bot_id) is int else "another bot"
         return Step(
             name,
             "failed",
-            f"the token in Vercel belongs to bot {data.get('bot_id')}, this token to {expected_bot_id}: put the "
+            f"the token in Vercel belongs to {owner}, this token to {expected_bot_id}: put the "
             f"@{bot_username} token into Vercel dafit-bot Production and redeploy",
         )
-    commit = data.get("commit")
-    env = data.get("env")
-    commit_text = commit[:7] if isinstance(commit, str) and commit else "unknown"
-    env_text = env if isinstance(env, str) and env else "unknown"
-    return Step(name, "ok", f"configured, commit {commit_text}, env {env_text}")
+    commit = _plain(data.get("commit"))
+    commit_text = commit[:7] if commit else "unknown"
+    return Step(name, "ok", f"configured, commit {commit_text}, env {_plain(data.get('env')) or 'unknown'}")
 
 
 async def _probe_without_secret(http: aiohttp.ClientSession, url: str) -> Step:
@@ -441,12 +451,20 @@ async def _run_steps(
 
 def render_report(steps: Sequence[Step], *, mode: str, redact: Sequence[str]) -> str:
     lines = [f"DaFit bot setup, mode {mode}"]
-    lines.extend(f"  {step.name:<28} {step.status:<10} {step.detail}".rstrip() for step in steps)
+    # One line per step: a line break in a detail could start a GitHub workflow command such as ::error::.
+    lines.extend(f"  {step.name:<28} {step.status:<10} {' '.join(step.detail.split())}".rstrip() for step in steps)
     lines.append(f"Result: {'FAILED' if any(step.failed for step in steps) else 'OK'}")
     text = "\n".join(lines) + "\n"
     for value in sorted((v for v in redact if v), key=len, reverse=True):
         text = text.replace(value, "[redacted]")
     return text
+
+
+def _plain(value: object) -> str | None:
+    """A short value from /healthz shown only when it is plain letters, digits, dots, dashes or underscores."""
+    if isinstance(value, str) and _PLAIN.fullmatch(value):
+        return value
+    return None
 
 
 def _origin(settings: Settings) -> str:
