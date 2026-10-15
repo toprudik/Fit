@@ -12,7 +12,7 @@ docs/adr/    Architecture decisions
 
 ## Run locally (Docker)
 
-Local runs need your own dev bot: create one in @BotFather (`/newbot`) and put its token into `.env.local`, for the web and the bot alike. Never use @fitconnection_bot locally: the bot container refuses to start with it, or with any bot that has a webhook (ADR 0002 §5).
+Local runs need your own dev bot: create one in @BotFather (`/newbot`) and put its token into `.env.local`, for the web and the bot alike. Never use @fitconnection_bot locally: the bot container refuses to start with it, or with any bot that has a webhook (ADR 0002 §5). If your dev bot has a webhook, for example after you ran `docker-compose.prod.yml` with it, open `https://api.telegram.org/bot<dev bot token>/deleteWebhook` in a browser to remove it, or create another dev bot.
 
 1. `cp .env.example .env.local` and fill in the empty values (see comments in the file).
 2. `docker compose up --build` → web on http://localhost:3000, bot in polling mode.
@@ -40,7 +40,7 @@ The bot function has two routes. `GET /healthz` shows whether its settings are v
 
 In Vercel, `dafit-bot` Production has `TELEGRAM_BOT_TOKEN` (@fitconnection_bot, the same token as `dafit-web` Production) and `WEBAPP_URL`. Preview and Development have no Telegram variables, so a preview never talks to Telegram; the `/healthz` of a deployment without a token shows `"bot_id": null`. The webhook secret is derived from the token. `TELEGRAM_WEBHOOK_SECRET` overrides it, and then it belongs next to the token in `dafit-bot` Production and in the repository secrets.
 
-The workflow `Bot setup` registers the webhook `https://<bot domain>/telegram/webhook` and syncs the bot's commands, descriptions, name and menu button. Before it writes anything, it checks that the token belongs to @fitconnection_bot and that the deployed function holds the same bot's token and accepts the secret. It runs after each push to `main` that changes `apps/bot`, once Vercel serves that commit, and checks the bot every morning. It needs one repository secret, `TELEGRAM_BOT_TOKEN`, and also reads `TELEGRAM_WEBHOOK_SECRET` when you set the override; the bot and web URLs are written in the workflow. Start it by hand with mode `setup` after you change the token, or with mode `check` to only look. Its log shows the webhook URL, pending updates and the last delivery error, never a secret. Deployments never register webhooks themselves. If GitHub emails you that `Bot setup` failed, forward the email to Claude.
+The workflow `Bot setup` registers the webhook `https://<bot domain>/telegram/webhook` and syncs the bot's commands, descriptions, name and menu button. Before it writes anything, it checks that the token belongs to @fitconnection_bot and that the deployed function holds the same bot's token and accepts the secret. It runs after each push to `main` that changes `apps/bot`, once Vercel serves that commit, and checks the bot every morning. It needs one repository secret, `TELEGRAM_BOT_TOKEN`, and also reads `TELEGRAM_WEBHOOK_SECRET` when you set the override; the bot and web URLs are written in the workflow. Start it by hand with mode `setup` after you change the token, or with mode `check` to only look. Its log shows the webhook URL, pending updates and the last delivery error, never a secret. Vercel deployments never register webhooks themselves. If GitHub emails you that `Bot setup` failed, forward the email to Claude.
 
 #### First setup
 
@@ -50,10 +50,10 @@ Once, after the bot code is on `main`:
 2. In the Vercel team that holds `dafit-web`: Add New → Project → import `toprudik/Fit`. Project Name `dafit-bot`, Framework Preset Python (if Vercel did not pick it), Root Directory `apps/bot`. Leave the build settings and environment variables empty and deploy. This first build works, but the bot has no settings yet.
 3. In `dafit-bot` → Settings → Environment Variables, tick Automatically expose System Environment Variables if it is off. Add `TELEGRAM_BOT_TOKEN` with the token, only Production ticked and Sensitive on. Add `WEBAPP_URL` with `https://dafit-web-eight.vercel.app`, also Production only. Do not add `TELEGRAM_WEBHOOK_SECRET`.
 4. Deployments → the latest Production deployment → ⋯ → Redeploy. Leave Deployment Protection as it is.
-5. If the production domain of `dafit-bot` is not `https://dafit-bot.vercel.app`, change `BOT_WEBHOOK_URL` in `.github/workflows/bot-setup.yml`.
+5. If the production domain of `dafit-bot` is not `https://dafit-bot.vercel.app`, tell Claude, who changes `BOT_WEBHOOK_URL` in `.github/workflows/bot-setup.yml`.
 6. In GitHub, `toprudik/Fit` → Settings → Secrets and variables → Actions → New repository secret: `TELEGRAM_BOT_TOKEN`, the same token.
 7. Run `Bot setup` with mode `setup` (Actions → Bot setup → Run workflow) and read its log.
-8. In @BotFather → `/mybots` → @fitconnection_bot: Bot Settings → Configure Mini App, turn it on and send `https://dafit-web-eight.vercel.app` without `?source`, so `t.me/fitconnection_bot?startapp=…` links work. Then Edit Bot → Edit Botpic and send a PNG of `docs/design/assets/Brand/app-icon.svg`.
+8. In @BotFather → `/mybots` → @fitconnection_bot: Bot Settings → Configure Mini App, turn it on and send `https://dafit-web-eight.vercel.app` without `?source`, so `t.me/fitconnection_bot?startapp=…` links work. Then Edit Bot → Edit Botpic and send the PNG that Claude gives you (`docs/design/assets/Brand/app-icon.svg` at 640 px). BotFather accepts the avatar only as a photo, so the SVG file itself does not work.
 9. On a phone, send `/start` to @fitconnection_bot. The answer comes in your Telegram language with an **Открыть DaFit** (**Open DaFit**) button that opens DaFit and signs you in. `/help` and any text get an answer with the same button; a sticker gets none.
 
 #### Rotating secrets
