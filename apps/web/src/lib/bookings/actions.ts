@@ -17,6 +17,8 @@ const KNOWN_ERRORS = [
   "already_client",
   "trial_used",
   "plan_limit_reached",
+  "session_full",
+  "already_booked",
 ] as const;
 
 export type BookingError = (typeof KNOWN_ERRORS)[number] | "failed";
@@ -69,6 +71,31 @@ export async function bookTrial(token: string, slotId: string): Promise<BookResu
   if (error) return { status: "error", error: known(error, "booking a trial") };
   refresh();
   return { status: "done", bookingId: data[0].booking_id, confirmed: false };
+}
+
+/** The confirm sheet for a group session: the same answer as for a slot. */
+export async function previewGroupBooking(sessionId: string): Promise<PreviewResult> {
+  if (!id.safeParse(sessionId).success) return { status: "error", error: "failed" };
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("group_booking_preview", { p_session_id: sessionId });
+  if (error) return { status: "error", error: known(error, "previewing a group booking") };
+  const row = data[0];
+  return {
+    status: "done",
+    confirmed: Boolean(row?.confirmed),
+    passTitle: row?.pass_title ?? null,
+    sessionsLeft: row?.sessions_left ?? null,
+  };
+}
+
+/** "Записаться" on a group session (PRD 2.6.4-1): a seat, confirmed or held by a request; session_full when the last one went. */
+export async function bookGroupSession(sessionId: string): Promise<BookResult> {
+  if (!id.safeParse(sessionId).success) return { status: "error", error: "failed" };
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("book_group_session", { p_session_id: sessionId });
+  if (error) return { status: "error", error: known(error, "booking a group session") };
+  refresh();
+  return { status: "done", bookingId: data[0].booking_id, confirmed: data[0].status === "confirmed" };
 }
 
 export type BookingActionResult = { status: "done" } | { status: "error"; error: BookingError };
