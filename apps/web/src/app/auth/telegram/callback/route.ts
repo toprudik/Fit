@@ -4,7 +4,7 @@ import { clientEnv } from "@/env/client";
 import { serverEnv } from "@/env/server";
 import { negotiateLocale } from "@/i18n/config";
 import { deviceCookies, setPreferenceCookies, syncPreferences } from "@/lib/account-preferences";
-import { signInWithTelegram } from "@/lib/auth/sign-in-with-telegram";
+import { AccountBlockedError, signInWithTelegram } from "@/lib/auth/sign-in-with-telegram";
 import { OIDC_COOKIE, oidcCookieOptions, parseOidcCookie, redirectUri, safeNext } from "@/lib/auth/oidc-cookie";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { botIdFromToken, type TelegramIdentity } from "@/lib/telegram/identity";
@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
     });
     signedIn = await signInWithTelegram(identity);
   } catch (error) {
+    if (error instanceof AccountBlockedError) return fail("blocked");
     console.error("telegram oidc sign-in failed", error instanceof Error ? error.message : "unknown");
     return fail("failed");
   }

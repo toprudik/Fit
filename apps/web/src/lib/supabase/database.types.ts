@@ -2293,7 +2293,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "admin_create_trainer_invite":
+            "admin_block_user":
+{ Args: { "p_reason": string,"p_user_id": string }; Returns: undefined
+                           },
+"admin_create_trainer_invite":
 { Args: { "p_note"?: string,"p_valid_days"?: number }; Returns: {
               "code": string,"expires_at": string,"invite_id": string
             }[]
@@ -2301,8 +2304,26 @@ isOneToOne: false
 "admin_decide_verification":
 { Args: { "p_decision": Database["public"]['Enums']["verification_status"],"p_reason"?: string,"p_trainer_id": string }; Returns: undefined
                            },
+"admin_overview":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "active_invites": number,"active_pairs": number,"blocked_users": number,"trainers": number,"trainers_pending": number,"trainers_verified": number,"users": number
+            }[]
+                           },
 "admin_revoke_trainer_invite":
 { Args: { "p_invite_id": string }; Returns: undefined
+                           },
+"admin_search_users":
+{ Args: { "p_limit"?: number,"p_query"?: string }; Returns: {
+              "blocked": boolean,"created_at": string,"first_name": string,"is_admin": boolean,"is_trainer": boolean,"last_name": string,"photo_url": string,"telegram_id": number,"user_id": string,"username": string
+            }[]
+                           },
+"admin_unblock_user":
+{ Args: { "p_reason": string,"p_user_id": string }; Returns: undefined
+                           },
+"admin_user_card":
+{ Args: { "p_user_id": string }; Returns: {
+              "blocked_at": string,"blocked_reason": string,"bookings_made": number,"client_active_pairs": number,"client_pairs": number,"created_at": string,"first_name": string,"is_admin": boolean,"is_trainer": boolean,"language_code": string,"last_name": string,"last_seen_at": string,"photo_url": string,"sessions_led": number,"telegram_id": number,"trainer_active_pairs": number,"trainer_pairs": number,"user_id": string,"username": string,"verification_status": Database["public"]['Enums']["verification_status"]
+            }[]
                            },
 "claim_outbox":
 { Args: { "p_limit"?: number }; Returns: {
