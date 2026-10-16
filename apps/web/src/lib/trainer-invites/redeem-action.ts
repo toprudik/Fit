@@ -3,6 +3,7 @@
 import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { WIZARD_START_PATH } from "@/lib/trainer-wizard/steps";
 import { normalizeInviteCode } from "./code";
 
 export type RedeemState = { failed: boolean };
@@ -12,7 +13,7 @@ const STATUS_ERRORS = new Set(["already_trainer", "invite_invalid", "invite_revo
 
 /**
  * "Стать тренером": redeems the code as the signed-in user (the database checks the invite and the
- * caller) and opens the trainer zone. When the invite changed since the screen showed it, the screen
+ * caller) and opens the profile wizard. The trainer zone is already open by then (Q15). When the invite changed since the screen showed it, the screen
  * reloads and says what happened to it.
  */
 export async function redeemTrainerInvite(_previous: RedeemState, formData: FormData): Promise<RedeemState> {
@@ -29,5 +30,5 @@ export async function redeemTrainerInvite(_previous: RedeemState, formData: Form
   }
   // The root layout reads whether the account is a trainer: render it again with the new profile.
   revalidatePath("/", "layout");
-  redirect("/trainer");
+  redirect(WIZARD_START_PATH);
 }
