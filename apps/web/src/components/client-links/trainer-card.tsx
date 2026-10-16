@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { PersonAvatar } from "@/components/ui/avatar";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { personName } from "@/lib/client-links/link";
+import { isSpecialty } from "@/lib/trainer-wizard/options";
 
 export type TrainerPreview = {
   firstName: string | null;
@@ -24,7 +25,9 @@ export function TrainerCard({ t, trainer }: { t: Dictionary; trainer: TrainerPre
   const copy = t.clientLinks.landing;
   const name = personName(trainer.firstName, trainer.lastName);
   const format = [trainer.worksOffline ? copy.offline : null, trainer.worksOnline ? copy.online : null].filter(Boolean).join(", ");
-  const details = [trainer.specialties.join(", "), format].filter(Boolean);
+  // The profile wizard stores specialties as keys, so each viewer reads them in their own language.
+  const specialties = trainer.specialties.map((key) => (isSpecialty(key) ? t.trainerWizard.specialties[key] : key));
+  const details = [specialties.join(", "), format].filter(Boolean);
 
   return (
     <section aria-label={name || copy.title} className="flex items-start gap-4 rounded-lg bg-surface-1 p-4">

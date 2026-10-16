@@ -2336,6 +2336,11 @@ isOneToOne: false
 "end_coaching":
 { Args: { "p_coaching_id": string,"p_reason"?: string }; Returns: number
                            },
+"get_trainer_showcase":
+{ Args: { "p_slug": string }; Returns: {
+              "bio": string,"city": string,"coaching_id": string,"headline": string,"is_own": boolean,"locations": Json,"name": string,"photo_url": string,"slug": string,"specialties": (string)[],"status": string,"verified": boolean,"works_offline": boolean,"works_online": boolean
+            }[]
+                           },
 "has_entitlement":
 { Args: { "p_feature": string,"p_pair"?: string,"p_user": string }; Returns: boolean
                            },
@@ -2344,6 +2349,9 @@ isOneToOne: false
                            },
 "join_by_invite":
 { Args: { "p_token": string }; Returns: string
+                           },
+"join_by_showcase":
+{ Args: { "p_slug": string }; Returns: string
                            },
 "my_client_invite":
 { Args: Record<PropertyKey, never>; Returns: {
