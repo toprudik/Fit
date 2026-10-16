@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CalendarDays, Plus } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BookingSegments } from "@/components/bookings/booking-segments";
 import { ScheduleSignIn } from "@/components/schedule/sign-in-state";
@@ -16,6 +17,7 @@ import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { bookingTone, segmentBookings } from "@/lib/bookings/book";
 import { loadClientBookings, type ClientBooking } from "@/lib/bookings/load";
+import { isPairId } from "@/lib/pairs/clients";
 import { loadScheduleOwner } from "@/lib/schedule/load";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -28,8 +30,10 @@ function now(): Date {
   return new Date();
 }
 
-async function Bookings() {
-  const [t, locale] = await Promise.all([getDictionary(), getLocale()]);
+async function Bookings({ searchParams }: { searchParams: PageProps<"/[lang]/client/sessions">["searchParams"] }) {
+  const [t, locale, params] = await Promise.all([getDictionary(), getLocale(), searchParams]);
+  // The bot's session reminder links here with ?booking=<id>: open that booking.
+  if (isPairId(params.booking)) redirect(`/client/bookings/${params.booking}`);
   const copy = t.schedule.clientSessions;
   const owner = await loadScheduleOwner();
   if (!owner) return <ScheduleSignIn title={t.tabs.client.sessions} next="/client/sessions" />;
@@ -94,14 +98,14 @@ async function Bookings() {
 }
 
 /** "Занятия" of the client (screens.md /client/sessions, PRD 2.6.4-7): bookings with every trainer. */
-export default async function ClientSessionsPage() {
+export default async function ClientSessionsPage(props: PageProps<"/[lang]/client/sessions">) {
   const t = await getDictionary();
   return (
     <MasterDetail
       list={
         <Screen header={<ScreenHeader title={t.tabs.client.sessions} />}>
           <Suspense fallback={<SkeletonRows rows={4} label={t.common.loading} />}>
-            <Bookings />
+            <Bookings searchParams={props.searchParams} />
           </Suspense>
         </Screen>
       }
