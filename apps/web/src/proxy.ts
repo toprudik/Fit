@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { clientEnv } from "@/env/client";
 import { LOCALE_COOKIE } from "@/i18n/config";
 import { BETA_TERMS_VERSION, CONSENT_COOKIE, consentCookieOptions, consentCookieValue } from "@/lib/consent/beta-terms";
-import { adminDeniedPath, consentRedirect, isAdminPath, routeRequest } from "@/lib/navigation/routing";
+import { adminDeniedPath, consentRedirect, isAdminPath, routeRequest, trainerZoneRedirect } from "@/lib/navigation/routing";
 import { ZONE_COOKIE } from "@/lib/navigation/zones";
 import { preferenceCookieOptions } from "@/lib/preferences";
 import { sessionCookieOptions } from "@/lib/supabase/cookie-options";
@@ -14,6 +14,17 @@ import type { Database } from "@/lib/supabase/database.types";
 async function isAdmin(supabase: SupabaseClient<Database>, userId: string): Promise<boolean> {
   const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
   if (error) console.error("reading the admin role failed", error.code);
+  return data !== null;
+}
+
+/** Whether the user has a trainer profile, which is what opens the trainer zone (read as the user under RLS). */
+async function isTrainer(supabase: SupabaseClient<Database>, userId: string): Promise<boolean> {
+  const { data, error } = await supabase.from("trainer_profiles").select("user_id").eq("user_id", userId).maybeSingle();
+  // Unreadable is not a reason to lock a trainer out of their zone: the page reads its own data under RLS.
+  if (error) {
+    console.error("reading the trainer profile failed", error.code);
+    return true;
+  }
   return data !== null;
 }
 
@@ -38,7 +49,7 @@ type CookieToSet = { name: string; value: string; options: Parameters<NextRespon
 /**
  * Runs on every page request: refreshes the Supabase session cookie, sends "/" to the last zone,
  * keeps signed-in users on the beta terms until they accept them (AUTH-4), remembers the zone (on the
- * device and the account), keeps the admin section to admins and serves
+ * device and the account), keeps the trainer zone to trainers and the admin section to admins and serves
  * the page in the user's language (see routeRequest).
  */
 export async function proxy(request: NextRequest) {
@@ -83,6 +94,15 @@ export async function proxy(request: NextRequest) {
       return redirect;
     }
     consentCookie = consentCookieValue(userId);
+  }
+  // Only trainers have the trainer zone (PAIR-3): anyone else signed in who opens it, from "/" with an old zone
+  // cookie or from a link, lands in the client zone. Signed-out visitors see the zone's screens as before.
+  const toClientZone = decision.kind === "rewrite" ? trainerZoneRedirect(request.nextUrl.pathname) : null;
+  if (userId && toClientZone && !(await isTrainer(supabase, userId))) {
+    const redirect = NextResponse.redirect(new URL(toClientZone, request.url));
+    for (const { name, value, options } of refreshed) redirect.cookies.set(name, value, options);
+    if (consentCookie) redirect.cookies.set(CONSENT_COOKIE, consentCookie, consentCookieOptions);
+    return redirect;
   }
   if (decision.kind === "rewrite" && isAdminPath(request.nextUrl.pathname) && !(userId && (await isAdmin(supabase, userId)))) {
     // A real 404 status, not a page that streams "not found" after a 200 (ADM-12).

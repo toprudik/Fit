@@ -2342,6 +2342,11 @@ isOneToOne: false
               "attempt": number,"chat_id": number,"chat_target": string,"kind": Database["public"]['Enums']["notification_type"],"locale": Database["public"]['Enums']["app_locale"],"outbox_id": number,"payload": Json,"silent": boolean,"time_zone": string
             }[]
                            },
+"close_schedule_days":
+{ Args: { "p_from": string,"p_to": string }; Returns: {
+              "session_id": string,"starts_at": string,"title": string
+            }[]
+                           },
 "create_managed_client":
 { Args: { "p_contact"?: string,"p_display_name": string,"p_note"?: string }; Returns: string
                            },
@@ -2408,6 +2413,9 @@ isOneToOne: false
               "code": string,"created_at": string,"invite_id": string,"token": string,"uses_count": number
             }[]
                            },
+"reopen_schedule":
+{ Args: { "p_slot_id": string }; Returns: number
+                           },
 "replace_progress_photo":
 { Args: { "p_blur_method": string,"p_face_blurred": boolean,"p_height": number,"p_new_id": string,"p_note"?: string,"p_photo_id": string,"p_storage_path": string,"p_width": number }; Returns: string
                            },
@@ -2421,6 +2429,9 @@ isOneToOne: false
                            },
 "resolve_managed_client_claim":
 { Args: { "p_claim_id": string,"p_managed_client_id"?: string }; Returns: string
+                           },
+"save_week_template":
+{ Args: { "p_buffer_min"?: number,"p_horizon_weeks"?: number,"p_items": Json }; Returns: number
                            },
 "session_meeting_url":
 { Args: { "p_session_id": string }; Returns: string

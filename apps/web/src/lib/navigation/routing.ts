@@ -76,3 +76,11 @@ export function consentRedirect(pathname: string, search: string): string | null
   if (BEFORE_CONSENT.includes(pathname)) return null;
   return `${CONSENT_PATH}?next=${encodeURIComponent(`${pathname}${search}`)}`;
 }
+
+/**
+ * Where the proxy sends a signed-in user without a trainer profile who opens the trainer zone (PRD wave-1
+ * §2.5 rule 5, PAIR-3): the client zone, which is the only zone they have. Null outside the trainer zone.
+ */
+export function trainerZoneRedirect(pathname: string): string | null {
+  return zoneFromPath(pathname) === "trainer" ? "/client" : null;
+}

@@ -111,8 +111,17 @@ describe("SideNav", () => {
     expect(screen.getByRole("tooltip").textContent).toBe("Настройки");
   });
 
+  it("shows the zone switch only to trainers (PAIR-3)", () => {
+    renderSideNav({ zone: "client", activeId: "home" });
+    expect(screen.queryByRole("radiogroup", { name: "Зона" })).toBeNull();
+
+    act(() => setAccount({ status: "signed-in", name: "Анна", photoUrl: null, isTrainer: false, isAdmin: false, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" }));
+    expect(screen.queryByRole("radiogroup", { name: "Зона" })).toBeNull();
+  });
+
   it("switches zones by opening the other zone's root", () => {
     renderSideNav({ zone: "trainer", activeId: "today" });
+    act(() => setAccount({ status: "signed-in", name: "Давид", photoUrl: null, isTrainer: true, isAdmin: false, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" }));
 
     const zones = screen.getByRole("radiogroup", { name: "Зона" });
     expect(within(zones).getByRole("radio", { name: "Тренер" }).getAttribute("aria-checked")).toBe("true");

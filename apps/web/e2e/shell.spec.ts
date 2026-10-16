@@ -35,6 +35,8 @@ type Screen = {
 const SCREENS: readonly Screen[] = [
   { slug: "trainer-today", path: "/trainer", title: "Сегодня" },
   { slug: "trainer-schedule", path: "/trainer/schedule", title: "Расписание" },
+  { slug: "trainer-week-template", path: "/trainer/schedule/template", title: "Шаблон недели" },
+  { slug: "trainer-slots", path: "/trainer/schedule/slots", title: "Слоты" },
   { slug: "trainer-clients", path: "/trainer/clients", title: "Клиенты" },
   { slug: "trainer-new-card", path: "/trainer/clients/new", title: "Добавить клиента вручную" },
   { slug: "trainer-money", path: "/trainer/money", title: "Деньги" },
@@ -107,7 +109,8 @@ for (const scheme of SCHEMES) {
       await page.getByRole("button", { name: "Профиль", exact: true }).click();
       const sheet = page.getByRole("dialog", { name: "Профиль" });
       await expect(sheet).toBeVisible();
-      await expect(sheet.getByRole("radiogroup", { name: "Зона" })).toBeVisible();
+      // Signed out there is no trainer profile, so no zone switch (PAIR-3).
+      await expect(sheet.getByRole("radiogroup", { name: "Зона" })).toHaveCount(0);
       await expect(sheet.getByRole("link", { name: "Настройки" })).toBeVisible();
 
       await settle(page);
