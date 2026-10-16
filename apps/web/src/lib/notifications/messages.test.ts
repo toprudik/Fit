@@ -61,6 +61,32 @@ describe("renderMessage", () => {
       { appUrl: "https://fit.example", group: false },
     );
     expect(message?.text).toBe("Иван теперь среди твоих клиентов. Проверь, нет ли у тебя карточки этого человека без аккаунта.");
+    expect(message?.buttons).toEqual([{ text: "Открыть клиентов", web_app: { url: "https://fit.example/trainer/clients?source=managed_client_claim" } }]);
+  });
+
+  it("opens the claim itself when the payload names it (Т7a)", () => {
+    const message = renderMessage(
+      { ...row, kind: "managed_client_claim", payload: { claim_id: PAIR, first_name: "Иван" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.buttons).toEqual([
+      { text: "Ответить", web_app: { url: `https://fit.example/trainer/clients/claims/${PAIR}?source=managed_client_claim` } },
+    ]);
+  });
+
+  it("tells the person a Free trainer has no place for them (К12)", () => {
+    const message = renderMessage(
+      {
+        ...row,
+        kind: "coaching_ended",
+        payload: { coaching_id: PAIR, ended_by: "trainer", cancelled: 0, first_name: "Иван", reason: "plan_limit_reached" },
+      },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message).toEqual({
+      text: "Тренер Иван сейчас не может добавить новых клиентов на бесплатном тарифе, поэтому занятия не начались. Когда место освободится, открой ссылку тренера ещё раз.",
+      buttons: [{ text: "Открыть тренера", web_app: { url: `https://fit.example/client/trainers/${PAIR}?source=coaching_ended` } }],
+    });
   });
 
   it("tells the trainer a client left, with the number of cancelled sessions (Т9)", () => {

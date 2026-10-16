@@ -1,5 +1,7 @@
 import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { PAID_PLAN, requestedPlans } from "@/lib/plans/plans";
+import type { Json } from "@/lib/supabase/database.types";
 import { displayName, isPairId, passIsEnding, type ClientItem, type CoachingStatus } from "./clients";
 
 const DEFAULT_TIME_ZONE = "Europe/Moscow";
@@ -112,6 +114,8 @@ export type PairDetail = {
   startedAt: string;
   endedAt: string | null;
   endedByMe: boolean;
+  /** Set when the pair ended for the plan limit (К12, Q65), not for a reason someone typed. */
+  endedForLimit: boolean;
   timeZone: string;
   partner: { name: string; photoUrl: string | null; username: string | null; isCard: boolean };
   attended: number;
@@ -138,7 +142,7 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
 
   const { data: pair, error } = await supabase
     .from("coachings")
-    .select("id, trainer_id, client_id, status, started_at, ended_at, ended_by, self_book_on_debt")
+    .select("id, trainer_id, client_id, status, started_at, ended_at, ended_by, end_reason, self_book_on_debt")
     .eq("id", coachingId)
     .eq(side === "trainer" ? "trainer_id" : "client_id", userId)
     .maybeSingle();
@@ -175,6 +179,7 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
     startedAt: pair.started_at,
     endedAt: pair.ended_at,
     endedByMe: pair.ended_by === userId,
+    endedForLimit: pair.status === "ended" && pair.ended_by === pair.trainer_id && pair.end_reason === "plan_limit_reached",
     timeZone: me.timeZone,
     partner: {
       name: displayName(person.data ?? undefined, meta.data?.client_alias),
@@ -204,5 +209,118 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
     })),
     archived: Boolean(meta.data?.archived_at),
     selfBookOnDebt: pair.self_book_on_debt,
+  };
+}
+
+/** The Free trainer's client count (PLAN-1): null on Pro or without a session. */
+export type ClientLimit = { active: number; limit: number; full: boolean; requested: boolean };
+
+export async function loadClientLimit(): Promise<ClientLimit | null> {
+  const me = await viewer();
+  if (!me) return null;
+  const [plans, requests] = await Promise.all([
+    me.supabase.rpc("my_plan"),
+    me.supabase.from("access_requests").select("plan_code, status, created_at").eq("user_id", me.userId),
+  ]);
+  if (plans.error) fail("plan", plans.error);
+  if (requests.error) fail("access requests", requests.error);
+  const row = plans.data.find((plan) => plan.side === "trainer");
+  if (!row || row.client_limit === null || row.active_clients === null) return null;
+  return {
+    active: row.active_clients,
+    limit: row.client_limit,
+    full: row.active_clients >= row.client_limit,
+    requested: requestedPlans(requests.data).has(PAID_PLAN.trainer),
+  };
+}
+
+/** Undecided "Это <Имя>?" questions of the signed-in trainer, newest first, with the name of who came. */
+export async function loadPendingClaims(): Promise<{ id: string; name: string }[]> {
+  const me = await viewer();
+  if (!me) return [];
+  const { data: claims, error } = await me.supabase
+    .from("managed_client_claims")
+    .select("id, claimant_id, created_at")
+    .eq("trainer_id", me.userId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  if (error) fail("claims", error);
+  if (!claims.length) return [];
+  const { data: people, error: peopleError } = await me.supabase
+    .from("profiles")
+    .select(PERSON_COLUMNS)
+    .in(
+      "id",
+      claims.map((claim) => claim.claimant_id),
+    );
+  if (peopleError) fail("claimants", peopleError);
+  const byId = new Map(people.map((person) => [person.id, person]));
+  return claims.map((claim) => ({ id: claim.id, name: displayName(byId.get(claim.claimant_id)) }));
+}
+
+export type ClaimCard = {
+  id: string;
+  coachingId: string;
+  name: string;
+  startedAt: string;
+  sessions: number;
+  passes: number;
+  payments: number;
+  notes: number;
+  measurements: number;
+};
+
+export type ClaimDetail = {
+  id: string;
+  status: "pending" | "merged" | "rejected";
+  newCoachingId: string | null;
+  limitFull: boolean;
+  person: { name: string; photoUrl: string | null; firstName: string | null; lastName: string | null; username: string | null };
+  cards: ClaimCard[];
+  timeZone: string;
+};
+
+const text = (value: Json | undefined) => (typeof value === "string" ? value : null);
+const count = (value: Json | undefined) => (typeof value === "number" ? value : 0);
+
+/** The "Это тот же клиент?" screen (get_managed_client_claim); null when the claim is not the trainer's. */
+export async function loadClaim(claimId: string): Promise<ClaimDetail | null> {
+  if (!isPairId(claimId)) return null;
+  const me = await viewer();
+  if (!me) return null;
+  const { data, error } = await me.supabase.rpc("get_managed_client_claim", { p_claim_id: claimId });
+  if (error?.message === "claim_not_found") return null;
+  if (error) fail("claim", error);
+  const claim = (data ?? {}) as Record<string, Json | undefined>;
+  const person = (claim.person ?? {}) as Record<string, Json | undefined>;
+  const status = claim.status === "merged" || claim.status === "rejected" ? claim.status : "pending";
+  const naming = { first_name: text(person.first_name), last_name: text(person.last_name), username: text(person.username) };
+  return {
+    id: claimId,
+    status,
+    newCoachingId: text(claim.new_coaching_id),
+    limitFull: claim.limit_full === true,
+    person: {
+      name: displayName(naming),
+      photoUrl: text(person.photo_url),
+      firstName: naming.first_name,
+      lastName: naming.last_name,
+      username: naming.username,
+    },
+    cards: (Array.isArray(claim.cards) ? claim.cards : []).map((value) => {
+      const card = (value ?? {}) as Record<string, Json | undefined>;
+      return {
+        id: text(card.id) ?? "",
+        coachingId: text(card.coaching_id) ?? "",
+        name: text(card.name) ?? "",
+        startedAt: text(card.started_at) ?? "",
+        sessions: count(card.sessions),
+        passes: count(card.passes),
+        payments: count(card.payments),
+        notes: count(card.notes),
+        measurements: count(card.measurements),
+      };
+    }),
+    timeZone: me.timeZone,
   };
 }

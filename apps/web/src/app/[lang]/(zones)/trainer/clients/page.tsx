@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Users } from "lucide-react";
 import { Suspense } from "react";
-import { ClientList } from "@/components/pairs/client-list";
+import { AddClientButton, ClientList } from "@/components/pairs/client-list";
 import { DetailPlaceholder, MasterDetail, Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { SkeletonRows } from "@/components/ui/skeleton";
@@ -25,7 +25,7 @@ export default async function TrainerClientsPage(props: PageProps<"/[lang]/train
   return (
     <MasterDetail
       list={
-        <Screen header={<ScreenHeader title={t.tabs.trainer.clients} />}>
+        <Screen header={<ScreenHeader title={t.tabs.trainer.clients} actions={<AddClientButton label={t.pairs.cards.add} />} />}>
           <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
             <ClientsFromParams searchParams={props.searchParams} />
           </Suspense>

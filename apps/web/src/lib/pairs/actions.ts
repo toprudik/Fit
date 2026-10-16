@@ -2,10 +2,9 @@
 
 import { refresh } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { END_REASON_MAX_LENGTH, isPairId, NOTE_MAX_LENGTH } from "./clients";
+import { CARD_CONTACT_MAX_LENGTH, CARD_NAME_MAX_LENGTH, END_REASON_MAX_LENGTH, isPairId, NOTE_MAX_LENGTH } from "./clients";
 
 export type PairActionResult = { ok: true } | { ok: false; reason: "invalid" | "failed" };
-
 
 function done(what: string, error: { code: string } | null, rows?: unknown[] | null): PairActionResult {
   if (error) {
@@ -87,4 +86,62 @@ export async function endCoaching(input: { coachingId: string; reason?: string }
   const { error } = await supabase.rpc("end_coaching", { p_coaching_id: input.coachingId, p_reason: reason || undefined });
   if (error?.message === "coaching_not_found") return { ok: false, reason: "invalid" };
   return done("ending a pair", error);
+}
+
+export type CreateCardResult = { ok: true; coachingId: string } | { ok: false; reason: "invalid" | "limit" | "failed" };
+
+/**
+ * "Добавить клиента вручную" (PRD wave-1 §2.5-3): a card of a client without an account and its pair. A Free
+ * trainer at the limit gets "limit" (PLAN-1).
+ */
+export async function createCard(input: { name: string; contact?: string; note?: string }): Promise<CreateCardResult> {
+  const name = input.name.trim();
+  const contact = input.contact?.trim() ?? "";
+  const note = input.note?.trim() ?? "";
+  if (!name || name.length > CARD_NAME_MAX_LENGTH || contact.length > CARD_CONTACT_MAX_LENGTH || note.length > NOTE_MAX_LENGTH) {
+    return { ok: false, reason: "invalid" };
+  }
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("create_managed_client", {
+    p_display_name: name,
+    p_contact: contact || undefined,
+    p_note: note || undefined,
+  });
+  if (error?.message === "plan_limit_reached") return { ok: false, reason: "limit" };
+  if (error || !data) {
+    if (error) console.error("creating a card failed", error.code);
+    return { ok: false, reason: error?.message === "not_a_trainer" ? "invalid" : "failed" };
+  }
+  refresh();
+  return { ok: true, coachingId: data };
+}
+
+export type ResolveClaimResult =
+  | { ok: true; coachingId: string; outcome: "merged" | "new" | "closed" }
+  | { ok: false; reason: "invalid" | "decided" | "failed" };
+
+/**
+ * The trainer's answer to "Это <Имя>?" (PRD wave-1 §2.5-3a): a card id merges the card into the person and
+ * cannot be undone; null keeps them as a new client, which on a full Free plan closes the new pair ("closed", Q65).
+ */
+export async function resolveClaim(input: { claimId: string; cardId: string | null }): Promise<ResolveClaimResult> {
+  if (!isPairId(input.claimId) || (input.cardId !== null && !isPairId(input.cardId))) return { ok: false, reason: "invalid" };
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("resolve_managed_client_claim", {
+    p_claim_id: input.claimId,
+    p_managed_client_id: input.cardId ?? undefined,
+  });
+  if (error?.message === "claim_decided" || error?.message === "claim_pair_ended") return { ok: false, reason: "decided" };
+  if (error?.message === "claim_not_found" || error?.message === "card_not_found") return { ok: false, reason: "invalid" };
+  if (error || !data) {
+    if (error) console.error("answering a claim failed", error.code);
+    return { ok: false, reason: "failed" };
+  }
+  let outcome: "merged" | "new" | "closed" = "merged";
+  if (input.cardId === null) {
+    const { data: pair } = await supabase.from("coachings").select("status").eq("id", data).maybeSingle();
+    outcome = pair?.status === "ended" ? "closed" : "new";
+  }
+  refresh();
+  return { ok: true, coachingId: data, outcome };
 }

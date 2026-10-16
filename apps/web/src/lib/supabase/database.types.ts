@@ -2350,6 +2350,9 @@ isOneToOne: false
               "session_id": string,"starts_at": string,"title": string
             }[]
                            },
+"create_managed_client":
+{ Args: { "p_contact"?: string,"p_display_name": string,"p_note"?: string }; Returns: string
+                           },
 "create_session":
 { Args: { "p_coaching_id": string,"p_count"?: number,"p_duration_min": number,"p_location_id"?: string,"p_meeting_url"?: string,"p_mode": Database["public"]['Enums']["session_mode"],"p_starts_at": string,"p_title"?: string,"p_until"?: string,"p_weekdays"?: (number)[] }; Returns: {
               "created": number,"session_id": string
@@ -2360,6 +2363,9 @@ isOneToOne: false
                            },
 "end_coaching":
 { Args: { "p_coaching_id": string,"p_reason"?: string }; Returns: number
+                           },
+"get_managed_client_claim":
+{ Args: { "p_claim_id": string }; Returns: Json
                            },
 "get_trainer_showcase":
 { Args: { "p_slug": string }; Returns: {
@@ -2428,6 +2434,9 @@ isOneToOne: false
 { Args: { "p_code"?: string,"p_token"?: string }; Returns: {
               "coaching_id": string,"first_name": string,"headline": string,"last_name": string,"photo_url": string,"specialties": (string)[],"status": string,"trainer_id": string,"verified": boolean,"works_offline": boolean,"works_online": boolean
             }[]
+                           },
+"resolve_managed_client_claim":
+{ Args: { "p_claim_id": string,"p_managed_client_id"?: string }; Returns: string
                            },
 "save_week_template":
 { Args: { "p_buffer_min"?: number,"p_horizon_weeks"?: number,"p_items": Json }; Returns: number
