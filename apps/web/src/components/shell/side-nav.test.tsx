@@ -127,7 +127,7 @@ describe("SideNav", () => {
     act(() => setAccount({ status: "signed-out" }));
     expect(screen.getByRole("button", { name: "Профиль" })).toBeTruthy();
 
-    act(() => setAccount({ status: "signed-in", name: "Давид Петров", photoUrl: null, isTrainer: false, isAdmin: false }));
+    act(() => setAccount({ status: "signed-in", name: "Давид Петров", photoUrl: null, isTrainer: false, isAdmin: false, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" }));
     fireEvent.click(screen.getByRole("button", { name: "Давид Петров" }));
     expect(onOpenProfile).toHaveBeenCalledOnce();
   });

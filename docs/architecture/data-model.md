@@ -294,7 +294,7 @@ grant select (id, username, first_name, last_name, photo_url, language_code, dis
   on public.profiles to authenticated;
 ```
 
-`bot_started_at` в волне 1 никто не пишет: бот к базе не обращается (ADR 0006), а писать человеку бот может и после разрешения в Mini App (`requestWriteAccess`). `bot_blocked_at` ставит диспетчер, когда Telegram отвечает 403 или «chat not found», и сбрасывает вход в приложение: другого признака жизни веб не видит. Комментарии к обоим столбцам поправлены миграцией `notification_dispatch`.
+`bot_started_at` в волне 1 никто не пишет: бот к базе не обращается (ADR 0006), а писать человеку бот может и после разрешения в Mini App (`requestWriteAccess`). `bot_blocked_at` ставит диспетчер, когда Telegram отвечает 403 или «chat not found», и сбрасывает вход в приложение: другого признака жизни веб не видит. Комментарии к обоим столбцам поправлены миграцией `notification_dispatch`. Миграция `bot_messages` добавила две definer-функции для самого пользователя: `bot_messages_blocked()` читает его отметку для баннера «Уведомления выключены» (AUTH-7), `set_bot_messages(allowed, send_test)` записывает ответ на `requestWriteAccess` (отказ ставит отметку, разрешение снимает) и по кнопке в баннере ставит в очередь `bot_test`, не чаще раза в минуту.
 
 Зеркальные столбцы нужны вью `public_profiles`: она `security_invoker` и читает только `profiles`, поэтому видит ровно тех, кого пускает политика `profiles` (сам, партнёры по парам в любом статусе, свои карточки тренера, админ без карточек и заглушки).
 

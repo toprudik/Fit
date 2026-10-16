@@ -1,7 +1,7 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { adminDeniedPath, isAdminPath, PUBLIC_FILES, routeRequest, type RouteInput } from "./routing";
+import { adminDeniedPath, consentRedirect, isAdminPath, PUBLIC_FILES, routeRequest, type RouteInput } from "./routing";
 
 function route(overrides: Partial<RouteInput>) {
   return routeRequest({
@@ -126,5 +126,19 @@ describe("the admin section", () => {
   it("sends non-admins to an unknown page of their language, which is the app's 404", () => {
     expect(adminDeniedPath("en")).toBe("/en/admin-not-found");
     expect(isAdminPath(adminDeniedPath("ru").slice(3))).toBe(false);
+  });
+});
+
+describe("consentRedirect", () => {
+  it("sends every screen to the beta terms with the screen in next", () => {
+    expect(consentRedirect("/client", "")).toBe("/onboarding/consent?next=%2Fclient");
+    expect(consentRedirect("/onboarding/trainer", "?code=ABCD")).toBe("/onboarding/consent?next=%2Fonboarding%2Ftrainer%3Fcode%3DABCD");
+    expect(consentRedirect("/onboarding/preferences", "")).toBe("/onboarding/consent?next=%2Fonboarding%2Fpreferences");
+    expect(consentRedirect("/admin/invites", "")).toBe("/onboarding/consent?next=%2Fadmin%2Finvites");
+  });
+
+  it("leaves the terms screen and the login screen open", () => {
+    expect(consentRedirect("/onboarding/consent", "?next=%2Fclient")).toBeNull();
+    expect(consentRedirect("/login", "?next=%2Fclient")).toBeNull();
   });
 });
