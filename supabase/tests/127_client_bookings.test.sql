@@ -1,4 +1,4 @@
--- Client bookings of migration 20261016213700_client_bookings.sql (PRD wave-1 §2.6.4, §2.6.5-6, data-model
+-- Client bookings of migration 20261016221900_client_bookings.sql (PRD wave-1 §2.6.4, §2.6.5-6, data-model
 -- §3.5): booking_auto_confirm, booking_preview, book_slot, decide_booking, withdraw_booking_request and the
 -- request expiry job.
 begin;

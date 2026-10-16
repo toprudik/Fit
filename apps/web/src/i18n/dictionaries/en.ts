@@ -1705,7 +1705,6 @@ export const en: Dictionary = {
     requestDeclined: "Your request to {name} for {when} was declined.",
     requestDeclinedReason: "Your request to {name} for {when} was declined. Reason: “{reason}”.",
     requestExpired: "Your request to {name} for {when} got no answer, so the booking did not happen.",
-    openSession: "Open session",
     answerRequest: "Answer the request",
     openSchedule: "Open schedule",
     openBooking: "Open booking",

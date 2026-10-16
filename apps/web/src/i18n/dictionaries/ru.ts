@@ -1725,7 +1725,6 @@ export const ru = {
     requestDeclined: "Запрос к тренеру {name} на {when} отклонён.",
     requestDeclinedReason: "Запрос к тренеру {name} на {when} отклонён. Причина: «{reason}».",
     requestExpired: "Запрос к тренеру {name} на {when} остался без ответа, запись не состоялась.",
-    openSession: "Открыть занятие",
     answerRequest: "Ответить на запрос",
     openSchedule: "Открыть расписание",
     openBooking: "Открыть запись",

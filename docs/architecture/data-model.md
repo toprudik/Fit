@@ -753,7 +753,7 @@ create index on public.slots (starts_at) where status = 'open';
 -- cancel_session(id, reason, following) отменяет занятия и записи тренером без списаний, освобождает слоты,
 --   при following останавливает повтор (ended_at); клиенту одно К5 со списком дат.
 --
--- Запись клиента и запросы (миграция 20261016213700_client_bookings, PRD 2.6.4, 2.6.5-6):
+-- Запись клиента и запросы (миграция 20261016221900_client_bookings, PRD 2.6.4, 2.6.5-6):
 -- private.booking_auto_confirm(coaching, kind, starts_at) решает по §3.5: (true, pass_id) по абонементу,
 --   (true, null) по разрешённому долгу, (false, null) = запрос. Только читает; правило денег меняется здесь.
 -- booking_preview(slot_id) отдаёт экрану подтверждения то же решение и остаток абонемента после записи.
