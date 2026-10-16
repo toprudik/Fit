@@ -2,7 +2,9 @@ import type { Locale } from "@/i18n/config";
 import { dictionaries, type Dictionary } from "@/i18n/dictionaries";
 import { interpolate } from "@/i18n/format";
 import { isPairId } from "@/lib/pairs/clients";
+import { formatSessionTime } from "@/lib/pairs/format";
 import { formatPlanDate, isPlanCode } from "@/lib/plans/plans";
+import { formatOffset } from "@/lib/reminders/offsets";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import type { InlineButton } from "./telegram";
 
@@ -79,6 +81,28 @@ const templates: Partial<Record<NotificationType, Template>> = {
         count: cancelled,
       }),
       buttons: [{ text: t.openClient, path: pairPath("/trainer/clients", payload) }],
+    };
+  },
+  // К7: payload { booking_id, starts_at, kind, title, mode, location_name, location_address, first_name, last_name,
+  // offset_min } from private.sync_booking_reminders. The meeting link stays in DaFit (SCHED-21).
+  session_reminder: ({ t, locale, timeZone, payload }) => {
+    const text = (value: Json | undefined) => (typeof value === "string" ? value.trim() : "");
+    const offset = Number(payload.offset_min);
+    const values = {
+      lead: Number.isInteger(offset) && offset > 0 ? formatOffset(locale, offset, dictionaries[locale].reminders.units) : "",
+      name: personName(payload) || t.unnamedTrainer,
+      time: typeof payload.starts_at === "string" ? formatSessionTime(locale, payload.starts_at, timeZone ?? "Europe/Moscow") : "",
+      title: text(payload.title),
+    };
+    const place = [text(payload.location_name), text(payload.location_address)].filter(Boolean).join(", ");
+    const lines = [
+      interpolateEscaped(payload.kind === "group" && values.title ? t.sessionReminderGroup : t.sessionReminder, values),
+      payload.mode === "online" ? escapeHtml(t.reminderOnline) : place ? interpolateEscaped(t.reminderPlace, { place }) : null,
+    ];
+    const booking = isPairId(payload.booking_id) ? payload.booking_id : null;
+    return {
+      text: lines.filter(Boolean).join("\n"),
+      buttons: [{ text: t.openSession, path: booking ? `/client/sessions?booking=${booking}` : "/client/sessions" }],
     };
   },
   // П1–П3: payload { plan, expires_at? } from admin_grant_plan and admin_revoke_plan (PLAN-5, §2.14-9).
