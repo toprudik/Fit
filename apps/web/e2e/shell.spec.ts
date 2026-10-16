@@ -54,7 +54,9 @@ const SCREENS: readonly Screen[] = [
   { slug: "client-book", path: "/client/book", title: "Запись на занятие" },
   { slug: "client-booking", path: "/client/bookings/0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f", title: "Запись" },
   { slug: "client-diary", path: "/client/diary", title: "Дневник" },
+  { slug: "client-new-workout", path: "/client/diary/workouts/new", title: "Новая тренировка" },
   { slug: "client-progress", path: "/client/progress", title: "Прогресс" },
+  { slug: "client-records", path: "/client/progress/records", title: "Рекорды" },
   { slug: "client-trainers", path: "/client/trainers", title: "Тренеры" },
   { slug: "settings", path: "/settings", title: "Настройки" },
   { slug: "settings-plan", path: "/settings/plan", title: "Мой тариф" },
@@ -79,6 +81,8 @@ const SCREENS: readonly Screen[] = [
   { slug: "trainer-showcase", path: "/trainer/showcase", title: "Витрина" },
   // Signed out, the intake asks to sign in and come back.
   { slug: "client-intake-signed-out", path: "/client/trainers/00000000-0000-4000-8000-000000000000/intake", title: "Анкета" },
+  // Signed out, "Что видит тренер" asks to sign in and come back.
+  { slug: "client-sharing-signed-out", path: "/client/trainers/00000000-0000-4000-8000-000000000000/sharing", title: "Что видит тренер" },
   { slug: "not-found", path: "/no-such-page", title: "Такой страницы нет", documentTitle: false, status: 404 },
   // ADM-12: the admin section is a 404 for everyone but admins, signed out included.
   { slug: "admin-denied", path: "/admin/invites", title: "Такой страницы нет", documentTitle: false, status: 404 },

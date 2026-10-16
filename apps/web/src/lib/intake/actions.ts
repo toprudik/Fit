@@ -69,7 +69,7 @@ export async function decideIntakeShare(coachingId: string, show: boolean): Prom
   redirect(count ? clientPairPath(coachingId) : clientIntakePath(coachingId));
 }
 
-/** "Показать тренеру" / "Скрыть от тренера" on the client's intake page, until "Доступ к данным" exists. */
+/** "Показать тренеру" / "Скрыть от тренера" on the client's intake page; "Доступ к данным" has the same switch. */
 export async function setIntakeShare(coachingId: string, show: boolean): Promise<{ failed: boolean }> {
   if (!z.uuid().safeParse(coachingId).success || typeof show !== "boolean") return { failed: true };
   const { saved } = await saveIntakeShare(coachingId, show);

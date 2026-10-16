@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { Dumbbell } from "lucide-react";
+import { Suspense } from "react";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
-import { EmptyState } from "@/components/ui/empty-state";
+import { SkeletonRows } from "@/components/ui/skeleton";
+import { LogListSection } from "@/components/workouts/log-screens";
 import { getDictionary } from "@/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -10,12 +11,16 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.tabs.client.diary };
 }
 
+/** "Дневник": the client's workout logs, own and from the trainer (PRD wave-1 §2.10-4). */
 export default async function ClientDiaryPage() {
   const t = await getDictionary();
-  const copy = t.screens.client.diary;
   return (
     <Screen header={<ScreenHeader title={t.tabs.client.diary} />}>
-      <EmptyState icon={Dumbbell} title={copy.emptyTitle} description={copy.emptyText} />
+      <div className="flex w-full max-w-2xl flex-col gap-6 pt-4 md:pt-0">
+        <Suspense fallback={<SkeletonRows rows={4} label={t.common.loading} />}>
+          <LogListSection place={{ side: "client" }} />
+        </Suspense>
+      </div>
     </Screen>
   );
 }
