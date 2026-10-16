@@ -2368,6 +2368,9 @@ isOneToOne: false
 "calendar_feed":
 { Args: { "p_token": string }; Returns: Json
                            },
+"cancel_account_deletion":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
 "cancel_pass":
 { Args: { "p_pass_id": string,"p_reason": string }; Returns: undefined
                            },
@@ -2376,6 +2379,11 @@ isOneToOne: false
                            },
 "change_pass_expiry":
 { Args: { "p_last_day": string,"p_pass_id": string,"p_reason": string }; Returns: undefined
+                           },
+"claim_data_exports":
+{ Args: { "p_limit"?: number }; Returns: {
+              "id": string,"user_id": string
+            }[]
                            },
 "claim_outbox":
 { Args: { "p_limit"?: number }; Returns: {
@@ -2386,6 +2394,9 @@ isOneToOne: false
 { Args: { "p_from": string,"p_to": string }; Returns: {
               "session_id": string,"starts_at": string,"title": string
             }[]
+                           },
+"complete_data_export":
+{ Args: { "p_id": string,"p_storage_path": string }; Returns: undefined
                            },
 "create_calendar_feed":
 { Args: { "p_zone": Database["public"]['Enums']["app_zone"] }; Returns: string
@@ -2416,6 +2427,9 @@ isOneToOne: false
                            },
 "end_coaching":
 { Args: { "p_coaching_id": string,"p_reason"?: string }; Returns: number
+                           },
+"fail_data_export":
+{ Args: { "p_id": string }; Returns: undefined
                            },
 "get_managed_client_claim":
 { Args: { "p_claim_id": string }; Returns: Json
@@ -2480,6 +2494,9 @@ isOneToOne: false
               "active_clients": number,"client_limit": number,"expires_at": string,"plan_code": string,"side": Database["public"]['Enums']["plan_side"]
             }[]
                            },
+"purge_account":
+{ Args: { "p_user": string }; Returns: (string)[]
+                           },
 "record_outbox_result":
 { Args: { "p_error"?: string,"p_id": number,"p_outcome": string,"p_retry_after_s"?: number,"p_telegram_message_id"?: number }; Returns: Database["public"]['Enums']["outbox_status"]
                            },
@@ -2505,6 +2522,12 @@ isOneToOne: false
                            },
 "request_access":
 { Args: { "p_feature"?: string,"p_plan_code": string }; Returns: string
+                           },
+"request_account_deletion":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
+"request_data_export":
+{ Args: Record<PropertyKey, never>; Returns: string
                            },
 "resolve_client_invite":
 { Args: { "p_code"?: string,"p_token"?: string }; Returns: {

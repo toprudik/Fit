@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { clientEnv } from "@/env/client";
 import { LOCALE_COOKIE } from "@/i18n/config";
+import { deletionRedirect, isDeletionPending } from "@/lib/account/deletion";
 import { BETA_TERMS_VERSION, CONSENT_COOKIE, consentCookieOptions, consentCookieValue } from "@/lib/consent/beta-terms";
 import { adminDeniedPath, consentRedirect, isAdminPath, routeRequest, trainerZoneRedirect } from "@/lib/navigation/routing";
 import { ZONE_COOKIE } from "@/lib/navigation/zones";
@@ -48,7 +49,8 @@ type CookieToSet = { name: string; value: string; options: Parameters<NextRespon
 
 /**
  * Runs on every page request: refreshes the Supabase session cookie, sends "/" to the last zone,
- * keeps signed-in users on the beta terms until they accept them (AUTH-4), remembers the zone (on the
+ * keeps signed-in users on the beta terms until they accept them (AUTH-4), keeps an account being deleted on
+ * the deletion screen (PRIV-7), remembers the zone (on the
  * device and the account), keeps the trainer zone to trainers and the admin section to admins and serves
  * the page in the user's language (see routeRequest).
  */
@@ -94,6 +96,15 @@ export async function proxy(request: NextRequest) {
       return redirect;
     }
     consentCookie = consentCookieValue(userId);
+  }
+  // An account in its 30 days before deletion opens only the deletion and export screens (PRIV-7). The mark
+  // comes with the verified token, so this costs no query.
+  const toDeletion = decision.kind === "rewrite" && isDeletionPending(data?.claims) ? deletionRedirect(request.nextUrl.pathname) : null;
+  if (userId && toDeletion) {
+    const redirect = NextResponse.redirect(new URL(toDeletion, request.url));
+    for (const { name, value, options } of refreshed) redirect.cookies.set(name, value, options);
+    if (consentCookie) redirect.cookies.set(CONSENT_COOKIE, consentCookie, consentCookieOptions);
+    return redirect;
   }
   // Only trainers have the trainer zone (PAIR-3): anyone else signed in who opens it, from "/" with an old zone
   // cookie or from a link, lands in the client zone. Signed-out visitors see the zone's screens as before.

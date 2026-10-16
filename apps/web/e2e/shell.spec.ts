@@ -67,6 +67,8 @@ const SCREENS: readonly Screen[] = [
   { slug: "settings-notifications", path: "/settings/notifications", title: "Уведомления" },
   { slug: "settings-calendar", path: "/settings/calendar", title: "Календарь" },
   { slug: "settings-licenses", path: "/settings/licenses", title: "Лицензии" },
+  { slug: "settings-export", path: "/settings/export", title: "Экспорт данных" },
+  { slug: "settings-delete", path: "/settings/delete", title: "Удаление аккаунта" },
   { slug: "profile", path: "/profile", title: "Профиль" },
   { slug: "login", path: "/login", title: "Вход" },
   { slug: "trainer-invite", path: "/onboarding/trainer?code=ABCD-EFGH-JKLM", title: "Инвайт тренера" },

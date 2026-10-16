@@ -513,3 +513,61 @@ describe("payment_reported", () => {
     expect(message?.buttons[0]).toEqual({ text: "Open payments", web_app: { url: "https://fit.example/trainer/money?source=payment_reported" } });
   });
 });
+
+describe("account messages", () => {
+  const app = { appUrl: "https://fit.example", group: false };
+
+  it("gives the deletion date and a button to cancel (PRIV-7)", () => {
+    const message = renderMessage(
+      { ...row, kind: "account_deletion", payload: { stage: "requested", scheduled_for: "2026-11-15T21:30:00Z" } },
+      app,
+    );
+    expect(message?.text).toBe(
+      "Аккаунт DaFit будет удалён 16 ноября 2026. Будущие записи отменены без списаний. Если передумаешь, открой DaFit и отмени удаление до этого дня.",
+    );
+    expect(message?.buttons).toEqual([
+      { text: "Отменить удаление", web_app: { url: "https://fit.example/settings/delete?source=account_deletion" } },
+    ]);
+  });
+
+  it("confirms a cancelled deletion", () => {
+    expect(renderMessage({ ...row, kind: "account_deletion", payload: { stage: "cancelled" } }, app)?.text).toBe(
+      "Удаление аккаунта отменено, всё осталось на месте.",
+    );
+  });
+
+  it("tells the trainer a client is leaving, with the cancelled bookings, and opens the card", () => {
+    const message = renderMessage(
+      {
+        ...row,
+        kind: "counterpart_deleting",
+        payload: { coaching_id: PAIR, side: "client", first_name: "Анна", cancelled: 2, scheduled_for: "2026-11-15T21:30:00Z" },
+      },
+      app,
+    );
+    expect(message?.text).toBe(
+      "Анна удаляет аккаунт в DaFit. Будущих записей отменено: 2. Занятия, абонементы и оплаты останутся у тебя, а с 16 ноября 2026 клиент будет называться «Удалённый клиент».",
+    );
+    expect(message?.buttons[0]).toEqual({
+      text: "Открыть клиента",
+      web_app: { url: `https://fit.example/trainer/clients/${PAIR}?source=counterpart_deleting` },
+    });
+  });
+
+  it("tells the client their trainer is leaving", () => {
+    const message = renderMessage(
+      { ...row, locale: "en", kind: "counterpart_deleting", payload: { coaching_id: PAIR, side: "trainer", first_name: "Ivan" } },
+      app,
+    );
+    expect(message?.text).toMatch(/^Your trainer Ivan is deleting/);
+    expect(message?.buttons[0]).toMatchObject({ web_app: { url: `https://fit.example/client/trainers/${PAIR}?source=counterpart_deleting` } });
+  });
+
+  it("sends the export screen, not a download link", () => {
+    const message = renderMessage({ ...row, kind: "export_ready", payload: { expires_at: "2026-10-23T10:00:00Z" } }, app);
+    expect(message?.text).toBe("Архив с твоими данными готов. Скачать его можно до 23 октября 2026.");
+    expect(message?.buttons).toEqual([
+      { text: "Скачать архив", web_app: { url: "https://fit.example/settings/export?source=export_ready" } },
+    ]);
+  });
+});
