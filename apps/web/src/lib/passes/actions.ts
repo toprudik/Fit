@@ -13,7 +13,13 @@ import {
   reportInput,
   sellInput,
   voidInput,
+  adjustInput,
+  pastSessionInput,
+  waiveInput,
+  type AdjustInput,
   type CancelInput,
+  type PastSessionInput,
+  type WaiveInput,
   type EndFreezeInput,
   type ExpiryInput,
   type FreezeInput,
@@ -22,7 +28,7 @@ import {
   type SellInput,
   type VoidInput,
 } from "./input";
-import { addDays, freezePeriod, paidAtFor } from "./present";
+import { addDays, freezePeriod, localInstant, paidAtFor } from "./present";
 
 /**
  * Writes on passes, freezes and payments (PRD wave-1 §2.8). Every write goes through the user's client, so the
@@ -34,7 +40,7 @@ export type MoneyResult =
   /** The row changed or is gone since the screen loaded (a client edited the report, a freeze started). */
   | { status: "stale" }
   /** A reason in the database's words: ended pair, overlapping freeze, pass in use ... */
-  | { status: "refused"; reason: "ended" | "overlap" | "in-use" | "cancelled" | "range" }
+  | { status: "refused"; reason: "ended" | "overlap" | "in-use" | "cancelled" | "range" | "waived" | "overdrawn" | "not-past" }
   | { status: "failed" };
 
 export type SellResult = { status: "sold"; passId: string; settled: number } | Exclude<MoneyResult, { status: "done" }>;
@@ -314,6 +320,60 @@ export async function withdrawReport(input: VoidInput): Promise<MoneyResult> {
     .select("id");
   if (error) return failed("withdrawing a report", error);
   if (data.length !== 1) return { status: "stale" };
+  refresh();
+  return { status: "done" };
+}
+
+/** "Простить" a charge (PRD 2.6.6-4): the session returns to its pass, or the debt shrinks. Final. */
+export async function waiveCharge(input: WaiveInput): Promise<MoneyResult> {
+  const parsed = waiveInput.safeParse(input);
+  if (!parsed.success) return { status: "invalid", fields: invalidFields(parsed.error) };
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("waive_charge", {
+    p_charge_id: parsed.data.chargeId,
+    ...(parsed.data.reason ? { p_reason: parsed.data.reason } : {}),
+  });
+  if (error?.message === "already_waived") return { status: "refused", reason: "waived" };
+  if (error?.message === "charge_not_found") return { status: "stale" };
+  if (error) return failed("waiving a charge", error);
+  refresh();
+  return { status: "done" };
+}
+
+/** "Корректировка": plus or minus sessions on a pass with a note (R84); never below zero. */
+export async function adjustPass(input: AdjustInput): Promise<MoneyResult> {
+  const parsed = adjustInput.safeParse(input);
+  if (!parsed.success) return { status: "invalid", fields: invalidFields(parsed.error) };
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("adjust_pass", {
+    p_pass_id: parsed.data.passId,
+    p_delta: parsed.data.delta,
+    p_note: parsed.data.note,
+  });
+  if (error?.message === "pass_overdrawn") return { status: "refused", reason: "overdrawn" };
+  if (error?.message === "pass_not_found") return { status: "stale" };
+  if (error) return failed("adjusting a pass", error);
+  refresh();
+  return { status: "done" };
+}
+
+/** "Дозаписать занятие": a personal session that already ended, charged by the usual rules (PRD 2.6.2-7). */
+export async function recordPastSession(input: PastSessionInput): Promise<MoneyResult> {
+  const parsed = pastSessionInput.safeParse(input);
+  if (!parsed.success) return { status: "invalid", fields: invalidFields(parsed.error) };
+  const supabase = await createSupabaseServerClient();
+  const user = await me(supabase);
+  if (!user) return { status: "failed" };
+  const { error } = await supabase.rpc("record_past_session", {
+    p_coaching_id: parsed.data.coachingId,
+    p_starts_at: localInstant(parsed.data.day, parsed.data.time, user.timeZone),
+    p_duration_min: parsed.data.durationMin,
+    p_mode: "offline",
+    p_status: parsed.data.status,
+  });
+  if (error?.message === "not_past" || error?.message === "too_old") return { status: "refused", reason: "not-past" };
+  if (error?.message === "not_your_client") return { status: "refused", reason: "ended" };
+  if (error) return failed("recording a past session", error);
   refresh();
   return { status: "done" };
 }

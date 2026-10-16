@@ -377,7 +377,8 @@ revoke all on function public.waive_charge(uuid, text) from public, anon;
 grant execute on function public.waive_charge(uuid, text) to authenticated;
 
 -- The trainer records a personal session that already took place (PRD 2.6.2-7): a completed session with an
--- attended (or no_show) booking, charged by the usual rules. No message to the client: nothing is planned.
+-- attended (or no_show) booking, charged by the usual rules. A no-show gets К8 like a marked one; an attended
+-- session needs no message.
 -- Raises not_a_trainer, not_your_client, not_past, too_old, invalid_duration, invalid_status or an error of the
 -- place check. Returns the session and the booking.
 create function public.record_past_session(
@@ -402,6 +403,7 @@ declare
   v_ends_at timestamptz;
   v_session uuid;
   v_booking uuid;
+  v_charge uuid;
 begin
   if v_trainer is null or not exists (select 1 from public.trainer_profiles t where t.user_id = v_trainer) then
     raise exception 'not_a_trainer' using errcode = '42501';
@@ -445,7 +447,10 @@ begin
     insert into public.booking_events (booking_id, from_status, to_status, actor_id, actor_role, payload)
     values (v_booking, 'attended', 'no_show', v_trainer, 'trainer', '{"recorded_after": true}');
   end if;
-  perform private.post_charge(v_booking, p_status::text::public.charge_reason);
+  v_charge := private.post_charge(v_booking, p_status::text::public.charge_reason);
+  if p_status = 'no_show' then
+    perform private.notify_charge(v_charge, 'charge_posted');
+  end if;
   return query select v_session, v_booking;
 end $$;
 

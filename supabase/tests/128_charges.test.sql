@@ -3,7 +3,7 @@
 -- settlement reversal, record_past_session and adjust_pass.
 begin;
 \ir _helpers.psql
-select plan(41);
+select plan(42);
 
 select tests.create_trainer('trainer_a');
 select tests.create_trainer('trainer_b');
@@ -229,6 +229,11 @@ select results_eq(
   $$ values ('no_show'::text, 'completed'::text, 'no_show'::text, tests.id('pass_c')) $$,
   'past: a no-show recorded after the fact is charged from the pass'
 );
+select is(
+  (select count(*) from public.notification_outbox
+   where type = 'charge_posted' and user_id = tests.u('client_c') and payload ->> 'reason' = 'no_show'
+     and payload ->> 'remaining' = '1'),
+  1::bigint, 'past: the client gets К8 for the no-show');
 
 -- =========================================================================================================
 -- adjust_pass
