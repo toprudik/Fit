@@ -105,7 +105,7 @@ describe("intake messages", () => {
       { ...row, kind: "intake_submitted", locale: "en", payload: { coaching_id: "p1", first_name: "Anna", parq_flagged: true } },
       options,
     );
-    expect(message?.text).toBe("New intake: Anna. There's a yes in PAR-Q, so read the intake before the session.");
+    expect(message?.text).toBe("New intake form from Anna. There's a yes in PAR-Q, so read it before the session.");
   });
 
   it("asks the client to fill in the intake on the trainer's behalf", () => {
