@@ -11,10 +11,29 @@ import { isTelegramAccount } from "./telegram-account";
  */
 export const telegramEmail = (telegramId: number) => `tg${telegramId}@users.fit.invalid`;
 
+/** An admin blocked this account (ADM-7): it gets no session, whatever Telegram says. */
+export class AccountBlockedError extends Error {
+  constructor() {
+    super("account blocked");
+    this.name = "AccountBlockedError";
+  }
+}
+
+/**
+ * Whether an admin blocked the account. blocked_at is never granted to users, so this reads it with the
+ * secret key; it returns a yes or no and nothing else.
+ */
+export async function isAccountBlocked(userId: string): Promise<boolean> {
+  const { data, error } = await createSupabaseAdminClient().from("profiles").select("blocked_at").eq("id", userId).maybeSingle();
+  if (error) throw new Error(`reading the block failed: ${error.code}`);
+  return Boolean(data?.blocked_at);
+}
+
 /**
  * Turns a server-verified Telegram identity into a Supabase session (cookies on the response).
  * `newAccount` is true when this sign-in created the account.
- * Callers MUST verify the identity first (initData HMAC or OIDC id_token).
+ * Callers MUST verify the identity first (initData HMAC or OIDC id_token). Throws AccountBlockedError for an
+ * account an admin blocked, before any session exists.
  *
  * Flow: ensure auth user exists (admin) → mint a one-time magic-link token (admin, never mailed)
  * → redeem it with the cookie-bound client, which writes the session cookies.
@@ -52,6 +71,7 @@ export async function signInWithTelegram(identity: TelegramIdentity): Promise<{ 
   if (!isTelegramAccount(link.data.user.app_metadata, identity.telegramId)) {
     throw new Error("Supabase user does not belong to this Telegram account");
   }
+  if (await isAccountBlocked(userId)) throw new AccountBlockedError();
 
   // Keep profile fresh on every sign-in (names/photo change in Telegram). The first insert also creates
   // the user_settings row (database trigger profiles_create_settings), so nothing else is written here.

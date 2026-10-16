@@ -1,4 +1,4 @@
--- end_coaching of migration 20261016150000_end_coaching.sql (PRD wave-1 §2.5, §2.12-5 PRIV-5): either side ends a
+-- end_coaching of migration 20261016160000_end_coaching.sql (PRD wave-1 §2.5, §2.12-5 PRIV-5): either side ends a
 -- live pair, future bookings are cancelled without a charge, lone future personal sessions and the pair's
 -- repeats stop, and the other side gets coaching_ended.
 begin;

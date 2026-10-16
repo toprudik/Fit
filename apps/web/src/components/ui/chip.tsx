@@ -2,6 +2,36 @@ import { Check, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
+type ChipCheckboxProps = Omit<React.ComponentProps<"input">, "type" | "children" | "className"> & {
+  children: React.ReactNode;
+  className?: string;
+};
+
+/**
+ * Chip for picking several values in a form (docs/design/components/Chip). A real checkbox under the
+ * pill, so the form posts it before hydration and screen readers hear "checkbox, checked". Selected
+ * is inverse with a check mark, so it reads without color too.
+ */
+export function ChipCheckbox({ children, className, ...input }: ChipCheckboxProps) {
+  return (
+    <label data-slot="chip" className={cn("relative inline-flex cursor-pointer", className)}>
+      <input type="checkbox" className="peer absolute inset-0 size-full cursor-pointer appearance-none rounded-full" {...input} />
+      <span
+        className={cn(
+          "pointer-events-none inline-flex h-9 items-center gap-1.5 rounded-full bg-surface-2 px-4 text-subhead font-medium text-ink",
+          "transition-[background-color,scale] duration-[var(--duration-instant)] ease-standard peer-active:scale-[0.96]",
+          "peer-checked:bg-inverse peer-checked:text-on-inverse peer-hover:not-peer-checked:bg-surface-3",
+          "motion-reduce:transition-none motion-reduce:peer-active:scale-100",
+          "[&>svg]:hidden peer-checked:[&>svg]:block",
+        )}
+      >
+        <Check aria-hidden size={16} strokeWidth={2.25} />
+        {children}
+      </span>
+    </label>
+  );
+}
+
 type ChipProps = {
   /** Selected chips turn `inverse` and get a check, so the choice reads without color. */
   selected?: boolean;
@@ -14,12 +44,12 @@ type ChipProps = {
 };
 
 /**
- * Filter or multiple choice (docs/design/components/Chip). Chips go in one scrolling row above a list;
- * see `ChipRow`. A link chip marks the selected one with aria-current, a button chip with aria-pressed.
+ * Filter chip (docs/design/components/Chip) that acts at once: a link for a filter in the URL, or a toggle
+ * button. Chips go in one scrolling row above a list; see `ChipRow`. A link chip marks the selected one with aria-current, a button chip with aria-pressed.
  */
 export function Chip({ selected = false, icon: Icon, href, onClick, children, className }: ChipProps) {
   const classes = cn(
-    "relative inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3.5 text-subhead font-semibold whitespace-nowrap select-none",
+    "relative inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 text-subhead font-medium whitespace-nowrap select-none",
     "transition-[scale,background-color,color] duration-[var(--duration-instant)] ease-standard active:scale-[0.97]",
     "motion-reduce:transition-none motion-reduce:active:scale-100",
     // 44px hit area around the 36px chip.

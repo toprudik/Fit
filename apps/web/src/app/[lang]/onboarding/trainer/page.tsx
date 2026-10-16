@@ -10,6 +10,7 @@ import type { Dictionary } from "@/i18n/dictionaries";
 import { getDictionary } from "@/i18n/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatInviteCode, INVITE_CODE_LENGTH, normalizeInviteCode, redeemPath } from "@/lib/trainer-invites/code";
+import { WIZARD_START_PATH } from "@/lib/trainer-wizard/steps";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
@@ -86,9 +87,14 @@ async function InviteStep({ searchParams }: { searchParams: PageProps<"/[lang]/o
     return (
       <div className="flex flex-col gap-6">
         <StatusText t={t} status={status} />
-        <Button asChild size="lg" block>
-          <Link href="/trainer">{t.trainerInvite.openTrainer}</Link>
-        </Button>
+        <div className="flex flex-col gap-3">
+          <Button asChild size="lg" block>
+            <Link href="/trainer">{t.trainerInvite.openTrainer}</Link>
+          </Button>
+          <Button asChild variant="secondary" size="lg" block>
+            <Link href={WIZARD_START_PATH}>{t.trainerWizard.fillProfile}</Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -124,8 +130,7 @@ async function InviteStep({ searchParams }: { searchParams: PageProps<"/[lang]/o
 
 /**
  * Redeeming a trainer invite (screens.md §3.1, PRD wave-1 §2.2): the code from the link or typed in,
- * its status, then "Стать тренером". The profile wizard that follows comes with its own screens;
- * until then the trainer zone opens right away.
+ * its status, then "Стать тренером", which opens the profile wizard (/onboarding/trainer/[step]).
  */
 export default async function TrainerInvitePage(props: PageProps<"/[lang]/onboarding/trainer">) {
   const t = await getDictionary();

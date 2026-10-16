@@ -2374,7 +2374,7 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 
 | Таблица | SELECT | INSERT | UPDATE | DELETE |
 |---|---|---|---|---|
-| `profiles` | сам; все, с кем есть пара (обе стороны, любой статус); тренер своих карточек; A (кроме карточек и заглушки, R5). Без `telegram_id`, `bot_*`, `blocked_*`, `claimed_by` и `last_seen_at` (колоночный грант) | S | S | S (удаление аккаунта) |
+| `profiles` | сам; все, с кем есть пара (обе стороны, любой статус); тренер своих карточек; A (кроме карточек и заглушки, R5). Без `telegram_id`, `bot_*`, `blocked_*`, `claimed_by` и `last_seen_at` (колоночный грант); админ видит `telegram_id`, `last_seen_at` и блокировку через S-RPC `admin_search_users` и `admin_user_card` | S | S; блокировку пишут только S-RPC `admin_block_user` и `admin_unblock_user` (с причиной и аудитом, ADM-7) | S (удаление аккаунта) |
 | `user_settings` | сам; остальные: только `display_name`, `avatar_path`, `time_zone` через вью `public_profiles` (R6) | S (триггер при создании профиля, R64) | сам | никто (каскад) |
 | `notification_preferences` | сам | сам | сам (`enabled`) | сам |
 | `user_roles` | сам; A | никто (позже `admin_grant_role`, R13) | никто | никто (позже `admin_revoke_role`) |

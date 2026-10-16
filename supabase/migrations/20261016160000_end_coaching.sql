@@ -43,7 +43,7 @@ begin
   if v_pair.status = 'ended' then
     return 0;
   end if;
-  v_role := case when v_user = v_pair.trainer_id then 'trainer' else 'client' end;
+  v_role := case when v_user = v_pair.trainer_id then 'trainer'::public.actor_role else 'client'::public.actor_role end;
 
   update public.coachings c
   set status = 'ended', ended_at = pg_catalog.now(), ended_by = v_user, end_reason = v_reason
