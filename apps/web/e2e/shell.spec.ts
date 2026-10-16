@@ -54,6 +54,8 @@ const SCREENS: readonly Screen[] = [
   { slug: "join", path: "/join?code=abc-def", title: "Код тренера" },
   // A malformed token is answered without the database: the "link no longer works" state.
   { slug: "client-link-invalid", path: "/i/not-a-token", title: "Приглашение тренера" },
+  // A malformed token is answered without the database: the "link doesn't work" state.
+  { slug: "trial-link-invalid", path: "/trial/not-a-token", title: "Пробное занятие" },
   // A malformed address is answered without the database: the "trainer unavailable" state (Q60).
   { slug: "showcase-unavailable", path: "/trainers/Not_A_Slug", title: "Тренер недоступен", documentTitle: false },
   { slug: "trainer-showcase", path: "/trainer/showcase", title: "Витрина" },
