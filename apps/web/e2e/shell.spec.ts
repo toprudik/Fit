@@ -36,6 +36,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "trainer-today", path: "/trainer", title: "Сегодня" },
   { slug: "trainer-schedule", path: "/trainer/schedule", title: "Расписание" },
   { slug: "trainer-clients", path: "/trainer/clients", title: "Клиенты" },
+  { slug: "trainer-new-card", path: "/trainer/clients/new", title: "Добавить клиента вручную" },
   { slug: "trainer-money", path: "/trainer/money", title: "Деньги" },
   { slug: "trainer-more", path: "/trainer/more", title: "Ещё" },
   { slug: "client-home", path: "/client", title: "Главная" },
@@ -224,7 +225,12 @@ test.describe("client link and trainer code", () => {
 
 test.describe("pairs", () => {
   // A pair id that is not a uuid is answered without the database, like a pair of someone else.
-  for (const path of ["/trainer/clients/not-a-pair", "/trainer/clients/not-a-pair/notes", "/client/trainers/not-a-pair"]) {
+  for (const path of [
+    "/trainer/clients/not-a-pair",
+    "/trainer/clients/not-a-pair/notes",
+    "/trainer/clients/claims/not-a-claim",
+    "/client/trainers/not-a-pair",
+  ]) {
     test(`${path} shows the not-found screen`, async ({ page }) => {
       await page.goto(path);
       await expect(page.getByRole("heading", { name: "Такой страницы нет" })).toBeVisible();
@@ -234,6 +240,15 @@ test.describe("pairs", () => {
   test("signed out, the client list offers the QR and link screen", async ({ page }) => {
     await page.goto("/trainer/clients?filter=debt&q=anna");
     await expect(page.getByRole("link", { name: "Показать QR и ссылку" })).toHaveAttribute("href", "/trainer/links");
+    await expect(page.getByRole("main").getByRole("link", { name: "Добавить клиента вручную" })).toHaveAttribute("href", "/trainer/clients/new");
+    await expect(page.getByRole("link", { name: "Добавить клиента", exact: true })).toHaveAttribute("href", "/trainer/clients/new");
+  });
+
+  test("a card needs a name before anything is sent", async ({ page }) => {
+    await page.goto("/trainer/clients/new");
+    await expect(page.getByRole("link", { name: /Отправить ссылку или QR/ })).toHaveAttribute("href", "/trainer/links");
+    await page.getByRole("button", { name: "Создать" }).click();
+    await expect(page.getByText("Напиши имя клиента")).toBeVisible();
   });
 });
 
