@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { isWizardStep, nextPath, previousPath, stepNumber, WIZARD_DONE_PATH, WIZARD_START_PATH, WIZARD_STEPS } from "./steps";
 
 describe("wizard steps", () => {
-  it("follow the order of screens.md flow 4.1, without the price grid until packages", () => {
-    expect(WIZARD_STEPS).toEqual(["profile", "format", "locations", "region", "cancellation", "payment", "certificates"]);
+  it("follow the order of screens.md flow 4.1", () => {
+    expect(WIZARD_STEPS).toEqual(["profile", "format", "locations", "region", "cancellation", "payment", "prices", "certificates"]);
     expect(WIZARD_START_PATH).toBe("/onboarding/trainer/profile");
   });
 

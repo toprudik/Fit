@@ -1,17 +1,19 @@
 import { BadgeCheck, MapPin } from "lucide-react";
 import { PersonAvatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { PriceGrid } from "@/components/packages/price-grid";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import type { Dictionary } from "@/i18n/dictionaries";
+import type { PriceGridItem } from "@/lib/packages/present";
 import type { Showcase } from "@/lib/showcase/load";
 import { isSpecialty } from "@/lib/trainer-wizard/options";
 
 /**
  * The public part of a showcase (PRD wave-1 §2.3 rule 1): photo, name, verification badge, headline,
- * format and city, specialties, about and locations. Prices join with packages in wave 2. Only what
- * get_trainer_showcase returns, so nothing private can show up here (SHOP-7).
+ * format and city, specialties, about, the price grid and locations. Only what get_trainer_showcase and
+ * get_trainer_showcase_prices return, so nothing private can show up here (SHOP-7).
  */
-export function ShowcaseProfile({ t, showcase }: { t: Dictionary; showcase: Showcase }) {
+export function ShowcaseProfile({ t, showcase, prices }: { t: Dictionary; showcase: Showcase; prices: PriceGridItem[] }) {
   const copy = t.showcase.public;
   const name = showcase.name ?? copy.title;
   const format = [showcase.worksOffline ? copy.offline : null, showcase.worksOnline ? copy.online : null, showcase.city]
@@ -55,6 +57,15 @@ export function ShowcaseProfile({ t, showcase }: { t: Dictionary; showcase: Show
             {copy.about}
           </h2>
           <p className="rounded-lg bg-surface-1 p-4 text-body break-words whitespace-pre-line">{showcase.bio}</p>
+        </section>
+      ) : null}
+
+      {prices.length > 0 ? (
+        <section aria-labelledby="showcase-prices" className="flex flex-col gap-1.5">
+          <h2 id="showcase-prices" className="px-4 text-footnote text-ink-2">
+            {copy.prices}
+          </h2>
+          <PriceGrid items={prices} bestLabel={t.money.packages.grid.best} />
         </section>
       ) : null}
 

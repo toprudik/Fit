@@ -2364,6 +2364,11 @@ isOneToOne: false
               "bio": string,"city": string,"coaching_id": string,"headline": string,"is_own": boolean,"locations": Json,"name": string,"photo_url": string,"slug": string,"specialties": (string)[],"status": string,"verified": boolean,"works_offline": boolean,"works_online": boolean
             }[]
                            },
+"get_trainer_showcase_prices":
+{ Args: { "p_slug": string }; Returns: {
+              "applies_to": Database["public"]['Enums']["package_applies_to"],"currency": string,"is_best_value": boolean,"per_session_minor": number,"price_minor": number,"savings_pct": number,"sessions_count": number,"title": string,"validity_days": number
+            }[]
+                           },
 "get_trial_link":
 { Args: { "p_token": string }; Returns: {
               "coaching_id": string,"currency": string,"description": string,"duration_min": number,"headline": string,"location_address": string,"location_name": string,"mode": Database["public"]['Enums']["session_mode"],"name": string,"photo_url": string,"price_minor": number,"specialties": (string)[],"status": string,"title": string,"trainer_id": string,"verified": boolean,"works_offline": boolean,"works_online": boolean
