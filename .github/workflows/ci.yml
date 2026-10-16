@@ -1,9 +1,15 @@
 name: CI
 
+# Minutes on a private repo are billed per job, each rounded up to a whole minute, so everything that does not
+# need Docker runs as one job and skips the parts of the repo a PR does not touch. Browser tests run only on PRs
+# labelled `e2e`: add the label once a PR is ready to merge (draft PRs need a paid plan on private repos).
+# main is not re-checked after a merge: the PR already was.
+# The database checks live in ci-database.yml, the Docker image builds in ci-docker.yml (both path-filtered).
+
 on:
-  push:
-    branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -13,25 +19,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  secrets-scan:
+  checks:
+    # Adding any other label is not a reason to run the checks again.
+    if: github.event.action != 'labeled' || github.event.label.name == 'e2e'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       # On pull_request events gitleaks-action lists the PR's commits through the API.
       pull-requests: read
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  web:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/web
     env:
       # Public values only; server secrets are not needed to build or test.
       NEXT_PUBLIC_APP_URL: https://fit.example
@@ -40,119 +35,77 @@ jobs:
       NEXT_TELEMETRY_DISABLED: 1
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: apps/web/package-lock.json
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  web-e2e:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/web
-    env:
-      NEXT_PUBLIC_APP_URL: https://fit.example
-      NEXT_PUBLIC_SUPABASE_URL: https://zxwabddqqtitybtsdeqp.supabase.co
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
-      NEXT_TELEMETRY_DISABLED: 1
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Which apps changed
+        id: changed
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ -z "$BASE_REF" ]; then
+            echo "web=true" >> "$GITHUB_OUTPUT"
+            echo "bot=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=$(git diff --name-only "origin/$BASE_REF...HEAD")
+          echo "$files"
+          if echo "$files" | grep -qE '^(apps/web/|\.github/workflows/ci\.yml$)'; then echo "web=true" >> "$GITHUB_OUTPUT"; fi
+          if echo "$files" | grep -qE '^(apps/bot/|\.github/workflows/ci\.yml$)'; then echo "bot=true" >> "$GITHUB_OUTPUT"; fi
+
+      - if: steps.changed.outputs.bot == 'true'
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+      - name: Bot checks
+        if: steps.changed.outputs.bot == 'true'
+        working-directory: apps/bot
+        run: |
+          uv sync --frozen
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run pytest -q
+
+      - if: steps.changed.outputs.web == 'true'
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run build
+      - if: steps.changed.outputs.web == 'true'
+        working-directory: apps/web
+        run: npm ci
+      - if: steps.changed.outputs.web == 'true'
+        working-directory: apps/web
+        run: npm run lint
+      - if: steps.changed.outputs.web == 'true'
+        working-directory: apps/web
+        run: npm run typecheck
+      - if: steps.changed.outputs.web == 'true'
+        working-directory: apps/web
+        run: npm test
+      - if: steps.changed.outputs.web == 'true'
+        working-directory: apps/web
+        run: npm run build
+
       # Every screen at 390 and 1280 px in both themes: axe (WCAG 2.2 AA), tabs, language, theme.
-      - run: npm run e2e
+      # Reuses the build above. Run on PRs labelled `e2e` and on manual runs.
+      - name: Install Chromium
+        id: e2e
+        if: steps.changed.outputs.web == 'true' && (github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'e2e'))
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+      - if: steps.e2e.outcome == 'success'
+        working-directory: apps/web
+        run: npm run e2e
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: ${{ !cancelled() && steps.e2e.outcome == 'success' }}
         with:
           name: e2e-screenshots
           path: |
             apps/web/e2e/screenshots
             apps/web/playwright-report
           retention-days: 14
-
-  bot:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/bot
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-        with:
-          python-version: "3.13"
-      - run: uv sync --frozen
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run pytest -q
-
-  db:
-    name: database
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
-        with:
-          version: 2.121.0 # the action's default is 2.20.3; bump on purpose, never "latest"
-      - name: Start Postgres and apply every migration from scratch
-        id: db
-        run: supabase db start
-      - name: pgTAP tests (RLS matrix, triggers, constraints)
-        if: ${{ !cancelled() && steps.db.outcome == 'success' }}
-        run: supabase test db
-      - name: plpgsql_check
-        if: ${{ !cancelled() && steps.db.outcome == 'success' }}
-        run: supabase db lint --local --schema public,private --fail-on error
-      - name: Security advisors
-        if: ${{ !cancelled() && steps.db.outcome == 'success' }}
-        run: supabase db advisors --local --type security --fail-on warn
-      # One permissive policy per action (contract R88), so no warning is filtered out here.
-      - name: Performance advisors
-        if: ${{ !cancelled() && steps.db.outcome == 'success' }}
-        run: supabase db advisors --local --type performance --fail-on warn
-      - name: Generated database types are committed and current
-        if: ${{ !cancelled() && steps.db.outcome == 'success' }}
-        run: |
-          supabase gen types typescript --local > "$RUNNER_TEMP/database.types.ts"
-          if ! diff -u apps/web/src/lib/supabase/database.types.ts "$RUNNER_TEMP/database.types.ts"; then
-            echo "::error file=apps/web/src/lib/supabase/database.types.ts::Out of date. Run: supabase gen types typescript --local > apps/web/src/lib/supabase/database.types.ts"
-            exit 1
-          fi
-
-  docker:
-    runs-on: ubuntu-latest
-    needs: [web, bot]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - name: Build web image
-        uses: docker/build-push-action@v6
-        with:
-          context: apps/web
-          target: runner
-          push: false
-          build-args: |
-            NEXT_PUBLIC_APP_URL=https://fit.example
-            NEXT_PUBLIC_SUPABASE_URL=https://zxwabddqqtitybtsdeqp.supabase.co
-            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_ci_placeholder
-          cache-from: type=gha,scope=web
-          cache-to: type=gha,mode=max,scope=web
-      - name: Build bot image
-        uses: docker/build-push-action@v6
-        with:
-          context: apps/bot
-          push: false
-          cache-from: type=gha,scope=bot
-          cache-to: type=gha,mode=max,scope=bot

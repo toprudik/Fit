@@ -1,0 +1,49 @@
+name: CI docker
+
+# Builds the self-hosting images (docker-compose.prod.yml) only when a PR changes what goes into them.
+
+on:
+  pull_request:
+    paths:
+      - "apps/*/Dockerfile"
+      - "apps/*/.dockerignore"
+      - "apps/web/package-lock.json"
+      - "apps/web/next.config.*"
+      - "apps/bot/uv.lock"
+      - "apps/bot/pyproject.toml"
+      - "docker-compose*.yml"
+      - ".github/workflows/ci-docker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-docker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/web
+          target: runner
+          push: false
+          build-args: |
+            NEXT_PUBLIC_APP_URL=https://fit.example
+            NEXT_PUBLIC_SUPABASE_URL=https://zxwabddqqtitybtsdeqp.supabase.co
+            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_ci_placeholder
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+      - name: Build bot image
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/bot
+          push: false
+          cache-from: type=gha,scope=bot
+          cache-to: type=gha,mode=max,scope=bot
