@@ -10,7 +10,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { IconButton } from "@/components/ui/icon-button";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { INTL_LOCALE } from "@/i18n/config";
+import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
+import { countTrainerRequests } from "@/lib/bookings/load";
 import { clientNames, loadScheduleOwner } from "@/lib/schedule/load";
 import { addDays, localToUtc, parseDay, today as todayIn, weekDays, weekStart } from "@/lib/schedule/time";
 import { buildWeek, type SessionRow, type SlotRow } from "@/lib/schedule/week";
@@ -22,6 +24,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** Seats a group session has taken: everyone booked in, whether they came yet or not. */
 const TAKEN = ["confirmed", "attended", "no_show"] as const;
+
+/** Request time, outside the component so rendering stays pure. */
+function requestTime(): Date {
+  return new Date();
+}
 
 async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer/schedule">["searchParams"] }) {
   const [t, locale, params] = await Promise.all([getDictionary(), getLocale(), searchParams]);
@@ -50,7 +57,7 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
   const from = localToUtc(monday, 0, timeZone).toISOString();
   const to = localToUtc(addDays(monday, 7), 0, timeZone).toISOString();
 
-  const [slots, sessions, template] = await Promise.all([
+  const [slots, sessions, template, requests] = await Promise.all([
     supabase
       .from("slots")
       .select("id, starts_at, ends_at, status, mode, template_item_id")
@@ -69,6 +76,7 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
       .order("starts_at")
       .returns<SessionRow[]>(),
     supabase.from("week_templates").select("id").eq("trainer_id", userId).eq("is_active", true).maybeSingle(),
+    countTrainerRequests(owner, requestTime()),
   ]);
   if (slots.error || sessions.error) {
     console.error("loading the schedule failed", slots.error?.code ?? sessions.error?.code);
@@ -136,6 +144,11 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
         <Button asChild size="sm" icon={Plus}>
           <Link href={`/trainer/sessions/new?date=${selected < today ? today : selected}`}>{copy.newSession}</Link>
         </Button>
+        {requests > 0 ? (
+          <Link href="/trainer/requests" className={buttonVariants({ variant: "secondary", size: "sm" })}>
+            {interpolate(copy.requests.open, { count: requests })}
+          </Link>
+        ) : null}
         <Link href="/trainer/schedule" className={buttonVariants({ variant: "secondary", size: "sm" })}>
           {copy.today}
         </Link>

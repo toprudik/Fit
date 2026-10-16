@@ -405,6 +405,45 @@ describe("plan messages", () => {
       expect(text).toBe("Your day, October 22\n\nNo sessions today.\n\n1 booking request is waiting for your answer.");
     });
   });
+
+  describe("client bookings and requests", () => {
+    const options = { appUrl: "https://fit.example", group: false };
+    const client = { first_name: "Анна", last_name: "Смирнова" };
+    const booking = "1f2e3d4c-5b6a-4987-8a6b-5c4d3e2f1a0b";
+    const base = { booking_id: booking, session_id: PAIR, starts_at: "2026-10-27T07:00:00Z", mode: "offline", location: "Зал" };
+
+    it("tells the trainer about a booking, on debt too, and a request with a button to answer", () => {
+      const created = renderMessage({ ...row, kind: "booking_created", payload: { ...client, ...base, debt: false } }, options);
+      expect(created?.text).toMatch(/^Новая запись: Анна Смирнова, .*10:00, Зал\.$/);
+      expect(created?.buttons[0]).toEqual({ text: "Открыть занятие", web_app: { url: `https://fit.example/trainer/sessions/${PAIR}?source=booking_created` } });
+      const debt = renderMessage({ ...row, kind: "booking_created", payload: { ...client, ...base, debt: true } }, options);
+      expect(debt?.text).toMatch(/занятие уйдёт в долг\.$/);
+      const requested = renderMessage({ ...row, kind: "booking_requested", locale: "en", payload: { ...base } }, options);
+      expect(requested?.text).toMatch(/^Booking request: a client with no name, .*, Зал\. Confirm or decline it before the session starts\.$/);
+      expect(requested?.buttons[0]).toEqual({
+        text: "Answer the request",
+        web_app: { url: `https://fit.example/trainer/requests/${booking}?source=booking_requested` },
+      });
+    });
+
+    it("tells the trainer a request was withdrawn", () => {
+      const withdrawn = renderMessage({ ...row, kind: "booking_cancelled_by_client", payload: { ...client, ...base, request: true } }, options);
+      expect(withdrawn?.text).toMatch(/^Запрос на .* отозван, клиент: Анна Смирнова\.$/);
+    });
+
+    it("tells the client the answer, with the decline reason escaped, or that none came", () => {
+      const trainer = { first_name: "Иван", last_name: "Петров" };
+      const confirmed = renderMessage({ ...row, kind: "booking_confirmed", payload: { ...trainer, ...base } }, options);
+      expect(confirmed?.text).toMatch(/^Запись к тренеру Иван Петров на .* подтверждена\.$/);
+      expect(confirmed?.buttons[0].text).toBe("Открыть запись");
+      const declined = renderMessage({ ...row, kind: "booking_declined", payload: { ...trainer, ...base, reason: "Зал <закрыт>" } }, options);
+      expect(declined?.text).toMatch(/^Запрос к тренеру Иван Петров на .* отклонён\. Причина: «Зал &lt;закрыт&gt;»\.$/);
+      const bare = renderMessage({ ...row, kind: "booking_declined", locale: "en", payload: { ...base, reason: null } }, options);
+      expect(bare?.text).toMatch(/^Your request to your trainer for .* was declined\.$/);
+      const expired = renderMessage({ ...row, kind: "booking_expired", payload: { ...trainer, ...base } }, options);
+      expect(expired?.text).toMatch(/остался без ответа, запись не состоялась\.$/);
+    });
+  });
 });
 
 describe("payment_reported", () => {
