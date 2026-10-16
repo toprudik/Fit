@@ -30,6 +30,14 @@ const schema = z.object({
   ),
   /** Telegram group that gets the team messages (PRD §3 А1, А2). Optional until those messages exist. */
   TELEGRAM_ADMIN_CHAT_ID: optional(z.coerce.number().int()),
+  /** Files a GitHub issue for each feedback message (PRD FDBK-1). Optional: without it the message stays in the admin inbox. */
+  GITHUB_FEEDBACK_TOKEN: optional(z.string().regex(/^[A-Za-z0-9_]{20,255}$/, "must be a GitHub token")),
+  GITHUB_FEEDBACK_REPO: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^[\w.-]+\/[\w.-]+$/, "must be owner/name").default("toprudik/Fit"),
+  ),
+  /** Set by Vercel; the feedback form records it as the app version. */
+  VERCEL_GIT_COMMIT_SHA: optional(z.string().max(64)),
 });
 
 export type ServerEnv = z.infer<typeof schema>;
