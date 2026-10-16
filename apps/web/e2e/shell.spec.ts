@@ -46,7 +46,10 @@ const SCREENS: readonly Screen[] = [
   { slug: "settings", path: "/settings", title: "Настройки" },
   { slug: "profile", path: "/profile", title: "Профиль" },
   { slug: "login", path: "/login", title: "Вход" },
+  { slug: "trainer-invite", path: "/onboarding/trainer?code=ABCD-EFGH-JKLM", title: "Инвайт тренера" },
   { slug: "not-found", path: "/no-such-page", title: "Такой страницы нет", documentTitle: false, status: 404 },
+  // ADM-12: the admin section is a 404 for everyone but admins, signed out included.
+  { slug: "admin-denied", path: "/admin/invites", title: "Такой страницы нет", documentTitle: false, status: 404 },
 ];
 
 const html = (page: Page) => page.locator("html");
@@ -136,6 +139,23 @@ test.describe("navigation", () => {
   test("URLs never show the locale", async ({ page }) => {
     await page.goto("/client/diary");
     await expect(page).toHaveURL(/\/client\/diary$/);
+  });
+});
+
+test.describe("trainer invite", () => {
+  test("signed out, the invite screen sends to sign-in and back with the code", async ({ page }) => {
+    await page.goto("/onboarding/trainer?code=abcd-efgh-jklm");
+    await expect(page.getByRole("link", { name: "Войти через Telegram" })).toHaveAttribute(
+      "href",
+      `/login?next=${encodeURIComponent("/onboarding/trainer?code=ABCDEFGHJKLM")}`,
+    );
+  });
+
+  test("signed out, the profile offers no trainer invite and no admin section", async ({ page }) => {
+    await page.goto("/profile");
+    await expect(page.getByRole("link", { name: "Войти через Telegram" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "У меня есть инвайт тренера" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Админка" })).toHaveCount(0);
   });
 });
 

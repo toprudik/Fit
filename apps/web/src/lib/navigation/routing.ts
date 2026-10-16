@@ -52,3 +52,13 @@ export function routeRequest(input: RouteInput): RouteDecision {
   const rememberZone = zone && input.isDocument && zone !== input.zoneCookie ? zone : null;
   return { kind: "rewrite", pathname: `/${locale}${pathname}`, locale, rememberZone };
 }
+
+/** The admin section (screens.md §2.4): only admins get its pages; everyone else gets the 404 (ADM-12). */
+export function isAdminPath(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/");
+}
+
+/** Where the proxy sends a non-admin who opens the admin section: an unknown page, so the app's 404. */
+export function adminDeniedPath(locale: Locale): string {
+  return `/${locale}/admin-not-found`;
+}

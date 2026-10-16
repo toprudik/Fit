@@ -5,6 +5,7 @@ import {
   init,
   isTMA,
   miniApp,
+  retrieveLaunchParams,
   retrieveRawInitData,
   settingsButton,
   swipeBehavior,
@@ -18,6 +19,7 @@ import { useI18n } from "@/i18n/client";
 import { isLocale, LOCALE_COOKIE, type Locale } from "@/i18n/config";
 import { reloadPage } from "@/lib/navigation/reload";
 import { readCookie } from "@/lib/preferences";
+import { startParamPath } from "@/lib/telegram/start-param";
 import {
   markMiniAppReady,
   type MiniAppSignInResult,
@@ -41,6 +43,26 @@ const sentInitData = new Set<string>();
 
 /** Set in sessionStorage once this tab reloaded for the language: it never reloads for it again. */
 const LOCALE_RELOAD_KEY = "dafit-locale-reload";
+
+/** The startapp parameter this tab already followed: a reload keeps the launch params, not the intent. */
+const START_PARAM_KEY = "dafit-start-param";
+
+/**
+ * The screen this launch's `startapp` asks for, the first time in this tab; null when there is none,
+ * it was followed already, or the app is on that screen.
+ */
+function takeStartParamPath(): string | null {
+  const param = safely(() => retrieveLaunchParams().tgWebAppStartParam);
+  const path = startParamPath(param);
+  if (!param || !path) return null;
+  try {
+    if (sessionStorage.getItem(START_PARAM_KEY) === param) return null;
+    sessionStorage.setItem(START_PARAM_KEY, param);
+  } catch {
+    // No sessionStorage: follow it anyway; the check below keeps a reload from navigating in place.
+  }
+  return path === `${window.location.pathname}${window.location.search}` ? null : path;
+}
 
 /** True the first time in this tab, false after that or when sessionStorage is unavailable. */
 function takeLocaleReload(): boolean {
@@ -117,7 +139,8 @@ function launchMiniApp() {
  * Inside Telegram: mounts the Mini App SDK, takes the light/dark scheme and safe areas from
  * Telegram (never its colors), keeps Telegram's chrome in DaFit's background color, routes the
  * Settings item of Telegram's menu to /settings and signs the user in from initData (verified on
- * the server) on every page load. After a full page load the URL has no launch hash; the SDK then
+ * the server) on every page load. A launch with `startapp` (t.me/<bot>?startapp=ti_…) opens the screen
+ * it names, once per tab. After a full page load the URL has no launch hash; the SDK then
  * reads the launch params it saved in sessionStorage (tapps/launchParams) on the first load.
  * Outside Telegram it does nothing; when the SDK can't start, the app stays the website, and
  * /login asks to reopen it. When the browser drops the app's cookies (Telegram Web's iframe with
@@ -130,6 +153,8 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const openSettings = useEffectEvent(() => {
     if (window.location.pathname !== SETTINGS_HREF) router.push(SETTINGS_HREF);
   });
+
+  const openStartPath = useEffectEvent((path: string) => router.replace(path));
 
   const signIn = useEffectEvent(async (initData: string): Promise<MiniAppSignInResult> => {
     let result: MiniAppSignInResult = "failed";
@@ -201,6 +226,9 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     void safelyAsync(() => viewport.mount());
 
     markMiniAppReady();
+    // The screen checks the parameter on the server and waits for the session itself (screens.md §1.7).
+    const startPath = takeStartParamPath();
+    if (startPath) openStartPath(startPath);
     // Show the app after the first frame so Telegram's splash hands over to a painted screen.
     const frame = requestAnimationFrame(() => safely(() => miniApp.ready()));
     keep(() => cancelAnimationFrame(frame));

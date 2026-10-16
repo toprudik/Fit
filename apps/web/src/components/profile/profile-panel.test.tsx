@@ -65,7 +65,7 @@ describe("account", () => {
 
   it("shows the name and a way to sign out", () => {
     renderPanel();
-    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null }));
+    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: false, isAdmin: false }));
 
     expect(screen.getByText("Анна Смирнова")).toBeTruthy();
     const signOut = screen.getByRole("button", { name: "Выйти" });
@@ -81,7 +81,7 @@ describe("account", () => {
 
   it("has no sign-out inside Telegram, where the account is the one the Mini App was opened with", async () => {
     renderPanel();
-    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null }));
+    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: false, isAdmin: false }));
     expect(screen.getByRole("button", { name: "Выйти" })).toBeTruthy();
 
     // What the Telegram provider does on every page load.
@@ -93,6 +93,27 @@ describe("account", () => {
     expect(screen.getByText("Анна Смирнова")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Выйти" })).toBeNull();
     expect(screen.getByRole("link", { name: "Настройки" })).toBeTruthy();
+  });
+
+  it("offers the trainer invite only to people who are not trainers yet (TINV-1)", () => {
+    renderPanel();
+    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: false, isAdmin: false }));
+    expect(screen.getByRole("link", { name: "У меня есть инвайт тренера" }).getAttribute("href")).toBe("/onboarding/trainer");
+
+    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: true, isAdmin: false }));
+    expect(screen.queryByRole("link", { name: "У меня есть инвайт тренера" })).toBeNull();
+
+    act(() => setAccount({ status: "signed-out" }));
+    expect(screen.queryByRole("link", { name: "У меня есть инвайт тренера" })).toBeNull();
+  });
+
+  it("links to the admin section for admins only", () => {
+    renderPanel();
+    act(() => setAccount({ status: "signed-in", name: "Давид", photoUrl: null, isTrainer: true, isAdmin: false }));
+    expect(screen.queryByRole("link", { name: "Админка" })).toBeNull();
+
+    act(() => setAccount({ status: "signed-in", name: "Давид", photoUrl: null, isTrainer: true, isAdmin: true }));
+    expect(screen.getByRole("link", { name: "Админка" }).getAttribute("href")).toBe("/admin/invites");
   });
 
   it("offers to sign in when signed out, coming back to the same screen", () => {

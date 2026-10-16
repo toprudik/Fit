@@ -5,7 +5,7 @@ import { setAccount } from "./account-store";
 
 type AccountSyncProps = {
   /** The signed-in person as the server read it, or null when nobody is signed in. */
-  account: { name: string; photoUrl: string | null } | null;
+  account: { name: string; photoUrl: string | null; isTrainer: boolean; isAdmin: boolean } | null;
 };
 
 /**
@@ -16,10 +16,12 @@ export function AccountSync({ account }: AccountSyncProps) {
   const signedIn = account !== null;
   const name = account?.name ?? "";
   const photoUrl = account?.photoUrl ?? null;
+  const isTrainer = account?.isTrainer ?? false;
+  const isAdmin = account?.isAdmin ?? false;
 
   useEffect(() => {
-    setAccount(signedIn ? { status: "signed-in", name, photoUrl } : { status: "signed-out" });
-  }, [signedIn, name, photoUrl]);
+    setAccount(signedIn ? { status: "signed-in", name, photoUrl, isTrainer, isAdmin } : { status: "signed-out" });
+  }, [signedIn, name, photoUrl, isTrainer, isAdmin]);
 
   return null;
 }

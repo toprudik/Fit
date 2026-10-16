@@ -2382,7 +2382,7 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `trainer_profiles` | сам; его клиенты в любом статусе пары (R89); A; anon/прочие: **pub** `get_trainer_showcase(slug)` (позже; при `verification_status = 'rejected'` отвечает «недоступна», R16, Q60); зона «Тренер» и `is_trainer()` доступны при наличии `trainer_profiles` (доступ не зависит от верификации и тарифа, Q55) | S-RPC `redeem_trainer_invite` | сам (кроме `verification_status`, `verified_at`, `trainer_invite_id`: колоночные гранты); A через `admin_decide_verification` | никто |
 | `trainer_certificates` | сам; A | сам (не больше 5, R53) | сам | сам |
 | `trainer_verifications` | сам; A | S-RPC (подача и решение) | никто | никто |
-| `trainer_invites` | A (без хеша кода) | A через `admin_create_trainer_invite` | S-RPC (отзыв, погашение) | никто |
+| `trainer_invites` | A (без хеша кода); статус кода для экрана погашения: S-RPC `trainer_invite_status` | A через `admin_create_trainer_invite` | S-RPC `admin_revoke_trainer_invite` (A), `redeem_trainer_invite` | никто |
 | `client_invites` | T; **pub** по токену/коду (`resolve_client_invite`) | T | T | никто (архив) |
 | `trial_links` | T; **pub** `get_trial_link(token)` | T | T (вкл. `is_enabled`) | никто (архив) |
 | `coachings` | C; T; A напрямую не видит (только агрегаты) | S-RPC `join_by_invite`, `join_by_code`, `book_trial`, `create_managed_client` | T: `self_book_on_debt`, `debt_limit_sessions`; C: `client_reminder_offsets` (триггер не даёт стороне менять чужие столбцы); завершение через RPC `end_coaching` (любая сторона) | никто |

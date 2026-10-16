@@ -2293,7 +2293,15 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "claim_outbox":
+            "admin_create_trainer_invite":
+{ Args: { "p_note"?: string,"p_valid_days"?: number }; Returns: {
+              "code": string,"expires_at": string,"invite_id": string
+            }[]
+                           },
+"admin_revoke_trainer_invite":
+{ Args: { "p_invite_id": string }; Returns: undefined
+                           },
+"claim_outbox":
 { Args: { "p_limit"?: number }; Returns: {
               "attempt": number,"chat_id": number,"chat_target": string,"kind": Database["public"]['Enums']["notification_type"],"locale": Database["public"]['Enums']["app_locale"],"outbox_id": number,"payload": Json,"silent": boolean,"time_zone": string
             }[]
@@ -2310,6 +2318,9 @@ isOneToOne: false
 "recurrence_meeting_url":
 { Args: { "p_recurrence_id": string }; Returns: string
                            },
+"redeem_trainer_invite":
+{ Args: { "p_code": string }; Returns: undefined
+                           },
 "replace_progress_photo":
 { Args: { "p_blur_method": string,"p_face_blurred": boolean,"p_height": number,"p_new_id": string,"p_note"?: string,"p_photo_id": string,"p_storage_path": string,"p_width": number }; Returns: string
                            },
@@ -2323,6 +2334,9 @@ isOneToOne: false
                            },
 "set_progress_photo_angle":
 { Args: { "p_angle": Database["public"]['Enums']["photo_angle"],"p_photo_id": string }; Returns: undefined
+                           },
+"trainer_invite_status":
+{ Args: { "p_code": string }; Returns: string
                            }
           }
           Enums: {

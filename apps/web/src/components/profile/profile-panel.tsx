@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Settings, User } from "lucide-react";
+import { KeyRound, LogOut, Settings, ShieldCheck, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLayoutEffect, useRef, useState } from "react";
@@ -71,8 +71,9 @@ type ProfilePanelProps = {
 
 /**
  * Profile content shared by the sheet behind the avatar and the /profile page
- * (docs/architecture/screens.md §2.3): who is signed in, the zone switch, settings and, on the
- * website, sign-out. The zone switch shows the zone the shell shows.
+ * (docs/architecture/screens.md §2.3): who is signed in, the zone switch, settings, the admin
+ * section for admins, the trainer invite for everyone who is not a trainer yet and, on the website,
+ * sign-out. The zone switch shows the zone the shell shows.
  */
 export function ProfilePanel({ onNavigate, groupSurface = "default" }: ProfilePanelProps) {
   const { t } = useI18n();
@@ -112,6 +113,13 @@ export function ProfilePanel({ onNavigate, groupSurface = "default" }: ProfilePa
       />
       <ListGroup surface={groupSurface}>
         <ListRow icon={Settings} title={t.profile.settings} href="/settings" onClick={onNavigate} />
+        {account.status === "signed-in" && account.isAdmin ? (
+          <ListRow icon={ShieldCheck} title={t.profile.admin} href="/admin/invites" onClick={onNavigate} />
+        ) : null}
+        {/* Only people without a trainer profile: nobody else sees a way to become a trainer (TINV-1). */}
+        {account.status === "signed-in" && !account.isTrainer ? (
+          <ListRow icon={KeyRound} title={t.profile.trainerInvite} href="/onboarding/trainer" onClick={onNavigate} />
+        ) : null}
         {account.status === "signed-in" && !inTelegram ? (
           // A plain POST, like the auth routes expect (same-origin check, then a redirect to /login).
           <form ref={signOutForm} method="post" action="/auth/sign-out">

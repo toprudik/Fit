@@ -32,6 +32,7 @@ const sdk = vi.hoisted(() => {
     isTMA: vi.fn(() => true),
     init: vi.fn(() => vi.fn()),
     retrieveRawInitData: vi.fn<() => string | undefined>(),
+    retrieveLaunchParams: vi.fn<() => { tgWebAppStartParam?: string }>(() => ({})),
     miniApp: { mount: vi.fn(), ready: vi.fn(), setHeaderColor: vi.fn(), setBgColor: vi.fn(), setBottomBarColor: vi.fn() },
     themeParams: { mount: vi.fn(), bgColor: signal<string | undefined>(undefined) },
     backButton: { mount: vi.fn(), show: vi.fn(), hide: vi.fn(), onClick: vi.fn(() => () => {}) },
@@ -53,7 +54,7 @@ const sdk = vi.hoisted(() => {
 });
 vi.mock("@tma.js/sdk-react", () => sdk);
 
-const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
+const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
@@ -133,6 +134,7 @@ beforeEach(() => {
   document.cookie = `${LOCALE_COOKIE}=; Path=/; Max-Age=0`;
   document.documentElement.removeAttribute("data-telegram");
   sessionStorage.clear();
+  sdk.retrieveLaunchParams.mockReturnValue({});
   document.documentElement.setAttribute("data-theme", "dark");
   resetThemeStoreForTests();
   systemPrefersLight(false);
@@ -278,6 +280,24 @@ describe("inside Telegram", () => {
 
     expect(screen.getByText("telegram")).toBeTruthy();
     expect(sdk.miniApp.setBgColor).toHaveBeenCalledWith(THEME_BG.dark);
+  });
+  it("opens the screen startapp names, once per tab", () => {
+    launch();
+    sdk.retrieveLaunchParams.mockReturnValue({ tgWebAppStartParam: "ti_ABCDEFGHJKLM" });
+    const { unmount } = renderApp({ strict: true });
+    expect(router.replace).toHaveBeenCalledExactlyOnceWith("/onboarding/trainer?code=ABCDEFGHJKLM");
+
+    // A reload keeps the launch params; the invite screen opened already.
+    unmount();
+    renderApp();
+    expect(router.replace).toHaveBeenCalledOnce();
+  });
+
+  it("stays put for a startapp it does not know", () => {
+    launch();
+    sdk.retrieveLaunchParams.mockReturnValue({ tgWebAppStartParam: "zz_1" });
+    renderApp();
+    expect(router.replace).not.toHaveBeenCalled();
   });
 });
 
