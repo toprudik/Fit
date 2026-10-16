@@ -12,7 +12,8 @@ type CookieToSet = { name: string; value: string; options: Parameters<NextRespon
 
 /**
  * Runs on every page request: refreshes the Supabase session cookie, sends "/" to the last zone,
- * remembers the zone and serves the page in the user's language (see routeRequest).
+ * remembers the zone (on the device and the account) and serves the page in the user's language
+ * (see routeRequest).
  */
 export async function proxy(request: NextRequest) {
   const decision = routeRequest({
@@ -41,7 +42,8 @@ export async function proxy(request: NextRequest) {
     },
   });
   // Validates the JWT signature (do not trust getSession() on the server).
-  await supabase.auth.getClaims();
+  const { data } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub;
 
   const init = { request: { headers: request.headers } };
   const response =
@@ -51,6 +53,12 @@ export async function proxy(request: NextRequest) {
   for (const { name, value, options } of refreshed) response.cookies.set(name, value, options);
   if (decision.kind === "rewrite" && decision.rememberZone) {
     response.cookies.set(ZONE_COOKIE, decision.rememberZone, preferenceCookieOptions);
+    // The account keeps it too, so a new device opens the same zone (ADR 0015). Only page loads
+    // that switch the zone get here; a failed save leaves the cookie, which is enough on this device.
+    if (userId) {
+      const { error } = await supabase.from("user_settings").update({ last_zone: decision.rememberZone }).eq("user_id", userId);
+      if (error) console.error("saving the last zone failed", error.code);
+    }
   }
   return response;
 }

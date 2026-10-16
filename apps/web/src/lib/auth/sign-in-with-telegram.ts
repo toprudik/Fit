@@ -13,12 +13,13 @@ export const telegramEmail = (telegramId: number) => `tg${telegramId}@users.fit.
 
 /**
  * Turns a server-verified Telegram identity into a Supabase session (cookies on the response).
+ * `newAccount` is true when this sign-in created the account.
  * Callers MUST verify the identity first (initData HMAC or OIDC id_token).
  *
  * Flow: ensure auth user exists (admin) → mint a one-time magic-link token (admin, never mailed)
  * → redeem it with the cookie-bound client, which writes the session cookies.
  */
-export async function signInWithTelegram(identity: TelegramIdentity): Promise<{ userId: string }> {
+export async function signInWithTelegram(identity: TelegramIdentity): Promise<{ userId: string; newAccount: boolean }> {
   const admin = createSupabaseAdminClient();
   const email = telegramEmail(identity.telegramId);
   const metadata = {
@@ -77,5 +78,6 @@ export async function signInWithTelegram(identity: TelegramIdentity): Promise<{ 
   const session = await supabase.auth.verifyOtp({ type: "magiclink", token_hash: link.data.properties.hashed_token });
   if (session.error) throw new Error(`Supabase verifyOtp failed: ${session.error.code ?? session.error.status}`);
 
-  return { userId };
+  // createUser succeeds only for an email it hasn't seen: this sign-in created the account.
+  return { userId, newAccount: !created.error };
 }

@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { serverEnv } from "@/env/server";
-import { isLocale, LOCALE_COOKIE, negotiateLocale } from "@/i18n/config";
+import { negotiateLocale } from "@/i18n/config";
+import { deviceCookies, setPreferenceCookies, syncPreferences } from "@/lib/account-preferences";
 import { isSameOrigin } from "@/lib/auth/same-origin";
 import { signInWithTelegram } from "@/lib/auth/sign-in-with-telegram";
-import { preferenceCookieOptions, readCookie } from "@/lib/preferences";
+import { readCookie } from "@/lib/preferences";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { assertInitDataFresh, InitDataError, verifyInitData } from "@/lib/telegram/init-data";
 import type { TelegramIdentity } from "@/lib/telegram/identity";
@@ -12,14 +13,26 @@ import type { TelegramIdentity } from "@/lib/telegram/identity";
 const body = z.object({ initData: z.string().min(1).max(4096) });
 
 /**
- * First launch without a saved language: take it from the verified Telegram language_code, then the
- * browser (ADR 0013). The client reloads when it differs from the language it was rendered in.
+ * Brings the language, theme and last zone of this device and the account in step (ADR 0015). The
+ * answer names the language and theme it set as cookies: on the first launch the language comes
+ * from the verified Telegram language_code, then the browser (ADR 0013); later it is the one saved
+ * to the account, perhaps on another device. The client reloads when the language differs from the
+ * one it was rendered in, and applies the theme at once.
  */
-function respond(request: Request, identity: TelegramIdentity, fresh: boolean) {
-  if (isLocale(readCookie(request.headers.get("cookie") ?? "", LOCALE_COOKIE))) return NextResponse.json({ ok: true, fresh });
-  const locale = negotiateLocale({ languageCode: identity.languageCode, acceptLanguage: request.headers.get("accept-language") });
-  const response = NextResponse.json({ ok: true, fresh, locale });
-  response.cookies.set(LOCALE_COOKIE, locale, preferenceCookieOptions);
+async function respond(
+  request: Request,
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  sync: { identity: TelegramIdentity; userId: string; newAccount: boolean; fresh: boolean },
+) {
+  const cookie = request.headers.get("cookie") ?? "";
+  const cookies = await syncPreferences(supabase, {
+    userId: sync.userId,
+    device: deviceCookies((name) => readCookie(cookie, name)),
+    newAccount: sync.newAccount,
+    firstLocale: negotiateLocale({ languageCode: sync.identity.languageCode, acceptLanguage: request.headers.get("accept-language") }),
+  });
+  const response = NextResponse.json({ ok: true, fresh: sync.fresh, locale: cookies.locale, theme: cookies.theme });
+  setPreferenceCookies(response, cookies);
   return response;
 }
 
@@ -43,11 +56,15 @@ export async function POST(request: Request) {
     // Already signed in as this Telegram user? Genuine initData of any age confirms it; nothing to do.
     const supabase = await createSupabaseServerClient();
     const { data } = await supabase.auth.getClaims();
-    if (data?.claims?.app_metadata?.telegram_id === identity.telegramId) return respond(request, identity, false);
+    const claims = data?.claims;
+    if (claims?.app_metadata?.telegram_id === identity.telegramId) {
+      return await respond(request, supabase, { identity, userId: claims.sub, newAccount: false, fresh: false });
+    }
 
     assertInitDataFresh(initData, { maxAgeSeconds: env.TELEGRAM_INIT_DATA_MAX_AGE });
-    await signInWithTelegram(identity);
-    return respond(request, identity, true);
+    const { userId, newAccount } = await signInWithTelegram(identity);
+    // The same client reads the session cookies signInWithTelegram just wrote to this response.
+    return await respond(request, supabase, { identity, userId, newAccount, fresh: true });
   } catch (error) {
     if (error instanceof InitDataError) return NextResponse.json({ error: "invalid_init_data" }, { status: 401 });
     console.error("mini-app sign-in failed", error instanceof Error ? error.message : "unknown");

@@ -49,7 +49,18 @@ const checkedIn = (radiogroup: HTMLElement) =>
     .filter((radio) => radio.getAttribute("aria-checked") === "true")
     .map((radio) => radio.textContent);
 
+/** Saves to the account (PATCH /api/settings/preferences); records each body. */
+let saved: unknown[] = [];
+
 beforeEach(() => {
+  saved = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (_url: string, init: RequestInit) => {
+      saved.push(JSON.parse(String(init.body)));
+      return new Response(null, { status: 204 });
+    }),
+  );
   for (const name of [THEME_COOKIE, LOCALE_COOKIE]) document.cookie = `${name}=; Path=/; Max-Age=0`;
   sessionStorage.clear();
   document.documentElement.setAttribute("data-theme", "dark");
@@ -72,7 +83,7 @@ describe("theme", () => {
     expect(screen.getByText("Авто берёт тему из Telegram, а на сайте из настроек устройства.")).toBeTruthy();
   });
 
-  it("Светлая pins the light theme", () => {
+  it("Светлая pins the light theme, on the device and the account", () => {
     mockSystem(false);
     renderWithProviders(<SettingsPanel />);
 
@@ -81,6 +92,7 @@ describe("theme", () => {
     expect(dataTheme()).toBe("light");
     expect(cookie(THEME_COOKIE)).toBe("light");
     expect(checkedIn(group("Тема"))).toEqual(["Светлая"]);
+    expect(saved).toEqual([{ theme: "light" }]);
   });
 
   it("Тёмная pins the dark theme, even on a light system", () => {
@@ -146,7 +158,7 @@ describe("language", () => {
     expect(checkedIn(group("Язык"))).toEqual(["Русский"]);
   });
 
-  it("English saves the choice and reloads the page", () => {
+  it("English saves the choice on the device and the account, then reloads the page", async () => {
     mockSystem(false);
     const reload = mockReload();
     renderWithProviders(<SettingsPanel />);
@@ -154,7 +166,8 @@ describe("language", () => {
     fireEvent.click(screen.getByRole("radio", { name: "English" }));
 
     expect(cookie(LOCALE_COOKIE)).toBe("en");
-    expect(reload).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(reload).toHaveBeenCalledOnce());
+    expect(saved).toEqual([{ locale: "en" }]);
   });
 
   it("does nothing when the current language is chosen again", () => {
@@ -181,7 +194,7 @@ describe("in English", () => {
     expect(checkedIn(group("Language"))).toEqual(["English"]);
   });
 
-  it("switches back to Russian", () => {
+  it("switches back to Russian", async () => {
     mockSystem(false);
     const reload = mockReload();
     renderWithProviders(<SettingsPanel />, { locale: "en" });
@@ -189,6 +202,6 @@ describe("in English", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Русский" }));
 
     expect(cookie(LOCALE_COOKIE)).toBe("ru");
-    expect(reload).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(reload).toHaveBeenCalledOnce());
   });
 });

@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { preferenceCookie, readCookie } from "@/lib/preferences";
+import { preferenceCookie, readCookie, saveAccountPreferences } from "@/lib/preferences";
 import {
   parseThemePreference,
   resolveTheme,
@@ -73,10 +73,19 @@ export function applyThemeAttribute() {
   document.documentElement.setAttribute("data-theme", current().theme);
 }
 
-/** Saves the user's choice in a cookie (read by the pre-paint script) and applies it right away. */
+/**
+ * Saves the user's choice in a cookie (read by the pre-paint script) and to the account, and
+ * applies it right away.
+ */
 export function setThemePreference(preference: ThemePreference) {
   document.cookie = preferenceCookie(THEME_COOKIE, preference);
   update({ preference });
+  void saveAccountPreferences({ theme: preference });
+}
+
+/** Applies a preference the server already saved in the cookie (the account's, after sign-in). */
+export function applyThemePreference(preference: ThemePreference) {
+  if (current().preference !== preference) update({ preference });
 }
 
 /** Called by the Telegram provider with the Mini App's color scheme (null outside Telegram). */

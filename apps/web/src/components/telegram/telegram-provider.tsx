@@ -27,8 +27,8 @@ import {
   signInToMiniApp,
 } from "@/lib/telegram/mini-app";
 import { THEME_BG } from "@/lib/theme/colors";
-import { setTelegramScheme } from "@/lib/theme/store";
-import { isColorDark } from "@/lib/theme/theme";
+import { applyThemePreference, setTelegramScheme } from "@/lib/theme/store";
+import { isColorDark, isThemePreference } from "@/lib/theme/theme";
 
 const SETTINGS_HREF = "/settings";
 const LOGIN_HREF = "/login";
@@ -54,10 +54,11 @@ function takeLocaleReload(): boolean {
 }
 
 /**
- * What to do after the server accepted initData. It sends `detected` only when the request came
- * without a language cookie: on the first launch it picked the language from Telegram and set the
- * cookie (ADR 0015). When the browser did not keep that cookie, it drops the app's cookies, as
- * Telegram Web does in its iframe with third-party cookies blocked: no session can last there.
+ * What to do after the server accepted initData. It sends `detected` only when it set the language
+ * cookie: on the first launch with the language from Telegram, later with the one saved to the
+ * account on another device (ADR 0015). When the browser did not keep that cookie, it drops the
+ * app's cookies, as Telegram Web does in its iframe with third-party cookies blocked: no session
+ * can last there.
  */
 function afterSignIn(detected: Locale | null, rendered: Locale): "stay" | "reload" | "blocked" {
   if (!detected) return "stay";
@@ -140,7 +141,9 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
       });
       if (res.ok) {
         // Session cookies are httpOnly, so the server decides whether this was a new sign-in.
-        const { fresh, locale: detected } = (await res.json()) as { fresh?: boolean; locale?: string };
+        const { fresh, locale: detected, theme } = (await res.json()) as { fresh?: boolean; locale?: string; theme?: string };
+        // A theme saved to the account, maybe on another device: the server already set the cookie.
+        if (isThemePreference(theme)) applyThemePreference(theme);
         const next = afterSignIn(isLocale(detected) ? detected : null, locale);
         if (next === "reload") reloadPage();
         else if (next === "stay" && fresh) router.refresh();

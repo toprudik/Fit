@@ -2,10 +2,11 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { clientEnv } from "@/env/client";
 import { serverEnv } from "@/env/server";
-import { isLocale, LOCALE_COOKIE, negotiateLocale } from "@/i18n/config";
+import { negotiateLocale } from "@/i18n/config";
+import { deviceCookies, setPreferenceCookies, syncPreferences } from "@/lib/account-preferences";
 import { signInWithTelegram } from "@/lib/auth/sign-in-with-telegram";
 import { OIDC_COOKIE, oidcCookieOptions, parseOidcCookie, redirectUri, safeNext } from "@/lib/auth/oidc-cookie";
-import { preferenceCookieOptions } from "@/lib/preferences";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { botIdFromToken, type TelegramIdentity } from "@/lib/telegram/identity";
 import { exchangeCodeForIdToken, verifyIdToken } from "@/lib/telegram/oidc";
 
@@ -32,6 +33,7 @@ export async function GET(request: NextRequest) {
 
   const env = serverEnv();
   let identity: TelegramIdentity;
+  let signedIn: { userId: string; newAccount: boolean };
   try {
     const idToken = await exchangeCodeForIdToken({
       code,
@@ -44,7 +46,7 @@ export async function GET(request: NextRequest) {
       audiences: [botIdFromToken(env.TELEGRAM_BOT_TOKEN), env.TELEGRAM_LOGIN_CLIENT_ID],
       nonce: saved.nonce,
     });
-    await signInWithTelegram(identity);
+    signedIn = await signInWithTelegram(identity);
   } catch (error) {
     console.error("telegram oidc sign-in failed", error instanceof Error ? error.message : "unknown");
     return fail("failed");
@@ -52,10 +54,13 @@ export async function GET(request: NextRequest) {
 
   const res = NextResponse.redirect(new URL(safeNext(saved.next, appUrl), appUrl));
   res.cookies.delete({ name: OIDC_COOKIE, path: oidcCookieOptions.path });
-  // First sign-in without a saved language: Telegram's language_code, then the browser (ADR 0013).
-  if (!isLocale(request.cookies.get(LOCALE_COOKIE)?.value)) {
-    const locale = negotiateLocale({ languageCode: identity.languageCode, acceptLanguage: request.headers.get("accept-language") });
-    res.cookies.set(LOCALE_COOKIE, locale, preferenceCookieOptions);
-  }
+  // Language, theme and last zone: a new account keeps this device's, an existing one brings its own
+  // (ADR 0015). A language the device never saved comes from Telegram, then the browser (ADR 0013).
+  const cookies = await syncPreferences(await createSupabaseServerClient(), {
+    ...signedIn,
+    device: deviceCookies((name) => request.cookies.get(name)?.value),
+    firstLocale: negotiateLocale({ languageCode: identity.languageCode, acceptLanguage: request.headers.get("accept-language") }),
+  });
+  setPreferenceCookies(res, cookies);
   return res;
 }

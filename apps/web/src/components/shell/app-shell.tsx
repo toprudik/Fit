@@ -7,7 +7,7 @@ import { ProfileSheet } from "@/components/profile/profile-sheet";
 import { useI18n } from "@/i18n/client";
 import { DURATION, EASE_STANDARD, prefersReducedMotion } from "@/lib/motion";
 import { activeTab, isTabRoot, isZone, ZONE_COOKIE, type TabId, type Zone } from "@/lib/navigation/zones";
-import { preferenceCookie } from "@/lib/preferences";
+import { preferenceCookie, saveAccountPreferences } from "@/lib/preferences";
 import { hapticImpact } from "@/lib/telegram/mini-app";
 import { cn } from "@/lib/utils";
 import { arrival } from "./navigation-tracker";
@@ -126,6 +126,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (routeZone === null || routeZone === savedZone.current) return;
     savedZone.current = routeZone;
     document.cookie = preferenceCookie(ZONE_COOKIE, routeZone);
+    void saveAccountPreferences({ lastZone: routeZone });
   }, [routeZone]);
 
   const frameRef = useRef<HTMLDivElement>(null);
