@@ -2,6 +2,15 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "python",
   "functions": {
-    "api/index.py": { "maxDuration": 30, "excludeFiles": "{tests/**,uv.lock}" }
+    "api/index.py": {
+      "maxDuration": 30,
+      "excludeFiles": "{tests/**,uv.lock}"
+    }
+  },
+  "git": {
+    "deploymentEnabled": {
+      "**": false,
+      "main": true
+    }
   }
 }
