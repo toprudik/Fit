@@ -1,4 +1,4 @@
--- Trial booking of migration 20261016225300_trial_booking.sql (PRD wave-1 §2.3 rules 4–6, SHOP-5..6, R23, R39):
+-- Trial booking of migration 20261016234300_trial_booking.sql (PRD wave-1 §2.3 rules 4–6, SHOP-5..6, R23, R39):
 -- get_trial_slots for anyone, book_trial, "never twice", and decide_booking not reserving a pass for a trial.
 begin;
 \ir _helpers.psql
