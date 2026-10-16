@@ -188,6 +188,48 @@ describe("plan messages", () => {
       renderMessage({ ...row, kind: "plan_expiring", payload: { plan: "client_premium", expires_at: "2026-11-30T20:59:59Z" } }, options)?.text,
     ).toBe("Тариф Premium закончится 30 ноября 2026. Если он ещё нужен, запроси доступ в разделе «Мой тариф».");
   });
+
+  describe("session_reminder (К7)", () => {
+    const BOOKING = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
+    const options = { appUrl: "https://fit.example", group: false };
+    const payload = {
+      booking_id: BOOKING,
+      starts_at: "2026-10-22T15:30:00Z",
+      kind: "personal",
+      title: null,
+      mode: "offline",
+      location_name: "Зал на Ленина",
+      location_address: "ул. Ленина, 1",
+      first_name: "Давид",
+      last_name: "Р.",
+      offset_min: 60,
+    };
+
+    it("says how soon, when, with whom and where, with a button to the booking", () => {
+      expect(renderMessage({ ...row, kind: "session_reminder", payload }, options)).toEqual({
+        text: "Через 1 час занятие с тренером Давид Р., чт, 22 окт., 18:30.\nМесто: Зал на Ленина, ул. Ленина, 1.",
+        buttons: [{ text: "Открыть занятие", web_app: { url: `https://fit.example/client/sessions?booking=${BOOKING}&source=session_reminder` } }],
+      });
+    });
+
+    it("keeps the meeting link out of an online reminder and names a group session", () => {
+      const online = { ...payload, kind: "group", title: "<Йога>", mode: "online", offset_min: 1440, meeting_url: "https://meet.example/x" };
+      const message = renderMessage({ ...row, locale: "en", kind: "session_reminder", payload: online }, options);
+      expect(message?.text).toMatch(
+        /^The group session \u201c&lt;Йога&gt;\u201d with Давид Р\. starts in 1 day, Thu, Oct 22, 6:30\sPM\.\nThe session is online, the link is in DaFit\.$/,
+      );
+      expect(message?.text).not.toContain("meet.example");
+    });
+
+    it("writes the lead time in the right plural form", () => {
+      const text = (offset_min: number) => renderMessage({ ...row, kind: "session_reminder", payload: { ...payload, offset_min } }, options)?.text;
+      expect(text(15)).toMatch(/^Через 15 минут /);
+      expect(text(180)).toMatch(/^Через 3 часа /);
+      expect(text(4320)).toMatch(/^Через 3 дня /);
+      expect(text(21)).toMatch(/^Через 21 минуту /);
+    });
+  });
+
   describe("sessions the trainer assigns, changes and cancels", () => {
     const options = { appUrl: "https://fit.example", group: false };
     const trainer = { first_name: "Иван", last_name: "Петров" };
