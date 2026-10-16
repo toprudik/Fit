@@ -776,6 +776,17 @@ create index on public.slots (starts_at) where status = 'open';
 --   с source trial на занятии kind trial (title и trial_link_id из ссылки); тренеру Т2 с trial = true.
 --   Пробное никогда не подтверждается само; «никогда дважды» = нет живой, проведённой или списанной пробной записи.
 -- decide_booking не резервирует абонемент для пробного: платное списывается со своего разового абонемента.
+--
+-- Групповые занятия (миграция 20261016235700_group_sessions, PRD 2.6.3):
+-- create_group_session(…, capacity, title, mode, …) создаёт групповое занятие или повтор (open_for_booking);
+--   materialize_recurrence и roll_recurrences раскладывают групповой повтор так же, как персональный.
+--   Название группы обязательно при создании; триггер sessions_keep_group_title не даёт стереть его потом.
+-- add_group_participant(session, coaching) тренер добавляет клиента: запись сразу confirmed, клиенту К1.
+-- bookable_group_sessions(trainer, from, to) отдаёт клиенту группы тренера с open_for_booking, занятыми местами
+--   и своей записью; private.bookable_group_session проверяет пару, время, места и что клиент ещё не записан.
+-- group_booking_preview(session) и book_group_session(session) решают оплату через
+--   booking_auto_confirm(coaching, 'group', starts_at): confirmed с reserved_pass_id, в долг или requested.
+-- drop_request_session не трогает групповое занятие, когда запрос на него отклонён или отозван.
 
 create table public.recurrences (
   id                uuid primary key default gen_random_uuid(),

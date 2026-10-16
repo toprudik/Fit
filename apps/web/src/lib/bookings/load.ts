@@ -52,12 +52,16 @@ export async function loadBookingTrainers(owner: ScheduleOwner): Promise<Booking
 
 export type BookableSlot = { id: string; startsAt: string; endsAt: string; mode: "offline" | "online"; place: string | null };
 
+/** An open group session of the trainer (PRD 2.6.4-1): seats taken, and the client's own booking on it. */
+export type BookableGroup = BookableSlot & { title: string; capacity: number; taken: number; myBookingId: string | null };
+
 /** A live booking of the client: the overlap warning names its trainer (PRD 2.6.4-8). */
 export type BusyTime = { startsAt: string; endsAt: string; trainer: string };
 
 export type BookingPage = {
   trainer: BookingTrainer;
   slots: BookableSlot[];
+  groups: BookableGroup[];
   busy: BusyTime[];
   dropIn: { priceMinor: number; currency: string } | null;
   paymentLinks: { title: string; url: string }[];
@@ -75,7 +79,7 @@ export async function loadBookingPage(owner: ScheduleOwner, trainer: BookingTrai
   const from = new Date(now.getTime() + (profile?.min_booking_notice_minutes ?? 0) * 60_000);
   const until = new Date(now.getTime() + BOOKING_DAYS * 86_400_000);
 
-  const [slots, dropIn, links, busy] = await Promise.all([
+  const [slots, groups, dropIn, links, busy] = await Promise.all([
     supabase
       .from("slots")
       .select("id, starts_at, ends_at, mode, location_id")
@@ -84,6 +88,11 @@ export async function loadBookingPage(owner: ScheduleOwner, trainer: BookingTrai
       .gte("starts_at", from.toISOString())
       .lt("starts_at", until.toISOString())
       .order("starts_at"),
+    supabase.rpc("bookable_group_sessions", {
+      p_trainer_id: trainer.trainerId,
+      p_from: now.toISOString(),
+      p_until: until.toISOString(),
+    }),
     supabase
       .from("packages")
       .select("price_minor, currency, applies_to")
@@ -97,7 +106,10 @@ export async function loadBookingPage(owner: ScheduleOwner, trainer: BookingTrai
     loadBusy(owner, now),
   ]);
   if (slots.error) fail("slots", slots.error);
-  const locationIds = [...new Set(slots.data.map((slot) => slot.location_id).filter((id): id is string => Boolean(id)))];
+  if (groups.error) fail("group sessions", groups.error);
+  const locationIds = [
+    ...new Set([...slots.data, ...groups.data].map((item) => item.location_id).filter((id): id is string => Boolean(id))),
+  ];
   const locations = locationIds.length ? await supabase.from("locations").select("id, name").in("id", locationIds) : { data: [] };
   const placeName = new Map((locations.data ?? []).map((location) => [location.id, location.name]));
 
@@ -109,6 +121,17 @@ export async function loadBookingPage(owner: ScheduleOwner, trainer: BookingTrai
       endsAt: slot.ends_at,
       mode: slot.mode,
       place: slot.location_id ? (placeName.get(slot.location_id) ?? null) : null,
+    })),
+    groups: groups.data.map((row) => ({
+      id: row.session_id,
+      startsAt: row.starts_at,
+      endsAt: row.ends_at,
+      mode: row.mode,
+      place: row.location_id ? (placeName.get(row.location_id) ?? null) : null,
+      title: row.title,
+      capacity: row.capacity,
+      taken: row.taken,
+      myBookingId: row.my_booking_id,
     })),
     busy,
     dropIn: dropIn.data?.[0] ? { priceMinor: dropIn.data[0].price_minor, currency: dropIn.data[0].currency } : null,

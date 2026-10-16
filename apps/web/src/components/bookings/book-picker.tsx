@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarX, Clock } from "lucide-react";
+import { CalendarX, Clock, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { INTL_LOCALE } from "@/i18n/config";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
-import { bookSlot, previewBooking, type PreviewResult } from "@/lib/bookings/actions";
+import { bookGroupSession, bookSlot, previewBooking, previewGroupBooking, type PreviewResult } from "@/lib/bookings/actions";
 import { findOverlap, groupByDay } from "@/lib/bookings/book";
-import type { BookableSlot, BusyTime } from "@/lib/bookings/load";
+import type { BookableGroup, BookableSlot, BusyTime } from "@/lib/bookings/load";
 import { localToUtc } from "@/lib/schedule/time";
 
 type BookPickerProps = {
@@ -22,23 +22,35 @@ type BookPickerProps = {
   /** Local days of the strip, today first. */
   days: string[];
   slots: BookableSlot[];
+  /** Open group sessions of the trainer, listed among the slots of their day. */
+  groups: BookableGroup[];
   busy: BusyTime[];
   /** "Разовое занятие стоит 2 000 ₽.", or null without a drop-in price. */
   dropInText: string | null;
   paymentLinks: { title: string; url: string }[];
 };
 
+type Item = ({ type: "slot" } & BookableSlot) | ({ type: "group" } & BookableGroup);
+
 /**
- * "Запись на занятие" (screens.md /client/book): a strip of days, the free slots of the chosen day and a confirm
- * sheet that says what pays for the session (PRD 2.6.4): a pass, allowed debt, or a request to the trainer.
+ * "Запись на занятие" (screens.md /client/book): a strip of days, the free slots and group sessions of the chosen
+ * day and a confirm sheet that says what pays for the session (PRD 2.6.4): a pass, allowed debt, or a request to
+ * the trainer. A group shows its free seats; a full one cannot be picked (SCHED-15).
  */
-export function BookPicker({ timeZone, days, slots, busy, dropInText, paymentLinks }: BookPickerProps) {
+export function BookPicker({ timeZone, days, slots, groups, busy, dropInText, paymentLinks }: BookPickerProps) {
   const { t, locale } = useI18n();
   const copy = t.schedule.book;
   const router = useRouter();
-  const byDay = useMemo(() => groupByDay(slots, timeZone), [slots, timeZone]);
+  const groupCopy = t.schedule.groupSession;
+  const byDay = useMemo(() => {
+    const items: Item[] = [
+      ...slots.map((slot) => ({ type: "slot" as const, ...slot })),
+      ...groups.map((group) => ({ type: "group" as const, ...group })),
+    ].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+    return groupByDay(items, timeZone);
+  }, [slots, groups, timeZone]);
   const [day, setDay] = useState(() => days.find((candidate) => byDay.has(candidate)) ?? days[0]);
-  const [slot, setSlot] = useState<BookableSlot | null>(null);
+  const [slot, setSlot] = useState<Item | null>(null);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -50,16 +62,16 @@ export function BookPicker({ timeZone, days, slots, busy, dropInText, paymentLin
     `${timeFormat.format(new Date(item.startsAt))}–${timeFormat.format(new Date(item.endsAt))}`;
   const where = (item: BookableSlot) => (item.mode === "online" ? copy.online : (item.place ?? copy.offline));
 
-  const open = (next: BookableSlot) => {
+  const open = (next: Item) => {
     setSlot(next);
     setPreview(null);
-    startTransition(async () => setPreview(await previewBooking(next.id)));
+    startTransition(async () => setPreview(await (next.type === "group" ? previewGroupBooking(next.id) : previewBooking(next.id))));
   };
 
   const confirm = () => {
     if (!slot) return;
     startTransition(async () => {
-      const result = await bookSlot(slot.id);
+      const result = slot.type === "group" ? await bookGroupSession(slot.id) : await bookSlot(slot.id);
       if (result.status === "done") {
         setSlot(null);
         toast.success(result.confirmed ? copy.booked : copy.requested);
@@ -86,15 +98,36 @@ export function BookPicker({ timeZone, days, slots, busy, dropInText, paymentLin
 
       {daySlots.length > 0 ? (
         <ListGroup header={dayFormat.format(localToUtc(day, 12 * 60, timeZone))}>
-          {daySlots.map((item) => (
-            <ListRow
-              key={item.id}
-              icon={Clock}
-              title={<span className="tabular-nums">{range(item)}</span>}
-              subtitle={where(item)}
-              onClick={() => open(item)}
-            />
-          ))}
+          {daySlots.map((item) =>
+            item.type === "group" ? (
+              <ListRow
+                key={item.id}
+                icon={Users}
+                title={
+                  <>
+                    <span className="tabular-nums">{range(item)}</span>, {item.title}
+                  </>
+                }
+                subtitle={`${where(item)}, ${
+                  item.myBookingId
+                    ? groupCopy.youAreIn
+                    : item.taken >= item.capacity
+                      ? groupCopy.noSeats
+                      : interpolate(groupCopy.seatsLeft, { count: item.capacity - item.taken, capacity: item.capacity })
+                }`}
+                href={item.myBookingId ? `/client/bookings/${item.myBookingId}` : undefined}
+                onClick={item.myBookingId || item.taken >= item.capacity ? undefined : () => open(item)}
+              />
+            ) : (
+              <ListRow
+                key={item.id}
+                icon={Clock}
+                title={<span className="tabular-nums">{range(item)}</span>}
+                subtitle={where(item)}
+                onClick={() => open(item)}
+              />
+            ),
+          )}
         </ListGroup>
       ) : (
         <div className="flex items-center gap-3 px-1 py-6 text-body text-ink-2">
@@ -106,7 +139,7 @@ export function BookPicker({ timeZone, days, slots, busy, dropInText, paymentLin
       <Sheet
         open={slot !== null}
         onOpenChange={(next) => (next ? null : setSlot(null))}
-        title={copy.confirmTitle}
+        title={slot?.type === "group" ? interpolate(groupCopy.confirmTitle, { title: slot.title }) : copy.confirmTitle}
         description={slot ? `${dayFormat.format(new Date(slot.startsAt))}, ${range(slot)}, ${where(slot)}` : undefined}
         actions={
           <>
@@ -127,7 +160,9 @@ export function BookPicker({ timeZone, days, slots, busy, dropInText, paymentLin
             </div>
           ) : preview.status === "error" ? (
             <p role="alert" className="text-subhead text-danger">
-              {copy.errors[preview.error === "slot_unavailable" || preview.error === "too_late" ? preview.error : "failed"]}
+              {preview.error === "session_full" || preview.error === "already_booked"
+                ? groupCopy.bookErrors[preview.error]
+                : copy.errors[preview.error === "slot_unavailable" || preview.error === "too_late" ? preview.error : "failed"]}
             </p>
           ) : preview.confirmed ? (
             <p>
