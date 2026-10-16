@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { CalendarCheck } from "lucide-react";
+import { Suspense } from "react";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { TodayDate } from "@/components/shell/today-date";
 import { EmptyState } from "@/components/ui/empty-state";
+import { VerificationBanner } from "@/components/verification/verification-banner";
 import { getDictionary } from "@/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -16,6 +18,9 @@ export default async function TrainerTodayPage() {
   const copy = t.screens.trainer.today;
   return (
     <Screen header={<ScreenHeader title={t.tabs.trainer.today} subtitle={<TodayDate />} />}>
+      <Suspense fallback={null}>
+        <VerificationBanner />
+      </Suspense>
       <EmptyState icon={CalendarCheck} title={copy.emptyTitle} description={copy.emptyText} />
     </Screen>
   );

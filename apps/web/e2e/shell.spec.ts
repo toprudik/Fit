@@ -54,6 +54,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "not-found", path: "/no-such-page", title: "Такой страницы нет", documentTitle: false, status: 404 },
   // ADM-12: the admin section is a 404 for everyone but admins, signed out included.
   { slug: "admin-denied", path: "/admin/invites", title: "Такой страницы нет", documentTitle: false, status: 404 },
+  { slug: "admin-verification-denied", path: "/admin/verification", title: "Такой страницы нет", documentTitle: false, status: 404 },
 ];
 
 const html = (page: Page) => page.locator("html");

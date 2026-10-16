@@ -2298,6 +2298,9 @@ isOneToOne: false
               "code": string,"expires_at": string,"invite_id": string
             }[]
                            },
+"admin_decide_verification":
+{ Args: { "p_decision": Database["public"]['Enums']["verification_status"],"p_reason"?: string,"p_trainer_id": string }; Returns: undefined
+                           },
 "admin_revoke_trainer_invite":
 { Args: { "p_invite_id": string }; Returns: undefined
                            },
@@ -2355,6 +2358,9 @@ isOneToOne: false
                            },
 "set_progress_photo_angle":
 { Args: { "p_angle": Database["public"]['Enums']["photo_angle"],"p_photo_id": string }; Returns: undefined
+                           },
+"submit_trainer_verification":
+{ Args: Record<PropertyKey, never>; Returns: undefined
                            },
 "trainer_invite_status":
 { Args: { "p_code": string }; Returns: string

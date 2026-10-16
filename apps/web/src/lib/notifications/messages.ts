@@ -23,16 +23,40 @@ type Template = (context: TemplateContext) => { text: string; buttons: { text: s
  */
 const templates: Partial<Record<NotificationType, Template>> = {
   bot_test: ({ t }) => ({ text: escapeHtml(t.botTest), buttons: [{ text: t.open, path: "/" }] }),
+  // С3: payload { decision, reason? } from admin_decide_verification.
+  verification_result: ({ t, payload }) => ({
+    text:
+      payload.decision === "verified"
+        ? escapeHtml(t.verificationVerified)
+        : interpolateEscaped(t.verificationRejected, { reason: String(payload.reason ?? "") }),
+    buttons: [{ text: t.openVerification, path: "/trainer/verification" }],
+  }),
+  // А1 to the admin group: payload { trainer_name, documents } from submit_trainer_verification.
+  verification_submitted: ({ t, payload }) => ({
+    text: interpolateEscaped(t.verificationSubmitted, {
+      name: String(payload.trainer_name ?? ""),
+      count: Number(payload.documents ?? 0),
+    }),
+    buttons: [{ text: t.openQueue, path: "/admin/verification" }],
+  }),
   // Т7 and Т7a. The client screen arrives with the pair card; until then the button opens the list.
   coaching_created: ({ t, payload }) => ({
-    text: escapeHtml(interpolate(t.newClient, { name: clientName(t, payload) })),
+    text: interpolateEscaped(t.newClient, { name: clientName(t, payload) }),
     buttons: [{ text: t.openClients, path: "/trainer/clients" }],
   }),
   managed_client_claim: ({ t, payload }) => ({
-    text: escapeHtml(interpolate(t.newClientWithCards, { name: clientName(t, payload) })),
+    text: interpolateEscaped(t.newClientWithCards, { name: clientName(t, payload) }),
     buttons: [{ text: t.openClients, path: "/trainer/clients" }],
   }),
 };
+
+/** Fills {placeholders} in a catalog string, escaping the template and every value. */
+function interpolateEscaped(template: string, values: Record<string, string | number>): string {
+  return interpolate(
+    escapeHtml(template),
+    Object.fromEntries(Object.entries(values).map(([key, value]) => [key, escapeHtml(String(value))])),
+  );
+}
 
 /** The client's name from the payload the join RPC queued, or a neutral stand-in. */
 function clientName(t: Dictionary["botMessages"], payload: TemplateContext["payload"]): string {
