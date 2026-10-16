@@ -30,16 +30,23 @@ async function NewSession({ searchParams }: { searchParams: PageProps<"/[lang]/t
   if (!owner) return <ScheduleSignIn title={copy.newTitle} next="/trainer/sessions/new" />;
 
   const data = await loadSessionFormData(owner);
-  if (data.clients.length === 0) {
+  // ?kind=group opens the group form; a group needs no clients (PRD 2.6.3).
+  const initialType = params.kind === "group" ? "group" : "personal";
+  if (data.clients.length === 0 && initialType === "personal") {
     return (
       <EmptyState
         icon={Users}
         title={copy.noClientsTitle}
         description={copy.noClientsText}
         action={
-          <Button asChild>
-            <Link href="/trainer/clients">{copy.noClientsAction}</Link>
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button asChild>
+              <Link href="/trainer/clients">{copy.noClientsAction}</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/trainer/sessions/new?kind=group">{t.schedule.groupSession.createGroup}</Link>
+            </Button>
+          </div>
         }
       />
     );
@@ -58,6 +65,7 @@ async function NewSession({ searchParams }: { searchParams: PageProps<"/[lang]/t
   return (
     <SessionForm
       kind="create"
+      initialType={initialType}
       clients={data.clients}
       locations={data.locations}
       timeZone={data.timeZone}
@@ -76,7 +84,10 @@ async function NewSession({ searchParams }: { searchParams: PageProps<"/[lang]/t
   );
 }
 
-/** "Новое занятие" (screens.md /trainer/sessions/new, PRD 2.6.2): the trainer books a client in, confirmed at once. */
+/**
+ * "Новое занятие" (screens.md /trainer/sessions/new, PRD 2.6.2, 2.6.3): the trainer books a client in, confirmed
+ * at once, or creates a group with seats.
+ */
 export default async function NewSessionPage(props: PageProps<"/[lang]/trainer/sessions/new">) {
   const t = await getDictionary();
   return (

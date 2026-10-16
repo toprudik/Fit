@@ -2293,7 +2293,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "admin_block_user":
+            "add_group_participant":
+{ Args: { "p_coaching_id": string,"p_session_id": string }; Returns: string
+                           },
+"admin_block_user":
 { Args: { "p_reason": string,"p_user_id": string }; Returns: undefined
                            },
 "admin_create_trainer_invite":
@@ -2334,6 +2337,11 @@ isOneToOne: false
               "blocked_at": string,"blocked_reason": string,"bookings_made": number,"client_active_pairs": number,"client_pairs": number,"created_at": string,"first_name": string,"is_admin": boolean,"is_trainer": boolean,"language_code": string,"last_name": string,"last_seen_at": string,"photo_url": string,"sessions_led": number,"telegram_id": number,"trainer_active_pairs": number,"trainer_pairs": number,"user_id": string,"username": string,"verification_status": Database["public"]['Enums']["verification_status"]
             }[]
                            },
+"book_group_session":
+{ Args: { "p_session_id": string }; Returns: {
+              "booking_id": string,"status": Database["public"]['Enums']["booking_status"]
+            }[]
+                           },
 "book_slot":
 { Args: { "p_slot_id": string }; Returns: {
               "booking_id": string,"status": Database["public"]['Enums']["booking_status"]
@@ -2342,6 +2350,11 @@ isOneToOne: false
 "book_trial":
 { Args: { "p_slot_id": string,"p_token": string }; Returns: {
               "booking_id": string,"coaching_id": string
+            }[]
+                           },
+"bookable_group_sessions":
+{ Args: { "p_from": string,"p_trainer_id": string,"p_until": string }; Returns: {
+              "capacity": number,"ends_at": string,"location_id": string,"mode": Database["public"]['Enums']["session_mode"],"my_booking_id": string,"session_id": string,"starts_at": string,"taken": number,"title": string
             }[]
                            },
 "booking_preview":
@@ -2376,6 +2389,11 @@ isOneToOne: false
                            },
 "create_calendar_feed":
 { Args: { "p_zone": Database["public"]['Enums']["app_zone"] }; Returns: string
+                           },
+"create_group_session":
+{ Args: { "p_capacity": number,"p_count"?: number,"p_duration_min": number,"p_location_id"?: string,"p_meeting_url"?: string,"p_mode": Database["public"]['Enums']["session_mode"],"p_open_for_booking"?: boolean,"p_starts_at": string,"p_title": string,"p_until"?: string,"p_weekdays"?: (number)[] }; Returns: {
+              "created": number,"session_id": string
+            }[]
                            },
 "create_managed_client":
 { Args: { "p_contact"?: string,"p_display_name": string,"p_note"?: string }; Returns: string
@@ -2420,6 +2438,11 @@ isOneToOne: false
 "get_trial_slots":
 { Args: { "p_token": string }; Returns: {
               "ends_at": string,"location_name": string,"mode": Database["public"]['Enums']["session_mode"],"slot_id": string,"starts_at": string
+            }[]
+                           },
+"group_booking_preview":
+{ Args: { "p_session_id": string }; Returns: {
+              "confirmed": boolean,"pass_title": string,"sessions_left": number
             }[]
                            },
 "has_entitlement":
