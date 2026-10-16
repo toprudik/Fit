@@ -227,6 +227,18 @@ const templates: Partial<Record<NotificationType, Template>> = {
     }),
     buttons: [{ text: t.openPlan, path: "/settings/plan" }],
   }),
+  // Т8: payload { coaching_id, first_name, last_name, parq_flagged } from the intakes trigger.
+  intake_submitted: ({ t, payload }) => ({
+    text: interpolateEscaped(payload.parq_flagged === true ? t.intakeSubmittedFlagged : t.intakeSubmitted, {
+      name: personName(payload) || t.unnamedClient,
+    }),
+    buttons: [{ text: t.openIntake, path: intakePath("/trainer/clients", payload) }],
+  }),
+  // "Напомнить": payload { coaching_id, first_name, last_name } of the trainer, from remind_intake.
+  intake_reminder: ({ t, payload }) => ({
+    text: interpolateEscaped(t.intakeReminder, { name: personName(payload) || t.someTrainer }),
+    buttons: [{ text: t.fillIntake, path: intakePath("/client/trainers", payload) }],
+  }),
   // К1: payload { session_id, starts_at, mode, location, count, until, first_name, last_name } from create_session,
   // one message for a whole repeat (PRD 2.6.2-5).
   booking_assigned: ({ t, locale, timeZone, payload }) => {
@@ -368,6 +380,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** The pair's card under `base`, or `base` itself when the payload has no valid pair id. */
 function pairPath(base: string, payload: TemplateContext["payload"]): string {
   return typeof payload.coaching_id === "string" && UUID.test(payload.coaching_id) ? `${base}/${payload.coaching_id}` : base;
+}
+
+/** The pair's intake under `base`, or `base` itself when the payload has no valid pair id. */
+function intakePath(base: string, payload: TemplateContext["payload"]): string {
+  const pair = pairPath(base, payload);
+  return pair === base ? base : `${pair}/intake`;
 }
 
 /** `${base}/${id}` for a valid id in the payload, else `fallback`. */

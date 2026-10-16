@@ -153,6 +153,46 @@ describe("verification messages", () => {
   });
 });
 
+describe("intake messages", () => {
+  const PAIR = "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b";
+  const options = { appUrl: "https://fit.example", group: false };
+
+  it("tells the trainer about a new intake and opens it (Т8)", () => {
+    const message = renderMessage(
+      { ...row, kind: "intake_submitted", payload: { coaching_id: PAIR, first_name: "Анна", parq_flagged: false } },
+      options,
+    );
+    expect(message).toEqual({
+      text: "Новая анкета: Анна.",
+      buttons: [{ text: "Открыть анкету", web_app: { url: `https://fit.example/trainer/clients/${PAIR}/intake?source=intake_submitted` } }],
+    });
+  });
+
+  it("points out a yes in PAR-Q", () => {
+    const message = renderMessage(
+      { ...row, kind: "intake_submitted", locale: "en", payload: { coaching_id: PAIR, first_name: "Anna", parq_flagged: true } },
+      options,
+    );
+    expect(message?.text).toBe("New intake form from Anna. There's a yes in PAR-Q, so read it before the session.");
+  });
+
+  it("asks the client to fill in the intake on the trainer's behalf", () => {
+    const message = renderMessage(
+      { ...row, kind: "intake_reminder", payload: { coaching_id: PAIR, first_name: "Олег", last_name: "<Б>" } },
+      options,
+    );
+    expect(message).toEqual({
+      text: "Олег &lt;Б&gt; просит заполнить анкету: так тренер заранее узнает о твоих целях и здоровье.",
+      buttons: [{ text: "Заполнить анкету", web_app: { url: `https://fit.example/client/trainers/${PAIR}/intake?source=intake_reminder` } }],
+    });
+  });
+
+  it("says Your trainer when the trainer has no name", () => {
+    const message = renderMessage({ ...row, kind: "intake_reminder", locale: "en", payload: { coaching_id: PAIR } }, options);
+    expect(message?.text).toMatch(/^Your trainer asks you/);
+  });
+});
+
 describe("escapeHtml", () => {
   it("escapes what parse_mode HTML treats as markup", () => {
     expect(escapeHtml(`<b>"Tom" & Jerry</b>`)).toBe("&lt;b&gt;&quot;Tom&quot; &amp; Jerry&lt;/b&gt;");

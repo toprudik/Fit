@@ -77,6 +77,8 @@ const SCREENS: readonly Screen[] = [
   // A malformed address is answered without the database: the "trainer unavailable" state (Q60).
   { slug: "showcase-unavailable", path: "/trainers/Not_A_Slug", title: "Тренер недоступен", documentTitle: false },
   { slug: "trainer-showcase", path: "/trainer/showcase", title: "Витрина" },
+  // Signed out, the intake asks to sign in and come back.
+  { slug: "client-intake-signed-out", path: "/client/trainers/00000000-0000-4000-8000-000000000000/intake", title: "Анкета" },
   { slug: "not-found", path: "/no-such-page", title: "Такой страницы нет", documentTitle: false, status: 404 },
   // ADM-12: the admin section is a 404 for everyone but admins, signed out included.
   { slug: "admin-denied", path: "/admin/invites", title: "Такой страницы нет", documentTitle: false, status: 404 },
