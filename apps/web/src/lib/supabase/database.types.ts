@@ -2437,6 +2437,11 @@ isOneToOne: false
 "join_by_trial_link":
 { Args: { "p_token": string }; Returns: string
                            },
+"last_exercise_results":
+{ Args: { "p_before"?: string,"p_client": string,"p_exercises": (string)[] }; Returns: {
+              "exercise_id": string,"log_id": string,"performed_at": string,"sets": Json
+            }[]
+                           },
 "my_client_invite":
 { Args: Record<PropertyKey, never>; Returns: {
               "code": string,"created_at": string,"invite_id": string,"token": string,"uses_count": number
@@ -2491,6 +2496,9 @@ isOneToOne: false
                            },
 "save_week_template":
 { Args: { "p_buffer_min"?: number,"p_horizon_weeks"?: number,"p_items": Json }; Returns: number
+                           },
+"save_workout_log":
+{ Args: { "p_log": Json }; Returns: string
                            },
 "search_exercises":
 { Args: { "p_category"?: string,"p_limit"?: number,"p_locale"?: Database["public"]['Enums']["app_locale"],"p_offset"?: number,"p_own_only"?: boolean,"p_query"?: string }; Returns: {
