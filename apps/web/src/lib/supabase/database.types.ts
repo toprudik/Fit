@@ -2337,6 +2337,12 @@ isOneToOne: false
 "bot_messages_blocked":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"cancel_pass":
+{ Args: { "p_pass_id": string,"p_reason": string }; Returns: undefined
+                           },
+"change_pass_expiry":
+{ Args: { "p_last_day": string,"p_pass_id": string,"p_reason": string }; Returns: undefined
+                           },
 "claim_outbox":
 { Args: { "p_limit"?: number }; Returns: {
               "attempt": number,"chat_id": number,"chat_target": string,"kind": Database["public"]['Enums']["notification_type"],"locale": Database["public"]['Enums']["app_locale"],"outbox_id": number,"payload": Json,"silent": boolean,"time_zone": string
@@ -2349,6 +2355,11 @@ isOneToOne: false
                            },
 "create_managed_client":
 { Args: { "p_contact"?: string,"p_display_name": string,"p_note"?: string }; Returns: string
+                           },
+"create_pass":
+{ Args: { "p_applies_to"?: Database["public"]['Enums']["package_applies_to"],"p_coaching_id": string,"p_currency"?: string,"p_note"?: string,"p_package_id"?: string,"p_paid_at"?: string,"p_payment_method"?: Database["public"]['Enums']["payment_method"],"p_payment_minor"?: number,"p_price_minor"?: number,"p_sessions"?: number,"p_starts_on"?: string,"p_title"?: string,"p_validity_days"?: number }; Returns: {
+              "pass_id": string,"settled": number
+            }[]
                            },
 "effective_plan":
 { Args: { "p_side": Database["public"]['Enums']["plan_side"],"p_user": string }; Returns: string
