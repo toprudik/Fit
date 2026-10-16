@@ -225,6 +225,7 @@ export const en: Dictionary = {
       trial: "Trial",
       ended: "Ended",
       archived: "Archived",
+      parq: "PAR-Q: a yes answer",
     },
     together: {
       one: "{count} session together",

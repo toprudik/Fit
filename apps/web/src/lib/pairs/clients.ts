@@ -44,6 +44,8 @@ export type ClientItem = {
   debtSessions: number;
   hasPass: boolean;
   passEnding: boolean;
+  /** The latest intake the client shows this trainer has a "yes" in PAR-Q (INTK-3). */
+  parqFlagged: boolean;
 };
 
 /** A live pair: trial or active. An ended one keeps its history and sits in the archive filter. */

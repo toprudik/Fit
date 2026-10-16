@@ -229,6 +229,7 @@ export const ru = {
       trial: "Пробная",
       ended: "Завершена",
       archived: "В архиве",
+      parq: "PAR-Q: есть «да»",
     },
     together: {
       one: "{count} занятие вместе",
