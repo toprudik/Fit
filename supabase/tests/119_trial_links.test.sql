@@ -53,7 +53,7 @@ select is((select count(*)::int from public.trial_links), 0, 'trainer: another t
 
 select tests.authenticate_as_anon();
 select results_eq(
-  $$ select status, trainer_id, name, verified, title, duration_min, price_minor, currency::text, mode::text,
+  $$ select status, trainer_id, name, verified, title, duration_min, price_minor, currency, mode::text,
             location_name, location_address, coaching_id
      from public.get_trial_link((select token from tests.trial where name = 'paid')) $$,
   $$ values ('valid'::text, tests.user_id('trainer_a'), 'trainer_a'::text, false, 'Пробная силовая'::text, 45::smallint,

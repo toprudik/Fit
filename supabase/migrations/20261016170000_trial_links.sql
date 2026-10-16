@@ -172,7 +172,7 @@ returns table (
   description    text,
   duration_min   smallint,
   price_minor    bigint,
-  currency       public.currency_code,
+  currency       text,
   mode           public.session_mode,
   location_name  text,
   location_address text,
@@ -225,7 +225,7 @@ begin
   description := v_link.description;
   duration_min := v_link.duration_min;
   price_minor := v_link.price_minor;
-  currency := v_link.currency;
+  currency := v_link.currency::text;
   mode := v_link.mode;
   select l.name, l.address into location_name, location_address
   from public.locations l
