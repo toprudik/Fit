@@ -97,8 +97,9 @@ select throws_ok(
 );
 
 select tests.authenticate_as_service_role();
+-- The three rows above plus the two reminders the bookings trigger queued for booking_c.
 select is(
-  (select count(*)::integer from public.notification_outbox), 3,
+  (select count(*)::integer from public.notification_outbox), 5,
   'notification_outbox: server code with the secret key reads every row'
 );
 select lives_ok(

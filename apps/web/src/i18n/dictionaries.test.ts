@@ -131,10 +131,12 @@ describe("dictionaries follow docs/writing.md", () => {
     // Words that keep their capital mid-sentence. Extend when a new name or acronym appears in copy.
     const properNouns = new Set([
       "DaFit", "Telegram", "QR", "Pro", "Premium", "English", "I", "OK", "JPG", "PNG", "PDF", "MB", "SBP", "ID", "NPS",
-      "Free", "CSV", "USA", "Russia", "Supabase", "Vercel", "Start",
+      "Free", "CSV", "USA", "Russia", "Supabase", "Vercel", "Start", "Google", "Apple", "Outlook", "Calendar", "Mac",
     ]);
     const titleCased = (value: string) =>
       value
+        // A quoted label of another app keeps its own case: “Add calendar”.
+        .replace(/“[^”]*”/g, "label")
         // Sentence starts may be capitalised: the first word and any word after ". ", "? " or ": ".
         .split(/(?<=[.?:])\s+/)
         .flatMap((sentence) => sentence.split(/\s+/).slice(1))

@@ -55,6 +55,8 @@ const SCREENS: readonly Screen[] = [
   { slug: "client-trainers", path: "/client/trainers", title: "Тренеры" },
   { slug: "settings", path: "/settings", title: "Настройки" },
   { slug: "settings-plan", path: "/settings/plan", title: "Мой тариф" },
+  { slug: "settings-notifications", path: "/settings/notifications", title: "Уведомления" },
+  { slug: "settings-calendar", path: "/settings/calendar", title: "Календарь" },
   { slug: "profile", path: "/profile", title: "Профиль" },
   { slug: "login", path: "/login", title: "Вход" },
   { slug: "trainer-invite", path: "/onboarding/trainer?code=ABCD-EFGH-JKLM", title: "Инвайт тренера" },
@@ -130,6 +132,12 @@ for (const scheme of SCHEMES) {
     });
   });
 }
+
+// A malformed feed token is refused before the database, like a reissued one (CAL-3).
+test("a calendar feed with a malformed token is a 404", async ({ request }) => {
+  const response = await request.get("/api/calendar/not-a-token.ics");
+  expect(response.status()).toBe(404);
+});
 
 test.describe("navigation", () => {
   test("the trainer zone has Сегодня, Расписание, Клиенты, Деньги, Ещё", async ({ page }, testInfo) => {

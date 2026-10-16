@@ -2347,6 +2347,9 @@ isOneToOne: false
 "bot_messages_blocked":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"calendar_feed":
+{ Args: { "p_token": string }; Returns: Json
+                           },
 "cancel_session":
 { Args: { "p_following"?: boolean,"p_reason": string,"p_session_id": string }; Returns: number
                            },
@@ -2359,6 +2362,9 @@ isOneToOne: false
 { Args: { "p_from": string,"p_to": string }; Returns: {
               "session_id": string,"starts_at": string,"title": string
             }[]
+                           },
+"create_calendar_feed":
+{ Args: { "p_zone": Database["public"]['Enums']["app_zone"] }; Returns: string
                            },
 "create_managed_client":
 { Args: { "p_contact"?: string,"p_display_name": string,"p_note"?: string }; Returns: string
@@ -2455,6 +2461,9 @@ isOneToOne: false
                            },
 "resolve_managed_client_claim":
 { Args: { "p_claim_id": string,"p_managed_client_id"?: string }; Returns: string
+                           },
+"revoke_calendar_feed":
+{ Args: { "p_zone": Database["public"]['Enums']["app_zone"] }; Returns: boolean
                            },
 "save_week_template":
 { Args: { "p_buffer_min"?: number,"p_horizon_weeks"?: number,"p_items": Json }; Returns: number
