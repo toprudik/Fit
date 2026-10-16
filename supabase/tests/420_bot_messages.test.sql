@@ -1,4 +1,4 @@
--- Bot message access of migration 20261016170000_bot_messages.sql (PRD wave-1 §2.1 rule 6, AUTH-7):
+-- Bot message access of migration 20261016175000_bot_messages.sql (PRD wave-1 §2.1 rule 6, AUTH-7):
 -- bot_messages_blocked and set_bot_messages.
 begin;
 \ir _helpers.psql
