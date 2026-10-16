@@ -2500,6 +2500,9 @@ isOneToOne: false
 "save_workout_log":
 { Args: { "p_log": Json }; Returns: string
                            },
+"save_workout_template":
+{ Args: { "p_template": Json }; Returns: string
+                           },
 "search_exercises":
 { Args: { "p_category"?: string,"p_limit"?: number,"p_locale"?: Database["public"]['Enums']["app_locale"],"p_offset"?: number,"p_own_only"?: boolean,"p_query"?: string }; Returns: {
               "category": string,"equipment": (string)[],"id": string,"name": string,"own": boolean,"source": Database["public"]['Enums']["exercise_source"]
