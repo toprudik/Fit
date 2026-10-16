@@ -2342,11 +2342,17 @@ isOneToOne: false
               "attempt": number,"chat_id": number,"chat_target": string,"kind": Database["public"]['Enums']["notification_type"],"locale": Database["public"]['Enums']["app_locale"],"outbox_id": number,"payload": Json,"silent": boolean,"time_zone": string
             }[]
                            },
+"create_managed_client":
+{ Args: { "p_contact"?: string,"p_display_name": string,"p_note"?: string }; Returns: string
+                           },
 "effective_plan":
 { Args: { "p_side": Database["public"]['Enums']["plan_side"],"p_user": string }; Returns: string
                            },
 "end_coaching":
 { Args: { "p_coaching_id": string,"p_reason"?: string }; Returns: number
+                           },
+"get_managed_client_claim":
+{ Args: { "p_claim_id": string }; Returns: Json
                            },
 "get_trainer_showcase":
 { Args: { "p_slug": string }; Returns: {
@@ -2412,6 +2418,9 @@ isOneToOne: false
 { Args: { "p_code"?: string,"p_token"?: string }; Returns: {
               "coaching_id": string,"first_name": string,"headline": string,"last_name": string,"photo_url": string,"specialties": (string)[],"status": string,"trainer_id": string,"verified": boolean,"works_offline": boolean,"works_online": boolean
             }[]
+                           },
+"resolve_managed_client_claim":
+{ Args: { "p_claim_id": string,"p_managed_client_id"?: string }; Returns: string
                            },
 "session_meeting_url":
 { Args: { "p_session_id": string }; Returns: string
