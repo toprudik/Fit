@@ -10,6 +10,15 @@ describe("startParamPath", () => {
     expect(startParamPath("ti_")).toBe("/onboarding/trainer");
   });
 
+  it("opens the client link landing for ci_<token>", () => {
+    expect(startParamPath("ci_Ab3_-Ab3_-Ab3_-Ab3_-Ab")).toBe("/i/Ab3_-Ab3_-Ab3_-Ab3_-Ab");
+  });
+
+  it("ignores a client link with a malformed token", () => {
+    expect(startParamPath("ci_")).toBeNull();
+    expect(startParamPath("ci_short")).toBeNull();
+  });
+
   it("ignores no parameter, unknown keys and characters Telegram does not allow", () => {
     expect(startParamPath(undefined)).toBeNull();
     expect(startParamPath("")).toBeNull();

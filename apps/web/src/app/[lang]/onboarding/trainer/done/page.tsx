@@ -11,8 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getDictionary } from "@/i18n/server";
-import { createClientInvite } from "@/lib/trainer-wizard/actions";
-import { clientInviteUrl } from "@/lib/trainer-wizard/client-link";
+import { clientInviteUrl, ensureClientInvite } from "@/lib/trainer-wizard/client-link";
 import { loadWizard, type WizardData } from "@/lib/trainer-wizard/load";
 import { isSpecialty } from "@/lib/trainer-wizard/options";
 import { stepPath, WIZARD_START_PATH, WIZARD_STEPS } from "@/lib/trainer-wizard/steps";
@@ -68,12 +67,12 @@ async function ClientLink({ t, token }: { t: Dictionary; token: string | null })
   const copy = t.trainerWizard.done;
   if (!token) {
     return (
-      <form action={createClientInvite} className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3">
         <p className="text-callout text-ink-2">{copy.noLink}</p>
-        <Button type="submit" size="lg" block>
-          {copy.createLink}
+        <Button asChild variant="secondary" size="lg" block>
+          <Link href="/trainer/links">{copy.openLinks}</Link>
         </Button>
-      </form>
+      </div>
     );
   }
   const link = clientInviteUrl(token);
@@ -102,21 +101,13 @@ async function DoneContent() {
   if (wizard.status !== "ok") redirect("/onboarding/trainer");
   const { data, supabase } = wizard;
 
-  // Only read here: "Позже" on the last step made the link, and a page load must not write.
-  const { data: invite, error } = await supabase
-    .from("client_invites")
-    .select("token")
-    .eq("trainer_id", data.user)
-    .is("archived_at", null)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (error) console.error("reading the client link failed", error.code);
+  // The trainer's working link, made on the first visit; the database keeps it to one.
+  const token = await ensureClientInvite(supabase);
 
   const copy = t.trainerWizard.done;
   return (
     <div className="flex flex-col gap-6">
-      <ClientLink t={t} token={invite?.token ?? null} />
+      <ClientLink t={t} token={token} />
       <Preview t={t} data={data} />
       <div className="flex flex-col gap-3">
         <Button asChild variant="secondary" size="lg" block>

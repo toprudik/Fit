@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CANCELLATION_HOURS, CURRENCIES, isSpecialty, isTimeZone, PAYMENT_LINK_KINDS } from "./options";
-import { ensureClientInvite } from "./client-link";
 import { isWizardStep, nextPath, type WizardStep } from "./steps";
 
 /** What was typed, so the form shows it again after React resets it on submit. */
@@ -182,8 +181,6 @@ async function saveStep(supabase: Supabase, user: string, step: WizardStep, form
       return done(step, error);
     }
     case "certificates":
-      // "Позже": the result screen shows the client link, so it has to exist by then.
-      await ensureClientInvite(supabase, user);
       return { status: "skipped" };
   }
 }
@@ -192,13 +189,4 @@ function done(step: WizardStep, error: { code: string } | null): SaveResult {
   if (!error) return { status: "saved" };
   console.error(`saving the trainer wizard step ${step} failed`, error.code);
   return { status: "failed" };
-}
-
-/** "Создать ссылку" on the result screen when the trainer has no client link (it was archived, or making it failed). */
-export async function createClientInvite(): Promise<void> {
-  const supabase = await createSupabaseServerClient();
-  const user = await userId(supabase);
-  if (!user) redirect("/onboarding/trainer");
-  await ensureClientInvite(supabase, user);
-  refresh();
 }

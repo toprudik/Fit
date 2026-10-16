@@ -18,7 +18,6 @@ const db = vi.hoisted(() => ({
   user: "trainer-1" as string | null,
   writes: [] as Write[],
   fail: false,
-  invites: [] as { token: string }[],
 }));
 
 function result(data: unknown) {
@@ -36,20 +35,9 @@ vi.mock("@/lib/supabase/server", () => ({
           return result(null);
         },
       }),
-      insert: (values: Record<string, unknown>) => {
+      insert: async (values: Record<string, unknown>) => {
         db.writes.push({ table, op: "insert", values });
-        const answer = Promise.resolve(result(null));
-        return Object.assign(answer, { select: () => ({ single: async () => result({ token: "new-token" }) }) });
-      },
-      select: () => {
-        const chain = {
-          eq: () => chain,
-          is: () => chain,
-          order: () => chain,
-          limit: () => chain,
-          maybeSingle: async () => ({ data: db.invites[0] ?? null, error: null }),
-        };
-        return chain;
+        return result(null);
       },
     }),
   }),
@@ -72,7 +60,6 @@ beforeEach(() => {
   db.user = "trainer-1";
   db.writes = [];
   db.fail = false;
-  db.invites = [];
 });
 
 describe("saveWizardStep", () => {
@@ -157,13 +144,7 @@ describe("saveWizardStep", () => {
     });
   });
 
-  it("makes the client link on Позже, so the result screen has one", async () => {
-    await expect(saveWizardStep(IDLE, form({ step: "certificates" }))).rejects.toThrow("redirect /onboarding/trainer/done");
-    expect(db.writes).toEqual([{ table: "client_invites", op: "insert", values: { trainer_id: "trainer-1" } }]);
-  });
-
-  it("keeps the trainer's existing client link", async () => {
-    db.invites = [{ token: "old-token" }];
+  it("finishes on Позже without writing anything", async () => {
     await expect(saveWizardStep(IDLE, form({ step: "certificates" }))).rejects.toThrow("redirect /onboarding/trainer/done");
     expect(db.writes).toEqual([]);
   });
