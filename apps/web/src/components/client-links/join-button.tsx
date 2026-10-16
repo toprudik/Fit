@@ -12,10 +12,23 @@ import { hapticSuccess } from "@/lib/telegram/mini-app";
 const IDLE: JoinState = { status: "idle" };
 
 /**
- * "Стать клиентом" for a link token, a typed code or a showcase the server found valid. After the
+ * "Стать клиентом" for a link token, a typed code, a showcase or a trial link the server found valid. After the
  * join the client zone opens on the trainers list with a toast and a success haptic (screens.md §4.2).
  */
-export function JoinButton({ token, code, slug, trainerName }: { token?: string; code?: string; slug?: string; trainerName: string }) {
+export function JoinButton({
+  token,
+  code,
+  slug,
+  trial,
+  trainerName,
+}: {
+  token?: string;
+  code?: string;
+  slug?: string;
+  /** A trial link token. */
+  trial?: string;
+  trainerName: string;
+}) {
   const { t } = useI18n();
   const router = useRouter();
   const [state, action, pending] = useActionState(joinTrainer, IDLE);
@@ -33,6 +46,7 @@ export function JoinButton({ token, code, slug, trainerName }: { token?: string;
       {token ? <input type="hidden" name="token" value={token} /> : null}
       {code ? <input type="hidden" name="code" value={code} /> : null}
       {slug ? <input type="hidden" name="slug" value={slug} /> : null}
+      {trial ? <input type="hidden" name="trial" value={trial} /> : null}
       {state.status === "error" ? (
         <p role="alert" className="text-subhead text-danger">
           {t.clientLinks.errors[state.reason]}

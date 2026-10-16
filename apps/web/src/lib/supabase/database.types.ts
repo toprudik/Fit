@@ -2338,6 +2338,11 @@ isOneToOne: false
               "bio": string,"city": string,"coaching_id": string,"headline": string,"is_own": boolean,"locations": Json,"name": string,"photo_url": string,"slug": string,"specialties": (string)[],"status": string,"verified": boolean,"works_offline": boolean,"works_online": boolean
             }[]
                            },
+"get_trial_link":
+{ Args: { "p_token": string }; Returns: {
+              "coaching_id": string,"currency": string,"description": string,"duration_min": number,"headline": string,"location_address": string,"location_name": string,"mode": Database["public"]['Enums']["session_mode"],"name": string,"photo_url": string,"price_minor": number,"specialties": (string)[],"status": string,"title": string,"trainer_id": string,"verified": boolean,"works_offline": boolean,"works_online": boolean
+            }[]
+                           },
 "has_entitlement":
 { Args: { "p_feature": string,"p_pair"?: string,"p_user": string }; Returns: boolean
                            },
@@ -2349,6 +2354,9 @@ isOneToOne: false
                            },
 "join_by_showcase":
 { Args: { "p_slug": string }; Returns: string
+                           },
+"join_by_trial_link":
+{ Args: { "p_token": string }; Returns: string
                            },
 "my_client_invite":
 { Args: Record<PropertyKey, never>; Returns: {
