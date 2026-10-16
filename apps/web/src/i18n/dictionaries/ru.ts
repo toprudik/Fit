@@ -795,6 +795,14 @@ export const ru = {
     /** А1: to the closed admin group. */
     verificationSubmitted: "Новая заявка на верификацию: {name}, документов: {count}.",
     openQueue: "Открыть очередь",
+    /** Т8: the first intake of a client, to the trainers it is shown to. */
+    intakeSubmitted: "Новая анкета: {name}.",
+    intakeSubmittedFlagged: "Новая анкета: {name}. В PAR-Q есть ответ «да», посмотри анкету до тренировки.",
+    openIntake: "Открыть анкету",
+    /** "Напомнить" on the trainer's intake screen. */
+    intakeReminder: "{name} просит заполнить анкету: так тренер заранее узнает о твоих целях и здоровье.",
+    unnamedTrainer: "Тренер",
+    fillIntake: "Заполнить анкету",
   },
   toast: {
     /** Screen reader name of the area where toasts appear. */

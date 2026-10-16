@@ -778,6 +778,12 @@ export const en: Dictionary = {
     openVerification: "Open verification",
     verificationSubmitted: "New verification request: {name}, documents: {count}.",
     openQueue: "Open the queue",
+    intakeSubmitted: "New intake: {name}.",
+    intakeSubmittedFlagged: "New intake: {name}. There's a yes in PAR-Q, so read the intake before the session.",
+    openIntake: "Open the intake",
+    intakeReminder: "{name} asks you to fill in the intake, so your trainer knows your goals and health in advance.",
+    unnamedTrainer: "Your trainer",
+    fillIntake: "Fill in the intake",
   },
   toast: {
     region: "Notifications",

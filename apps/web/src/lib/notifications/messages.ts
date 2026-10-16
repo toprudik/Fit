@@ -48,6 +48,18 @@ const templates: Partial<Record<NotificationType, Template>> = {
     text: interpolateEscaped(t.newClientWithCards, { name: clientName(t, payload) }),
     buttons: [{ text: t.openClients, path: "/trainer/clients" }],
   }),
+  // Т8: payload { coaching_id, first_name, last_name, parq_flagged } from the intakes trigger.
+  intake_submitted: ({ t, payload }) => ({
+    text: interpolateEscaped(payload.parq_flagged === true ? t.intakeSubmittedFlagged : t.intakeSubmitted, {
+      name: clientName(t, payload),
+    }),
+    buttons: [{ text: t.openIntake, path: `/trainer/clients/${pairId(payload)}/intake` }],
+  }),
+  // "Напомнить": payload { coaching_id, first_name, last_name } of the trainer, from remind_intake.
+  intake_reminder: ({ t, payload }) => ({
+    text: interpolateEscaped(t.intakeReminder, { name: personName(payload) || t.unnamedTrainer }),
+    buttons: [{ text: t.fillIntake, path: `/client/trainers/${pairId(payload)}/intake` }],
+  }),
 };
 
 /** Fills {placeholders} in a catalog string, escaping the template and every value. */
@@ -60,8 +72,18 @@ function interpolateEscaped(template: string, values: Record<string, string | nu
 
 /** The client's name from the payload the join RPC queued, or a neutral stand-in. */
 function clientName(t: Dictionary["botMessages"], payload: TemplateContext["payload"]): string {
+  return personName(payload) || t.unnamedClient;
+}
+
+/** first_name and last_name of a payload, or an empty string. */
+function personName(payload: TemplateContext["payload"]): string {
   const part = (value: Json | undefined) => (typeof value === "string" ? value.trim() : "");
-  return [part(payload.first_name), part(payload.last_name)].filter(Boolean).join(" ") || t.unnamedClient;
+  return [part(payload.first_name), part(payload.last_name)].filter(Boolean).join(" ");
+}
+
+/** The pair id of a payload for a route segment; the database writes a uuid there. */
+function pairId(payload: TemplateContext["payload"]): string {
+  return encodeURIComponent(String(payload.coaching_id ?? ""));
 }
 
 /** Escapes text for parse_mode HTML. Templates pass catalog strings and every inserted value through it. */

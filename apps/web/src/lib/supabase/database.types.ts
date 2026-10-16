@@ -2377,6 +2377,9 @@ isOneToOne: false
               "code": string,"created_at": string,"invite_id": string,"token": string,"uses_count": number
             }[]
                            },
+"remind_intake":
+{ Args: { "p_coaching_id": string }; Returns: boolean
+                           },
 "replace_progress_photo":
 { Args: { "p_blur_method": string,"p_face_blurred": boolean,"p_height": number,"p_new_id": string,"p_note"?: string,"p_photo_id": string,"p_storage_path": string,"p_width": number }; Returns: string
                            },
