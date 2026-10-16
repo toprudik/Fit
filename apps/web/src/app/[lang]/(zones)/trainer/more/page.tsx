@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { QrCode } from "lucide-react";
+import { QrCode, Store } from "lucide-react";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { ListGroup, ListRow } from "@/components/ui/list";
@@ -18,6 +18,7 @@ export default async function TrainerMorePage() {
       <div className="flex w-full max-w-2xl flex-col gap-6 pt-4 md:pt-0">
         <ListGroup footer={copy.later}>
           <ListRow icon={QrCode} iconTone="accent" title={copy.links} subtitle={copy.linksText} href="/trainer/links" />
+          <ListRow icon={Store} title={copy.showcase} subtitle={copy.showcaseText} href="/trainer/showcase" />
         </ListGroup>
       </div>
     </Screen>

@@ -49,6 +49,12 @@ describe("joinTrainer", () => {
     expect(db.calls).toEqual([{ fn: "join_by_code", args: { p_code: "ABCDEF" } }]);
   });
 
+  it("joins through the showcase by its address", async () => {
+    db.answer = { data: "pair-3", error: null };
+    expect(await joinTrainer(IDLE, form({ slug: "anna-fit" }))).toEqual({ status: "joined", coachingId: "pair-3" });
+    expect(db.calls).toEqual([{ fn: "join_by_showcase", args: { p_slug: "anna-fit" } }]);
+  });
+
   it("treats a malformed token and an empty code as invalid without asking the database", async () => {
     expect(await joinTrainer(IDLE, form({ token: "short", code: "" }))).toEqual({ status: "error", reason: "invalid" });
     expect(db.calls).toEqual([]);
