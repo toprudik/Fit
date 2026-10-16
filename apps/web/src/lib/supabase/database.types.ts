@@ -2304,10 +2304,19 @@ isOneToOne: false
 "admin_decide_verification":
 { Args: { "p_decision": Database["public"]['Enums']["verification_status"],"p_reason"?: string,"p_trainer_id": string }; Returns: undefined
                            },
+"admin_decline_access_request":
+{ Args: { "p_request_id": string }; Returns: undefined
+                           },
+"admin_grant_plan":
+{ Args: { "p_expires_at"?: string,"p_plan_code": string,"p_reason": string,"p_user_id": string }; Returns: string
+                           },
 "admin_overview":
 { Args: Record<PropertyKey, never>; Returns: {
               "active_invites": number,"active_pairs": number,"blocked_users": number,"trainers": number,"trainers_pending": number,"trainers_verified": number,"users": number
             }[]
+                           },
+"admin_revoke_plan":
+{ Args: { "p_grant_id": string,"p_reason": string }; Returns: undefined
                            },
 "admin_revoke_trainer_invite":
 { Args: { "p_invite_id": string }; Returns: undefined
@@ -2325,6 +2334,9 @@ isOneToOne: false
               "blocked_at": string,"blocked_reason": string,"bookings_made": number,"client_active_pairs": number,"client_pairs": number,"created_at": string,"first_name": string,"is_admin": boolean,"is_trainer": boolean,"language_code": string,"last_name": string,"last_seen_at": string,"photo_url": string,"sessions_led": number,"telegram_id": number,"trainer_active_pairs": number,"trainer_pairs": number,"user_id": string,"username": string,"verification_status": Database["public"]['Enums']["verification_status"]
             }[]
                            },
+"bot_messages_blocked":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
 "claim_outbox":
 { Args: { "p_limit"?: number }; Returns: {
               "attempt": number,"chat_id": number,"chat_target": string,"kind": Database["public"]['Enums']["notification_type"],"locale": Database["public"]['Enums']["app_locale"],"outbox_id": number,"payload": Json,"silent": boolean,"time_zone": string
@@ -2332,6 +2344,9 @@ isOneToOne: false
                            },
 "effective_plan":
 { Args: { "p_side": Database["public"]['Enums']["plan_side"],"p_user": string }; Returns: string
+                           },
+"end_coaching":
+{ Args: { "p_coaching_id": string,"p_reason"?: string }; Returns: number
                            },
 "get_trainer_showcase":
 { Args: { "p_slug": string }; Returns: {
@@ -2363,6 +2378,16 @@ isOneToOne: false
               "code": string,"created_at": string,"invite_id": string,"token": string,"uses_count": number
             }[]
                            },
+"my_inherited_rights":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "coaching_id": string,"first_name": string,"last_name": string,"trainer_id": string,"username": string
+            }[]
+                           },
+"my_plan":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "active_clients": number,"client_limit": number,"expires_at": string,"plan_code": string,"side": Database["public"]['Enums']["plan_side"]
+            }[]
+                           },
 "record_outbox_result":
 { Args: { "p_error"?: string,"p_id": number,"p_outcome": string,"p_retry_after_s"?: number,"p_telegram_message_id"?: number }; Returns: Database["public"]['Enums']["outbox_status"]
                            },
@@ -2383,6 +2408,9 @@ isOneToOne: false
 "replace_progress_photo":
 { Args: { "p_blur_method": string,"p_face_blurred": boolean,"p_height": number,"p_new_id": string,"p_note"?: string,"p_photo_id": string,"p_storage_path": string,"p_width": number }; Returns: string
                            },
+"request_access":
+{ Args: { "p_feature"?: string,"p_plan_code": string }; Returns: string
+                           },
 "resolve_client_invite":
 { Args: { "p_code"?: string,"p_token"?: string }; Returns: {
               "coaching_id": string,"first_name": string,"headline": string,"last_name": string,"photo_url": string,"specialties": (string)[],"status": string,"trainer_id": string,"verified": boolean,"works_offline": boolean,"works_online": boolean
@@ -2395,6 +2423,9 @@ isOneToOne: false
 { Args: { "p_session_id": string }; Returns: {
               "capacity": number,"occupied": number
             }[]
+                           },
+"set_bot_messages":
+{ Args: { "p_allowed": boolean,"p_send_test"?: boolean }; Returns: undefined
                            },
 "set_progress_photo_angle":
 { Args: { "p_angle": Database["public"]['Enums']["photo_angle"],"p_photo_id": string }; Returns: undefined

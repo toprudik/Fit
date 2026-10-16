@@ -294,7 +294,7 @@ grant select (id, username, first_name, last_name, photo_url, language_code, dis
   on public.profiles to authenticated;
 ```
 
-`bot_started_at` в волне 1 никто не пишет: бот к базе не обращается (ADR 0006), а писать человеку бот может и после разрешения в Mini App (`requestWriteAccess`). `bot_blocked_at` ставит диспетчер, когда Telegram отвечает 403 или «chat not found», и сбрасывает вход в приложение: другого признака жизни веб не видит. Комментарии к обоим столбцам поправлены миграцией `notification_dispatch`.
+`bot_started_at` в волне 1 никто не пишет: бот к базе не обращается (ADR 0006), а писать человеку бот может и после разрешения в Mini App (`requestWriteAccess`). `bot_blocked_at` ставит диспетчер, когда Telegram отвечает 403 или «chat not found», и сбрасывает вход в приложение: другого признака жизни веб не видит. Комментарии к обоим столбцам поправлены миграцией `notification_dispatch`. Миграция `bot_messages` добавила две definer-функции для самого пользователя: `bot_messages_blocked()` читает его отметку для баннера «Уведомления выключены» (AUTH-7), `set_bot_messages(allowed, send_test)` записывает ответ на `requestWriteAccess` (отказ ставит отметку, разрешение снимает) и по кнопке в баннере ставит в очередь `bot_test`, не чаще раза в минуту.
 
 Зеркальные столбцы нужны вью `public_profiles`: она `security_invoker` и читает только `profiles`, поэтому видит ровно тех, кого пускает политика `profiles` (сам, партнёры по парам в любом статусе, свои карточки тренера, админ без карточек и заглушки).
 
@@ -562,6 +562,8 @@ create unique index coachings_trainer_client_uniq on public.coachings (trainer_i
 
 Повторное присоединение к тому же тренеру после `ended` реактивирует ту же строку (`coachings_trainer_client_uniq`), история сохраняется; RPC при этом сбрасывает `data_shares` и поля завершения.
 
+Завершает пару любая сторона через RPC `end_coaching(coaching_id, reason)` (PRIV-5). В одной транзакции пара получает `ended`, будущие записи пары (`requested`, `confirmed`) отменяются без списания от имени завершившей стороны с `cancel_reason = 'coaching_ended'` и строкой `booking_events`, будущее персональное или пробное занятие без других живых записей отменяется, повторы пары останавливаются (`recurrences.ended_at`), другой стороне ставится `coaching_ended` (Т9; поле `ended_by` в payload). Повторный вызов для завершённой пары ничего не меняет. Архив клиента у тренера (`coaching_trainer_meta.archived_at`), заметки и «Разрешить запись в долг» пишутся напрямую под политиками, без RPC.
+
 Таблицы пары (`passes`, `payments`, `bookings`, `ledger_entries`, `money_events`, `recurrences`, `workout_logs` …) ссылаются на пару составным ключом `(coaching_id, trainer_id, client_id)` с `on update cascade`, поэтому строка не может указать на чужую пару, а смена клиента пары (заглушка, слияние карточки) переносит их сама. Составные FK по `coaching_id` объявлены `deferrable initially immediate`: RPC слияния переносит строки между парами в несколько шагов под `set constraints all deferred`.
 
 ```sql
@@ -641,6 +643,10 @@ create table public.intakes (                  -- версии анкеты кл
   submitted_at  timestamptz not null default now()
 );
 create index on public.intakes (user_id, submitted_at desc);
+-- Уведомления (миграция 20261016193000_intake_notifications.sql): триггер intakes_notify_trainers после первой версии
+-- ставит intake_submitted (Т8, с parq_flagged) каждому тренеру живой пары с share:intake; кнопка «Напомнить» тренера
+-- вызывает RPC remind_intake(coaching_id), которая ставит клиенту intake_reminder не чаще раза в сутки на пару и
+-- только пока анкеты нет и клиент её этому тренеру показывает (иначе intake_filled / intake_hidden).
 
 create type public.contact_request_status as enum ('pending', 'accepted', 'declined', 'expired');
 create table public.contact_requests (          -- «Попросить связаться», Q39
@@ -1562,7 +1568,8 @@ create function public.effective_plan(p_user uuid, p_side public.plan_side) retu
 - **Лимит Free-тренера** проверяет `private.assert_can_add_client(trainer)`, её первой вызывает каждая RPC, создающая живую пару (`redeem_client_invite`, `create_managed_client`, `accept_trial_booking` и другие): если у тренера нет `trainer.unlimited_clients`, а пар в статусах `trial` и `active` (карточки считаются, заглушка нет) уже `limits.max_active_clients`, возвращается ошибка `plan_limit_reached` (R85). Функция берёт строку `trainer_profiles` `for no key update`, поэтому два клиента не займут последнее место одновременно; в `repeatable read` она отказывает (`unsupported_isolation`). Исключение для карточек описано в R91 (§2.1, «Переход»). Запись в `coachings` напрямую через RLS запрещена.
 - **Понижение тарифа:** данные не удаляются; функции Pro проверяют `has_entitlement` на запись, чтение ранее созданных данных остаётся (группы, отчёты: «только чтение»).
 - **RLS:** `plans` читают все аутентифицированные; в `plan_grants` пользователь видит свои выдачи, админ: все, через `admin_grant_plan()` / `admin_revoke_plan()` (SECURITY DEFINER, проверка `is_admin()`, запись в `admin_audit_log`, постановка уведомления в outbox); в `access_requests` пользователь создаёт и видит свои запросы, админ решает их через RPC.
-- Истечение проверяется по времени в `has_entitlement`, без cron; уведомление «тариф заканчивается через 3 дня» ставит ежедневный cron в outbox.
+- **Выдача:** одна действующая выдача тарифа на пользователя; чтобы поменять срок, админ отзывает выдачу и выдаёт заново. `admin_grant_plan()` закрывает открытые запросы на этот тариф как `granted`, отклоняет их `admin_decline_access_request()`. Кнопка «Запросить доступ» вызывает `request_access()`: при открытом запросе или запросе за последние сутки возвращается прежний (PLAN-4). «Мой тариф» читает `my_plan()` (тариф по каждой стороне, срок, для тренера счёт клиентов и лимит) и `my_inherited_rights()` (живые пары с тренером на платном тарифе).
+- Истечение проверяется по времени в `has_entitlement`, без cron. Уведомление «тариф заканчивается через 3 дня» ставит сама `admin_grant_plan()`: строка `plan_expiring` в outbox с `scheduled_for = expires_at - 3 дня`; `admin_revoke_plan()` отменяет её (`cancelled`).
 
 ### 2.2. Волна 2: «Питание и аналитика»
 

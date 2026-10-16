@@ -88,18 +88,21 @@ export function IntakeForm({ coachingId, initial }: { coachingId: string; initia
   );
   const top = useRef<HTMLDivElement>(null);
 
-  // A rejected form opens on the step of the first problem, and the yes set follows the answers sent back.
+  // A rejected form opens on the earliest step with a problem, and the yes set follows the answers sent back.
   const [handled, setHandled] = useState(state);
   if (handled !== state) {
     setHandled(state);
     if (state.status === "invalid") {
-      setStep(INTAKE_STEPS.indexOf(stepOf(state.fields[0] ?? "goals")));
+      setStep(Math.min(...state.fields.map((field) => INTAKE_STEPS.indexOf(stepOf(field)))));
       setYes(new Set(PARQ_QUESTIONS.filter((question) => state.values[question] === "yes")));
     }
   }
 
   useEffect(() => {
-    if (state.status === "sent") hapticSuccess();
+    if (state.status !== "sent") return;
+    hapticSuccess();
+    // The short "sent" panel replaces the long form: start it at the top.
+    window.scrollTo({ top: 0 });
   }, [state]);
 
   useEffect(() => {
@@ -208,12 +211,13 @@ export function IntakeForm({ coachingId, initial }: { coachingId: string; initia
       ) : null}
 
       <div className="mt-auto flex flex-col gap-3">
+        {/* Separate keys: one reused <button> turning into submit mid-click would send the form. */}
         {last ? (
-          <Button type="submit" size="lg" block loading={pending}>
+          <Button key="submit" type="submit" size="lg" block loading={pending}>
             {copy.submit}
           </Button>
         ) : (
-          <Button type="button" size="lg" block onClick={() => setStep(step + 1)}>
+          <Button key="next" type="button" size="lg" block onClick={() => setStep(step + 1)}>
             {copy.next}
           </Button>
         )}

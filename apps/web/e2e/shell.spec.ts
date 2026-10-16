@@ -44,9 +44,12 @@ const SCREENS: readonly Screen[] = [
   { slug: "client-progress", path: "/client/progress", title: "Прогресс" },
   { slug: "client-trainers", path: "/client/trainers", title: "Тренеры" },
   { slug: "settings", path: "/settings", title: "Настройки" },
+  { slug: "settings-plan", path: "/settings/plan", title: "Мой тариф" },
   { slug: "profile", path: "/profile", title: "Профиль" },
   { slug: "login", path: "/login", title: "Вход" },
   { slug: "trainer-invite", path: "/onboarding/trainer?code=ABCD-EFGH-JKLM", title: "Инвайт тренера" },
+  { slug: "beta-terms", path: "/onboarding/consent?next=%2Fclient", title: "Закрытая бета DaFit" },
+  { slug: "onboarding-preferences", path: "/onboarding/preferences?next=%2Fclient", title: "Язык и тема" },
   { slug: "trainer-wizard", path: "/onboarding/trainer/format", title: "Чем ты занимаешься", documentTitle: false },
   { slug: "trainer-links", path: "/trainer/links", title: "QR и ссылка" },
   { slug: "join", path: "/join?code=abc-def", title: "Код тренера" },
@@ -57,6 +60,8 @@ const SCREENS: readonly Screen[] = [
   // A malformed address is answered without the database: the "trainer unavailable" state (Q60).
   { slug: "showcase-unavailable", path: "/trainers/Not_A_Slug", title: "Тренер недоступен", documentTitle: false },
   { slug: "trainer-showcase", path: "/trainer/showcase", title: "Витрина" },
+  // Signed out, the intake asks to sign in and come back.
+  { slug: "client-intake-signed-out", path: "/client/trainers/00000000-0000-4000-8000-000000000000/intake", title: "Анкета" },
   { slug: "not-found", path: "/no-such-page", title: "Такой страницы нет", documentTitle: false, status: 404 },
   // ADM-12: the admin section is a 404 for everyone but admins, signed out included.
   { slug: "admin-denied", path: "/admin/invites", title: "Такой страницы нет", documentTitle: false, status: 404 },
@@ -64,6 +69,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "admin-overview-denied", path: "/admin", title: "Такой страницы нет", documentTitle: false, status: 404 },
   { slug: "admin-users-denied", path: "/admin/users", title: "Такой страницы нет", documentTitle: false, status: 404 },
   { slug: "admin-audit-denied", path: "/admin/audit", title: "Такой страницы нет", documentTitle: false, status: 404 },
+  { slug: "admin-plans-denied", path: "/admin/plans", title: "Такой страницы нет", documentTitle: false, status: 404 },
 ];
 
 const html = (page: Page) => page.locator("html");
@@ -157,6 +163,20 @@ test.describe("navigation", () => {
 });
 
 test.describe("trainer invite", () => {
+  test("signed out, the beta terms send to sign-in and back with the next screen", async ({ page }) => {
+    await page.goto("/onboarding/consent?next=%2Fonboarding%2Ftrainer%3Fcode%3DABCD");
+    await expect(page.getByRole("link", { name: "Войти" })).toHaveAttribute(
+      "href",
+      `/login?next=${encodeURIComponent(`/onboarding/consent?next=${encodeURIComponent("/onboarding/trainer?code=ABCD")}`)}`,
+    );
+  });
+
+  test("the preferences step goes on to the next screen", async ({ page }) => {
+    await page.goto("/onboarding/preferences?next=%2Fclient%2Fsessions");
+    await page.getByRole("link", { name: "Далее" }).click();
+    await expect(page).toHaveURL(/\/client\/sessions$/);
+  });
+
   test("signed out, the invite screen sends to sign-in and back with the code", async ({ page }) => {
     await page.goto("/onboarding/trainer?code=abcd-efgh-jklm");
     await expect(page.getByRole("link", { name: "Войти через Telegram" })).toHaveAttribute(
@@ -201,6 +221,21 @@ test.describe("client link and trainer code", () => {
     await page.goto("/i/not-a-token");
     await expect(page.getByRole("heading", { name: "Ссылка недействительна" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Ввести код тренера" })).toHaveAttribute("href", "/join");
+  });
+});
+
+test.describe("pairs", () => {
+  // A pair id that is not a uuid is answered without the database, like a pair of someone else.
+  for (const path of ["/trainer/clients/not-a-pair", "/trainer/clients/not-a-pair/notes", "/client/trainers/not-a-pair"]) {
+    test(`${path} shows the not-found screen`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.getByRole("heading", { name: "Такой страницы нет" })).toBeVisible();
+    });
+  }
+
+  test("signed out, the client list offers the QR and link screen", async ({ page }) => {
+    await page.goto("/trainer/clients?filter=debt&q=anna");
+    await expect(page.getByRole("link", { name: "Показать QR и ссылку" })).toHaveAttribute("href", "/trainer/links");
   });
 });
 

@@ -1,6 +1,7 @@
 import type { Locale } from "@/i18n/config";
 import { dictionaries, type Dictionary } from "@/i18n/dictionaries";
 import { interpolate } from "@/i18n/format";
+import { formatPlanDate, isPlanCode } from "@/lib/plans/plans";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import type { InlineButton } from "./telegram";
 
@@ -39,28 +40,72 @@ const templates: Partial<Record<NotificationType, Template>> = {
     }),
     buttons: [{ text: t.openQueue, path: "/admin/verification" }],
   }),
-  // Т7 and Т7a. The client screen arrives with the pair card; until then the button opens the list.
+  // Т7 and Т7a: payload { coaching_id, claim_id?, first_name, last_name } from the join RPCs.
   coaching_created: ({ t, payload }) => ({
-    text: interpolateEscaped(t.newClient, { name: clientName(t, payload) }),
-    buttons: [{ text: t.openClients, path: "/trainer/clients" }],
+    text: interpolateEscaped(t.newClient, { name: personName(payload) || t.unnamedClient }),
+    buttons: [{ text: t.openClient, path: pairPath("/trainer/clients", payload) }],
   }),
   managed_client_claim: ({ t, payload }) => ({
-    text: interpolateEscaped(t.newClientWithCards, { name: clientName(t, payload) }),
+    text: interpolateEscaped(t.newClientWithCards, { name: personName(payload) || t.unnamedClient }),
     buttons: [{ text: t.openClients, path: "/trainer/clients" }],
+  }),
+  // Т9 and its mirror: payload { coaching_id, ended_by, cancelled, first_name, last_name } from end_coaching,
+  // naming the side that ended the pair. The other side gets it, so the button opens their own zone.
+  coaching_ended: ({ t, payload }) => {
+    const cancelled = Number(payload.cancelled ?? 0);
+    if (payload.ended_by === "trainer") {
+      return {
+        text: interpolateEscaped(cancelled > 0 ? t.coachingEndedByTrainerCancelled : t.coachingEndedByTrainer, {
+          name: personName(payload) || t.unnamedTrainer,
+        }),
+        buttons: [{ text: t.openTrainer, path: pairPath("/client/trainers", payload) }],
+      };
+    }
+    return {
+      text: interpolateEscaped(cancelled > 0 ? t.coachingEndedByClientCancelled : t.coachingEndedByClient, {
+        name: personName(payload) || t.unnamedClient,
+        count: cancelled,
+      }),
+      buttons: [{ text: t.openClient, path: pairPath("/trainer/clients", payload) }],
+    };
+  },
+  // П1–П3: payload { plan, expires_at? } from admin_grant_plan and admin_revoke_plan (PLAN-5, §2.14-9).
+  plan_granted: ({ t, locale, timeZone, payload }) => ({
+    text:
+      typeof payload.expires_at === "string"
+        ? interpolateEscaped(t.planGrantedUntil, { plan: planName(payload), date: formatPlanDate(locale, payload.expires_at, timeZone) })
+        : interpolateEscaped(t.planGranted, { plan: planName(payload) }),
+    buttons: [{ text: t.openPlan, path: "/settings/plan" }],
+  }),
+  plan_revoked: ({ t, payload }) => ({
+    text: interpolateEscaped(t.planRevoked, { plan: planName(payload) }),
+    buttons: [{ text: t.openPlan, path: "/settings/plan" }],
+  }),
+  plan_expiring: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(t.planExpiring, {
+      plan: planName(payload),
+      date: typeof payload.expires_at === "string" ? formatPlanDate(locale, payload.expires_at, timeZone) : "",
+    }),
+    buttons: [{ text: t.openPlan, path: "/settings/plan" }],
   }),
   // Т8: payload { coaching_id, first_name, last_name, parq_flagged } from the intakes trigger.
   intake_submitted: ({ t, payload }) => ({
     text: interpolateEscaped(payload.parq_flagged === true ? t.intakeSubmittedFlagged : t.intakeSubmitted, {
-      name: clientName(t, payload),
+      name: personName(payload) || t.unnamedClient,
     }),
-    buttons: [{ text: t.openIntake, path: `/trainer/clients/${pairId(payload)}/intake` }],
+    buttons: [{ text: t.openIntake, path: intakePath("/trainer/clients", payload) }],
   }),
   // "Напомнить": payload { coaching_id, first_name, last_name } of the trainer, from remind_intake.
   intake_reminder: ({ t, payload }) => ({
-    text: interpolateEscaped(t.intakeReminder, { name: personName(payload) || t.unnamedTrainer }),
-    buttons: [{ text: t.fillIntake, path: `/client/trainers/${pairId(payload)}/intake` }],
+    text: interpolateEscaped(t.intakeReminder, { name: personName(payload) || t.someTrainer }),
+    buttons: [{ text: t.fillIntake, path: intakePath("/client/trainers", payload) }],
   }),
 };
+
+/** "Pro" or "Premium": the same word in every language, from the plan code in the payload. */
+function planName(payload: TemplateContext["payload"]): string {
+  return isPlanCode(payload.plan) ? dictionaries.ru.plans.names[payload.plan] : String(payload.plan ?? "");
+}
 
 /** Fills {placeholders} in a catalog string, escaping the template and every value. */
 function interpolateEscaped(template: string, values: Record<string, string | number>): string {
@@ -70,20 +115,23 @@ function interpolateEscaped(template: string, values: Record<string, string | nu
   );
 }
 
-/** The client's name from the payload the join RPC queued, or a neutral stand-in. */
-function clientName(t: Dictionary["botMessages"], payload: TemplateContext["payload"]): string {
-  return personName(payload) || t.unnamedClient;
-}
-
-/** first_name and last_name of a payload, or an empty string. */
+/** The person's name from the payload the RPC queued; empty when there is none. */
 function personName(payload: TemplateContext["payload"]): string {
   const part = (value: Json | undefined) => (typeof value === "string" ? value.trim() : "");
   return [part(payload.first_name), part(payload.last_name)].filter(Boolean).join(" ");
 }
 
-/** The pair id of a payload for a route segment; the database writes a uuid there. */
-function pairId(payload: TemplateContext["payload"]): string {
-  return encodeURIComponent(String(payload.coaching_id ?? ""));
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The pair's card under `base`, or `base` itself when the payload has no valid pair id. */
+function pairPath(base: string, payload: TemplateContext["payload"]): string {
+  return typeof payload.coaching_id === "string" && UUID.test(payload.coaching_id) ? `${base}/${payload.coaching_id}` : base;
+}
+
+/** The pair's intake under `base`, or `base` itself when the payload has no valid pair id. */
+function intakePath(base: string, payload: TemplateContext["payload"]): string {
+  const pair = pairPath(base, payload);
+  return pair === base ? base : `${pair}/intake`;
 }
 
 /** Escapes text for parse_mode HTML. Templates pass catalog strings and every inserted value through it. */
