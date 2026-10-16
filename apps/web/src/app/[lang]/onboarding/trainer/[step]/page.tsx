@@ -19,8 +19,8 @@ import { loadWizard, type WizardData } from "@/lib/trainer-wizard/load";
 import { timeZones } from "@/lib/trainer-wizard/options";
 import { isWizardStep, previousPath, stepNumber, stepPath, WIZARD_STEPS, type WizardStep } from "@/lib/trainer-wizard/steps";
 
-/** Where the last step sends documents: the verification screen in the trainer's settings. */
-const CERTIFICATES_PATH = "/trainer/settings/verification";
+/** Where the last step sends documents: the verification screen (built with trainer verification). */
+const CERTIFICATES_PATH = "/trainer/verification";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
