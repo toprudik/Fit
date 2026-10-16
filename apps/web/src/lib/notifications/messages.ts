@@ -1,6 +1,6 @@
 import { INTL_LOCALE, type Locale } from "@/i18n/config";
 import { dictionaries, type Dictionary } from "@/i18n/dictionaries";
-import { interpolate } from "@/i18n/format";
+import { interpolate, plural, type PluralForms } from "@/i18n/format";
 import { formatMoney } from "@/lib/money/format";
 import { isPairId } from "@/lib/pairs/clients";
 import { formatSessionTime } from "@/lib/pairs/format";
@@ -129,6 +129,87 @@ const templates: Partial<Record<NotificationType, Template>> = {
       text: lines.filter(Boolean).join("\n"),
       buttons: [{ text: t.openSession, path: booking ? `/client/sessions?booking=${booking}` : "/client/sessions" }],
     };
+  },
+  // Т-сводка (NOTIF-5): payload { day, sessions[{ starts_at, kind, title, name, booked }], sessions_count,
+  // requests_count, passes[{ name, available, expires_at }], passes_count, debts[{ name, sessions }], debts_count }
+  // from private.daily_digest_payload. Lists are capped there; the counts say how many more there are.
+  daily_digest: ({ t, locale, timeZone, payload }) => {
+    const zone = timeZone ?? DEFAULT_TIME_ZONE;
+    const count = (value: Json | undefined) => (typeof value === "number" && Number.isFinite(value) ? value : 0);
+    const items = (value: Json | undefined) =>
+      Array.isArray(value)
+        ? value.filter((item): item is Record<string, Json> => !!item && typeof item === "object" && !Array.isArray(item))
+        : [];
+    const text = (value: Json | undefined) => (typeof value === "string" ? value.trim() : "");
+    const date = (iso: string, options: Intl.DateTimeFormatOptions, tz: string) =>
+      new Intl.DateTimeFormat(INTL_LOCALE[locale], { ...options, timeZone: tz }).format(new Date(iso));
+    const counted = (forms: PluralForms, value: number, values: Record<string, string | number> = {}) =>
+      interpolateEscaped(plural(locale, value, forms), values);
+    const more = (shown: number, total: number) =>
+      total > shown ? [`• ${interpolateEscaped(t.digestMore, { count: total - shown })}`] : [];
+
+    const day = typeof payload.day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(payload.day) ? payload.day : null;
+    const lines = [
+      interpolateEscaped(t.digestTitle, { date: day ? date(`${day}T12:00:00Z`, { day: "numeric", month: "long" }, "UTC") : "" }),
+    ];
+
+    const sessions = items(payload.sessions);
+    const sessionsCount = count(payload.sessions_count);
+    lines.push("");
+    if (sessionsCount > 0) {
+      lines.push(counted(t.digestSessions, sessionsCount));
+      for (const session of sessions) {
+        const time = typeof session.starts_at === "string" ? date(session.starts_at, { hour: "numeric", minute: "2-digit" }, zone) : "";
+        lines.push(
+          `• ${
+            session.kind === "group"
+              ? interpolateEscaped(t.digestSessionGroup, {
+                  time,
+                  title: text(session.title) || t.digestGroup,
+                  booked: count(session.booked),
+                })
+              : interpolateEscaped(t.digestSession, { time, name: text(session.name) || t.unnamedClient })
+          }`,
+        );
+      }
+      lines.push(...more(sessions.length, sessionsCount));
+    } else {
+      lines.push(escapeHtml(t.digestNoSessions));
+    }
+
+    const requests = count(payload.requests_count);
+    if (requests > 0) lines.push("", counted(t.digestRequests, requests));
+
+    const passes = items(payload.passes);
+    const passesCount = count(payload.passes_count);
+    if (passesCount > 0) {
+      lines.push("", escapeHtml(t.digestPasses));
+      for (const pass of passes) {
+        const name = text(pass.name) || t.unnamedClient;
+        const available = count(pass.available);
+        lines.push(
+          `• ${
+            available > 1 && typeof pass.expires_at === "string"
+              ? interpolateEscaped(t.digestPassUntil, { name, date: date(pass.expires_at, { day: "numeric", month: "short" }, zone) })
+              : available > 0
+                ? counted(t.digestPassLeft, available, { name })
+                : interpolateEscaped(t.digestPassEmpty, { name })
+          }`,
+        );
+      }
+      lines.push(...more(passes.length, passesCount));
+    }
+
+    const debts = items(payload.debts);
+    const debtsCount = count(payload.debts_count);
+    if (debtsCount > 0) {
+      lines.push("", escapeHtml(t.digestDebts));
+      for (const debt of debts)
+        lines.push(`• ${counted(t.digestDebt, count(debt.sessions), { name: text(debt.name) || t.unnamedClient })}`);
+      lines.push(...more(debts.length, debtsCount));
+    }
+
+    return { text: lines.join("\n"), buttons: [{ text: t.openToday, path: "/trainer" }] };
   },
   // П1–П3: payload { plan, expires_at? } from admin_grant_plan and admin_revoke_plan (PLAN-5, §2.14-9).
   plan_granted: ({ t, locale, timeZone, payload }) => ({

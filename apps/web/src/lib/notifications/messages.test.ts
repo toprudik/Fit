@@ -355,6 +355,57 @@ describe("plan messages", () => {
     });
   });
 
+  describe("daily_digest (NOTIF-5)", () => {
+    const options = { appUrl: "https://fit.example", group: false };
+    const payload = {
+      day: "2026-10-22",
+      sessions: [
+        { starts_at: "2026-10-22T07:00:00Z", kind: "personal", title: null, name: "Катя", booked: 1 },
+        { starts_at: "2026-10-22T15:00:00Z", kind: "group", title: "Функционалка", name: null, booked: 5 },
+      ],
+      sessions_count: 3,
+      requests_count: 2,
+      passes: [
+        { name: "Катя", available: 1, expires_at: null },
+        { name: "Борис", available: 4, expires_at: "2026-10-25T21:00:00Z" },
+      ],
+      passes_count: 2,
+      debts: [{ name: "<Вера>", sessions: 2 }],
+      debts_count: 1,
+    };
+
+    it("lists today's sessions, requests, passes running out and debts, with a button to Today", () => {
+      expect(renderMessage({ ...row, kind: "daily_digest", payload }, options)).toEqual({
+        text: [
+          "Сводка на 22 октября",
+          "",
+          "Сегодня 3 занятия:",
+          "• 10:00, Катя",
+          "• 18:00, Функционалка, записались: 5",
+          "• и ещё 1",
+          "",
+          "2 запроса на запись ждут ответа.",
+          "",
+          "Абонементы на исходе:",
+          "• Катя, осталось 1 занятие",
+          "• Борис, до 26 окт.",
+          "",
+          "Долги:",
+          "• &lt;Вера&gt;, 2 занятия",
+        ].join("\n"),
+        buttons: [{ text: "Открыть «Сегодня»", web_app: { url: "https://fit.example/trainer?source=daily_digest" } }],
+      });
+    });
+
+    it("says there are no sessions when only other parts have news", () => {
+      const text = renderMessage(
+        { ...row, locale: "en", kind: "daily_digest", payload: { day: "2026-10-22", sessions: [], sessions_count: 0, requests_count: 1 } },
+        options,
+      )?.text;
+      expect(text).toBe("Your day, October 22\n\nNo sessions today.\n\n1 booking request is waiting for your answer.");
+    });
+  });
+
   describe("client bookings and requests", () => {
     const options = { appUrl: "https://fit.example", group: false };
     const client = { first_name: "Анна", last_name: "Смирнова" };
