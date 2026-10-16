@@ -49,6 +49,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "trainer-invite", path: "/onboarding/trainer?code=ABCD-EFGH-JKLM", title: "Инвайт тренера" },
   { slug: "beta-terms", path: "/onboarding/consent?next=%2Fclient", title: "Закрытая бета DaFit" },
   { slug: "onboarding-preferences", path: "/onboarding/preferences?next=%2Fclient", title: "Язык и тема" },
+  { slug: "trainer-wizard", path: "/onboarding/trainer/format", title: "Чем ты занимаешься", documentTitle: false },
   { slug: "trainer-links", path: "/trainer/links", title: "QR и ссылка" },
   { slug: "join", path: "/join?code=abc-def", title: "Код тренера" },
   // A malformed token is answered without the database: the "link no longer works" state.
@@ -170,6 +171,21 @@ test.describe("trainer invite", () => {
       "href",
       `/login?next=${encodeURIComponent("/onboarding/trainer?code=ABCDEFGHJKLM")}`,
     );
+  });
+
+  test("signed out, a wizard step sends to sign-in and back to the same step", async ({ page }) => {
+    await page.goto("/onboarding/trainer/region");
+    await expect(page.getByRole("heading", { level: 1, name: "Часовой пояс и валюта" })).toBeVisible();
+    await expect(page.getByRole("progressbar", { name: "Профиль заполнен" })).toHaveAttribute("aria-valuenow", "43");
+    await expect(page.getByRole("link", { name: "Войти через Telegram" })).toHaveAttribute(
+      "href",
+      `/login?next=${encodeURIComponent("/onboarding/trainer/region")}`,
+    );
+  });
+
+  test("signed out, the result screen goes back to the invite screen", async ({ page }) => {
+    await page.goto("/onboarding/trainer/done");
+    await expect(page).toHaveURL(/\/onboarding\/trainer$/);
   });
 
   test("signed out, the profile offers no trainer invite and no admin section", async ({ page }) => {
