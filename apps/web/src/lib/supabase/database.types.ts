@@ -2456,6 +2456,9 @@ isOneToOne: false
               "code": string,"created_at": string,"invite_id": string,"token": string,"uses_count": number
             }[]
                            },
+"remind_intake":
+{ Args: { "p_coaching_id": string }; Returns: boolean
+                           },
 "reopen_schedule":
 { Args: { "p_slot_id": string }; Returns: number
                            },

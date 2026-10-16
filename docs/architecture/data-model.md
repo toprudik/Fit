@@ -643,6 +643,10 @@ create table public.intakes (                  -- версии анкеты кл
   submitted_at  timestamptz not null default now()
 );
 create index on public.intakes (user_id, submitted_at desc);
+-- Уведомления (миграция 20261016224700_intake_notifications.sql): триггер intakes_notify_trainers после первой версии
+-- ставит intake_submitted (Т8, с parq_flagged) каждому тренеру живой пары с share:intake; кнопка «Напомнить» тренера
+-- вызывает RPC remind_intake(coaching_id), которая ставит клиенту intake_reminder не чаще раза в сутки на пару и
+-- только пока анкеты нет и клиент её этому тренеру показывает (иначе intake_filled / intake_hidden).
 
 create type public.contact_request_status as enum ('pending', 'accepted', 'declined', 'expired');
 create table public.contact_requests (          -- «Попросить связаться», Q39

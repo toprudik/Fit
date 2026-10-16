@@ -1,6 +1,8 @@
 import { CalendarDays, MessageCircle, Plus, Ticket, Wallet } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TrainerIntakeRow } from "@/components/intake/intake-rows";
+import { TrainerIntake } from "@/components/intake/trainer-intake";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { IconButton } from "@/components/ui/icon-button";
@@ -20,7 +22,7 @@ import { NoteComposer, NoteItem, NoteVisibility } from "./notes";
 import { PairTabs } from "./pair-tabs";
 import { ArchiveRow, DebtBookingSwitch, EndPairRow } from "./pair-controls";
 
-export type PairTab = "overview" | "notes" | "passes" | "payments";
+export type PairTab = "overview" | "notes" | "passes" | "payments" | "intake";
 
 /** "34 занятия вместе, с 3 марта" under the name. */
 export function pairSubtitle(t: Dictionary, locale: Locale, pair: PairDetail): string {
@@ -101,6 +103,8 @@ function Overview({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: Pa
       <ListGroup header={t.pairs.passes}>
         <PassRows t={t} locale={locale} pair={pair} />
       </ListGroup>
+
+      {pair.partner.isCard ? null : <TrainerIntakeRow coachingId={pair.coachingId} />}
 
       {latest ? (
         <section aria-labelledby="latest-note" className="flex flex-col gap-1.5">
@@ -206,12 +210,16 @@ export async function TrainerPair({ coachingId, tab, action }: { coachingId: str
             { href: `${base}/passes`, label: t.pairs.tabs.passes, current: tab === "passes" },
             { href: `${base}/payments`, label: t.pairs.tabs.payments, current: tab === "payments" },
             { href: `${base}/notes`, label: t.pairs.tabs.notes, current: tab === "notes" },
+            // A card has no account to fill in an intake.
+            ...(pair.partner.isCard ? [] : [{ href: `${base}/intake`, label: t.intake.trainer.title, current: tab === "intake" }]),
           ]}
         />
         {tab === "overview" ? (
           <Overview t={t} locale={locale} pair={pair} />
         ) : tab === "notes" ? (
           <Notes t={t} locale={locale} pair={pair} />
+        ) : tab === "intake" ? (
+          <TrainerIntake coachingId={pair.coachingId} />
         ) : money && tab === "passes" ? (
           <TrainerPasses money={money} symbol={currencySymbol(locale, money.currency)} />
         ) : money ? (

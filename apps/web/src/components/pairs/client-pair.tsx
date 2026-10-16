@@ -1,6 +1,7 @@
 import { CalendarDays, Wallet } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Screen } from "@/components/shell/screen";
+import { ClientIntakeRows } from "@/components/intake/intake-rows";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { interpolate, plural } from "@/i18n/format";
@@ -59,6 +60,8 @@ export async function ClientPair({ coachingId }: { coachingId: string }) {
         <ListGroup header={t.pairs.passes}>
           <PassRows t={t} locale={locale} pair={pair} />
         </ListGroup>
+
+        <ClientIntakeRows coachingId={pair.coachingId} />
 
         <section aria-labelledby="trainer-notes" className="flex flex-col gap-1.5">
           <h2 id="trainer-notes" className="px-4 text-footnote text-ink-2">
