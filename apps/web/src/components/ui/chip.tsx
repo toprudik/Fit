@@ -14,8 +14,35 @@ type ChipCheckboxProps = Omit<React.ComponentProps<"input">, "type" | "children"
  */
 export function ChipCheckbox({ children, className, ...input }: ChipCheckboxProps) {
   return (
+    <ChipInput type="checkbox" className={className} input={input}>
+      {children}
+    </ChipInput>
+  );
+}
+
+/** The same chip for picking one value of a group: a real radio button under the pill. */
+export function ChipRadio({ children, className, ...input }: ChipCheckboxProps) {
+  return (
+    <ChipInput type="radio" className={className} input={input}>
+      {children}
+    </ChipInput>
+  );
+}
+
+function ChipInput({
+  type,
+  input,
+  children,
+  className,
+}: {
+  type: "checkbox" | "radio";
+  input: Omit<ChipCheckboxProps, "children" | "className">;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
     <label data-slot="chip" className={cn("relative inline-flex cursor-pointer", className)}>
-      <input type="checkbox" className="peer absolute inset-0 size-full cursor-pointer appearance-none rounded-full" {...input} />
+      <input type={type} className="peer absolute inset-0 size-full cursor-pointer appearance-none rounded-full" {...input} />
       <span
         className={cn(
           "pointer-events-none inline-flex h-9 items-center gap-1.5 rounded-full bg-surface-2 px-4 text-subhead font-medium text-ink",
