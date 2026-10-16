@@ -730,6 +730,17 @@ create table public.slots (
 create index on public.slots (trainer_id, starts_at);
 create index on public.slots (starts_at) where status = 'open';
 
+-- Расписание тренера (миграция 20261016193700_schedule_slots):
+-- save_week_template(items, horizon_weeks, buffer_min) сохраняет неделю целиком: убирает будущие свободные
+--   слоты старого шаблона (кроме занятых), заменяет окна и режет новые слоты на horizon_weeks вперёд.
+-- close_schedule_days(from, to) удаляет свободные слоты в эти местные дни, ставит один слот-отметку
+--   status = 'closed' без template_item_id на весь период и возвращает оставшиеся занятия для предупреждения.
+-- reopen_schedule(slot_id) снимает отметку и дорезает слоты из шаблона.
+-- Одиночный слот тренер закрывает и открывает обычным update status под RLS.
+-- pg_cron «slots-roll» (00:15 UTC) каждый день досоздаёт слоты до горизонта: private.roll_slots().
+-- Местное время в UTC переводит private.local_to_utc: время в «дыре» перехода на летнее время уходит
+--   на конец дыры, неоднозначное берёт первое прочтение (PRD 2.6.7-3).
+
 create table public.recurrences (
   id                uuid primary key default gen_random_uuid(),
   trainer_id        uuid not null references public.trainer_profiles(user_id) on delete cascade,
