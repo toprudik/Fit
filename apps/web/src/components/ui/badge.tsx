@@ -7,6 +7,9 @@ const TONES = {
   success: "bg-success-soft text-success",
   warning: "bg-warning-soft text-warning",
   danger: "bg-danger-soft text-danger",
+  // Plan badges: Pro is blue, Premium gold (tokens pro and premium).
+  pro: "bg-pro-soft text-pro",
+  premium: "bg-premium-soft text-premium",
 } as const;
 
 type BadgeProps = {
@@ -17,7 +20,7 @@ type BadgeProps = {
   className?: string;
 };
 
-/** Short status label next to a title (docs/design/components/Badge). Tariff badges come with tariffs. */
+/** Short status or plan label next to a title (docs/design/components/Badge). */
 export function Badge({ tone = "neutral", icon: Icon, children, className }: BadgeProps) {
   return (
     <span
