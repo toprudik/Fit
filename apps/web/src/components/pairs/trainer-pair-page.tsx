@@ -3,7 +3,7 @@ import { MasterDetail, Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { Skeleton, SkeletonRows } from "@/components/ui/skeleton";
 import { getDictionary } from "@/i18n/server";
-import { ClientList } from "./client-list";
+import { AddClientButton, ClientList } from "./client-list";
 import { TrainerPair } from "./trainer-pair";
 
 async function PairFromParams({ params, tab }: { params: Promise<{ coachingId: string }>; tab: "overview" | "notes" }) {
@@ -26,7 +26,7 @@ export async function TrainerPairPage({ params, tab }: { params: Promise<{ coach
     <MasterDetail
       show="detail"
       list={
-        <Screen header={<ScreenHeader title={t.tabs.trainer.clients} />}>
+        <Screen header={<ScreenHeader title={t.tabs.trainer.clients} actions={<AddClientButton label={t.pairs.cards.add} />} />}>
           <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
             <ListFromParams params={params} />
           </Suspense>

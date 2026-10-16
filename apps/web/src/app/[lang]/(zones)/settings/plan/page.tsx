@@ -14,23 +14,12 @@ import type { Dictionary } from "@/i18n/dictionaries";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { personName } from "@/lib/admin/people";
-import { formatPlanDate, isPaidPlan, isPlanCode, PAID_PLAN, PLAN_FEATURES, PLAN_TIER, type PlanSide } from "@/lib/plans/plans";
+import { formatPlanDate, isPaidPlan, isPlanCode, PAID_PLAN, PLAN_FEATURES, PLAN_TIER, requestedPlans, type PlanSide } from "@/lib/plans/plans";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
   return { title: t.plans.title };
-}
-
-/** A request this recent still shows as sent: request_access returns it instead of making a new one (PLAN-4). */
-const REQUEST_DAY_MS = 24 * 60 * 60 * 1000;
-
-/** Plans with a request that is open or was made within a day: their button already says "Запрос отправлен". */
-function requestedPlans(requests: { plan_code: string; status: string; created_at: string }[]): Set<string> {
-  const since = Date.now() - REQUEST_DAY_MS;
-  return new Set(
-    requests.filter((request) => request.status === "open" || new Date(request.created_at).getTime() > since).map((request) => request.plan_code),
-  );
 }
 
 type SideRow = { side: PlanSide; plan_code: string; expires_at: string | null; active_clients: number | null; client_limit: number | null };
