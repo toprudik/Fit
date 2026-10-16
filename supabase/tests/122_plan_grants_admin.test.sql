@@ -1,5 +1,6 @@
--- Admin plan grants and access requests of migration 20261016160000_plan_grants_admin.sql (PRD wave-1 §2.14
--- PLAN-1, 2, 4, 5, 6): admin_grant_plan, admin_revoke_plan, admin_decline_access_request, request_access.
+-- Admin plan grants and access requests of migration 20261016180000_plan_grants_admin.sql (PRD wave-1 §2.14
+-- PLAN-1, 2, 4, 5, 6, 7): admin_grant_plan, admin_revoke_plan, admin_decline_access_request, request_access, my_plan,
+-- my_inherited_rights.
 begin;
 \ir _helpers.psql
 select plan(58);
