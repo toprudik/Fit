@@ -19,6 +19,7 @@ const KNOWN_ERRORS = [
   "not_your_client",
   "session_not_found",
   "not_editable",
+  "invalid_capacity",
 ] as const;
 
 export type SessionError = (typeof KNOWN_ERRORS)[number] | "failed";
@@ -57,9 +58,18 @@ const createInput = z.object({
     .nullable(),
 });
 
+const createGroupInput = z.object({
+  ...fields,
+  title: z.string().trim().min(1).max(120),
+  capacity: z.number().int().min(2).max(100),
+  openForBooking: z.boolean(),
+  repeat: createInput.shape.repeat,
+});
+
 const updateInput = z.object({ ...fields, sessionId: z.uuid(), following: z.boolean() });
 
 export type CreateSessionInput = z.input<typeof createInput>;
+export type CreateGroupSessionInput = z.input<typeof createGroupInput>;
 export type UpdateSessionInput = z.input<typeof updateInput>;
 
 function rpcError(error: { message: string; code: string }, what: string): SaveSessionResult {
@@ -145,6 +155,48 @@ export async function createSession(raw: CreateSessionInput): Promise<SaveSessio
 }
 
 /**
+ * "Создать" for a group on /trainer/sessions/new (PRD 2.6.3): a titled session with seats, once or weekly. It
+ * starts empty; with `openForBooking` the trainer's clients book seats themselves.
+ */
+export async function createGroupSession(raw: CreateGroupSessionInput): Promise<SaveSessionResult> {
+  const parsed = createGroupInput.safeParse(raw);
+  if (!parsed.success) return { status: "error", error: raw.title?.trim() ? "failed" : "invalid_title" };
+  const input = parsed.data;
+
+  const supabase = await createSupabaseServerClient();
+  const zone = await trainerZone(supabase);
+  if (!zone) return { status: "error", error: "failed" };
+  const startsAt = localToUtc(input.day, parseMinutes(input.time)!, zone);
+  const endsAt = new Date(startsAt.getTime() + input.durationMin * 60_000);
+
+  if (!input.force) {
+    const overlapping = await conflicts(supabase, startsAt, endsAt, null);
+    if (overlapping.length > 0) return { status: "conflict", conflicts: overlapping };
+  }
+
+  const { data, error } = await supabase.rpc("create_group_session", {
+    p_starts_at: startsAt.toISOString(),
+    p_duration_min: input.durationMin,
+    p_capacity: input.capacity,
+    p_title: input.title,
+    p_mode: input.mode,
+    ...(input.mode === "offline" && input.locationId ? { p_location_id: input.locationId } : {}),
+    ...(input.mode === "online" && input.meetingUrl ? { p_meeting_url: input.meetingUrl } : {}),
+    p_open_for_booking: input.openForBooking,
+    ...(input.repeat
+      ? {
+          p_weekdays: input.repeat.weekdays,
+          ...(input.repeat.until ? { p_until: input.repeat.until } : {}),
+          ...(input.repeat.count ? { p_count: input.repeat.count } : {}),
+        }
+      : {}),
+  });
+  if (error) return rpcError(error, "creating a group session");
+  refresh();
+  return { status: "done", sessionId: data[0].session_id, count: data[0].created };
+}
+
+/**
  * "Сохранить" on /trainer/sessions/[id]/edit (PRD 2.6.5-5): moves or changes one session, or with `following`
  * this one and the later ones of its repeat. The client gets one К6.
  */
@@ -200,4 +252,52 @@ export async function cancelSession(raw: { sessionId: string; reason: string; fo
   }
   refresh();
   return { status: "done", count: data };
+}
+
+/** Errors of the participant and seat controls on a group session page. */
+const GROUP_ERRORS = ["already_booked", "session_full", "not_your_client", "session_not_found", "capacity_below_occupied"] as const;
+
+export type GroupError = (typeof GROUP_ERRORS)[number] | "failed";
+export type GroupActionResult = { status: "done" } | { status: "error"; error: GroupError };
+
+function groupError(error: { message: string; code: string }, what: string): GroupActionResult {
+  const known = GROUP_ERRORS.find((key) => key === error.message);
+  if (known) return { status: "error", error: known };
+  console.error(`${what} failed`, error.code);
+  return { status: "error", error: "failed" };
+}
+
+/** "Добавить участника" on a group session (PRD 2.6.3): the client is confirmed at once and gets К1. */
+export async function addGroupParticipant(raw: { sessionId: string; coachingId: string }): Promise<GroupActionResult> {
+  const parsed = z.object({ sessionId: z.uuid(), coachingId: z.uuid() }).safeParse(raw);
+  if (!parsed.success) return { status: "error", error: "failed" };
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("add_group_participant", {
+    p_session_id: parsed.data.sessionId,
+    p_coaching_id: parsed.data.coachingId,
+  });
+  if (error) return groupError(error, "adding a group participant");
+  refresh();
+  return { status: "done" };
+}
+
+/**
+ * "Места" on a group session: the number of seats, never below the ones taken (capacity_below_occupied), and
+ * whether clients book it themselves. RLS lets the trainer change these two columns of their own session.
+ */
+export async function updateGroupSeats(raw: { sessionId: string; capacity: number; openForBooking: boolean }): Promise<GroupActionResult> {
+  const parsed = z.object({ sessionId: z.uuid(), capacity: z.number().int().min(2).max(100), openForBooking: z.boolean() }).safeParse(raw);
+  if (!parsed.success) return { status: "error", error: "failed" };
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("sessions")
+    .update({ capacity: parsed.data.capacity, open_for_booking: parsed.data.openForBooking })
+    .eq("id", parsed.data.sessionId)
+    .eq("kind", "group")
+    .eq("status", "scheduled")
+    .select("id");
+  if (error) return groupError(error, "changing group seats");
+  if (data.length === 0) return { status: "error", error: "session_not_found" };
+  refresh();
+  return { status: "done" };
 }

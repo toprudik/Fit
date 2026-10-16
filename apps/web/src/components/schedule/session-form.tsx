@@ -7,11 +7,13 @@ import { ChipCheckbox } from "@/components/ui/chip";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
+import { Switch } from "@/components/ui/switch";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import {
+  createGroupSession,
   createSession,
   updateSession,
   type SaveSessionResult,
@@ -36,27 +38,35 @@ export type SessionFormValues = {
 };
 
 type Props = {
+  /** Without clients only a group can be created. */
   clients: { coachingId: string; name: string }[];
   locations: { id: string; name: string }[];
   timeZone: string;
   today: string;
   initial: SessionFormValues;
 } & (
-  | { kind: "create" }
+  | { kind: "create"; initialType: "personal" | "group" }
   /** Editing: the client stays; a session of a repeat asks "Только это / Это и следующие". */
-  | { kind: "edit"; sessionId: string; inRepeat: boolean }
+  | { kind: "edit"; sessionId: string; inRepeat: boolean; group: boolean }
 );
 
 /**
- * "Новое занятие" and "Изменить занятие" (screens.md /trainer/sessions/new and /[id]/edit, PRD 2.6.2): client,
- * day and time in the trainer's zone, length, where it happens and a weekly repeat. A time that overlaps
- * another session asks first (2.6.2-6).
+ * "Новое занятие" and "Изменить занятие" (screens.md /trainer/sessions/new and /[id]/edit, PRD 2.6.2, 2.6.3):
+ * a personal session for a client or a group with a title and seats, day and time in the trainer's zone,
+ * length, where it happens and a weekly repeat. A time that overlaps another session asks first (2.6.2-6).
  */
 export function SessionForm(props: Props) {
   const { t, locale } = useI18n();
   const copy = t.schedule.sessionForm;
+  const groupCopy = t.schedule.groupSession;
   const router = useRouter();
   const [values, setValues] = useState(props.initial);
+  const [type, setType] = useState<"personal" | "group">(() =>
+    props.kind === "create" ? (props.clients.length === 0 ? "group" : props.initialType) : props.group ? "group" : "personal",
+  );
+  const group = type === "group";
+  const [capacity, setCapacity] = useState("8");
+  const [openForBooking, setOpenForBooking] = useState(true);
   const [repeat, setRepeat] = useState<"none" | "weekly">("none");
   const [weekdays, setWeekdays] = useState<number[]>(() => [isoWeekday(props.initial.day)]);
   const [end, setEnd] = useState<"until" | "count">("count");
@@ -71,15 +81,19 @@ export function SessionForm(props: Props) {
     setValues((current) => ({ ...current, ...patch }));
     setError(null);
   };
-  const errorText = (key: SessionError) => copy.errors[key];
+  const errorText = (key: SessionError) =>
+    key === "invalid_capacity" ? groupCopy.invalidCapacity : key === "invalid_title" && group ? groupCopy.titleRequired : copy.errors[key];
   const when = new Intl.DateTimeFormat(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit", timeZone: props.timeZone });
 
   const done = (result: Extract<SaveSessionResult, { status: "done" }>) => {
-    if (props.kind === "create") {
+    if (props.kind === "create" && group) {
+      toast.success(result.count > 1 ? interpolate(groupCopy.createdMany, { count: result.count }) : groupCopy.created);
+      router.push(`/trainer/sessions/${result.sessionId}`);
+    } else if (props.kind === "create") {
       toast.success(result.count > 1 ? interpolate(copy.assignedMany, { count: result.count }) : copy.assigned);
       router.push(`/trainer/schedule?date=${values.day}`);
     } else {
-      toast.success(copy.saved);
+      toast.success(group ? groupCopy.saved : copy.saved);
       router.push(`/trainer/sessions/${props.kind === "edit" ? props.sessionId : ""}`);
     }
   };
@@ -96,21 +110,26 @@ export function SessionForm(props: Props) {
         title: values.title.trim() || null,
         force,
       };
+      const repeatInput =
+        repeat === "weekly"
+          ? {
+              weekdays,
+              until: end === "until" ? until : null,
+              count: end === "count" ? Number(count) : null,
+            }
+          : null;
       const result =
-        props.kind === "create"
-          ? await createSession({
-              ...common,
-              coachingId: values.coachingId,
-              repeat:
-                repeat === "weekly"
-                  ? {
-                      weekdays,
-                      until: end === "until" ? until : null,
-                      count: end === "count" ? Number(count) : null,
-                    }
-                  : null,
-            })
-          : await updateSession({ ...common, sessionId: props.sessionId, following });
+        props.kind === "edit"
+          ? await updateSession({ ...common, sessionId: props.sessionId, following })
+          : group
+            ? await createGroupSession({
+                ...common,
+                title: values.title.trim(),
+                capacity: Number(capacity),
+                openForBooking,
+                repeat: repeatInput,
+              })
+            : await createSession({ ...common, coachingId: values.coachingId, repeat: repeatInput });
       if (result.status === "done") return done(result);
       if (result.status === "conflict") return setConflicts(result.conflicts);
       setConflicts([]);
@@ -120,7 +139,12 @@ export function SessionForm(props: Props) {
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
-    if (props.kind === "create" && !values.coachingId) return setError(copy.chooseClient);
+    if (props.kind === "create" && !group && !values.coachingId) return setError(copy.chooseClient);
+    if (group && !values.title.trim()) return setError(groupCopy.titleRequired);
+    const seats = Number(capacity);
+    if (props.kind === "create" && group && (!Number.isInteger(seats) || seats < 2 || seats > 100)) {
+      return setError(groupCopy.invalidCapacity);
+    }
     if (values.mode === "online" && values.meetingUrl.trim() && !/^https:\/\/\S+$/.test(values.meetingUrl.trim())) {
       return setError(copy.errors.invalid_link);
     }
@@ -141,7 +165,56 @@ export function SessionForm(props: Props) {
   return (
     <form onSubmit={submit} className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 rounded-lg bg-surface-1 p-4">
-        {props.kind === "create" ? (
+        {props.kind === "create" && props.clients.length > 0 ? (
+          <div className="flex flex-col gap-1.5">
+            <span className="px-1 text-footnote text-ink-2">{groupCopy.type}</span>
+            <SegmentedControl
+              label={groupCopy.type}
+              value={type}
+              onValueChange={(next) => {
+                setType(next);
+                setError(null);
+              }}
+              options={[
+                { value: "personal", label: groupCopy.personal },
+                { value: "group", label: groupCopy.group },
+              ]}
+            />
+          </div>
+        ) : null}
+        {props.kind === "create" && group ? (
+          <>
+            <TextField
+              label={groupCopy.title}
+              hint={groupCopy.titleHint}
+              value={values.title}
+              onChange={(event) => change({ title: event.target.value })}
+              maxLength={120}
+              required
+            />
+            <TextField
+              label={groupCopy.capacity}
+              type="number"
+              inputMode="numeric"
+              min={2}
+              max={100}
+              value={capacity}
+              onChange={(event) => {
+                setCapacity(event.target.value);
+                setError(null);
+              }}
+              required
+            />
+            <Switch
+              checked={openForBooking}
+              onCheckedChange={setOpenForBooking}
+              label={groupCopy.openForBooking}
+              hint={groupCopy.openForBookingHint}
+              showLabel
+            />
+          </>
+        ) : null}
+        {props.kind === "create" && !group ? (
           <div className="flex flex-col gap-1.5">
             <label htmlFor="session-client" className="px-1 text-footnote text-ink-2">
               {copy.client}
@@ -249,13 +322,16 @@ export function SessionForm(props: Props) {
             maxLength={500}
           />
         ) : null}
-        <TextField
-          label={copy.sessionTitle}
-          hint={copy.sessionTitleHint}
-          value={values.title}
-          onChange={(event) => change({ title: event.target.value })}
-          maxLength={120}
-        />
+        {props.kind === "create" && group ? null : (
+          <TextField
+            label={group ? groupCopy.title : copy.sessionTitle}
+            hint={group ? groupCopy.titleHint : copy.sessionTitleHint}
+            value={values.title}
+            onChange={(event) => change({ title: event.target.value })}
+            maxLength={120}
+            required={group}
+          />
+        )}
       </div>
 
       {props.kind === "create" ? (
@@ -356,7 +432,7 @@ export function SessionForm(props: Props) {
           </p>
         ) : null}
         <Button type="submit" size="lg" block loading={pending && conflicts.length === 0}>
-          {props.kind === "create" ? copy.submit : copy.save}
+          {props.kind === "edit" ? copy.save : group ? groupCopy.submit : copy.submit}
         </Button>
       </div>
 
