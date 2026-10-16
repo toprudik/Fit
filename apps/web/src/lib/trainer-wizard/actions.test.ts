@@ -11,7 +11,7 @@ const next = vi.hoisted(() => ({
 vi.mock("next/cache", () => ({ refresh: next.refresh }));
 vi.mock("next/navigation", () => ({ redirect: next.redirect }));
 
-type Write = { table: string; op: "update" | "insert"; values: Record<string, unknown>; filter?: [string, unknown] };
+type Write = { table: string; op: "update" | "insert"; values: Record<string, unknown> | Record<string, unknown>[]; filter?: [string, unknown] };
 
 /** Writes made as the signed-in user; `fail` makes the next write answer with an error. */
 const db = vi.hoisted(() => ({
@@ -29,13 +29,14 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({
     auth: { getClaims: async () => ({ data: db.user ? { claims: { sub: db.user } } : null }) },
     from: (table: string) => ({
+      select: () => ({ eq: () => ({ single: async () => ({ data: { default_currency: "RUB" }, error: null }) }) }),
       update: (values: Record<string, unknown>) => ({
         eq: async (column: string, value: unknown) => {
           db.writes.push({ table, op: "update", values, filter: [column, value] });
           return result(null);
         },
       }),
-      insert: async (values: Record<string, unknown>) => {
+      insert: async (values: Record<string, unknown> | Record<string, unknown>[]) => {
         db.writes.push({ table, op: "insert", values });
         return result(null);
       },
@@ -101,6 +102,9 @@ describe("saveWizardStep", () => {
   it("moves on without writing when an optional step is left empty", async () => {
     await expect(saveWizardStep(IDLE, form({ step: "locations", name: "", address: "" }))).rejects.toThrow("redirect /onboarding/trainer/region");
     await expect(saveWizardStep(IDLE, form({ step: "payment", title: "", url: "", kind: "sbp" }))).rejects.toThrow(
+      "redirect /onboarding/trainer/prices",
+    );
+    await expect(saveWizardStep(IDLE, form({ step: "prices", dropIn: "", p5: "", p10: "", p20: "", validity: "" }))).rejects.toThrow(
       "redirect /onboarding/trainer/certificates",
     );
     expect(db.writes).toEqual([]);
@@ -136,12 +140,38 @@ describe("saveWizardStep", () => {
     });
     await expect(
       saveWizardStep(IDLE, form({ step: "payment", title: "СБП", url: "https://pay.example/anna", kind: "self_employed" })),
-    ).rejects.toThrow("redirect /onboarding/trainer/certificates");
+    ).rejects.toThrow("redirect /onboarding/trainer/prices");
     expect(db.writes.at(-1)).toEqual({
       table: "payment_links",
       op: "insert",
       values: { trainer_id: "trainer-1", title: "СБП", url: "https://pay.example/anna", kind: "self_employed" },
     });
+  });
+
+  it("creates the price grid from the template in the trainer's currency", async () => {
+    await expect(
+      saveWizardStep(IDLE, form({ step: "prices", dropIn: "2 000", p5: "9000", p10: "16000", p20: "", validity: "90" })),
+    ).rejects.toThrow("redirect /onboarding/trainer/certificates");
+    expect(db.writes).toEqual([
+      {
+        table: "packages",
+        op: "insert",
+        values: [
+          { trainer_id: "trainer-1", title: "Разовое занятие", sessions_count: 1, price_minor: 200000, currency: "RUB", sort_order: 0 },
+          { trainer_id: "trainer-1", title: "5 занятий", sessions_count: 5, price_minor: 900000, currency: "RUB", validity_days: 90, sort_order: 1 },
+          { trainer_id: "trainer-1", title: "10 занятий", sessions_count: 10, price_minor: 1600000, currency: "RUB", validity_days: 90, sort_order: 2 },
+        ],
+      },
+    ]);
+  });
+
+  it("checks the template prices and skips a grid the trainer already has", async () => {
+    expect(await saveWizardStep(IDLE, form({ step: "prices", dropIn: "abc", p5: "-1", p10: "", p20: "", validity: "7" }))).toMatchObject({
+      status: "invalid",
+      fields: ["dropIn", "p5", "validity"],
+    });
+    await expect(saveWizardStep(IDLE, form({ step: "prices", existing: "1" }))).rejects.toThrow("redirect /onboarding/trainer/certificates");
+    expect(db.writes).toEqual([]);
   });
 
   it("finishes on Позже without writing anything", async () => {
