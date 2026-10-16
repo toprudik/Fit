@@ -19,6 +19,11 @@ describe("startParamPath", () => {
     expect(startParamPath("ci_short")).toBeNull();
   });
 
+  it("opens the trial link landing for tl_<token>", () => {
+    expect(startParamPath("tl_Ab3_-Ab3_-Ab3_-Ab3_-Ab")).toBe("/trial/Ab3_-Ab3_-Ab3_-Ab3_-Ab");
+    expect(startParamPath("tl_short")).toBeNull();
+  });
+
   it("opens the trainer showcase for tp_<slug>", () => {
     expect(startParamPath("tp_anna-fit")).toBe("/trainers/anna-fit");
   });

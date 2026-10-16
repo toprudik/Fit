@@ -1,6 +1,7 @@
 import { CLIENT_LINK_START_PREFIX, clientLinkPath, isClientLinkToken } from "@/lib/client-links/link";
 import { isShowcaseSlug, SHOWCASE_START_PREFIX, showcasePath } from "@/lib/showcase/link";
 import { INVITE_START_PREFIX, redeemPath } from "@/lib/trainer-invites/code";
+import { isTrialToken, TRIAL_START_PREFIX, trialPath } from "@/lib/trial-links/link";
 
 /** Telegram allows [A-Za-z0-9_-], at most 512 characters (screens.md §1.7). */
 const START_PARAM = /^[A-Za-z0-9_-]{1,512}$/;
@@ -16,6 +17,10 @@ export function startParamPath(param: string | null | undefined): string | null 
   if (param.startsWith(CLIENT_LINK_START_PREFIX)) {
     const token = param.slice(CLIENT_LINK_START_PREFIX.length);
     return isClientLinkToken(token) ? clientLinkPath(token) : null;
+  }
+  if (param.startsWith(TRIAL_START_PREFIX)) {
+    const token = param.slice(TRIAL_START_PREFIX.length);
+    return isTrialToken(token) ? trialPath(token) : null;
   }
   if (param.startsWith(SHOWCASE_START_PREFIX)) {
     const slug = param.slice(SHOWCASE_START_PREFIX.length);
