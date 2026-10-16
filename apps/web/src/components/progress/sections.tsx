@@ -3,11 +3,12 @@ import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { interpolate } from "@/i18n/format";
-import { loadMyMeasurements, loadMyMilestones, loadPairMeasurements, loadTrainerMilestones, type Measurements } from "@/lib/progress/load";
+import { loadMyMeasurements, loadMyMilestones, loadPairMeasurements, type Measurements } from "@/lib/progress/load";
 import { MeasurementChart } from "./measurement-chart";
 import { AddMeasurement } from "./measurement-form";
 import { MeasurementHistory } from "./measurement-history";
 import { MilestoneGroup } from "./milestones";
+import { TrainerPhotos } from "./photo-sections";
 
 /** The chart, the "Добавить замер" button and, on the full screen, the history; an empty state before the first entry. */
 function MeasurementsBlock({
@@ -79,16 +80,11 @@ export async function ClientMilestones() {
 }
 
 /**
- * "Прогресс" on the trainer's client card: the client's measurements while they share them, and the pair's
- * milestones. A closed share shows one quiet line and no button to ask (screens.md).
+ * "Прогресс" on the trainer's client card: the client's measurements and photos while they share them. A closed
+ * share shows one quiet line and no button to ask (screens.md). The pair's milestones live on the card itself.
  */
 export async function TrainerProgress({ coachingId }: { coachingId: string }) {
-  const [t, locale, measurements, milestones] = await Promise.all([
-    getDictionary(),
-    getLocale(),
-    loadPairMeasurements(coachingId),
-    loadTrainerMilestones(coachingId),
-  ]);
+  const [t, measurements] = await Promise.all([getDictionary(), loadPairMeasurements(coachingId)]);
   const copy = t.progress.measurements;
   return (
     <div className="flex flex-col gap-6">
@@ -103,7 +99,7 @@ export async function TrainerProgress({ coachingId }: { coachingId: string }) {
           copy={copy}
         />
       )}
-      {milestones ? <MilestoneGroup t={t} locale={locale} item={milestones} header={t.progress.milestones.title} /> : null}
+      <TrainerPhotos coachingId={coachingId} />
     </div>
   );
 }

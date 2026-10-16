@@ -142,19 +142,6 @@ async function milestonesOf(supabase: Supabase, coachingIds: string[]) {
   });
 }
 
-/** Milestones of one pair for the trainer's card. Null when the caller is not this pair's trainer. */
-export async function loadTrainerMilestones(coachingId: string): Promise<PairMilestones | null> {
-  if (!z.uuid().safeParse(coachingId).success) return null;
-  const supabase = await createSupabaseServerClient();
-  const me = await viewer(supabase);
-  if (!me) return null;
-  const { data: pair, error } = await supabase.from("coachings").select("id, trainer_id, started_at").eq("id", coachingId).maybeSingle();
-  if (error) throw new Error(`loading the pair failed: ${error.code}`);
-  if (!pair || pair.trainer_id !== me.id) return null;
-  const [counted] = await milestonesOf(supabase, [pair.id]);
-  return { ...counted, partnerName: "", startedAt: pair.started_at, timeZone: me.timeZone };
-}
-
 /** Milestones of the signed-in client's live pairs, one per trainer, oldest pair first. */
 export async function loadMyMilestones(): Promise<PairMilestones[]> {
   const supabase = await createSupabaseServerClient();
