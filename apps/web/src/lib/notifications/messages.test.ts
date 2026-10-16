@@ -605,3 +605,62 @@ describe("charge_posted and charge_waived", () => {
     expect(message?.text).toMatch(/^Oleg forgave the session on .+\. You owe nothing now\.$/);
   });
 });
+
+describe("contact requests", () => {
+  const REQUEST = "5a1e3cc4-e5f3-4d31-9cc0-9cf56a876699";
+  const options = { appUrl: "https://fit.example", group: false };
+
+  it("asks the client on behalf of the trainer, with both answers on the answer screen", () => {
+    const message = renderMessage(
+      { ...row, kind: "contact_request", payload: { request_id: REQUEST, coaching_id: PAIR, side: "trainer", first_name: "Анна" } },
+      options,
+    );
+    expect(message?.text).toMatch(/^Тренер Анна просит связаться с тобой\./);
+    const url = `https://fit.example/contact/${REQUEST}?source=contact_request`;
+    expect(message?.buttons).toEqual([
+      { text: "Поделиться контактом", web_app: { url } },
+      { text: "Отказаться", web_app: { url } },
+    ]);
+  });
+
+  it("gives the trainer the client's number and a link to the chat", () => {
+    const message = renderMessage(
+      {
+        ...row,
+        kind: "contact_response",
+        payload: {
+          request_id: REQUEST,
+          coaching_id: PAIR,
+          side: "trainer",
+          accepted: true,
+          first_name: "<Иван>",
+          phone: "+79991234567",
+          telegram_id: 4242,
+        },
+      },
+      options,
+    );
+    expect(message?.text).toBe(
+      'На просьбу связаться ответили. <a href="tg://user?id=4242">&lt;Иван&gt;</a>: +79991234567. Нажми на имя, чтобы открыть чат в Telegram.',
+    );
+    expect(message?.buttons).toEqual([
+      { text: "Открыть клиента", web_app: { url: `https://fit.example/trainer/clients/${PAIR}?source=contact_response` } },
+    ]);
+  });
+
+  it("tells the client the trainer declined, without a contact", () => {
+    const message = renderMessage(
+      {
+        ...row,
+        kind: "contact_response",
+        locale: "en",
+        payload: { coaching_id: PAIR, side: "client", accepted: false, first_name: "Anna" },
+      },
+      options,
+    );
+    expect(message?.text).toBe("Anna declined your request to get in touch.");
+    expect(message?.buttons).toEqual([
+      { text: "Open trainer", web_app: { url: `https://fit.example/client/trainers/${PAIR}?source=contact_response` } },
+    ]);
+  });
+});

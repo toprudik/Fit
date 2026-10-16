@@ -1,4 +1,5 @@
 import { CLIENT_LINK_START_PREFIX, clientLinkPath, isClientLinkToken } from "@/lib/client-links/link";
+import { CONTACT_START_PREFIX, contactRequestPath, isContactRequestId } from "@/lib/contact/request";
 import { isPairId } from "@/lib/pairs/clients";
 import { isShowcaseSlug, SHOWCASE_START_PREFIX, showcasePath } from "@/lib/showcase/link";
 import { INVITE_START_PREFIX, redeemPath } from "@/lib/trainer-invites/code";
@@ -29,6 +30,11 @@ export function startParamPath(param: string | null | undefined): string | null 
   if (param.startsWith(SHOWCASE_START_PREFIX)) {
     const slug = param.slice(SHOWCASE_START_PREFIX.length);
     return isShowcaseSlug(slug) ? showcasePath(slug) : null;
+  }
+  // cr_<request id>: the answer to "Попросить связаться", opened from the website (PRIV-2).
+  if (param.startsWith(CONTACT_START_PREFIX)) {
+    const id = param.slice(CONTACT_START_PREFIX.length);
+    return isContactRequestId(id) ? contactRequestPath(id) : null;
   }
   // t_pay_<coachingId>: "Отметить оплату" of that client; c_pass_<passId>: the client's pass (К10, К11 buttons).
   if (param.startsWith(TRAINER_PAY_PREFIX)) {
