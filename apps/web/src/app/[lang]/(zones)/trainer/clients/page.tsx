@@ -1,47 +1,37 @@
 import type { Metadata } from "next";
 import { Users } from "lucide-react";
-import Link from "next/link";
 import { Suspense } from "react";
-import { PairList } from "@/components/client-links/pair-list";
+import { ClientList } from "@/components/pairs/client-list";
 import { DetailPlaceholder, MasterDetail, Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
-import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { getDictionary } from "@/i18n/server";
+import { parseClientFilter } from "@/lib/pairs/clients";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
   return { title: t.tabs.trainer.clients };
 }
 
-export default async function TrainerClientsPage() {
+async function ClientsFromParams({ searchParams }: { searchParams: PageProps<"/[lang]/trainer/clients">["searchParams"] }) {
+  const params = await searchParams;
+  const query = typeof params.q === "string" ? params.q.slice(0, 64) : "";
+  return <ClientList filter={parseClientFilter(params.filter)} query={query} />;
+}
+
+/** The trainer's clients: search, filters and the list; a client opens as a pushed card (screens.md §3.2). */
+export default async function TrainerClientsPage(props: PageProps<"/[lang]/trainer/clients">) {
   const t = await getDictionary();
-  const copy = t.screens.trainer.clients;
   return (
     <MasterDetail
       list={
         <Screen header={<ScreenHeader title={t.tabs.trainer.clients} />}>
           <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
-            <PairList
-              side="trainer"
-              empty={
-                <EmptyState
-                  icon={Users}
-                  title={copy.emptyTitle}
-                  description={copy.emptyText}
-                  action={
-                    <Button asChild>
-                      <Link href="/trainer/links">{copy.emptyAction}</Link>
-                    </Button>
-                  }
-                />
-              }
-            />
+            <ClientsFromParams searchParams={props.searchParams} />
           </Suspense>
         </Screen>
       }
-      detail={<DetailPlaceholder icon={Users} text={copy.detail} />}
+      detail={<DetailPlaceholder icon={Users} text={t.screens.trainer.clients.detail} />}
     />
   );
 }

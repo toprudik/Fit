@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { escapeHtml, renderMessage } from "./messages";
 
+const PAIR = "0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f";
 const row = { kind: "bot_test" as const, locale: "ru" as const, time_zone: "Europe/Moscow", payload: {} };
 
 describe("renderMessage", () => {
@@ -25,15 +26,25 @@ describe("renderMessage", () => {
     expect(renderMessage(row, { appUrl: "http://localhost:3000", group: false })?.buttons).toEqual([]);
   });
 
-  it("tells the trainer about a new client by name, escaped, with a button to the clients", () => {
+  it("tells the trainer about a new client by name, escaped, with a button to the client card", () => {
     const message = renderMessage(
-      { ...row, kind: "coaching_created", payload: { coaching_id: "p1", first_name: "Анна", last_name: "<Смирнова>" } },
+      { ...row, kind: "coaching_created", payload: { coaching_id: PAIR, first_name: "Анна", last_name: "<Смирнова>" } },
       { appUrl: "https://fit.example", group: false },
     );
     expect(message).toEqual({
       text: "Новый клиент: Анна &lt;Смирнова&gt;",
-      buttons: [{ text: "Открыть клиентов", web_app: { url: "https://fit.example/trainer/clients?source=coaching_created" } }],
+      buttons: [{ text: "Открыть клиента", web_app: { url: `https://fit.example/trainer/clients/${PAIR}?source=coaching_created` } }],
     });
+  });
+
+  it("opens the client list when the pair id is not a uuid", () => {
+    const message = renderMessage(
+      { ...row, kind: "coaching_created", payload: { coaching_id: "../admin", first_name: "Анна" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.buttons).toEqual([
+      { text: "Открыть клиента", web_app: { url: "https://fit.example/trainer/clients?source=coaching_created" } },
+    ]);
   });
 
   it("names a client without a name neutrally", () => {
@@ -50,6 +61,36 @@ describe("renderMessage", () => {
       { appUrl: "https://fit.example", group: false },
     );
     expect(message?.text).toBe("Иван теперь среди твоих клиентов. Проверь, нет ли у тебя карточки этого человека без аккаунта.");
+  });
+
+  it("tells the trainer a client left, with the number of cancelled sessions (Т9)", () => {
+    const message = renderMessage(
+      { ...row, kind: "coaching_ended", payload: { coaching_id: PAIR, ended_by: "client", cancelled: 2, first_name: "Анна" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message).toEqual({
+      text: "Анна больше не занимается у тебя. Будущих занятий отменено: 2.",
+      buttons: [{ text: "Открыть клиента", web_app: { url: `https://fit.example/trainer/clients/${PAIR}?source=coaching_ended` } }],
+    });
+  });
+
+  it("leaves the count out when no session was cancelled", () => {
+    const message = renderMessage(
+      { ...row, kind: "coaching_ended", locale: "en", payload: { ended_by: "client", cancelled: 0, first_name: "Ann" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe("Ann no longer trains with you.");
+  });
+
+  it("tells the client the trainer ended the pair and opens the client zone", () => {
+    const message = renderMessage(
+      { ...row, kind: "coaching_ended", payload: { coaching_id: PAIR, ended_by: "trainer", cancelled: 1, first_name: "Иван" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message).toEqual({
+      text: "Занятия с тренером Иван завершены. Будущие записи отменены без списаний.",
+      buttons: [{ text: "Открыть тренера", web_app: { url: `https://fit.example/client/trainers/${PAIR}?source=coaching_ended` } }],
+    });
   });
 
   it("returns null for a type without a template yet", () => {

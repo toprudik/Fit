@@ -45,24 +45,36 @@ type MasterDetailProps = {
   list: React.ReactNode;
   /** What the list item opens; a `DetailPlaceholder` until one is chosen. */
   detail: React.ReactNode;
+  /**
+   * Which column a phone or tablet shows: the list on the list route, the open item on its own route
+   * (a pushed screen). From 1280px both show.
+   */
+  show?: "list" | "detail";
 };
 
 /**
- * List on the left, the open item on the right (screens.md §1.1). Below 1280px only the list shows
- * and items open as pushed screens. From 1280px the columns are 320px and the rest, and each scrolls
+ * List on the left, the open item on the right (screens.md §1.1). Below 1280px only one column shows
+ * (`show`): items open as pushed screens. From 1280px the columns are 320px and the rest, and each scrolls
  * on its own.
  */
-export function MasterDetail({ list, detail }: MasterDetailProps) {
+export function MasterDetail({ list, detail, show = "list" }: MasterDetailProps) {
   return (
     <div className="xl:grid xl:h-dvh xl:grid-cols-[320px_minmax(0,1fr)]">
       {/* data-scroll-column: tapping the current tab again scrolls these to the top too (AppShell). */}
       <div
         data-scroll-column
-        className={cn("xl:h-dvh xl:overflow-y-auto xl:overscroll-contain xl:border-r xl:border-line", LIST_COLUMN)}
+        className={cn(
+          "xl:block xl:h-dvh xl:overflow-y-auto xl:overscroll-contain xl:border-r xl:border-line",
+          show === "detail" && "hidden",
+          LIST_COLUMN,
+        )}
       >
         {list}
       </div>
-      <div data-scroll-column className="hidden xl:block xl:h-dvh xl:overflow-y-auto xl:overscroll-contain">
+      <div
+        data-scroll-column
+        className={cn("xl:block xl:h-dvh xl:overflow-y-auto xl:overscroll-contain", show === "list" && "hidden")}
+      >
         {detail}
       </div>
     </div>
