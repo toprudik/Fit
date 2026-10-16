@@ -7,13 +7,14 @@ import { toast } from "@/components/ui/sonner";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
 import { joinTrainer, type JoinState } from "@/lib/client-links/actions";
+import { intakeConsentPath } from "@/lib/intake/paths";
 import { hapticSuccess } from "@/lib/telegram/mini-app";
 
 const IDLE: JoinState = { status: "idle" };
 
 /**
  * "Стать клиентом" for a link token, a typed code, a showcase or a trial link the server found valid. After the
- * join the client zone opens on the trainers list with a toast and a success haptic (screens.md §4.2).
+ * join a toast and a success haptic, then the intake consent step of the new pair (screens.md §4.2, flow 4a).
  */
 export function JoinButton({
   token,
@@ -34,12 +35,14 @@ export function JoinButton({
   const [state, action, pending] = useActionState(joinTrainer, IDLE);
   const joined = state.status === "joined";
 
+  const coachingId = state.status === "joined" ? state.coachingId : null;
   useEffect(() => {
-    if (!joined) return;
+    if (!coachingId) return;
     hapticSuccess();
     toast.success(interpolate(t.clientLinks.joinedToast, { name: trainerName }));
-    router.replace("/client/trainers");
-  }, [joined, router, t, trainerName]);
+    // The consent step for the intake comes first; once answered it passes on to the pair.
+    router.replace(intakeConsentPath(coachingId));
+  }, [coachingId, router, t, trainerName]);
 
   return (
     <form action={action} className="flex flex-col gap-3">
