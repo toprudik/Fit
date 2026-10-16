@@ -2337,6 +2337,9 @@ isOneToOne: false
 "bot_messages_blocked":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"calendar_feed":
+{ Args: { "p_token": string }; Returns: Json
+                           },
 "claim_outbox":
 { Args: { "p_limit"?: number }; Returns: {
               "attempt": number,"chat_id": number,"chat_target": string,"kind": Database["public"]['Enums']["notification_type"],"locale": Database["public"]['Enums']["app_locale"],"outbox_id": number,"payload": Json,"silent": boolean,"time_zone": string
@@ -2346,6 +2349,9 @@ isOneToOne: false
 { Args: { "p_from": string,"p_to": string }; Returns: {
               "session_id": string,"starts_at": string,"title": string
             }[]
+                           },
+"create_calendar_feed":
+{ Args: { "p_zone": Database["public"]['Enums']["app_zone"] }; Returns: string
                            },
 "create_managed_client":
 { Args: { "p_contact"?: string,"p_display_name": string,"p_note"?: string }; Returns: string
@@ -2429,6 +2435,9 @@ isOneToOne: false
                            },
 "resolve_managed_client_claim":
 { Args: { "p_claim_id": string,"p_managed_client_id"?: string }; Returns: string
+                           },
+"revoke_calendar_feed":
+{ Args: { "p_zone": Database["public"]['Enums']["app_zone"] }; Returns: boolean
                            },
 "save_week_template":
 { Args: { "p_buffer_min"?: number,"p_horizon_weeks"?: number,"p_items": Json }; Returns: number
