@@ -1,7 +1,9 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { isShowcaseSlug } from "@/lib/showcase/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isTrialToken } from "@/lib/trial-links/link";
 import { isClientLinkToken, normalizeClientCode } from "./link";
 
 export type JoinFailure = "invalid" | "unavailable" | "own" | "limit" | "failed";
@@ -17,19 +19,26 @@ const FAILURES: Record<string, JoinFailure> = {
 };
 
 /**
- * "Стать клиентом" on /i/<token> and /join: joins the trainer as the signed-in user, by the link
- * token or the typed code (the database checks both and the Free limit). A pair that already exists
- * comes back as joined too. The screen shows the toast and opens the client zone.
+ * "Стать клиентом" on /i/<token>, /join, the showcase /trainers/<slug> and a trial link /trial/<token>:
+ * joins the trainer as the signed-in user, by the link token, the typed code, the showcase address or
+ * the trial link (the database checks each and the Free limit). A pair that already exists comes back as joined too. The screen shows the toast
+ * and opens the client zone.
  */
 export async function joinTrainer(_previous: JoinState, formData: FormData): Promise<JoinState> {
   const token = formData.get("token");
+  const trial = formData.get("trial");
+  const slug = formData.get("slug");
   const code = normalizeClientCode(String(formData.get("code") ?? ""));
   const supabase = await createSupabaseServerClient();
   const { data, error } = isClientLinkToken(typeof token === "string" ? token : null)
     ? await supabase.rpc("join_by_invite", { p_token: token as string })
-    : code
-      ? await supabase.rpc("join_by_code", { p_code: code })
-      : { data: null, error: { message: "invite_invalid", code: "P0001" } };
+    : isTrialToken(typeof trial === "string" ? trial : null)
+      ? await supabase.rpc("join_by_trial_link", { p_token: trial as string })
+      : isShowcaseSlug(typeof slug === "string" ? slug : null)
+      ? await supabase.rpc("join_by_showcase", { p_slug: slug as string })
+      : code
+        ? await supabase.rpc("join_by_code", { p_code: code })
+        : { data: null, error: { message: "invite_invalid", code: "P0001" } };
   if (error || !data) {
     const reason = (error && FAILURES[error.message]) ?? "failed";
     if (reason === "failed") console.error("joining a trainer failed", error?.code);
