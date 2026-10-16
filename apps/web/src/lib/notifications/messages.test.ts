@@ -189,3 +189,29 @@ describe("plan messages", () => {
     ).toBe("Тариф Premium закончится 30 ноября 2026. Если он ещё нужен, запроси доступ в разделе «Мой тариф».");
   });
 });
+
+describe("payment_reported", () => {
+  it("tells the trainer who paid how much for which pass, with a button to the client's payments", () => {
+    const message = renderMessage(
+      {
+        ...row,
+        kind: "payment_reported",
+        payload: { coaching_id: PAIR, amount_minor: 1_800_000, currency: "RUB", pass_title: "10 <занятий>", first_name: "Анна" },
+      },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe("Анна сообщает об оплате 18 000 ₽ за «10 &lt;занятий&gt;». Подтверди, когда деньги придут.");
+    expect(message?.buttons).toEqual([
+      { text: "Открыть оплаты", web_app: { url: `https://fit.example/trainer/clients/${PAIR}/payments?source=payment_reported` } },
+    ]);
+  });
+
+  it("leaves the pass out of a payment on account and falls back to the money screen", () => {
+    const message = renderMessage(
+      { ...row, kind: "payment_reported", locale: "en", payload: { amount_minor: 50_000, currency: "USD", first_name: "Ann" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe("Ann says they paid $500. Confirm it once the money arrives.");
+    expect(message?.buttons[0]).toEqual({ text: "Open payments", web_app: { url: "https://fit.example/trainer/money?source=payment_reported" } });
+  });
+});

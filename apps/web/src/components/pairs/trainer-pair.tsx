@@ -10,12 +10,17 @@ import { interpolate, plural } from "@/i18n/format";
 import type { Locale } from "@/i18n/config";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { formatDay, formatNoteTime, formatSessionTime } from "@/lib/pairs/format";
+import { TrainerPasses } from "@/components/passes/trainer-passes";
+import { TrainerPayments } from "@/components/passes/trainer-payments";
+import { currencySymbol } from "@/lib/money/format";
 import { loadPair, type PairDetail } from "@/lib/pairs/load";
+import { loadPairMoney } from "@/lib/passes/load";
+import { formatLocalDay, lastValidDay } from "@/lib/passes/present";
 import { NoteComposer, NoteItem, NoteVisibility } from "./notes";
 import { PairTabs } from "./pair-tabs";
 import { ArchiveRow, DebtBookingSwitch, EndPairRow } from "./pair-controls";
 
-type Tab = "overview" | "notes";
+export type PairTab = "overview" | "notes" | "passes" | "payments";
 
 /** "34 занятия вместе, с 3 марта" under the name. */
 export function pairSubtitle(t: Dictionary, locale: Locale, pair: PairDetail): string {
@@ -40,14 +45,18 @@ export function WriteButton({ t, username }: { t: Dictionary; username: string |
 
 export function PassRows({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: PairDetail }) {
   if (!pair.passes.length) return <ListRow icon={Ticket} title={t.pairs.noPass} />;
+  // expiresAt is the start of the day after the last valid day (pass_balances.effective_expires_at).
   return pair.passes.map((pass) => (
     <ListRow
       key={pass.id}
       icon={Ticket}
       title={pass.title}
+      href={pair.side === "trainer" ? `/trainer/clients/${pair.coachingId}/passes` : `/client/passes/${pass.id}`}
       subtitle={[
         interpolate(t.pairs.passLeft, { available: pass.available, total: pass.sessionsTotal }),
-        pass.expiresAt ? interpolate(t.pairs.passUntil, { date: formatDay(locale, pass.expiresAt, pair.timeZone) }) : null,
+        pass.expiresAt
+          ? interpolate(t.pairs.passUntil, { date: formatLocalDay(locale, lastValidDay(pass.expiresAt, pair.timeZone) ?? "") })
+          : null,
         pass.status === "frozen" ? t.pairs.passFrozen : null,
       ]
         .filter(Boolean)
@@ -85,6 +94,7 @@ function Overview({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: Pa
           icon={Wallet}
           title={t.pairs.debt}
           value={pair.debtSessions > 0 ? plural(locale, pair.debtSessions, t.pairs.debtSessions) : t.pairs.noDebt}
+          href={`${base}/payments`}
         />
       </ListGroup>
 
@@ -151,8 +161,13 @@ function Notes({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: PairD
  * Client card of the trainer (screens.md "Карточка пары"): header with the name, "вместе с …" and
  * "Написать", the sections as tabs, then the open section. Not the trainer's pair → 404.
  */
-export async function TrainerPair({ coachingId, tab }: { coachingId: string; tab: Tab }) {
-  const [t, locale, pair] = await Promise.all([getDictionary(), getLocale(), loadPair(coachingId, "trainer")]);
+export async function TrainerPair({ coachingId, tab, action }: { coachingId: string; tab: PairTab; action?: string }) {
+  const [t, locale, pair, money] = await Promise.all([
+    getDictionary(),
+    getLocale(),
+    loadPair(coachingId, "trainer"),
+    tab === "passes" || tab === "payments" ? loadPairMoney(coachingId) : null,
+  ]);
   if (!pair) notFound();
   const base = `/trainer/clients/${pair.coachingId}`;
   const name = pair.partner.name || t.botMessages.unnamedClient;
@@ -188,10 +203,20 @@ export async function TrainerPair({ coachingId, tab }: { coachingId: string; tab
           label={t.pairs.tabsLabel}
           tabs={[
             { href: base, label: t.pairs.tabs.overview, current: tab === "overview" },
+            { href: `${base}/passes`, label: t.pairs.tabs.passes, current: tab === "passes" },
+            { href: `${base}/payments`, label: t.pairs.tabs.payments, current: tab === "payments" },
             { href: `${base}/notes`, label: t.pairs.tabs.notes, current: tab === "notes" },
           ]}
         />
-        {tab === "overview" ? <Overview t={t} locale={locale} pair={pair} /> : <Notes t={t} locale={locale} pair={pair} />}
+        {tab === "overview" ? (
+          <Overview t={t} locale={locale} pair={pair} />
+        ) : tab === "notes" ? (
+          <Notes t={t} locale={locale} pair={pair} />
+        ) : money && tab === "passes" ? (
+          <TrainerPasses money={money} symbol={currencySymbol(locale, money.currency)} />
+        ) : money ? (
+          <TrainerPayments money={money} symbol={currencySymbol(locale, money.currency)} startOpen={action === "new"} />
+        ) : null}
       </div>
     </Screen>
   );
