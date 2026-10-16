@@ -47,6 +47,10 @@ const SCREENS: readonly Screen[] = [
   { slug: "profile", path: "/profile", title: "Профиль" },
   { slug: "login", path: "/login", title: "Вход" },
   { slug: "trainer-invite", path: "/onboarding/trainer?code=ABCD-EFGH-JKLM", title: "Инвайт тренера" },
+  { slug: "trainer-links", path: "/trainer/links", title: "QR и ссылка" },
+  { slug: "join", path: "/join?code=abc-def", title: "Код тренера" },
+  // A malformed token is answered without the database: the "link no longer works" state.
+  { slug: "client-link-invalid", path: "/i/not-a-token", title: "Приглашение тренера" },
   { slug: "not-found", path: "/no-such-page", title: "Такой страницы нет", documentTitle: false, status: 404 },
   // ADM-12: the admin section is a 404 for everyone but admins, signed out included.
   { slug: "admin-denied", path: "/admin/invites", title: "Такой страницы нет", documentTitle: false, status: 404 },
@@ -157,6 +161,22 @@ test.describe("trainer invite", () => {
     await expect(page.getByRole("link", { name: "Войти через Telegram" })).toBeVisible();
     await expect(page.getByRole("link", { name: "У меня есть инвайт тренера" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Админка" })).toHaveCount(0);
+  });
+});
+
+test.describe("client link and trainer code", () => {
+  test("signed out, the trainer code screen asks to sign in and keeps the code", async ({ page }) => {
+    await page.goto("/join?code=abc-def");
+    await expect(page.getByRole("link", { name: "Войти через Telegram" })).toHaveAttribute(
+      "href",
+      `/login?next=${encodeURIComponent("/join?code=ABCDEF")}`,
+    );
+  });
+
+  test("a malformed client link offers the trainer code instead", async ({ page }) => {
+    await page.goto("/i/not-a-token");
+    await expect(page.getByRole("heading", { name: "Ссылка недействительна" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Ввести код тренера" })).toHaveAttribute("href", "/join");
   });
 });
 

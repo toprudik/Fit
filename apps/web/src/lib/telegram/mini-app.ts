@@ -156,6 +156,11 @@ export function hapticImpact() {
   else if (typeof navigator !== "undefined") navigator.vibrate?.(8);
 }
 
+/** Success feedback after a finished action: joined a trainer, booked a session (screens.md §1.5). */
+export function hapticSuccess() {
+  if (ready) safely(() => hapticFeedback.notificationOccurred("success"));
+}
+
 /** Selection feedback: segmented controls, pickers, switches. */
 export function hapticSelection() {
   if (ready) safely(() => hapticFeedback.selectionChanged());

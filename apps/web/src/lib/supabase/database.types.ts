@@ -2315,6 +2315,17 @@ isOneToOne: false
 "has_entitlement":
 { Args: { "p_feature": string,"p_pair"?: string,"p_user": string }; Returns: boolean
                            },
+"join_by_code":
+{ Args: { "p_code": string }; Returns: string
+                           },
+"join_by_invite":
+{ Args: { "p_token": string }; Returns: string
+                           },
+"my_client_invite":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "code": string,"created_at": string,"invite_id": string,"token": string,"uses_count": number
+            }[]
+                           },
 "record_outbox_result":
 { Args: { "p_error"?: string,"p_id": number,"p_outcome": string,"p_retry_after_s"?: number,"p_telegram_message_id"?: number }; Returns: Database["public"]['Enums']["outbox_status"]
                            },
@@ -2324,8 +2335,18 @@ isOneToOne: false
 "redeem_trainer_invite":
 { Args: { "p_code": string }; Returns: undefined
                            },
+"reissue_client_invite":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "code": string,"created_at": string,"invite_id": string,"token": string,"uses_count": number
+            }[]
+                           },
 "replace_progress_photo":
 { Args: { "p_blur_method": string,"p_face_blurred": boolean,"p_height": number,"p_new_id": string,"p_note"?: string,"p_photo_id": string,"p_storage_path": string,"p_width": number }; Returns: string
+                           },
+"resolve_client_invite":
+{ Args: { "p_code"?: string,"p_token"?: string }; Returns: {
+              "coaching_id": string,"first_name": string,"headline": string,"last_name": string,"photo_url": string,"specialties": (string)[],"status": string,"trainer_id": string,"verified": boolean,"works_offline": boolean,"works_online": boolean
+            }[]
                            },
 "session_meeting_url":
 { Args: { "p_session_id": string }; Returns: string

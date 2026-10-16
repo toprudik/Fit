@@ -39,6 +39,15 @@ const templates: Partial<Record<NotificationType, Template>> = {
     }),
     buttons: [{ text: t.openQueue, path: "/admin/verification" }],
   }),
+  // Т7 and Т7a. The client screen arrives with the pair card; until then the button opens the list.
+  coaching_created: ({ t, payload }) => ({
+    text: interpolateEscaped(t.newClient, { name: clientName(t, payload) }),
+    buttons: [{ text: t.openClients, path: "/trainer/clients" }],
+  }),
+  managed_client_claim: ({ t, payload }) => ({
+    text: interpolateEscaped(t.newClientWithCards, { name: clientName(t, payload) }),
+    buttons: [{ text: t.openClients, path: "/trainer/clients" }],
+  }),
 };
 
 /** Fills {placeholders} in a catalog string, escaping the template and every value. */
@@ -47,6 +56,12 @@ function interpolateEscaped(template: string, values: Record<string, string | nu
     escapeHtml(template),
     Object.fromEntries(Object.entries(values).map(([key, value]) => [key, escapeHtml(String(value))])),
   );
+}
+
+/** The client's name from the payload the join RPC queued, or a neutral stand-in. */
+function clientName(t: Dictionary["botMessages"], payload: TemplateContext["payload"]): string {
+  const part = (value: Json | undefined) => (typeof value === "string" ? value.trim() : "");
+  return [part(payload.first_name), part(payload.last_name)].filter(Boolean).join(" ") || t.unnamedClient;
 }
 
 /** Escapes text for parse_mode HTML. Templates pass catalog strings and every inserted value through it. */

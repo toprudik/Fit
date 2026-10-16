@@ -88,8 +88,9 @@ select is(
       and has_function_privilege('anon', p.oid, 'EXECUTE')
     order by 1
   ),
-  '{}'::text[],
-  'anon cannot execute any function in public or private'
+  -- The public lookups of data-model §1.1: definer functions that answer people without an account.
+  array['resolve_client_invite(text,text)'],
+  'anon can execute only the listed public lookups in public or private'
 );
 
 -- One permissive policy per (table, command) for authenticated; a FOR ALL policy counts for every command.
