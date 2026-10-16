@@ -20,6 +20,9 @@ export function isPairId(value: unknown): value is string {
 /** Limits of the database checks on coaching_notes.body and coachings.end_reason. */
 export const NOTE_MAX_LENGTH = 5000;
 export const END_REASON_MAX_LENGTH = 500;
+/** Limits of create_managed_client: the card's name and the contact the trainer keeps for themselves. */
+export const CARD_NAME_MAX_LENGTH = 100;
+export const CARD_CONTACT_MAX_LENGTH = 200;
 
 /** A pass ends soon at one session left or 7 days before its end, as in the К10/Т6 messages. */
 export const PASS_ENDING_SESSIONS = 1;
@@ -104,4 +107,20 @@ export function displayName(
     .filter(Boolean)
     .join(" ");
   return alias?.trim() || person?.display_name?.trim() || own || (person?.username ? `@${person.username}` : "");
+}
+
+/**
+ * The name hint on "Это тот же клиент?" (PRD wave-1 §2.5-3a): a card matches when a word of its name and a word
+ * of the person's name start with the same three letters: "Катя" matches "Катерина", "Саша Петров" matches "Петров".
+ */
+export function cardMatchesPerson(cardName: string, person: { first_name?: string | null; last_name?: string | null; username?: string | null }): boolean {
+  const words = (value: string) => normalizeSearch(value).split(" ").filter((word) => word.length >= 2);
+  const card = words(cardName);
+  const own = words([person.first_name, person.last_name, person.username].filter(Boolean).join(" "));
+  if (!card.length || !own.length) return false;
+  const prefix = (a: string, b: string) => {
+    const length = Math.min(a.length, b.length, 3);
+    return a.slice(0, length) === b.slice(0, length);
+  };
+  return card.some((word) => own.some((other) => prefix(word, other)));
 }

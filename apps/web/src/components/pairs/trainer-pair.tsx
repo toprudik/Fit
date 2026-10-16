@@ -176,7 +176,14 @@ export async function TrainerPair({ coachingId, tab }: { coachingId: string; tab
         ) : pair.archived ? (
           <PairNotice>{t.pairs.archivedText}</PairNotice>
         ) : null}
-        {pair.partner.isCard ? <PairNotice>{t.pairs.cardText}</PairNotice> : null}
+        {pair.partner.isCard ? (
+          <PairNotice>
+            {t.pairs.cardText}{" "}
+            <Link href="/trainer/links" className="font-semibold text-accent-ink">
+              {t.pairs.cards.invite}
+            </Link>
+          </PairNotice>
+        ) : null}
         <PairTabs
           label={t.pairs.tabsLabel}
           tabs={[

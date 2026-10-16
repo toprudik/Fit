@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { displayName, filterClients, matchesSearch, parseClientFilter, passIsEnding, type ClientItem } from "./clients";
+import { cardMatchesPerson, displayName, filterClients, matchesSearch, parseClientFilter, passIsEnding, type ClientItem } from "./clients";
 
 const base: ClientItem = {
   coachingId: "p",
@@ -85,5 +85,19 @@ describe("displayName", () => {
     expect(displayName({ first_name: " Anna ", last_name: null })).toBe("Anna");
     expect(displayName({ first_name: null, username: "anna" })).toBe("@anna");
     expect(displayName(undefined)).toBe("");
+  });
+});
+
+describe("cardMatchesPerson", () => {
+  it("matches by the first three letters of any word", () => {
+    expect(cardMatchesPerson("Катя", { first_name: "Катерина" })).toBe(true);
+    expect(cardMatchesPerson("Саша Петров", { first_name: "Александр", last_name: "Петров" })).toBe(true);
+    expect(cardMatchesPerson("алёна", { first_name: "Алена" })).toBe(true);
+  });
+
+  it("does not match different names or empty ones", () => {
+    expect(cardMatchesPerson("Борис", { first_name: "Анна" })).toBe(false);
+    expect(cardMatchesPerson("", { first_name: "Анна" })).toBe(false);
+    expect(cardMatchesPerson("Анна", {})).toBe(false);
   });
 });
