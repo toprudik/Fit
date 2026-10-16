@@ -15,6 +15,7 @@ const base: ClientItem = {
   debtSessions: 0,
   hasPass: false,
   passEnding: false,
+  parqFlagged: false,
 };
 
 const items: ClientItem[] = [
