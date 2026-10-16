@@ -1765,6 +1765,10 @@ export const ru = {
       duplicate: "Такое напоминание уже есть.",
       range: "Напомнить можно за 5 минут до 7 дней.",
     },
+    digest: {
+      label: "Время утренней сводки",
+      footer: "Каждый день в это время бот пришлёт занятия на сегодня, запросы на запись, абонементы на исходе и долги. Если ничего этого нет, сводки не будет.",
+    },
     quiet: {
       header: "Тихие часы",
       label: "Тихие часы",
@@ -1779,6 +1783,7 @@ export const ru = {
       items: {
         session_reminder: "Напоминания о занятиях",
         coaching_created: "Новый клиент",
+        daily_digest: "Утренняя сводка",
         coaching_ended: "Конец занятий",
       },
     },
@@ -1986,6 +1991,42 @@ export const ru = {
     chargeWaivedDebt: "Тренер {name}: долг за занятие {when} прощён. Осталось в долге: {debt}.",
     chargeWaivedNoDebt: "Тренер {name}: долг за занятие {when} прощён. Долга больше нет.",
     openPass: "Открыть абонемент",
+    /** Т-сводка: the trainer daily digest (NOTIF-5, PRD 2.9-6). */
+    digestTitle: "Сводка на {date}",
+    digestSessions: {
+      one: "Сегодня {count} занятие:",
+      few: "Сегодня {count} занятия:",
+      many: "Сегодня {count} занятий:",
+      other: "Сегодня {count} занятия:",
+    } as PluralForms,
+    digestNoSessions: "Занятий сегодня нет.",
+    digestSession: "{time}, {name}",
+    digestSessionGroup: "{time}, {title}, записались: {booked}",
+    digestGroup: "Групповое занятие",
+    digestMore: "и ещё {count}",
+    digestRequests: {
+      one: "{count} запрос на запись ждёт ответа.",
+      few: "{count} запроса на запись ждут ответа.",
+      many: "{count} запросов на запись ждут ответа.",
+      other: "{count} запроса на запись ждут ответа.",
+    } as PluralForms,
+    digestPasses: "Абонементы на исходе:",
+    digestPassLeft: {
+      one: "{name}, осталось {count} занятие",
+      few: "{name}, осталось {count} занятия",
+      many: "{name}, осталось {count} занятий",
+      other: "{name}, осталось {count} занятия",
+    } as PluralForms,
+    digestPassEmpty: "{name}, занятий не осталось",
+    digestPassUntil: "{name}, до {date}",
+    digestDebts: "Долги:",
+    digestDebt: {
+      one: "{name}, {count} занятие",
+      few: "{name}, {count} занятия",
+      many: "{name}, {count} занятий",
+      other: "{name}, {count} занятия",
+    } as PluralForms,
+    openToday: "Открыть «Сегодня»",
     /** Т: the client said "Я оплатил"; the trainer confirms it on the payments screen. */
     paymentReported: "{name} сообщает об оплате {amount} за «{pass}». Подтверди, когда деньги придут.",
     paymentReportedNoPass: "{name} сообщает об оплате {amount}. Подтверди, когда деньги придут.",

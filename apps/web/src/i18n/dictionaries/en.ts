@@ -1755,6 +1755,10 @@ export const en: Dictionary = {
       duplicate: "You already have this reminder.",
       range: "A reminder can be from 5 minutes to 7 days before.",
     },
+    digest: {
+      label: "Daily digest time",
+      footer: "Every day at this time the bot sends today's sessions, booking requests, passes running out and debts. If there's none of that, there's no digest.",
+    },
     quiet: {
       header: "Quiet hours",
       label: "Quiet hours",
@@ -1769,6 +1773,7 @@ export const en: Dictionary = {
       items: {
         session_reminder: "Session reminders",
         coaching_created: "New client",
+        daily_digest: "Daily digest",
         coaching_ended: "Coaching ended",
       },
     },
@@ -1966,6 +1971,42 @@ export const en: Dictionary = {
     chargeWaivedDebt: "{name} forgave the session on {when}. Debt: {debt}.",
     chargeWaivedNoDebt: "{name} forgave the session on {when}. You owe nothing now.",
     openPass: "Open my pass",
+    /** Т-сводка: the trainer daily digest (NOTIF-5, PRD 2.9-6). */
+    digestTitle: "Your day, {date}",
+    digestSessions: {
+      one: "{count} session today:",
+      few: "{count} sessions today:",
+      many: "{count} sessions today:",
+      other: "{count} sessions today:",
+    },
+    digestNoSessions: "No sessions today.",
+    digestSession: "{time}, {name}",
+    digestSessionGroup: "{time}, {title}, booked: {booked}",
+    digestGroup: "Group session",
+    digestMore: "and {count} more",
+    digestRequests: {
+      one: "{count} booking request is waiting for your answer.",
+      few: "{count} booking requests are waiting for your answer.",
+      many: "{count} booking requests are waiting for your answer.",
+      other: "{count} booking requests are waiting for your answer.",
+    },
+    digestPasses: "Passes running out:",
+    digestPassLeft: {
+      one: "{name}, {count} session left",
+      few: "{name}, {count} sessions left",
+      many: "{name}, {count} sessions left",
+      other: "{name}, {count} sessions left",
+    },
+    digestPassEmpty: "{name}, no sessions left",
+    digestPassUntil: "{name}, until {date}",
+    digestDebts: "Debts:",
+    digestDebt: {
+      one: "{name}, {count} session",
+      few: "{name}, {count} sessions",
+      many: "{name}, {count} sessions",
+      other: "{name}, {count} sessions",
+    },
+    openToday: "Open \u201cToday\u201d",
     /** Т: the client said "Я оплатил"; the trainer confirms it on the payments screen. */
     paymentReported: "{name} says they paid {amount} for {pass}. Confirm it once the money arrives.",
     paymentReportedNoPass: "{name} says they paid {amount}. Confirm it once the money arrives.",
