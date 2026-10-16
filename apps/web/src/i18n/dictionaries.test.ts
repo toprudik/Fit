@@ -129,7 +129,7 @@ describe("dictionaries follow docs/writing.md", () => {
 
   it("writes English in sentence case", () => {
     // Words that keep their capital mid-sentence. Extend when a new name or acronym appears in copy.
-    const properNouns = new Set(["DaFit", "Telegram", "QR", "Pro", "Premium", "English", "I", "OK", "SBP"]);
+    const properNouns = new Set(["DaFit", "Telegram", "QR", "Pro", "Premium", "English", "I", "OK", "JPG", "PNG", "PDF", "MB", "SBP"]);
     const titleCased = (value: string) =>
       value
         // Sentence starts may be capitalised: the first word and any word after ". ", "? " or ": ".
