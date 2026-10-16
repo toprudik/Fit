@@ -14,7 +14,9 @@ function displayName(profile: ProfileName | null): string {
   return fullName || profile.username?.trim() || "";
 }
 
-async function readAccount(): Promise<{ name: string; photoUrl: string | null } | null> {
+type AccountData = { name: string; photoUrl: string | null; isTrainer: boolean; isAdmin: boolean };
+
+async function readAccount(): Promise<AccountData | null> {
   try {
     const supabase = await createSupabaseServerClient();
     // getClaims() verifies the session JWT; the user id comes from it, never from the client.
@@ -23,13 +25,13 @@ async function readAccount(): Promise<{ name: string; photoUrl: string | null } 
     if (!userId) return null;
 
     // List the columns: telegram_id and last_seen_at are not granted to signed-in users, so select("*")
-    // fails. RLS also shows pair partners' rows, so the id filter stays.
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("first_name, last_name, username, photo_url")
-      .eq("id", userId)
-      .maybeSingle();
-    return { name: displayName(profile), photoUrl: profile?.photo_url ?? null };
+    // fails. RLS also shows pair partners' rows and trainers, so the id filters stay.
+    const [{ data: profile }, { data: trainer }, { data: admin }] = await Promise.all([
+      supabase.from("profiles").select("first_name, last_name, username, photo_url").eq("id", userId).maybeSingle(),
+      supabase.from("trainer_profiles").select("user_id").eq("user_id", userId).maybeSingle(),
+      supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle(),
+    ]);
+    return { name: displayName(profile), photoUrl: profile?.photo_url ?? null, isTrainer: trainer !== null, isAdmin: admin !== null };
   } catch {
     // Supabase unreachable: the shell works signed out rather than failing the page.
     return null;

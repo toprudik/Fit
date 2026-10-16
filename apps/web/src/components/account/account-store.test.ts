@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetAccountStoreForTests, setAccount, useAccount, type Account } from "./account-store";
 import { AccountSync } from "./account-sync";
 
-const ANNA: Account = { status: "signed-in", name: "Анна Смирнова", photoUrl: "https://t.me/i/userpic/320/anna.jpg" };
+const ANNA: Account = { status: "signed-in", name: "Анна Смирнова", photoUrl: "https://t.me/i/userpic/320/anna.jpg", isTrainer: false, isAdmin: false };
 
 beforeEach(() => {
   resetAccountStoreForTests();
@@ -53,8 +53,8 @@ describe("useAccount", () => {
 describe("AccountSync", () => {
   it("puts the signed-in person into the store", () => {
     const { result } = renderHook(() => useAccount());
-    render(createElement(AccountSync, { account: { name: "Анна Смирнова", photoUrl: null } }));
-    expect(result.current).toEqual({ status: "signed-in", name: "Анна Смирнова", photoUrl: null });
+    render(createElement(AccountSync, { account: { name: "Анна Смирнова", photoUrl: null, isTrainer: true, isAdmin: false } }));
+    expect(result.current).toEqual({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: true, isAdmin: false });
   });
 
   it("reports nobody signed in as signed out", () => {
@@ -67,7 +67,7 @@ describe("AccountSync", () => {
     const { result } = renderHook(() => useAccount());
     const sync = render(createElement(AccountSync, { account: null }));
 
-    sync.rerender(createElement(AccountSync, { account: { name: "Анна Смирнова", photoUrl: "https://t.me/i/userpic/320/anna.jpg" } }));
+    sync.rerender(createElement(AccountSync, { account: { name: "Анна Смирнова", photoUrl: "https://t.me/i/userpic/320/anna.jpg", isTrainer: false, isAdmin: false } }));
     expect(result.current).toEqual(ANNA);
   });
 

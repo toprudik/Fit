@@ -1,7 +1,7 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { PUBLIC_FILES, routeRequest, type RouteInput } from "./routing";
+import { adminDeniedPath, isAdminPath, PUBLIC_FILES, routeRequest, type RouteInput } from "./routing";
 
 function route(overrides: Partial<RouteInput>) {
   return routeRequest({
@@ -112,5 +112,19 @@ describe("PUBLIC_FILES", () => {
   it("lists exactly the files in apps/web/public (the proxy matcher excludes the same names)", () => {
     const files = readdirSync(join(__dirname, "../../../public")).map((name) => `/${name}`);
     expect([...PUBLIC_FILES].sort()).toEqual(files.sort());
+  });
+});
+
+describe("the admin section", () => {
+  it("covers /admin and everything under it, nothing else", () => {
+    expect(isAdminPath("/admin")).toBe(true);
+    expect(isAdminPath("/admin/invites")).toBe(true);
+    expect(isAdminPath("/administrator")).toBe(false);
+    expect(isAdminPath("/trainer/admin")).toBe(false);
+  });
+
+  it("sends non-admins to an unknown page of their language, which is the app's 404", () => {
+    expect(adminDeniedPath("en")).toBe("/en/admin-not-found");
+    expect(isAdminPath(adminDeniedPath("ru").slice(3))).toBe(false);
   });
 });

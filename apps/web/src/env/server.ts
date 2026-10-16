@@ -23,6 +23,11 @@ const schema = z.object({
    * deployment without it still serves the app; the route answers 503 until it is set.
    */
   CRON_SECRET: optional(z.string().regex(/^[A-Za-z0-9_-]{32,256}$/, "must be 32-256 characters [A-Za-z0-9_-]")),
+  /** Bot whose Mini App opens invite links (t.me/<bot>?startapp=…). Locally your own dev bot. */
+  TELEGRAM_BOT_USERNAME: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^[A-Za-z][A-Za-z0-9_]{3,31}$/, "must be a bot username without @").default("fitconnection_bot"),
+  ),
   /** Telegram group that gets the team messages (PRD §3 А1, А2). Optional until those messages exist. */
   TELEGRAM_ADMIN_CHAT_ID: optional(z.coerce.number().int()),
 });
