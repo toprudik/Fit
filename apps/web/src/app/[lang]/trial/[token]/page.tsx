@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { DaMark } from "@/components/brand/da-mark";
+import { TrialPicker } from "@/components/bookings/trial-picker";
 import { JoinButton } from "@/components/client-links/join-button";
 import { SignedOutActions } from "@/components/client-links/signed-out-actions";
 import { TrainerCard } from "@/components/client-links/trainer-card";
@@ -11,6 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { serverEnv } from "@/env/server";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getDictionary, getLocale } from "@/i18n/server";
+import { loadLiveTrial, loadTrialSlots } from "@/lib/bookings/trial";
+import { DEFAULT_TIME_ZONE } from "@/lib/plans/plans";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isTrialToken, trialPath, trialTelegram } from "@/lib/trial-links/link";
 
@@ -70,6 +73,20 @@ async function TrialStep({ params }: { params: PageProps<"/[lang]/trial/[token]"
   }
 
   const name = link.name ?? "";
+  const userId = session?.claims.sub ?? null;
+  const [slots, liveTrial, settings] = await Promise.all([
+    loadTrialSlots(supabase, token),
+    userId && link.trainer_id ? loadLiveTrial(supabase, userId, link.trainer_id) : null,
+    userId ? supabase.from("user_settings").select("time_zone").eq("user_id", userId).maybeSingle() : null,
+  ]);
+  const timeZone = settings?.data?.time_zone ?? DEFAULT_TIME_ZONE;
+  const signIn = userId
+    ? null
+    : {
+        telegramHref: trialTelegram(token, serverEnv().TELEGRAM_BOT_USERNAME),
+        loginHref: `/login?next=${encodeURIComponent(trialPath(token))}`,
+      };
+
   return (
     <div className="flex flex-col gap-6">
       <TrainerCard
@@ -99,7 +116,19 @@ async function TrialStep({ params }: { params: PageProps<"/[lang]/trial/[token]"
           locationAddress: link.location_address,
         }}
       />
-      {link.status === "joined" ? (
+      {liveTrial ? (
+        <div className="flex flex-col gap-4">
+          <StatusText
+            title={liveTrial.status === "confirmed" ? t.schedule.trialBooking.confirmedTitle : t.schedule.trialBooking.requestedTitle}
+            text={liveTrial.status === "confirmed" ? t.schedule.trialBooking.confirmedText : t.schedule.trialBooking.requestedText}
+          />
+          <Button asChild size="lg" block>
+            <Link href={`/client/bookings/${liveTrial.id}`}>{t.schedule.trialBooking.openBooking}</Link>
+          </Button>
+        </div>
+      ) : slots.length > 0 ? (
+        <TrialPicker token={token} timeZone={timeZone} slots={slots} signIn={signIn} />
+      ) : link.status === "joined" ? (
         <div className="flex flex-col gap-4">
           <p className="text-callout">{copy.joined.title}</p>
           <Button asChild size="lg" block>
@@ -108,18 +137,15 @@ async function TrialStep({ params }: { params: PageProps<"/[lang]/trial/[token]"
         </div>
       ) : (
         <>
-          {/* Booking a slot arrives with slots in week 2; until then the next step is joining the trainer. */}
+          {/* No free trial time: joining lets the trainer arrange the trial ("Попросить связаться"). */}
           <p className="text-callout text-ink-2">{copy.nextStep}</p>
-          {session?.claims.sub ? (
-            <JoinButton trial={token} trainerName={name} />
-          ) : (
+          {signIn ? (
             <div className="flex flex-col gap-3">
               <p className="text-callout text-ink-2">{copy.signedOutText}</p>
-              <SignedOutActions
-                telegramHref={trialTelegram(token, serverEnv().TELEGRAM_BOT_USERNAME)}
-                loginHref={`/login?next=${encodeURIComponent(trialPath(token))}`}
-              />
+              <SignedOutActions telegramHref={signIn.telegramHref} loginHref={signIn.loginHref} />
             </div>
+          ) : (
+            <JoinButton trial={token} trainerName={name} />
           )}
         </>
       )}
@@ -129,9 +155,9 @@ async function TrialStep({ params }: { params: PageProps<"/[lang]/trial/[token]"
 
 /**
  * Trial link landing (screens.md §3.1 "Лендинг ссылки на пробное", PRD wave-1 §2.3 rule 4): the
- * trainer and the trial terms before sign-in, on the web and in the Mini App (startapp=tl_<token>).
- * Picking a slot comes with the schedule in week 2; for now "Стать клиентом" makes the pair from
- * the trial link and the trainer arranges the trial.
+ * trainer and the trial terms before sign-in, on the web and in the Mini App (startapp=tl_<token>),
+ * then a free time for the trial and a request to the trainer (§2.3-5). Without free time,
+ * "Стать клиентом" makes the pair from the trial link and the trainer arranges the trial.
  */
 export default async function TrialLinkPage(props: PageProps<"/[lang]/trial/[token]">) {
   const t = await getDictionary();

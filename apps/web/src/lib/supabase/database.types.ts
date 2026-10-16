@@ -2339,6 +2339,11 @@ isOneToOne: false
               "booking_id": string,"status": Database["public"]['Enums']["booking_status"]
             }[]
                            },
+"book_trial":
+{ Args: { "p_slot_id": string,"p_token": string }; Returns: {
+              "booking_id": string,"coaching_id": string
+            }[]
+                           },
 "booking_preview":
 { Args: { "p_slot_id": string }; Returns: {
               "confirmed": boolean,"pass_title": string,"sessions_left": number
@@ -2410,6 +2415,11 @@ isOneToOne: false
 "get_trial_link":
 { Args: { "p_token": string }; Returns: {
               "coaching_id": string,"currency": string,"description": string,"duration_min": number,"headline": string,"location_address": string,"location_name": string,"mode": Database["public"]['Enums']["session_mode"],"name": string,"photo_url": string,"price_minor": number,"specialties": (string)[],"status": string,"title": string,"trainer_id": string,"verified": boolean,"works_offline": boolean,"works_online": boolean
+            }[]
+                           },
+"get_trial_slots":
+{ Args: { "p_token": string }; Returns: {
+              "ends_at": string,"location_name": string,"mode": Database["public"]['Enums']["session_mode"],"slot_id": string,"starts_at": string
             }[]
                            },
 "has_entitlement":

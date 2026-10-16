@@ -100,7 +100,10 @@ const templates: Partial<Record<NotificationType, Template>> = {
       buttons: [
         {
           text: t.openPayments,
-          path: typeof payload.coaching_id === "string" && isPairId(payload.coaching_id) ? `/trainer/clients/${payload.coaching_id}/payments` : "/trainer/money",
+          path:
+            typeof payload.coaching_id === "string" && isPairId(payload.coaching_id)
+              ? `/trainer/clients/${payload.coaching_id}/payments`
+              : "/trainer/money",
         },
       ],
     };
@@ -291,9 +294,9 @@ const templates: Partial<Record<NotificationType, Template>> = {
     }),
     buttons: [{ text: t.openSession, path: idPath("/trainer/sessions", payload.session_id, "/trainer/schedule") }],
   }),
-  // Т2: the same payload for a request; the button opens it to confirm or decline (PRD 2.6.4).
+  // Т2: the same payload for a request, with trial = a trial request; the button opens it to confirm or decline (PRD 2.6.4, 2.3-5).
   booking_requested: ({ t, locale, timeZone, payload }) => ({
-    text: interpolateEscaped(t.bookingRequested, {
+    text: interpolateEscaped(payload.trial === true ? t.trialRequested : t.bookingRequested, {
       name: personName(payload) || t.unnamedClient,
       when: sessionTime(locale, payload.starts_at, timeZone),
       place: place(t, payload),
