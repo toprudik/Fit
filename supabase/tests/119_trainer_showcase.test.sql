@@ -1,4 +1,4 @@
--- The public showcase of migration 20261016150000_trainer_showcase.sql (PRD wave-1 §2.3 rule 1, SHOP-1, SHOP-7,
+-- The public showcase of migration 20261016160000_trainer_showcase.sql (PRD wave-1 §2.3 rule 1, SHOP-1, SHOP-7,
 -- TINV-7; R16, Q60): get_trainer_showcase and join_by_showcase.
 begin;
 \ir _helpers.psql
