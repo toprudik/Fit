@@ -131,7 +131,7 @@ describe("dictionaries follow docs/writing.md", () => {
     // Words that keep their capital mid-sentence. Extend when a new name or acronym appears in copy.
     const properNouns = new Set([
       "DaFit", "Telegram", "QR", "Pro", "Premium", "English", "I", "OK", "JPG", "PNG", "PDF", "MB", "SBP", "ID", "NPS",
-      "Free", "CSV", "USA", "Russia", "Supabase", "Vercel", "Start", "Google", "Apple", "Outlook", "Calendar", "Mac",
+      "Free", "CSV", "USA", "Russia", "Supabase", "Vercel", "Start", "Google", "Apple", "Outlook", "Calendar", "Mac", "PAR-Q",
     ]);
     const titleCased = (value: string) =>
       value
