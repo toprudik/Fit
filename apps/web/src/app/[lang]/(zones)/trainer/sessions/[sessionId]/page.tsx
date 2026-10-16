@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CalendarX, Clock, Link2, MapPin, Repeat, User, Users } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { AttendanceMarks } from "@/components/passes/attendance-marks";
 import { CancelSession } from "@/components/schedule/cancel-session";
 import { GroupControls } from "@/components/schedule/group-controls";
 import { ScheduleSignIn } from "@/components/schedule/sign-in-state";
@@ -154,6 +155,10 @@ async function SessionDetails({ params }: { params: PageProps<"/[lang]/trainer/s
             />
           ))}
         </ListGroup>
+      ) : null}
+
+      {session.status !== "cancelled" && session.startsAt <= now() ? (
+        <AttendanceMarks clients={session.clients.filter((client) => ["confirmed", "attended", "no_show"].includes(client.status))} />
       ) : null}
 
       {session.status === "cancelled" && session.cancelReason ? (
