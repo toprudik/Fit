@@ -134,7 +134,8 @@ export function SideNav({ zone, activeId, settingsActive = false, onSelect, onSe
         </button>,
       )}
 
-      {zone ? (
+      {/* The switch is only for trainers, who have both zones (PAIR-3). */}
+      {zone && signedIn && account.isTrainer ? (
         <SegmentedControl
           options={zoneOptions}
           value={zone}

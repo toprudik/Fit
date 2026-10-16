@@ -73,7 +73,7 @@ type ProfilePanelProps = {
 /**
  * Profile content shared by the sheet behind the avatar and the /profile page
  * (docs/architecture/screens.md §2.3): who is signed in, the banner when the bot cannot write to them
- * (AUTH-7), the zone switch, settings, the admin
+ * (AUTH-7), the zone switch for trainers, settings, the admin
  * section for admins, the trainer invite for everyone who is not a trainer yet and, on the website,
  * sign-out. The zone switch shows the zone the shell shows.
  */
@@ -105,15 +105,18 @@ export function ProfilePanel({ onNavigate, groupSurface = "default" }: ProfilePa
     <div className="flex flex-col gap-6">
       <AccountBlock onNavigate={onNavigate} />
       {account.status === "signed-in" && account.botBlocked ? <BotMessagesBanner botUrl={account.botUrl} /> : null}
-      <SegmentedControl
-        // On /profile opened directly the zone is read in the browser only: remount once it is known,
-        // so the thumb starts there instead of sliding over from the default on every page load.
-        key={known ? "known" : "default"}
-        label={t.zones.label}
-        options={zoneOptions}
-        value={picked ?? known ?? DEFAULT_ZONE}
-        onValueChange={pickZone}
-      />
+      {/* Only trainers have two zones; everyone else lives in the client zone and sees no switch (PAIR-3). */}
+      {account.status === "signed-in" && account.isTrainer ? (
+        <SegmentedControl
+          // On /profile opened directly the zone is read in the browser only: remount once it is known,
+          // so the thumb starts there instead of sliding over from the default on every page load.
+          key={known ? "known" : "default"}
+          label={t.zones.label}
+          options={zoneOptions}
+          value={picked ?? known ?? DEFAULT_ZONE}
+          onValueChange={pickZone}
+        />
+      ) : null}
       <ListGroup surface={groupSurface}>
         <ListRow icon={Settings} title={t.profile.settings} href="/settings" onClick={onNavigate} />
         {account.status === "signed-in" ? <ListRow icon={Gem} title={t.profile.plan} href="/settings/plan" onClick={onNavigate} /> : null}

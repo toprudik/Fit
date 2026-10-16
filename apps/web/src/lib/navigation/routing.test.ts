@@ -1,7 +1,7 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { adminDeniedPath, consentRedirect, isAdminPath, PUBLIC_FILES, routeRequest, type RouteInput } from "./routing";
+import { adminDeniedPath, consentRedirect, isAdminPath, PUBLIC_FILES, routeRequest, trainerZoneRedirect, type RouteInput } from "./routing";
 
 function route(overrides: Partial<RouteInput>) {
   return routeRequest({
@@ -140,5 +140,20 @@ describe("consentRedirect", () => {
   it("leaves the terms screen and the login screen open", () => {
     expect(consentRedirect("/onboarding/consent", "?next=%2Fclient")).toBeNull();
     expect(consentRedirect("/login", "?next=%2Fclient")).toBeNull();
+  });
+});
+
+describe("trainerZoneRedirect", () => {
+  it("sends the trainer zone, any screen of it, to the client zone (PAIR-3)", () => {
+    expect(trainerZoneRedirect("/trainer")).toBe("/client");
+    expect(trainerZoneRedirect("/trainer/clients/42")).toBe("/client");
+    expect(trainerZoneRedirect("/trainer/verification")).toBe("/client");
+  });
+
+  it("leaves every other screen alone, including the trainer onboarding and showcases", () => {
+    expect(trainerZoneRedirect("/client")).toBeNull();
+    expect(trainerZoneRedirect("/onboarding/trainer")).toBeNull();
+    expect(trainerZoneRedirect("/trainers/anna")).toBeNull();
+    expect(trainerZoneRedirect("/trainerx")).toBeNull();
   });
 });
