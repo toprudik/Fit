@@ -9,6 +9,7 @@ import { getDictionary, getLocale } from "@/i18n/server";
 import { formatDay, formatNoteTime, formatSessionTime } from "@/lib/pairs/format";
 import { loadPair } from "@/lib/pairs/load";
 import { sharingPath } from "@/lib/sharing/categories";
+import { PairMilestones } from "./milestones";
 import { EndPairRow } from "./pair-controls";
 import { PairNotice, PassRows, WriteButton, pairSubtitle } from "./trainer-pair";
 
@@ -61,6 +62,8 @@ export async function ClientPair({ coachingId }: { coachingId: string }) {
         <ListGroup header={t.pairs.passes}>
           <PassRows t={t} locale={locale} pair={pair} />
         </ListGroup>
+
+        <PairMilestones t={t} locale={locale} pair={pair} />
 
         <ClientIntakeRows coachingId={pair.coachingId} />
 

@@ -20,6 +20,7 @@ import { loadPairMoney } from "@/lib/passes/load";
 import { formatLocalDay, lastValidDay } from "@/lib/passes/present";
 import { TrainerProgress } from "@/components/progress/sections";
 import { LogListSection } from "@/components/workouts/log-screens";
+import { PairMilestones } from "./milestones";
 import { NoteComposer, NoteItem, NoteVisibility } from "./notes";
 import { PairTabs } from "./pair-tabs";
 import { ArchiveRow, DebtBookingSwitch, EndPairRow } from "./pair-controls";
@@ -105,6 +106,8 @@ function Overview({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: Pa
       <ListGroup header={t.pairs.passes}>
         <PassRows t={t} locale={locale} pair={pair} />
       </ListGroup>
+
+      <PairMilestones t={t} locale={locale} pair={pair} />
 
       {pair.partner.isCard ? null : <TrainerIntakeRow coachingId={pair.coachingId} />}
 

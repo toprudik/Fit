@@ -236,6 +236,17 @@ export const en: Dictionary = {
       other: "{count} sessions together",
     },
     since: "since {date}",
+    milestones: {
+      title: "Milestones",
+      newBadge: "New milestone",
+      next: {
+        one: "{count} more session to {sessions}",
+        few: "{count} more sessions to {sessions}",
+        many: "{count} more sessions to {sessions}",
+        other: "{count} more sessions to {sessions}",
+      },
+      allReached: "Every milestone reached: 100 sessions together",
+    },
     write: "Message",
     tabsLabel: "Sections",
     tabs: {
