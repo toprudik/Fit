@@ -2337,6 +2337,9 @@ isOneToOne: false
 "bot_messages_blocked":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"cancel_session":
+{ Args: { "p_following"?: boolean,"p_reason": string,"p_session_id": string }; Returns: number
+                           },
 "claim_outbox":
 { Args: { "p_limit"?: number }; Returns: {
               "attempt": number,"chat_id": number,"chat_target": string,"kind": Database["public"]['Enums']["notification_type"],"locale": Database["public"]['Enums']["app_locale"],"outbox_id": number,"payload": Json,"silent": boolean,"time_zone": string
@@ -2345,6 +2348,11 @@ isOneToOne: false
 "close_schedule_days":
 { Args: { "p_from": string,"p_to": string }; Returns: {
               "session_id": string,"starts_at": string,"title": string
+            }[]
+                           },
+"create_session":
+{ Args: { "p_coaching_id": string,"p_count"?: number,"p_duration_min": number,"p_location_id"?: string,"p_meeting_url"?: string,"p_mode": Database["public"]['Enums']["session_mode"],"p_starts_at": string,"p_title"?: string,"p_until"?: string,"p_weekdays"?: (number)[] }; Returns: {
+              "created": number,"session_id": string
             }[]
                            },
 "effective_plan":
@@ -2424,6 +2432,11 @@ isOneToOne: false
 "save_week_template":
 { Args: { "p_buffer_min"?: number,"p_horizon_weeks"?: number,"p_items": Json }; Returns: number
                            },
+"session_conflicts":
+{ Args: { "p_ends_at": string,"p_ignore"?: string,"p_starts_at": string }; Returns: {
+              "coaching_id": string,"ends_at": string,"kind": Database["public"]['Enums']["session_kind"],"session_id": string,"starts_at": string,"title": string
+            }[]
+                           },
 "session_meeting_url":
 { Args: { "p_session_id": string }; Returns: string
                            },
@@ -2443,6 +2456,9 @@ isOneToOne: false
                            },
 "trainer_invite_status":
 { Args: { "p_code": string }; Returns: string
+                           },
+"update_session":
+{ Args: { "p_duration_min": number,"p_following"?: boolean,"p_location_id"?: string,"p_meeting_url"?: string,"p_mode": Database["public"]['Enums']["session_mode"],"p_session_id": string,"p_starts_at": string,"p_title"?: string }; Returns: number
                            }
           }
           Enums: {
