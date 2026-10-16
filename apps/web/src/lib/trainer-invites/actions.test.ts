@@ -44,8 +44,8 @@ beforeEach(() => {
 });
 
 describe("redeemTrainerInvite", () => {
-  it("redeems the normalized code and opens the trainer zone", async () => {
-    await expect(redeemTrainerInvite({ failed: false }, form({ code: "abcd-efgh jklm" }))).rejects.toThrow("redirect /trainer");
+  it("redeems the normalized code and opens the profile wizard", async () => {
+    await expect(redeemTrainerInvite({ failed: false }, form({ code: "abcd-efgh jklm" }))).rejects.toThrow("redirect /onboarding/trainer/profile");
     expect(db.calls).toEqual([{ fn: "redeem_trainer_invite", args: { p_code: "ABCDEFGHJKLM" } }]);
     expect(next.revalidatePath).toHaveBeenCalledWith("/", "layout");
   });

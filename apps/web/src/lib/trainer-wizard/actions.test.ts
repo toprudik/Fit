@@ -1,0 +1,185 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
+
+const next = vi.hoisted(() => ({
+  refresh: vi.fn(),
+  redirect: vi.fn((to: string) => {
+    throw new Error(`redirect ${to}`);
+  }),
+}));
+vi.mock("next/cache", () => ({ refresh: next.refresh }));
+vi.mock("next/navigation", () => ({ redirect: next.redirect }));
+
+type Write = { table: string; op: "update" | "insert"; values: Record<string, unknown>; filter?: [string, unknown] };
+
+/** Writes made as the signed-in user; `fail` makes the next write answer with an error. */
+const db = vi.hoisted(() => ({
+  user: "trainer-1" as string | null,
+  writes: [] as Write[],
+  fail: false,
+  invites: [] as { token: string }[],
+}));
+
+function result(data: unknown) {
+  const error = db.fail ? { code: "23514", message: "check" } : null;
+  return { data: error ? null : data, error };
+}
+
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseServerClient: async () => ({
+    auth: { getClaims: async () => ({ data: db.user ? { claims: { sub: db.user } } : null }) },
+    from: (table: string) => ({
+      update: (values: Record<string, unknown>) => ({
+        eq: async (column: string, value: unknown) => {
+          db.writes.push({ table, op: "update", values, filter: [column, value] });
+          return result(null);
+        },
+      }),
+      insert: (values: Record<string, unknown>) => {
+        db.writes.push({ table, op: "insert", values });
+        const answer = Promise.resolve(result(null));
+        return Object.assign(answer, { select: () => ({ single: async () => result({ token: "new-token" }) }) });
+      },
+      select: () => {
+        const chain = {
+          eq: () => chain,
+          is: () => chain,
+          order: () => chain,
+          limit: () => chain,
+          maybeSingle: async () => ({ data: db.invites[0] ?? null, error: null }),
+        };
+        return chain;
+      },
+    }),
+  }),
+}));
+
+const { saveWizardStep } = await import("./actions");
+
+const IDLE = { status: "idle" } as const;
+
+function form(values: Record<string, string | string[]>) {
+  const data = new FormData();
+  for (const [key, value] of Object.entries(values)) {
+    for (const item of Array.isArray(value) ? value : [value]) data.append(key, item);
+  }
+  return data;
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  db.user = "trainer-1";
+  db.writes = [];
+  db.fail = false;
+  db.invites = [];
+});
+
+describe("saveWizardStep", () => {
+  it("saves the name in settings and the intro in the trainer profile, then opens the next step", async () => {
+    await expect(saveWizardStep(IDLE, form({ step: "profile", name: " Анна ", headline: "Силовые", bio: "" }))).rejects.toThrow(
+      "redirect /onboarding/trainer/format",
+    );
+    expect(db.writes).toEqual([
+      { table: "user_settings", op: "update", values: { display_name: "Анна" }, filter: ["user_id", "trainer-1"] },
+      { table: "trainer_profiles", op: "update", values: { headline: "Силовые", bio: null }, filter: ["user_id", "trainer-1"] },
+    ]);
+  });
+
+  it("asks for a name and keeps what was typed", async () => {
+    const state = await saveWizardStep(IDLE, form({ step: "profile", name: "  ", headline: "Йога", bio: "" }));
+    expect(state).toEqual({ status: "invalid", fields: ["name"], values: { name: "  ", headline: "Йога", bio: "" } });
+    expect(db.writes).toEqual([]);
+  });
+
+  it("needs at least one format and drops unknown specialties", async () => {
+    expect(await saveWizardStep(IDLE, form({ step: "format", city: "", specialties: ["yoga"] }))).toMatchObject({
+      status: "invalid",
+      fields: ["format"],
+      values: { specialties: ["yoga"] },
+    });
+    await expect(
+      saveWizardStep(IDLE, form({ step: "format", online: "on", city: "Казань", specialties: ["yoga", "yoga", "<script>"] })),
+    ).rejects.toThrow("redirect /onboarding/trainer/locations");
+    expect(db.writes.at(-1)?.values).toEqual({ works_offline: false, works_online: true, city: "Казань", specialties: ["yoga"] });
+  });
+
+  it("adds a place for the trainer and stays for another with Добавить ещё", async () => {
+    const state = await saveWizardStep(IDLE, form({ step: "locations", intent: "more", name: "Зал на Ленина", address: "" }));
+    expect(state).toEqual({ status: "added" });
+    expect(next.refresh).toHaveBeenCalledOnce();
+    expect(db.writes).toEqual([{ table: "locations", op: "insert", values: { trainer_id: "trainer-1", name: "Зал на Ленина", address: null } }]);
+  });
+
+  it("moves on without writing when an optional step is left empty", async () => {
+    await expect(saveWizardStep(IDLE, form({ step: "locations", name: "", address: "" }))).rejects.toThrow("redirect /onboarding/trainer/region");
+    await expect(saveWizardStep(IDLE, form({ step: "payment", title: "", url: "", kind: "sbp" }))).rejects.toThrow(
+      "redirect /onboarding/trainer/certificates",
+    );
+    expect(db.writes).toEqual([]);
+  });
+
+  it("checks the time zone and the currency", async () => {
+    expect(await saveWizardStep(IDLE, form({ step: "region", timeZone: "Mars/Olympus", currency: "RUB" }))).toMatchObject({
+      status: "invalid",
+      fields: ["timeZone"],
+    });
+    await expect(saveWizardStep(IDLE, form({ step: "region", timeZone: "Asia/Almaty", currency: "KZT" }))).rejects.toThrow(
+      "redirect /onboarding/trainer/cancellation",
+    );
+    expect(db.writes.map((write) => write.values)).toEqual([{ time_zone: "Asia/Almaty" }, { default_currency: "KZT" }]);
+  });
+
+  it("takes only the offered cancellation deadlines", async () => {
+    expect(await saveWizardStep(IDLE, form({ step: "cancellation", hours: "1000" }))).toMatchObject({ status: "invalid" });
+    await expect(saveWizardStep(IDLE, form({ step: "cancellation", hours: "12" }))).rejects.toThrow("redirect /onboarding/trainer/payment");
+    expect(db.writes).toEqual([
+      { table: "trainer_profiles", op: "update", values: { cancellation_deadline_hours: 12 }, filter: ["user_id", "trainer-1"] },
+    ]);
+  });
+
+  it("accepts only https payment links", async () => {
+    expect(await saveWizardStep(IDLE, form({ step: "payment", title: "СБП", url: "http://pay.example", kind: "sbp" }))).toMatchObject({
+      status: "invalid",
+      fields: ["url"],
+    });
+    expect(await saveWizardStep(IDLE, form({ step: "payment", title: "СБП", url: "javascript:alert(1)", kind: "sbp" }))).toMatchObject({
+      status: "invalid",
+      fields: ["url"],
+    });
+    await expect(
+      saveWizardStep(IDLE, form({ step: "payment", title: "СБП", url: "https://pay.example/anna", kind: "self_employed" })),
+    ).rejects.toThrow("redirect /onboarding/trainer/certificates");
+    expect(db.writes.at(-1)).toEqual({
+      table: "payment_links",
+      op: "insert",
+      values: { trainer_id: "trainer-1", title: "СБП", url: "https://pay.example/anna", kind: "self_employed" },
+    });
+  });
+
+  it("makes the client link on Позже, so the result screen has one", async () => {
+    await expect(saveWizardStep(IDLE, form({ step: "certificates" }))).rejects.toThrow("redirect /onboarding/trainer/done");
+    expect(db.writes).toEqual([{ table: "client_invites", op: "insert", values: { trainer_id: "trainer-1" } }]);
+  });
+
+  it("keeps the trainer's existing client link", async () => {
+    db.invites = [{ token: "old-token" }];
+    await expect(saveWizardStep(IDLE, form({ step: "certificates" }))).rejects.toThrow("redirect /onboarding/trainer/done");
+    expect(db.writes).toEqual([]);
+  });
+
+  it("reports a write the database refused and keeps the form", async () => {
+    db.fail = true;
+    expect(await saveWizardStep(IDLE, form({ step: "cancellation", hours: "24" }))).toEqual({ status: "failed", values: { hours: "24" } });
+  });
+
+  it("sends a signed-out request back to the invite screen", async () => {
+    db.user = null;
+    await expect(saveWizardStep(IDLE, form({ step: "profile", name: "Анна" }))).rejects.toThrow("redirect /onboarding/trainer");
+    expect(db.writes).toEqual([]);
+  });
+
+  it("refuses an unknown step", async () => {
+    expect(await saveWizardStep(IDLE, form({ step: "price-grid" }))).toEqual({ status: "failed", values: {} });
+  });
+});
