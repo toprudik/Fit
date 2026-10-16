@@ -67,6 +67,16 @@ export async function setQuietHours(hours: { start: string; end: string } | null
   return done("saving quiet hours", error, data);
 }
 
+/** When the trainer daily digest leaves, in the user's time zone (PRD 2.9-6). */
+export async function setDigestTime(time: string): Promise<SettingsActionResult> {
+  const value = shortTime(time);
+  if (!value) return { ok: false };
+  const { supabase, userId } = await signedIn();
+  if (!userId) return { ok: false };
+  const { data, error } = await supabase.from("user_settings").update({ daily_digest_time: value }).eq("user_id", userId).select("user_id");
+  return done("saving the digest time", error, data);
+}
+
 /**
  * Turns one notification type on or off (PRD 2.9-8, NOTIF-7). A row exists only for a type switched off;
  * turning it back on deletes the row, so the default applies again.

@@ -1374,6 +1374,10 @@ export const ru = {
       duplicate: "Такое напоминание уже есть.",
       range: "Напомнить можно за 5 минут до 7 дней.",
     },
+    digest: {
+      label: "Время утренней сводки",
+      footer: "Каждый день в это время бот пришлёт занятия на сегодня, запросы на запись, абонементы на исходе и долги. Если ничего этого нет, сводки не будет.",
+    },
     quiet: {
       header: "Тихие часы",
       label: "Тихие часы",
@@ -1388,6 +1392,7 @@ export const ru = {
       items: {
         session_reminder: "Напоминания о занятиях",
         coaching_created: "Новый клиент",
+        daily_digest: "Утренняя сводка",
         coaching_ended: "Конец занятий",
       },
     },
@@ -1586,6 +1591,42 @@ export const ru = {
     planRevoked: "Тариф {plan} отключён. Все твои данные на месте.",
     planExpiring: "Тариф {plan} закончится {date}. Если он ещё нужен, запроси доступ в разделе «Мой тариф».",
     openPlan: "Открыть тариф",
+    /** Т-сводка: the trainer daily digest (NOTIF-5, PRD 2.9-6). */
+    digestTitle: "Сводка на {date}",
+    digestSessions: {
+      one: "Сегодня {count} занятие:",
+      few: "Сегодня {count} занятия:",
+      many: "Сегодня {count} занятий:",
+      other: "Сегодня {count} занятия:",
+    } as PluralForms,
+    digestNoSessions: "Занятий сегодня нет.",
+    digestSession: "{time}, {name}",
+    digestSessionGroup: "{time}, {title}, записались: {booked}",
+    digestGroup: "Групповое занятие",
+    digestMore: "и ещё {count}",
+    digestRequests: {
+      one: "{count} запрос на запись ждёт ответа.",
+      few: "{count} запроса на запись ждут ответа.",
+      many: "{count} запросов на запись ждут ответа.",
+      other: "{count} запроса на запись ждут ответа.",
+    } as PluralForms,
+    digestPasses: "Абонементы на исходе:",
+    digestPassLeft: {
+      one: "{name}, осталось {count} занятие",
+      few: "{name}, осталось {count} занятия",
+      many: "{name}, осталось {count} занятий",
+      other: "{name}, осталось {count} занятия",
+    } as PluralForms,
+    digestPassEmpty: "{name}, занятий не осталось",
+    digestPassUntil: "{name}, до {date}",
+    digestDebts: "Долги:",
+    digestDebt: {
+      one: "{name}, {count} занятие",
+      few: "{name}, {count} занятия",
+      many: "{name}, {count} занятий",
+      other: "{name}, {count} занятия",
+    } as PluralForms,
+    openToday: "Открыть «Сегодня»",
     /** К1: the trainer booked the client in, a single session or a whole repeat (PRD 2.6.2). */
     sessionAssigned: "Новое занятие с тренером {name}: {when}, {place}.",
     sessionsAssigned: "Новые занятия с тренером {name}, всего {count}. Первое: {when}, {place}.",

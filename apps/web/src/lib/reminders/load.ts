@@ -16,6 +16,8 @@ export type NotificationSettingsData = {
   /** The trainer's reminders for new clients; null for someone who is not a trainer. */
   trainerDefaults: number[] | null;
   quietHours: { start: string; end: string } | null;
+  /** "08:00": when the trainer daily digest leaves (NOTIF-5). */
+  digestTime: string;
   disabled: ToggleType[];
 };
 
@@ -34,7 +36,7 @@ export async function loadNotificationSettings(): Promise<NotificationSettingsDa
       .in("status", ["trial", "active"])
       .order("started_at", { ascending: true }),
     supabase.from("trainer_profiles").select("default_client_reminder_offsets").eq("user_id", userId).maybeSingle(),
-    supabase.from("user_settings").select("quiet_hours_start, quiet_hours_end").eq("user_id", userId).maybeSingle(),
+    supabase.from("user_settings").select("quiet_hours_start, quiet_hours_end, daily_digest_time").eq("user_id", userId).maybeSingle(),
     supabase.from("notification_preferences").select("type, enabled").eq("user_id", userId),
   ]);
   if (pairs.error) throw new Error(`loading pairs failed: ${pairs.error.code}`);
@@ -69,6 +71,7 @@ export async function loadNotificationSettings(): Promise<NotificationSettingsDa
     }),
     trainerDefaults: trainer.data ? sortOffsets(trainer.data.default_client_reminder_offsets) : null,
     quietHours: start && end ? { start, end } : null,
+    digestTime: shortTime(settings.data?.daily_digest_time) ?? "08:00",
     disabled: preferences.data.filter((row) => !row.enabled && isToggleType(row.type)).map((row) => row.type as ToggleType),
   };
 }
