@@ -108,7 +108,8 @@ for (const scheme of SCHEMES) {
       await page.getByRole("button", { name: "Профиль", exact: true }).click();
       const sheet = page.getByRole("dialog", { name: "Профиль" });
       await expect(sheet).toBeVisible();
-      await expect(sheet.getByRole("radiogroup", { name: "Зона" })).toBeVisible();
+      // Signed out there is no trainer profile, so no zone switch (PAIR-3).
+      await expect(sheet.getByRole("radiogroup", { name: "Зона" })).toHaveCount(0);
       await expect(sheet.getByRole("link", { name: "Настройки" })).toBeVisible();
 
       await settle(page);

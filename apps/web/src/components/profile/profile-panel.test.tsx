@@ -191,13 +191,31 @@ describe("settings", () => {
 });
 
 describe("zone switch", () => {
+  const trainer = { status: "signed-in", name: "Давид", photoUrl: null, isTrainer: true, isAdmin: false, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" } as const;
+
+  it("is shown only to trainers, who have both zones (PAIR-3)", () => {
+    renderPanel({ zone: "client" });
+    expect(screen.queryByRole("radiogroup", { name: "Зона" })).toBeNull();
+
+    act(() => setAccount({ status: "signed-out" }));
+    expect(screen.queryByRole("radiogroup", { name: "Зона" })).toBeNull();
+
+    act(() => setAccount({ ...trainer, isTrainer: false }));
+    expect(screen.queryByRole("radiogroup", { name: "Зона" })).toBeNull();
+
+    act(() => setAccount(trainer));
+    expect(screen.getByRole("radiogroup", { name: "Зона" })).toBeTruthy();
+  });
+
   it("shows the zone the shell shows", () => {
     renderPanel({ zone: "trainer" });
+    act(() => setAccount(trainer));
     expect(checkedZone()).toEqual(["Тренер"]);
   });
 
   it("jumps to the zone once the shell knows it, instead of sliding over from the default", () => {
     const view = renderPanel({ zone: null });
+    act(() => setAccount(trainer));
     expect(checkedZone()).toEqual(["Клиент"]);
 
     view.rerender(
@@ -211,6 +229,7 @@ describe("zone switch", () => {
   it("opens the other zone and lets the sheet close", () => {
     const onNavigate = vi.fn();
     renderPanel({ zone: "trainer", onNavigate });
+    act(() => setAccount(trainer));
 
     fireEvent.click(screen.getByRole("radio", { name: "Клиент" }));
 
@@ -223,6 +242,7 @@ describe("zone switch", () => {
 describe("in English", () => {
   it("links to the settings", () => {
     renderPanel({ zone: "client", locale: "en" });
+    act(() => setAccount({ status: "signed-in", name: "Давид", photoUrl: null, isTrainer: true, isAdmin: false, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" }));
 
     expect(screen.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/settings");
     expect(within(screen.getByRole("radiogroup", { name: "Zone" })).getAllByRole("radio").map((radio) => radio.textContent)).toEqual([

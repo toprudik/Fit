@@ -70,6 +70,9 @@ export const en: Dictionary = {
       home: {
         emptyTitle: "No sessions yet",
         emptyText: "Your next session, pass balance, and plan for the day will show up here.",
+        noTrainerTitle: "You don't have a trainer yet",
+        noTrainerText: "Enter your trainer's code or open their link, and your sessions and pass will show up here.",
+        noTrainerAction: "Enter a trainer code",
       },
       sessions: {
         emptyTitle: "No bookings yet",
