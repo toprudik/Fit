@@ -3,7 +3,7 @@
 -- settlement reversal, record_past_session and adjust_pass.
 begin;
 \ir _helpers.psql
-select plan(40);
+select plan(41);
 
 select tests.create_trainer('trainer_a');
 select tests.create_trainer('trainer_b');
@@ -78,7 +78,7 @@ select results_eq(
   'end: without a pass the session goes into debt at the drop-in price'
 );
 select is(
-  (select debt_sessions from public.coaching_balances where coaching_id = tests.pair_id('trainer_a', 'client_d')),
+  (select debt_sessions::bigint from public.coaching_balances where coaching_id = tests.pair_id('trainer_a', 'client_d')),
   1::bigint, 'end: client D owes one session');
 select results_eq(
   $$ select b.status::text, (select count(*) from public.ledger_entries e where e.booking_id = b.id)
@@ -171,7 +171,7 @@ select throws_ok(
 );
 select tests.clear_authentication();
 select is(
-  (select debt_sessions from public.coaching_balances where coaching_id = tests.pair_id('trainer_a', 'client_d')),
+  (select debt_sessions::bigint from public.coaching_balances where coaching_id = tests.pair_id('trainer_a', 'client_d')),
   0::bigint, 'waive: the debt shrinks');
 select is(
   (select count(*) from public.notification_outbox where type = 'charge_waived' and user_id = tests.u('client_d')),
@@ -194,10 +194,10 @@ select lives_ok($$ select public.waive_charge(tests.id('charge_past_d')) $$, 'se
 select tests.clear_authentication();
 select results_eq(
   $$ select entry_type::text, pass_id, sessions_delta, amount_minor from public.ledger_entries
-     where related_entry_id = tests.id('charge_past_d') order by entry_type $$,
-  $$ values ('waiver'::text, null::uuid, 1, -250000::bigint),
-            ('settlement', tests.id('pass_d'), -1, 200000::bigint),
-            ('settlement_reversal', tests.id('pass_d'), 1, -200000::bigint) $$,
+     where related_entry_id = tests.id('charge_past_d') order by entry_type::text $$,
+  $$ values ('settlement'::text, tests.id('pass_d'), -1, 200000::bigint),
+            ('settlement_reversal', tests.id('pass_d'), 1, -200000::bigint),
+            ('waiver', null::uuid, 1, -250000::bigint) $$,
   'settled: the waiver mirrors the charge and the reversal mirrors the settlement'
 );
 select is(tests.left_on(tests.id('pass_d')), 5::bigint, 'settled: the session returns to the pass that paid for it');

@@ -2293,7 +2293,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "admin_block_user":
+            "adjust_pass":
+{ Args: { "p_delta": number,"p_note": string,"p_pass_id": string }; Returns: string
+                           },
+"admin_block_user":
 { Args: { "p_reason": string,"p_user_id": string }; Returns: undefined
                            },
 "admin_create_trainer_invite":
@@ -2414,6 +2417,9 @@ isOneToOne: false
 "join_by_trial_link":
 { Args: { "p_token": string }; Returns: string
                            },
+"mark_attendance":
+{ Args: { "p_booking_id": string,"p_reason"?: string,"p_status": Database["public"]['Enums']["booking_status"] }; Returns: Database["public"]['Enums']["booking_status"]
+                           },
 "my_client_invite":
 { Args: Record<PropertyKey, never>; Returns: {
               "code": string,"created_at": string,"invite_id": string,"token": string,"uses_count": number
@@ -2431,6 +2437,11 @@ isOneToOne: false
                            },
 "record_outbox_result":
 { Args: { "p_error"?: string,"p_id": number,"p_outcome": string,"p_retry_after_s"?: number,"p_telegram_message_id"?: number }; Returns: Database["public"]['Enums']["outbox_status"]
+                           },
+"record_past_session":
+{ Args: { "p_coaching_id": string,"p_duration_min": number,"p_location_id"?: string,"p_mode": Database["public"]['Enums']["session_mode"],"p_starts_at": string,"p_status"?: Database["public"]['Enums']["booking_status"],"p_title"?: string }; Returns: {
+              "booking_id": string,"session_id": string
+            }[]
                            },
 "recurrence_meeting_url":
 { Args: { "p_recurrence_id": string }; Returns: string
@@ -2493,6 +2504,9 @@ isOneToOne: false
                            },
 "update_session":
 { Args: { "p_duration_min": number,"p_following"?: boolean,"p_location_id"?: string,"p_meeting_url"?: string,"p_mode": Database["public"]['Enums']["session_mode"],"p_session_id": string,"p_starts_at": string,"p_title"?: string }; Returns: number
+                           },
+"waive_charge":
+{ Args: { "p_charge_id": string,"p_reason"?: string }; Returns: string
                            }
           }
           Enums: {
