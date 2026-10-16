@@ -234,6 +234,8 @@ export type TrainerRequest = {
   endsAt: string;
   mode: "offline" | "online";
   locationId: string | null;
+  /** A trial request names its trial link (PRD 2.3-5). */
+  trialLinkId: string | null;
 };
 
 /** Open booking requests of the signed-in trainer, soonest first; one of them with `bookingId`. */
@@ -248,7 +250,7 @@ export async function loadTrainerRequests(owner: ScheduleOwner, now: Date, booki
   const [sessions, names] = await Promise.all([
     supabase
       .from("sessions")
-      .select("id, starts_at, ends_at, mode, location_id")
+      .select("id, starts_at, ends_at, mode, location_id, trial_link_id")
       .in(
         "id",
         bookings.map((booking) => booking.session_id),
@@ -275,6 +277,7 @@ export async function loadTrainerRequests(owner: ScheduleOwner, now: Date, booki
           endsAt: session.ends_at,
           mode: session.mode,
           locationId: session.location_id,
+          trialLinkId: session.trial_link_id,
         },
       ];
     })
@@ -285,6 +288,8 @@ export type TrainerRequestDetail = TrainerRequest & {
   place: string | null;
   availableSessions: number;
   debtSessions: number;
+  /** The trial's terms when this is a trial request. */
+  trial: { title: string; priceMinor: number; currency: string } | null;
 };
 
 /** One open request of the signed-in trainer with the client's balance (screens.md /trainer/requests/[id]). */
@@ -292,17 +297,21 @@ export async function loadTrainerRequest(owner: ScheduleOwner, bookingId: string
   const [request] = await loadTrainerRequests(owner, now, bookingId);
   if (!request) return null;
   const { supabase } = owner;
-  const [location, balance] = await Promise.all([
+  const [location, balance, trial] = await Promise.all([
     request.locationId
       ? supabase.from("locations").select("name").eq("id", request.locationId).maybeSingle()
       : Promise.resolve({ data: null }),
     supabase.from("coaching_balances").select("available_sessions, debt_sessions").eq("coaching_id", request.coachingId).maybeSingle(),
+    request.trialLinkId
+      ? supabase.from("trial_links").select("title, price_minor, currency").eq("id", request.trialLinkId).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
   return {
     ...request,
     place: location.data?.name ?? null,
     availableSessions: balance.data?.available_sessions ?? 0,
     debtSessions: balance.data?.debt_sessions ?? 0,
+    trial: trial.data ? { title: trial.data.title, priceMinor: trial.data.price_minor, currency: trial.data.currency } : null,
   };
 }
 

@@ -229,6 +229,7 @@ export const ru = {
       trial: "Пробная",
       ended: "Завершена",
       archived: "В архиве",
+      parq: "PAR-Q: есть «да»",
     },
     together: {
       one: "{count} занятие вместе",
@@ -994,7 +995,7 @@ export const ru = {
       minutes: "{minutes} мин",
       offline: "В зале",
       online: "Онлайн",
-      nextStep: "Запись на время прямо здесь скоро появится. Пока стань клиентом: тренер увидит тебя и договорится о пробном в Telegram.",
+      nextStep: "Свободного времени для пробного на 2 недели нет. Стань клиентом: тренер увидит тебя и договорится о пробном в Telegram.",
       signedOutText: "Чтобы стать клиентом, войди через Telegram.",
       failed: "Не получилось открыть ссылку. Обнови страницу.",
       joined: {
@@ -1707,6 +1708,32 @@ export const ru = {
         failed: "Не получилось, попробуй ещё раз.",
       },
     },
+    /** Booking a trial on /trial/<token> (PRD wave-1 §2.3-5, screens.md §3.1). */
+    trialBooking: {
+      pick: "Выбери время пробного",
+      confirmTitle: "Записаться на пробное?",
+      requestLine: "Ты станешь клиентом тренера, а он получит запрос на это время. Ответ придёт в Telegram.",
+      signInLine: "Чтобы отправить запрос, войди через Telegram.",
+      send: "Отправить запрос",
+      keep: "Выбрать другое время",
+      requested: "Запрос на пробное отправлен",
+      requestedTitle: "Запрос на пробное отправлен",
+      requestedText: "Тренер подтвердит время или предложит другое. Ответ придёт в Telegram.",
+      confirmedTitle: "Пробное подтверждено",
+      confirmedText: "Время и место есть в записи.",
+      openBooking: "Открыть запись",
+      errors: {
+        slot_unavailable: "Это время уже заняли, выбери другое.",
+        too_late: "На это время записаться уже нельзя, выбери другое.",
+        invite_invalid: "Ссылка больше не работает. Попроси у тренера новую.",
+        trainer_unavailable: "Сейчас к этому тренеру нельзя записаться.",
+        own_invite: "Записаться к самому себе нельзя.",
+        already_client: "Ты уже занимаешься у этого тренера, пробное не нужно. Запишись на обычное занятие.",
+        trial_used: "Пробное у этого тренера уже есть.",
+        plan_limit_reached: "У тренера сейчас нет мест для новых клиентов.",
+        failed: "Не получилось, попробуй ещё раз.",
+      },
+    },
     /** "Занятия" of the client (screens.md /client/sessions): bookings with every trainer. */
     clientSessions: {
       book: "Записаться",
@@ -1764,6 +1791,8 @@ export const ru = {
       client: "Клиент",
       passLine: "Спишется с абонемента, свободных занятий: {count}.",
       debtLine: "Подходящего абонемента нет, при списании занятие уйдёт в долг.",
+      trialLine: "Пробное «{title}», {price}.",
+      trialFree: "бесплатно",
       debtNow: "Долг сейчас, занятий: {count}.",
       confirm: "Подтвердить",
       decline: "Отклонить",
@@ -2275,6 +2304,7 @@ export const ru = {
     /** Т1, Т2: a client booked a slot, confirmed at once or as a request (PRD 2.6.4). */
     bookingCreated: "Новая запись: {name}, {when}, {place}.",
     bookingCreatedDebt: "Новая запись: {name}, {when}, {place}. Абонемента нет, при списании занятие уйдёт в долг.",
+    trialRequested: "Запрос на пробное: {name}, {when}, {place}. Подтверди или отклони его до начала занятия.",
     bookingRequested: "Запрос на запись: {name}, {when}, {place}. Подтверди или отклони его до начала занятия.",
     /** Т3: the client took back a request or cancelled a booking. */
     requestWithdrawn: "Запрос на {when} отозван, клиент: {name}.",

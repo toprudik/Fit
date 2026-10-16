@@ -225,6 +225,7 @@ export const en: Dictionary = {
       trial: "Trial",
       ended: "Ended",
       archived: "Archived",
+      parq: "PAR-Q: a yes answer",
     },
     together: {
       one: "{count} session together",
@@ -987,7 +988,7 @@ export const en: Dictionary = {
       minutes: "{minutes} min",
       offline: "In person",
       online: "Online",
-      nextStep: "Booking a time right here is coming soon. For now, become a client: the trainer will see you and set up the trial with you on Telegram.",
+      nextStep: "No free time for a trial in the next 2 weeks. Become a client: the trainer will see you and set up the trial with you on Telegram.",
       signedOutText: "Sign in with Telegram to become a client.",
       failed: "Couldn't open the link. Refresh the page.",
       joined: {
@@ -1697,6 +1698,32 @@ export const en: Dictionary = {
         failed: "Something went wrong, please try again.",
       },
     },
+    /** Booking a trial on /trial/<token> (PRD wave-1 §2.3-5, screens.md §3.1). */
+    trialBooking: {
+      pick: "Pick a time for the trial",
+      confirmTitle: "Book this trial?",
+      requestLine: "You become the trainer's client, and they get a request for this time. The answer comes on Telegram.",
+      signInLine: "Sign in with Telegram to send the request.",
+      send: "Send request",
+      keep: "Pick another time",
+      requested: "Trial request sent",
+      requestedTitle: "Trial request sent",
+      requestedText: "Your trainer confirms the time or suggests another one. The answer comes on Telegram.",
+      confirmedTitle: "Trial confirmed",
+      confirmedText: "The time and place are in the booking.",
+      openBooking: "Open booking",
+      errors: {
+        slot_unavailable: "Someone has just taken this time, pick another one.",
+        too_late: "It's too late to book this time, pick another one.",
+        invite_invalid: "This link no longer works. Ask the trainer for a new one.",
+        trainer_unavailable: "You can't book with this trainer right now.",
+        own_invite: "You can't book with yourself.",
+        already_client: "You already train with this trainer, so you don't need a trial. Book a regular session.",
+        trial_used: "You already have a trial with this trainer.",
+        plan_limit_reached: "The trainer has no room for new clients right now.",
+        failed: "Something went wrong, please try again.",
+      },
+    },
     /** The client's sessions (screens.md /client/sessions): bookings with every trainer. */
     clientSessions: {
       book: "Book",
@@ -1754,6 +1781,8 @@ export const en: Dictionary = {
       client: "Client",
       passLine: "Charged to a pass, free sessions: {count}.",
       debtLine: "No pass fits, so the session goes to debt when charged.",
+      trialLine: "Trial “{title}”, {price}.",
+      trialFree: "free",
       debtNow: "Current debt, sessions: {count}.",
       confirm: "Confirm",
       decline: "Decline",
@@ -2253,6 +2282,7 @@ export const en: Dictionary = {
     /** Т1, Т2: a client booked a slot, confirmed at once or as a request (PRD 2.6.4). */
     bookingCreated: "New booking: {name}, {when}, {place}.",
     bookingCreatedDebt: "New booking: {name}, {when}, {place}. There is no pass, so the session goes to debt when charged.",
+    trialRequested: "Trial request: {name}, {when}, {place}. Confirm or decline it before the session starts.",
     bookingRequested: "Booking request: {name}, {when}, {place}. Confirm or decline it before the session starts.",
     /** Т3: the client took back a request or cancelled a booking. */
     requestWithdrawn: "The request for {when} was withdrawn by {name}.",

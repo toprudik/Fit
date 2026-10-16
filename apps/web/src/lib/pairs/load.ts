@@ -29,15 +29,12 @@ export async function loadTrainerClients(): Promise<{ items: ClientItem[]; timeZ
   if (!me) return null;
   const { supabase, userId } = me;
 
-  const { data: pairs, error } = await supabase
-    .from("coachings")
-    .select("id, client_id, status, started_at")
-    .eq("trainer_id", userId);
+  const { data: pairs, error } = await supabase.from("coachings").select("id, client_id, status, started_at").eq("trainer_id", userId);
   if (error) fail("pairs", error);
   if (!pairs.length) return { items: [], timeZone: me.timeZone };
 
   const ids = pairs.map((pair) => pair.id);
-  const [meta, people, balances, stats, passes] = await Promise.all([
+  const [meta, people, balances, stats, passes, intakes] = await Promise.all([
     supabase.from("coaching_trainer_meta").select("coaching_id, client_alias, archived_at").in("coaching_id", ids),
     supabase
       .from("profiles")
@@ -53,8 +50,17 @@ export async function loadTrainerClients(): Promise<{ items: ClientItem[]; timeZ
       .select("coaching_id, status, available, effective_expires_at")
       .eq("trainer_id", userId)
       .in("status", ["active", "frozen"]),
+    // RLS returns a client's intakes only while they show them to this trainer (can_view, INTK-2).
+    supabase
+      .from("intakes")
+      .select("user_id, parq_flagged, submitted_at")
+      .in(
+        "user_id",
+        pairs.map((pair) => pair.client_id),
+      )
+      .order("submitted_at", { ascending: false }),
   ]);
-  for (const [what, result] of Object.entries({ meta, people, balances, stats, passes })) {
+  for (const [what, result] of Object.entries({ meta, people, balances, stats, passes, intakes })) {
     if (result.error) fail(what, result.error);
   }
 
@@ -64,6 +70,8 @@ export async function loadTrainerClients(): Promise<{ items: ClientItem[]; timeZ
   const balanceById = byId(balances.data);
   const statsById = byId(stats.data);
   const personById = new Map((people.data ?? []).map((person) => [person.id, person]));
+  const latestIntake = new Map<string, boolean>();
+  for (const row of intakes.data ?? []) if (!latestIntake.has(row.user_id)) latestIntake.set(row.user_id, row.parq_flagged);
 
   const items = pairs.map((pair): ClientItem => {
     const person = personById.get(pair.client_id);
@@ -82,6 +90,7 @@ export async function loadTrainerClients(): Promise<{ items: ClientItem[]; timeZ
       debtSessions: balanceById.get(pair.id)?.debt_sessions ?? 0,
       hasPass: pairPasses.length > 0,
       passEnding: passIsEnding(pairPasses, now),
+      parqFlagged: pair.status !== "ended" && (latestIntake.get(pair.client_id) ?? false),
     };
   });
   return { items, timeZone: me.timeZone };
