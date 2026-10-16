@@ -562,6 +562,8 @@ create unique index coachings_trainer_client_uniq on public.coachings (trainer_i
 
 Повторное присоединение к тому же тренеру после `ended` реактивирует ту же строку (`coachings_trainer_client_uniq`), история сохраняется; RPC при этом сбрасывает `data_shares` и поля завершения.
 
+Завершает пару любая сторона через RPC `end_coaching(coaching_id, reason)` (PRIV-5). В одной транзакции пара получает `ended`, будущие записи пары (`requested`, `confirmed`) отменяются без списания от имени завершившей стороны с `cancel_reason = 'coaching_ended'` и строкой `booking_events`, будущее персональное или пробное занятие без других живых записей отменяется, повторы пары останавливаются (`recurrences.ended_at`), другой стороне ставится `coaching_ended` (Т9; поле `ended_by` в payload). Повторный вызов для завершённой пары ничего не меняет. Архив клиента у тренера (`coaching_trainer_meta.archived_at`), заметки и «Разрешить запись в долг» пишутся напрямую под политиками, без RPC.
+
 Таблицы пары (`passes`, `payments`, `bookings`, `ledger_entries`, `money_events`, `recurrences`, `workout_logs` …) ссылаются на пару составным ключом `(coaching_id, trainer_id, client_id)` с `on update cascade`, поэтому строка не может указать на чужую пару, а смена клиента пары (заглушка, слияние карточки) переносит их сама. Составные FK по `coaching_id` объявлены `deferrable initially immediate`: RPC слияния переносит строки между парами в несколько шагов под `set constraints all deferred`.
 
 ```sql

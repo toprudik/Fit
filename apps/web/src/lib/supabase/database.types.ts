@@ -2350,6 +2350,9 @@ isOneToOne: false
 "effective_plan":
 { Args: { "p_side": Database["public"]['Enums']["plan_side"],"p_user": string }; Returns: string
                            },
+"end_coaching":
+{ Args: { "p_coaching_id": string,"p_reason"?: string }; Returns: number
+                           },
 "get_trainer_showcase":
 { Args: { "p_slug": string }; Returns: {
               "bio": string,"city": string,"coaching_id": string,"headline": string,"is_own": boolean,"locations": Json,"name": string,"photo_url": string,"slug": string,"specialties": (string)[],"status": string,"verified": boolean,"works_offline": boolean,"works_online": boolean

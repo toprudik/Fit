@@ -108,7 +108,8 @@ for (const scheme of SCHEMES) {
       await page.getByRole("button", { name: "Профиль", exact: true }).click();
       const sheet = page.getByRole("dialog", { name: "Профиль" });
       await expect(sheet).toBeVisible();
-      await expect(sheet.getByRole("radiogroup", { name: "Зона" })).toBeVisible();
+      // Signed out there is no trainer profile, so no zone switch (PAIR-3).
+      await expect(sheet.getByRole("radiogroup", { name: "Зона" })).toHaveCount(0);
       await expect(sheet.getByRole("link", { name: "Настройки" })).toBeVisible();
 
       await settle(page);
@@ -221,6 +222,21 @@ test.describe("client link and trainer code", () => {
     await page.goto("/i/not-a-token");
     await expect(page.getByRole("heading", { name: "Ссылка недействительна" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Ввести код тренера" })).toHaveAttribute("href", "/join");
+  });
+});
+
+test.describe("pairs", () => {
+  // A pair id that is not a uuid is answered without the database, like a pair of someone else.
+  for (const path of ["/trainer/clients/not-a-pair", "/trainer/clients/not-a-pair/notes", "/client/trainers/not-a-pair"]) {
+    test(`${path} shows the not-found screen`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.getByRole("heading", { name: "Такой страницы нет" })).toBeVisible();
+    });
+  }
+
+  test("signed out, the client list offers the QR and link screen", async ({ page }) => {
+    await page.goto("/trainer/clients?filter=debt&q=anna");
+    await expect(page.getByRole("link", { name: "Показать QR и ссылку" })).toHaveAttribute("href", "/trainer/links");
   });
 });
 
