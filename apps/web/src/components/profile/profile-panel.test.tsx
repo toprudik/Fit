@@ -114,6 +114,16 @@ describe("account", () => {
 
     act(() => setAccount({ status: "signed-in", name: "Давид", photoUrl: null, isTrainer: true, isAdmin: true }));
     expect(screen.getByRole("link", { name: "Админка" }).getAttribute("href")).toBe("/admin/invites");
+    expect(screen.getByRole("link", { name: "Очередь верификации" }).getAttribute("href")).toBe("/admin/verification");
+  });
+
+  it("links trainers to their verification", () => {
+    renderPanel();
+    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: false, isAdmin: false }));
+    expect(screen.queryByRole("link", { name: "Верификация" })).toBeNull();
+
+    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: true, isAdmin: false }));
+    expect(screen.getByRole("link", { name: "Верификация" }).getAttribute("href")).toBe("/trainer/verification");
   });
 
   it("offers to sign in when signed out, coming back to the same screen", () => {

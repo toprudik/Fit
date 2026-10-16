@@ -1,5 +1,6 @@
 import type { Locale } from "@/i18n/config";
 import { dictionaries, type Dictionary } from "@/i18n/dictionaries";
+import { interpolate } from "@/i18n/format";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import type { InlineButton } from "./telegram";
 
@@ -22,7 +23,31 @@ type Template = (context: TemplateContext) => { text: string; buttons: { text: s
  */
 const templates: Partial<Record<NotificationType, Template>> = {
   bot_test: ({ t }) => ({ text: escapeHtml(t.botTest), buttons: [{ text: t.open, path: "/" }] }),
+  // С3: payload { decision, reason? } from admin_decide_verification.
+  verification_result: ({ t, payload }) => ({
+    text:
+      payload.decision === "verified"
+        ? escapeHtml(t.verificationVerified)
+        : interpolateEscaped(t.verificationRejected, { reason: String(payload.reason ?? "") }),
+    buttons: [{ text: t.openVerification, path: "/trainer/verification" }],
+  }),
+  // А1 to the admin group: payload { trainer_name, documents } from submit_trainer_verification.
+  verification_submitted: ({ t, payload }) => ({
+    text: interpolateEscaped(t.verificationSubmitted, {
+      name: String(payload.trainer_name ?? ""),
+      count: Number(payload.documents ?? 0),
+    }),
+    buttons: [{ text: t.openQueue, path: "/admin/verification" }],
+  }),
 };
+
+/** Fills {placeholders} in a catalog string, escaping the template and every value. */
+function interpolateEscaped(template: string, values: Record<string, string | number>): string {
+  return interpolate(
+    escapeHtml(template),
+    Object.fromEntries(Object.entries(values).map(([key, value]) => [key, escapeHtml(String(value))])),
+  );
+}
 
 /** Escapes text for parse_mode HTML. Templates pass catalog strings and every inserted value through it. */
 export function escapeHtml(value: string): string {
