@@ -24,7 +24,7 @@
 - Каждый столбец, на который ссылается политика (`trainer_id`, `client_id`, `coaching_id`, `session_id`, `user_id`), проиндексирован.
 - Политики чтения больших таблиц (`coachings`, `bookings`, `ledger_entries`, `passes`, `payments`, `money_events`, `sessions`, `measurements`, `progress_photos`) не вызывают помощник со столбцом строки: такой вызов идёт на каждую строку и не даёт планировщику взять индекс, и чтение без фильтра просматривало строки всех тренеров. Они сравнивают столбец с массивом, который помощник считает один раз: `coaching_id = any ((select private.trainer_coaching_ids('{passes}'))::uuid[])`. Тест `000_schema_invariants` это проверяет.
 - Новые функции по умолчанию не исполняются ролью `PUBLIC` (базовая миграция меняет default privileges), поэтому каждая RPC выдаёт права явно, а забытый `revoke` не открывает её для `anon`.
-- Анонимной роли (`anon`) доступны только SECURITY DEFINER-функции витрины (`get_trainer_showcase`, `get_trial_link`), не таблицы. В волне 1 у `anon` нет ничего: функции витрины появятся позже. `get_trainer_showcase` должна отвечать «недоступна», когда тренер выключил витрину (`is_public = false`) или его верификация отклонена (R16, Q60); сейчас это правило записано только в комментарии к `is_public`.
+- Анонимной роли (`anon`) доступны только SECURITY DEFINER-функции витрины (`get_trainer_showcase`, `get_trial_link`), не таблицы. В волне 1 у `anon` есть только `resolve_client_invite(token)`: лендинг ссылки клиента `/i/<token>` показывает карточку тренера до входа (коды тренера проверяются только после входа); функции витрины появятся позже. `get_trainer_showcase` должна отвечать «недоступна», когда тренер выключил витрину (`is_public = false`) или его верификация отклонена (R16, Q60); сейчас это правило записано только в комментарии к `is_public`.
 - После каждой DDL-миграции запускаются Supabase security advisors (CLAUDE.md).
 
 ### 1.2. Идентификаторы и общие столбцы
@@ -2383,7 +2383,7 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `trainer_certificates` | сам; A | сам (не больше 5, R53) | сам | сам |
 | `trainer_verifications` | сам; A | S-RPC (подача и решение) | никто | никто |
 | `trainer_invites` | A (без хеша кода); статус кода для экрана погашения: S-RPC `trainer_invite_status` | A через `admin_create_trainer_invite` | S-RPC `admin_revoke_trainer_invite` (A), `redeem_trainer_invite` | никто |
-| `client_invites` | T; **pub** по токену/коду (`resolve_client_invite`) | T | T | никто (архив) |
+| `client_invites` | T; **pub** по токену, по коду после входа (`resolve_client_invite`) | T; S-RPC `my_client_invite` (создаёт ссылку при первом открытии), `reissue_client_invite` | T; S-RPC `reissue_client_invite` (архивирует старые) | никто (архив) |
 | `trial_links` | T; **pub** `get_trial_link(token)` | T | T (вкл. `is_enabled`) | никто (архив) |
 | `coachings` | C; T; A напрямую не видит (только агрегаты) | S-RPC `join_by_invite`, `join_by_code`, `book_trial`, `create_managed_client` | T: `self_book_on_debt`, `debt_limit_sessions`; C: `client_reminder_offsets` (триггер не даёт стороне менять чужие столбцы); завершение через RPC `end_coaching` (любая сторона) | никто |
 | `coaching_trainer_meta` | только T (R9) | S (вместе с парой) | T: `client_alias`, `contact`, `archived_at`, `intake_seen_at` | никто (каскад) |

@@ -25,6 +25,33 @@ describe("renderMessage", () => {
     expect(renderMessage(row, { appUrl: "http://localhost:3000", group: false })?.buttons).toEqual([]);
   });
 
+  it("tells the trainer about a new client by name, escaped, with a button to the clients", () => {
+    const message = renderMessage(
+      { ...row, kind: "coaching_created", payload: { coaching_id: "p1", first_name: "Анна", last_name: "<Смирнова>" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message).toEqual({
+      text: "Новый клиент: Анна &lt;Смирнова&gt;",
+      buttons: [{ text: "Открыть клиентов", web_app: { url: "https://fit.example/trainer/clients?source=coaching_created" } }],
+    });
+  });
+
+  it("names a client without a name neutrally", () => {
+    const message = renderMessage(
+      { ...row, kind: "coaching_created", locale: "en", payload: { first_name: null, last_name: " " } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe("New client: a client with no name");
+  });
+
+  it("asks the trainer with cards to check them when someone joins", () => {
+    const message = renderMessage(
+      { ...row, kind: "managed_client_claim", payload: { claim_id: "c1", first_name: "Иван" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe("Иван теперь среди твоих клиентов. Проверь, нет ли у тебя карточки этого человека без аккаунта.");
+  });
+
   it("returns null for a type without a template yet", () => {
     expect(renderMessage({ ...row, kind: "booking_assigned" }, { appUrl: "https://fit.example", group: false })).toBeNull();
   });

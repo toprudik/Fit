@@ -1,5 +1,6 @@
 import type { Locale } from "@/i18n/config";
 import { dictionaries, type Dictionary } from "@/i18n/dictionaries";
+import { interpolate } from "@/i18n/format";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import type { InlineButton } from "./telegram";
 
@@ -22,7 +23,22 @@ type Template = (context: TemplateContext) => { text: string; buttons: { text: s
  */
 const templates: Partial<Record<NotificationType, Template>> = {
   bot_test: ({ t }) => ({ text: escapeHtml(t.botTest), buttons: [{ text: t.open, path: "/" }] }),
+  // Т7 and Т7a. The client screen arrives with the pair card; until then the button opens the list.
+  coaching_created: ({ t, payload }) => ({
+    text: escapeHtml(interpolate(t.newClient, { name: clientName(t, payload) })),
+    buttons: [{ text: t.openClients, path: "/trainer/clients" }],
+  }),
+  managed_client_claim: ({ t, payload }) => ({
+    text: escapeHtml(interpolate(t.newClientWithCards, { name: clientName(t, payload) })),
+    buttons: [{ text: t.openClients, path: "/trainer/clients" }],
+  }),
 };
+
+/** The client's name from the payload the join RPC queued, or a neutral stand-in. */
+function clientName(t: Dictionary["botMessages"], payload: TemplateContext["payload"]): string {
+  const part = (value: Json | undefined) => (typeof value === "string" ? value.trim() : "");
+  return [part(payload.first_name), part(payload.last_name)].filter(Boolean).join(" ") || t.unnamedClient;
+}
 
 /** Escapes text for parse_mode HTML. Templates pass catalog strings and every inserted value through it. */
 export function escapeHtml(value: string): string {
