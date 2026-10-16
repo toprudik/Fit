@@ -2337,8 +2337,14 @@ isOneToOne: false
 "bot_messages_blocked":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"calendar_feed":
+{ Args: { "p_token": string }; Returns: Json
+                           },
 "cancel_pass":
 { Args: { "p_pass_id": string,"p_reason": string }; Returns: undefined
+                           },
+"cancel_session":
+{ Args: { "p_following"?: boolean,"p_reason": string,"p_session_id": string }; Returns: number
                            },
 "change_pass_expiry":
 { Args: { "p_last_day": string,"p_pass_id": string,"p_reason": string }; Returns: undefined
@@ -2353,12 +2359,20 @@ isOneToOne: false
               "session_id": string,"starts_at": string,"title": string
             }[]
                            },
+"create_calendar_feed":
+{ Args: { "p_zone": Database["public"]['Enums']["app_zone"] }; Returns: string
+                           },
 "create_managed_client":
 { Args: { "p_contact"?: string,"p_display_name": string,"p_note"?: string }; Returns: string
                            },
 "create_pass":
 { Args: { "p_applies_to"?: Database["public"]['Enums']["package_applies_to"],"p_coaching_id": string,"p_currency"?: string,"p_note"?: string,"p_package_id"?: string,"p_paid_at"?: string,"p_payment_method"?: Database["public"]['Enums']["payment_method"],"p_payment_minor"?: number,"p_price_minor"?: number,"p_sessions"?: number,"p_starts_on"?: string,"p_title"?: string,"p_validity_days"?: number }; Returns: {
               "pass_id": string,"settled": number
+            }[]
+                           },
+"create_session":
+{ Args: { "p_coaching_id": string,"p_count"?: number,"p_duration_min": number,"p_location_id"?: string,"p_meeting_url"?: string,"p_mode": Database["public"]['Enums']["session_mode"],"p_starts_at": string,"p_title"?: string,"p_until"?: string,"p_weekdays"?: (number)[] }; Returns: {
+              "created": number,"session_id": string
             }[]
                            },
 "effective_plan":
@@ -2446,8 +2460,16 @@ isOneToOne: false
 "resolve_managed_client_claim":
 { Args: { "p_claim_id": string,"p_managed_client_id"?: string }; Returns: string
                            },
+"revoke_calendar_feed":
+{ Args: { "p_zone": Database["public"]['Enums']["app_zone"] }; Returns: boolean
+                           },
 "save_week_template":
 { Args: { "p_buffer_min"?: number,"p_horizon_weeks"?: number,"p_items": Json }; Returns: number
+                           },
+"session_conflicts":
+{ Args: { "p_ends_at": string,"p_ignore"?: string,"p_starts_at": string }; Returns: {
+              "coaching_id": string,"ends_at": string,"kind": Database["public"]['Enums']["session_kind"],"session_id": string,"starts_at": string,"title": string
+            }[]
                            },
 "session_meeting_url":
 { Args: { "p_session_id": string }; Returns: string
@@ -2468,6 +2490,9 @@ isOneToOne: false
                            },
 "trainer_invite_status":
 { Args: { "p_code": string }; Returns: string
+                           },
+"update_session":
+{ Args: { "p_duration_min": number,"p_following"?: boolean,"p_location_id"?: string,"p_meeting_url"?: string,"p_mode": Database["public"]['Enums']["session_mode"],"p_session_id": string,"p_starts_at": string,"p_title"?: string }; Returns: number
                            }
           }
           Enums: {

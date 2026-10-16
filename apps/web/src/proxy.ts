@@ -131,5 +131,5 @@ export async function proxy(request: NextRequest) {
 export const config = {
   // Everything except build assets, the public files, the auth endpoints that manage the session
   // themselves and the cron routes, which have no session or locale. Other paths with a dot are pages too, so they get the app's localized 404.
-  matcher: ["/((?!_next/static|_next/image|api/auth|api/cron|auth/telegram|favicon\\.ico$|icon\\.svg$|apple-icon\\.png$|robots\\.txt$).*)"],
+  matcher: ["/((?!_next/static|_next/image|api/auth|api/cron|api/calendar|auth/telegram|favicon\\.ico$|icon\\.svg$|apple-icon\\.png$|robots\\.txt$).*)"],
 };

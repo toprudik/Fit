@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { DayList, WeekGrid, type DayLabel } from "@/components/schedule/week-view";
@@ -11,7 +11,7 @@ import { IconButton } from "@/components/ui/icon-button";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { INTL_LOCALE } from "@/i18n/config";
 import { getDictionary, getLocale } from "@/i18n/server";
-import { loadScheduleOwner } from "@/lib/schedule/load";
+import { clientNames, loadScheduleOwner } from "@/lib/schedule/load";
 import { addDays, localToUtc, parseDay, today as todayIn, weekDays, weekStart } from "@/lib/schedule/time";
 import { buildWeek, type SessionRow, type SlotRow } from "@/lib/schedule/week";
 
@@ -75,11 +75,29 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
     throw new Error("loading the schedule failed");
   }
 
-  const groups = sessions.data.filter((session) => session.kind === "group").map((session) => session.id);
+  // Group seats taken, and the client of each personal session or trial for its card.
   const taken = new Map<string, number>();
-  if (groups.length > 0) {
-    const { data } = await supabase.from("bookings").select("session_id").in("session_id", groups).in("status", TAKEN);
-    for (const booking of data ?? []) taken.set(booking.session_id, (taken.get(booking.session_id) ?? 0) + 1);
+  const pairOf = new Map<string, string>();
+  if (sessions.data.length > 0) {
+    const { data } = await supabase
+      .from("bookings")
+      .select("session_id, coaching_id")
+      .in(
+        "session_id",
+        sessions.data.map((session) => session.id),
+      )
+      .in("status", ["requested", ...TAKEN]);
+    const kind = new Map(sessions.data.map((session) => [session.id, session.kind]));
+    for (const booking of data ?? []) {
+      if (kind.get(booking.session_id) === "group") taken.set(booking.session_id, (taken.get(booking.session_id) ?? 0) + 1);
+      else pairOf.set(booking.session_id, booking.coaching_id);
+    }
+  }
+  const pairNames = await clientNames(supabase, [...pairOf.values()]);
+  const names = new Map<string, string>();
+  for (const [sessionId, coachingId] of pairOf) {
+    const name = pairNames.get(coachingId);
+    if (name) names.set(sessionId, name);
   }
   const week = buildWeek(days, slots.data, sessions.data, taken, timeZone);
 
@@ -115,6 +133,9 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
         </IconButton>
       </div>
       <div className="flex flex-wrap gap-2">
+        <Button asChild size="sm" icon={Plus}>
+          <Link href={`/trainer/sessions/new?date=${selected < today ? today : selected}`}>{copy.newSession}</Link>
+        </Button>
         <Link href="/trainer/schedule" className={buttonVariants({ variant: "secondary", size: "sm" })}>
           {copy.today}
         </Link>
@@ -138,8 +159,8 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
         />
       ) : (
         <>
-          <DayList week={week} labels={labels} selected={selected} today={today} copy={copy} />
-          <WeekGrid week={week} labels={labels} today={today} copy={copy} />
+          <DayList week={week} labels={labels} selected={selected} today={today} copy={copy} names={names} />
+          <WeekGrid week={week} labels={labels} today={today} copy={copy} names={names} />
         </>
       )}
     </div>

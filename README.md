@@ -32,7 +32,7 @@ to Allowed URLs, then put the shown Client ID / Client Secret into `.env.local`.
 
 ## Deployed environments
 
-The web app is the Vercel project `dafit-web` (https://dafit-web-eight.vercel.app). The bot is the Vercel project `dafit-bot` with Root Directory `apps/bot`: a Python function in webhook mode (ADR 0006). Both deploy production from `main`. Previews sit behind Vercel Authentication, so Telegram only reaches production domains. Notifications go out from a database outbox: Supabase pg_cron calls the web route `POST /api/cron/notifications` every minute when messages are due (ADR 0006). Docker is for local development; `docker-compose.prod.yml` is the self-hosting option for after the beta.
+The web app is the Vercel project `dafit-web` (https://dafit-web-eight.vercel.app). The bot is the Vercel project `dafit-bot` with Root Directory `apps/bot`: a Python function in webhook mode (ADR 0006). Both deploy production from `main`, and only `main`: the `git.deploymentEnabled` block in `apps/web/vercel.json` and `apps/bot/vercel.json` turns off automatic builds of other branches, because the Hobby plan allows 100 builds a day and pushes to PR branches used them up. CI checks every PR without Vercel. Previews sit behind Vercel Authentication, so Telegram only reaches production domains. Notifications go out from a database outbox: Supabase pg_cron calls the web route `POST /api/cron/notifications` every minute when messages are due (ADR 0006). Docker is for local development; `docker-compose.prod.yml` is the self-hosting option for after the beta.
 
 ### Bot
 

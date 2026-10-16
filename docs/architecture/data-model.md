@@ -740,6 +740,18 @@ create index on public.slots (starts_at) where status = 'open';
 -- pg_cron «slots-roll» (00:15 UTC) каждый день досоздаёт слоты до горизонта: private.roll_slots().
 -- Местное время в UTC переводит private.local_to_utc: время в «дыре» перехода на летнее время уходит
 --   на конец дыры, неоднозначное берёт первое прочтение (PRD 2.6.7-3).
+--
+-- Занятия и повторы (миграция 20261016204500_schedule_sessions, PRD 2.6.2, 2.6.5):
+-- create_session(coaching, starts_at, duration, mode, …, weekdays, until | count) назначает клиенту одно
+--   занятие или еженедельный повтор: запись сразу confirmed (source trainer или recurrence) со строкой
+--   booking_events, свободные слоты под занятием удаляются, клиенту одно К1 на весь повтор.
+-- Повтор хранится в recurrences в местном времени тренера; private.materialize_recurrence создаёт
+--   занятия на полгода вперёд, pg_cron «recurrences-roll» (00:20 UTC) досоздаёт остальные.
+-- session_conflicts(from, to, ignore) отдаёт пересекающиеся занятия тренера: это предупреждение, не запрет.
+-- update_session(…, following) переносит одно занятие (is_exception у вхождения повтора) или это и следующие:
+--   каждое переезжает на новое время в свой день, повтор тоже; клиенту одно К6 «было → стало».
+-- cancel_session(id, reason, following) отменяет занятия и записи тренером без списаний, освобождает слоты,
+--   при following останавливает повтор (ended_at); клиенту одно К5 со списком дат.
 
 create table public.recurrences (
   id                uuid primary key default gen_random_uuid(),

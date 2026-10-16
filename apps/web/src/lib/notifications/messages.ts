@@ -1,9 +1,11 @@
-import type { Locale } from "@/i18n/config";
+import { INTL_LOCALE, type Locale } from "@/i18n/config";
 import { dictionaries, type Dictionary } from "@/i18n/dictionaries";
 import { interpolate } from "@/i18n/format";
 import { formatMoney } from "@/lib/money/format";
 import { isPairId } from "@/lib/pairs/clients";
-import { formatPlanDate, isPlanCode } from "@/lib/plans/plans";
+import { formatSessionTime } from "@/lib/pairs/format";
+import { DEFAULT_TIME_ZONE, formatPlanDate, isPlanCode } from "@/lib/plans/plans";
+import { formatOffset } from "@/lib/reminders/offsets";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import type { InlineButton } from "./telegram";
 
@@ -103,6 +105,28 @@ const templates: Partial<Record<NotificationType, Template>> = {
       ],
     };
   },
+  // К7: payload { booking_id, starts_at, kind, title, mode, location_name, location_address, first_name, last_name,
+  // offset_min } from private.sync_booking_reminders. The meeting link stays in DaFit (SCHED-21).
+  session_reminder: ({ t, locale, timeZone, payload }) => {
+    const text = (value: Json | undefined) => (typeof value === "string" ? value.trim() : "");
+    const offset = Number(payload.offset_min);
+    const values = {
+      lead: Number.isInteger(offset) && offset > 0 ? formatOffset(locale, offset, dictionaries[locale].reminders.units) : "",
+      name: personName(payload) || t.unnamedTrainer,
+      time: typeof payload.starts_at === "string" ? formatSessionTime(locale, payload.starts_at, timeZone ?? DEFAULT_TIME_ZONE) : "",
+      title: text(payload.title),
+    };
+    const place = [text(payload.location_name), text(payload.location_address)].filter(Boolean).join(", ");
+    const lines = [
+      interpolateEscaped(payload.kind === "group" && values.title ? t.sessionReminderGroup : t.sessionReminder, values),
+      payload.mode === "online" ? escapeHtml(t.reminderOnline) : place ? interpolateEscaped(t.reminderPlace, { place }) : null,
+    ];
+    const booking = isPairId(payload.booking_id) ? payload.booking_id : null;
+    return {
+      text: lines.filter(Boolean).join("\n"),
+      buttons: [{ text: t.openSession, path: booking ? `/client/sessions?booking=${booking}` : "/client/sessions" }],
+    };
+  },
   // П1–П3: payload { plan, expires_at? } from admin_grant_plan and admin_revoke_plan (PLAN-5, §2.14-9).
   plan_granted: ({ t, locale, timeZone, payload }) => ({
     text:
@@ -122,7 +146,71 @@ const templates: Partial<Record<NotificationType, Template>> = {
     }),
     buttons: [{ text: t.openPlan, path: "/settings/plan" }],
   }),
+  // К1: payload { session_id, starts_at, mode, location, count, until, first_name, last_name } from create_session,
+  // one message for a whole repeat (PRD 2.6.2-5).
+  booking_assigned: ({ t, locale, timeZone, payload }) => {
+    const count = Number(payload.count ?? 1);
+    const values = {
+      name: personName(payload) || t.sessionTrainer,
+      when: sessionTime(locale, payload.starts_at, timeZone),
+      place: place(t, payload),
+    };
+    const text =
+      typeof payload.until === "string"
+        ? interpolateEscaped(t.sessionsAssignedUntil, { ...values, until: formatPlanDate(locale, `${payload.until}T12:00:00Z`, "UTC") })
+        : count > 1
+          ? interpolateEscaped(t.sessionsAssigned, { ...values, count })
+          : interpolateEscaped(t.sessionAssigned, values);
+    return { text, buttons: [{ text: t.openSessions, path: "/client/sessions" }] };
+  },
+  // К6: payload { session_id, before_starts_at, starts_at, mode, location, count, first_name, last_name } from
+  // update_session, "было → стало" for the first session the change touched.
+  session_changed: ({ t, locale, timeZone, payload }) => {
+    const count = Number(payload.count ?? 1);
+    const before = sessionTime(locale, payload.before_starts_at, timeZone);
+    const after = sessionTime(locale, payload.starts_at, timeZone);
+    const values = { name: personName(payload) || t.sessionTrainer, before, after, when: after, place: place(t, payload), count };
+    const template = before !== after ? (count > 1 ? t.sessionsMoved : t.sessionMoved) : count > 1 ? t.sessionsChanged : t.sessionChanged;
+    return { text: interpolateEscaped(template, values), buttons: [{ text: t.openSessions, path: "/client/sessions" }] };
+  },
+  // К5: payload { session_id, dates, reason, first_name, last_name } from cancel_session, every cancelled date in one
+  // message (PRD 2.6.2-5); the trainer cancels without a charge (2.6.5).
+  booking_cancelled_by_trainer: ({ t, locale, timeZone, payload }) => {
+    const dates = (Array.isArray(payload.dates) ? payload.dates : []).filter((date): date is string => typeof date === "string");
+    const shown = dates.slice(0, MAX_DATES).map((date) => sessionTime(locale, date, timeZone));
+    if (dates.length > MAX_DATES) shown.push(interpolate(t.moreDates, { count: dates.length - MAX_DATES }));
+    return {
+      text: interpolateEscaped(dates.length > 1 ? t.sessionsCancelled : t.sessionCancelled, {
+        name: personName(payload) || t.sessionTrainer,
+        dates: shown.join("; "),
+        reason: String(payload.reason ?? ""),
+      }),
+      buttons: [{ text: t.openSessions, path: "/client/sessions" }],
+    };
+  },
 };
+
+/** A cancelled repeat lists this many dates, then "and N more". */
+const MAX_DATES = 5;
+
+/** "пн, 26 октября в 18:00" in the recipient's zone (PRD 2.6.7-4). */
+function sessionTime(locale: Locale, value: Json | undefined, timeZone: string | null): string {
+  if (typeof value !== "string") return "";
+  const date = new Date(value);
+  const options: Intl.DateTimeFormatOptions = { weekday: "short", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" };
+  const format = (zone: string) => new Intl.DateTimeFormat(INTL_LOCALE[locale], { ...options, timeZone: zone }).format(date);
+  try {
+    return format(timeZone ?? DEFAULT_TIME_ZONE);
+  } catch {
+    return format(DEFAULT_TIME_ZONE);
+  }
+}
+
+/** Where a session happens: the trainer's place by name, or in person or online. */
+function place(t: TemplateContext["t"], payload: TemplateContext["payload"]): string {
+  if (payload.mode === "online") return t.placeOnline;
+  return typeof payload.location === "string" && payload.location.trim() ? payload.location.trim() : t.placeOffline;
+}
 
 /** "Pro" or "Premium": the same word in every language, from the plan code in the payload. */
 function planName(payload: TemplateContext["payload"]): string {
