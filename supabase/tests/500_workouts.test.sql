@@ -51,7 +51,9 @@ create function tests.u(p_handle text) returns uuid language sql stable set sear
   select tests.user_id(p_handle)
 $$;
 
--- The catalog (written by the import job) and the custom exercises of B and F.
+-- The catalog (written by the import job) and the custom exercises of B and F. The imported wger catalog
+-- (20261016231700_wger_catalog.sql) is replaced by three rows, so the counts below are this test's rows only.
+delete from public.exercises where source = 'wger';
 insert into public.exercises (id, source, wger_id, name, license) values
   (tests.i('squat'), 'wger', 1, 'Squat', 'CC-BY-SA-4.0'),
   (tests.i('bench'), 'wger', 2, 'Bench press', 'CC-BY-SA-4.0'),
