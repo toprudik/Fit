@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n/client";
 import { DEFAULT_ZONE, ZONES, type Zone } from "@/lib/navigation/zones";
 import { useMiniAppSignIn } from "@/lib/telegram/mini-app";
+import { BotMessagesBanner } from "./bot-messages-banner";
 
 function SignedOut({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useI18n();
@@ -71,7 +72,8 @@ type ProfilePanelProps = {
 
 /**
  * Profile content shared by the sheet behind the avatar and the /profile page
- * (docs/architecture/screens.md §2.3): who is signed in, the zone switch, settings, the admin
+ * (docs/architecture/screens.md §2.3): who is signed in, the banner when the bot cannot write to them
+ * (AUTH-7), the zone switch, settings, the admin
  * section for admins, the trainer invite for everyone who is not a trainer yet and, on the website,
  * sign-out. The zone switch shows the zone the shell shows.
  */
@@ -102,6 +104,7 @@ export function ProfilePanel({ onNavigate, groupSurface = "default" }: ProfilePa
   return (
     <div className="flex flex-col gap-6">
       <AccountBlock onNavigate={onNavigate} />
+      {account.status === "signed-in" && account.botBlocked ? <BotMessagesBanner botUrl={account.botUrl} /> : null}
       <SegmentedControl
         // On /profile opened directly the zone is read in the browser only: remount once it is known,
         // so the thumb starts there instead of sliding over from the default on every page load.

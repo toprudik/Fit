@@ -2301,6 +2301,9 @@ isOneToOne: false
 "admin_revoke_trainer_invite":
 { Args: { "p_invite_id": string }; Returns: undefined
                            },
+"bot_messages_blocked":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
 "claim_outbox":
 { Args: { "p_limit"?: number }; Returns: {
               "attempt": number,"chat_id": number,"chat_target": string,"kind": Database["public"]['Enums']["notification_type"],"locale": Database["public"]['Enums']["app_locale"],"outbox_id": number,"payload": Json,"silent": boolean,"time_zone": string
@@ -2331,6 +2334,9 @@ isOneToOne: false
 { Args: { "p_session_id": string }; Returns: {
               "capacity": number,"occupied": number
             }[]
+                           },
+"set_bot_messages":
+{ Args: { "p_allowed": boolean,"p_send_test"?: boolean }; Returns: undefined
                            },
 "set_progress_photo_angle":
 { Args: { "p_angle": Database["public"]['Enums']["photo_angle"],"p_photo_id": string }; Returns: undefined

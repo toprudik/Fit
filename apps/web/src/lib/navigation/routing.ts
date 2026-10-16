@@ -1,4 +1,5 @@
 import { negotiateLocale, type Locale } from "@/i18n/config";
+import { CONSENT_PATH } from "@/lib/consent/beta-terms";
 import { DEFAULT_ZONE, isZone, zoneFromPath, type Zone } from "./zones";
 
 export type RouteInput = {
@@ -61,4 +62,17 @@ export function isAdminPath(pathname: string): boolean {
 /** Where the proxy sends a non-admin who opens the admin section: an unknown page, so the app's 404. */
 export function adminDeniedPath(locale: Locale): string {
   return `/${locale}/admin-not-found`;
+}
+
+/** Screens a signed-in user opens before accepting the beta terms: the terms themselves and the login screen. */
+const BEFORE_CONSENT: readonly string[] = [CONSENT_PATH, "/login"];
+
+/**
+ * Where the proxy sends a signed-in user who has not accepted the beta terms in force (PRD wave-1 §2.1
+ * rule 3, AUTH-4): the terms screen, with the screen they asked for in `next`, so a link's parameter
+ * survives the acceptance (rule 5). Null for the screens open before it.
+ */
+export function consentRedirect(pathname: string, search: string): string | null {
+  if (BEFORE_CONSENT.includes(pathname)) return null;
+  return `${CONSENT_PATH}?next=${encodeURIComponent(`${pathname}${search}`)}`;
 }

@@ -47,6 +47,8 @@ const SCREENS: readonly Screen[] = [
   { slug: "profile", path: "/profile", title: "Профиль" },
   { slug: "login", path: "/login", title: "Вход" },
   { slug: "trainer-invite", path: "/onboarding/trainer?code=ABCD-EFGH-JKLM", title: "Инвайт тренера" },
+  { slug: "beta-terms", path: "/onboarding/consent?next=%2Fclient", title: "Закрытая бета DaFit" },
+  { slug: "onboarding-preferences", path: "/onboarding/preferences?next=%2Fclient", title: "Язык и тема" },
   { slug: "not-found", path: "/no-such-page", title: "Такой страницы нет", documentTitle: false, status: 404 },
   // ADM-12: the admin section is a 404 for everyone but admins, signed out included.
   { slug: "admin-denied", path: "/admin/invites", title: "Такой страницы нет", documentTitle: false, status: 404 },
@@ -143,6 +145,20 @@ test.describe("navigation", () => {
 });
 
 test.describe("trainer invite", () => {
+  test("signed out, the beta terms send to sign-in and back with the next screen", async ({ page }) => {
+    await page.goto("/onboarding/consent?next=%2Fonboarding%2Ftrainer%3Fcode%3DABCD");
+    await expect(page.getByRole("link", { name: "Войти" })).toHaveAttribute(
+      "href",
+      `/login?next=${encodeURIComponent(`/onboarding/consent?next=${encodeURIComponent("/onboarding/trainer?code=ABCD")}`)}`,
+    );
+  });
+
+  test("the preferences step goes on to the next screen", async ({ page }) => {
+    await page.goto("/onboarding/preferences?next=%2Fclient%2Fsessions");
+    await page.getByRole("link", { name: "Далее" }).click();
+    await expect(page).toHaveURL(/\/client\/sessions$/);
+  });
+
   test("signed out, the invite screen sends to sign-in and back with the code", async ({ page }) => {
     await page.goto("/onboarding/trainer?code=abcd-efgh-jklm");
     await expect(page.getByRole("link", { name: "Войти через Telegram" })).toHaveAttribute(
