@@ -188,13 +188,12 @@ async function VerificationQueue() {
 
 /**
  * Verification queue for admins (screens.md §3.5, PRD wave-1 §4 ADM-4..6): trainers under review with their
- * documents, "Верифицировать" or "Отклонить" with a reason, and the latest decisions. It sits in the app's
- * shell next to the invites until the admin section gets its own frame.
+ * documents, "Верифицировать" or "Отклонить" with a reason, and the latest decisions.
  */
 export default async function AdminVerificationPage() {
   const t = await getDictionary();
   return (
-    <Screen header={<ScreenHeader title={t.verification.admin.title} back={{ fallbackHref: "/profile" }} />}>
+    <Screen header={<ScreenHeader title={t.verification.admin.title} back={{ fallbackHref: "/admin" }} />}>
       <div className="flex w-full max-w-2xl flex-col pt-4 md:pt-0">
         <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
           <VerificationQueue />

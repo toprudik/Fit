@@ -177,12 +177,18 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
       } else if (res.status === 401) {
         // initData too old or not genuine. Sending it again won't help, only a new launch will.
         result = "reopen";
+      } else if (res.status === 403 && ((await res.json().catch(() => null)) as { error?: string } | null)?.error === "account_blocked") {
+        // An admin blocked the account; the server ended any session it had, so the screen re-reads who is in.
+        result = "banned";
+        router.refresh();
       }
     } catch {
       // Network or a malformed answer: another try may work.
     }
     // /login shows how the sign-in went on the page itself.
-    if (window.location.pathname !== LOGIN_HREF) toast.error(result === "blocked" ? t.telegram.cookiesBlocked : t.telegram.signInFailed);
+    if (window.location.pathname !== LOGIN_HREF) toast.error(
+        result === "blocked" ? t.telegram.cookiesBlocked : result === "banned" ? t.telegram.accountBlocked : t.telegram.signInFailed,
+      );
     return result;
   });
 

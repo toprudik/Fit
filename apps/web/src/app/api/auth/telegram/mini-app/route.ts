@@ -4,7 +4,7 @@ import { serverEnv } from "@/env/server";
 import { negotiateLocale } from "@/i18n/config";
 import { deviceCookies, setPreferenceCookies, syncPreferences } from "@/lib/account-preferences";
 import { isSameOrigin } from "@/lib/auth/same-origin";
-import { signInWithTelegram } from "@/lib/auth/sign-in-with-telegram";
+import { AccountBlockedError, isAccountBlocked, signInWithTelegram } from "@/lib/auth/sign-in-with-telegram";
 import { readCookie } from "@/lib/preferences";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { assertInitDataFresh, InitDataError, verifyInitData } from "@/lib/telegram/init-data";
@@ -58,6 +58,11 @@ export async function POST(request: Request) {
     const { data } = await supabase.auth.getClaims();
     const claims = data?.claims;
     if (claims?.app_metadata?.telegram_id === identity.telegramId) {
+      // A block ends the session at the next page load, not only when its access token expires (ADM-7).
+      if (await isAccountBlocked(claims.sub)) {
+        await supabase.auth.signOut({ scope: "local" });
+        throw new AccountBlockedError();
+      }
       return await respond(request, supabase, { identity, userId: claims.sub, newAccount: false, fresh: false });
     }
 
@@ -67,6 +72,7 @@ export async function POST(request: Request) {
     return await respond(request, supabase, { identity, userId, newAccount, fresh: true });
   } catch (error) {
     if (error instanceof InitDataError) return NextResponse.json({ error: "invalid_init_data" }, { status: 401 });
+    if (error instanceof AccountBlockedError) return NextResponse.json({ error: "account_blocked" }, { status: 403 });
     console.error("mini-app sign-in failed", error instanceof Error ? error.message : "unknown");
     return NextResponse.json({ error: "sign_in_failed" }, { status: 500 });
   }

@@ -10,6 +10,7 @@ const admin = vi.hoisted(() => ({
   upserts: [] as { table: string; row: Record<string, unknown>; options: unknown }[],
   upsertError: null as { code: string } | null,
   createError: null as { code: string } | null,
+  blockedAt: null as string | null,
 }));
 vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: () => ({
@@ -24,6 +25,7 @@ vi.mock("@/lib/supabase/admin", () => ({
       },
     },
     from: (table: string) => ({
+      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { blocked_at: admin.blockedAt }, error: null }) }) }),
       upsert: async (row: Record<string, unknown>, options: unknown) => {
         admin.upserts.push({ table, row, options });
         return { error: admin.upsertError };
@@ -34,7 +36,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 const verifyOtp = vi.hoisted(() => vi.fn(async () => ({ data: {}, error: null })));
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient: async () => ({ auth: { verifyOtp } }) }));
 
-const { signInWithTelegram } = await import("./sign-in-with-telegram");
+const { AccountBlockedError, signInWithTelegram } = await import("./sign-in-with-telegram");
 
 const identity: TelegramIdentity = {
   telegramId: 42,
@@ -50,6 +52,7 @@ beforeEach(() => {
   admin.upserts = [];
   admin.upsertError = null;
   admin.createError = null;
+  admin.blockedAt = null;
   verifyOtp.mockClear();
   vi.useFakeTimers({ now: new Date("2026-10-15T09:30:00.000Z"), toFake: ["Date"] });
 });
@@ -92,6 +95,15 @@ describe("signInWithTelegram", () => {
     admin.upsertError = { code: "23514" };
 
     await expect(signInWithTelegram(identity)).rejects.toThrow("profile upsert failed: 23514");
+    expect(verifyOtp).not.toHaveBeenCalled();
+  });
+
+  it("gives a blocked account no session and leaves its profile as it is (ADM-7)", async () => {
+    admin.createError = { code: "email_exists" };
+    admin.blockedAt = "2026-10-15T09:00:00.000Z";
+
+    await expect(signInWithTelegram(identity)).rejects.toBeInstanceOf(AccountBlockedError);
+    expect(admin.upserts).toEqual([]);
     expect(verifyOtp).not.toHaveBeenCalled();
   });
 });
