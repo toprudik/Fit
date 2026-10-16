@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { QrCode } from "lucide-react";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ListGroup, ListRow } from "@/components/ui/list";
 import { getDictionary } from "@/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -15,7 +15,11 @@ export default async function TrainerMorePage() {
   const copy = t.screens.trainer.more;
   return (
     <Screen header={<ScreenHeader title={t.tabs.trainer.more} />}>
-      <EmptyState icon={QrCode} title={copy.emptyTitle} description={copy.emptyText} />
+      <div className="flex w-full max-w-2xl flex-col gap-6 pt-4 md:pt-0">
+        <ListGroup footer={copy.later}>
+          <ListRow icon={QrCode} iconTone="accent" title={copy.links} subtitle={copy.linksText} href="/trainer/links" />
+        </ListGroup>
+      </div>
     </Screen>
   );
 }
