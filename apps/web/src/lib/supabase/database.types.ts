@@ -2358,6 +2358,9 @@ isOneToOne: false
 "calendar_feed":
 { Args: { "p_token": string }; Returns: Json
                            },
+"cancel_my_booking":
+{ Args: { "p_booking_id": string,"p_late"?: boolean,"p_reason"?: string }; Returns: Database["public"]['Enums']["booking_status"]
+                           },
 "cancel_pass":
 { Args: { "p_pass_id": string,"p_reason": string }; Returns: undefined
                            },
@@ -2493,6 +2496,16 @@ isOneToOne: false
                            },
 "request_access":
 { Args: { "p_feature"?: string,"p_plan_code": string }; Returns: string
+                           },
+"reschedule_my_booking":
+{ Args: { "p_booking_id": string,"p_slot_id": string }; Returns: {
+              "booking_id": string,"status": Database["public"]['Enums']["booking_status"]
+            }[]
+                           },
+"reschedule_preview":
+{ Args: { "p_booking_id": string,"p_slot_id": string }; Returns: {
+              "confirmed": boolean,"pass_title": string,"sessions_left": number
+            }[]
                            },
 "resolve_client_invite":
 { Args: { "p_code"?: string,"p_token"?: string }; Returns: {

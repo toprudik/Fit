@@ -14,6 +14,7 @@ import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
 import { bookSlot, previewBooking, type PreviewResult } from "@/lib/bookings/actions";
 import { findOverlap, groupByDay } from "@/lib/bookings/book";
+import { previewReschedule, rescheduleBooking } from "@/lib/bookings/changes";
 import type { BookableSlot, BusyTime } from "@/lib/bookings/load";
 import { localToUtc } from "@/lib/schedule/time";
 
@@ -26,13 +27,15 @@ type BookPickerProps = {
   /** "Разовое занятие стоит 2 000 ₽.", or null without a drop-in price. */
   dropInText: string | null;
   paymentLinks: { title: string; url: string }[];
+  /** Set on /client/bookings/[bookingId]/reschedule: the chosen slot replaces this booking (PRD 2.6.5). */
+  moveBookingId?: string;
 };
 
 /**
  * "Запись на занятие" (screens.md /client/book): a strip of days, the free slots of the chosen day and a confirm
  * sheet that says what pays for the session (PRD 2.6.4): a pass, allowed debt, or a request to the trainer.
  */
-export function BookPicker({ timeZone, days, slots, busy, dropInText, paymentLinks }: BookPickerProps) {
+export function BookPicker({ timeZone, days, slots, busy, dropInText, paymentLinks, moveBookingId }: BookPickerProps) {
   const { t, locale } = useI18n();
   const copy = t.schedule.book;
   const router = useRouter();
@@ -53,16 +56,19 @@ export function BookPicker({ timeZone, days, slots, busy, dropInText, paymentLin
   const open = (next: BookableSlot) => {
     setSlot(next);
     setPreview(null);
-    startTransition(async () => setPreview(await previewBooking(next.id)));
+    startTransition(async () =>
+      setPreview(await (moveBookingId ? previewReschedule(moveBookingId, next.id) : previewBooking(next.id))),
+    );
   };
 
   const confirm = () => {
     if (!slot) return;
     startTransition(async () => {
-      const result = await bookSlot(slot.id);
+      const result = await (moveBookingId ? rescheduleBooking(moveBookingId, slot.id) : bookSlot(slot.id));
       if (result.status === "done") {
         setSlot(null);
-        toast.success(result.confirmed ? copy.booked : copy.requested);
+        if (moveBookingId) toast.success(result.confirmed ? copy.moved : copy.moveRequested);
+        else toast.success(result.confirmed ? copy.booked : copy.requested);
         router.push(`/client/bookings/${result.bookingId}`);
         return;
       }
@@ -106,15 +112,15 @@ export function BookPicker({ timeZone, days, slots, busy, dropInText, paymentLin
       <Sheet
         open={slot !== null}
         onOpenChange={(next) => (next ? null : setSlot(null))}
-        title={copy.confirmTitle}
+        title={moveBookingId ? copy.moveTitle : copy.confirmTitle}
         description={slot ? `${dayFormat.format(new Date(slot.startsAt))}, ${range(slot)}, ${where(slot)}` : undefined}
         actions={
           <>
             <Button type="button" block loading={pending} disabled={!ready} onClick={confirm}>
-              {ready && !preview.confirmed ? copy.sendRequest : copy.book}
+              {ready && !preview.confirmed ? copy.sendRequest : moveBookingId ? copy.move : copy.book}
             </Button>
             <Button type="button" variant="secondary" block onClick={() => setSlot(null)}>
-              {copy.keep}
+              {moveBookingId ? copy.moveKeep : copy.keep}
             </Button>
           </>
         }

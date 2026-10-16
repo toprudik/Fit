@@ -300,21 +300,44 @@ const templates: Partial<Record<NotificationType, Template>> = {
     buttons: [{ text: t.openSession, path: idPath("/trainer/sessions", payload.session_id, "/trainer/schedule") }],
   }),
   // Т2: the same payload for a request, with trial = a trial request; the button opens it to confirm or decline (PRD 2.6.4, 2.3-5).
+  // A move that became a request carries rescheduled_from, the old start (PRD 2.6.5).
   booking_requested: ({ t, locale, timeZone, payload }) => ({
-    text: interpolateEscaped(payload.trial === true ? t.trialRequested : t.bookingRequested, {
+    text: interpolateEscaped(
+      payload.trial === true ? t.trialRequested : typeof payload.rescheduled_from === "string" ? t.rescheduleRequested : t.bookingRequested,
+      {
+        name: personName(payload) || t.unnamedClient,
+        when: sessionTime(locale, payload.starts_at, timeZone),
+        from: sessionTime(locale, payload.rescheduled_from, timeZone),
+        place: place(t, payload),
+      },
+    ),
+    buttons: [{ text: t.answerRequest, path: idPath("/trainer/requests", payload.booking_id, "/trainer/requests") }],
+  }),
+  // Т3: payload { booking_id, session_id, starts_at, request, late, reason, first_name, last_name }; request = a
+  // request taken back, late = cancelled after the deadline with a charge (PRD 2.6.5).
+  booking_cancelled_by_client: ({ t, locale, timeZone, payload }) => {
+    const reason = typeof payload.reason === "string" ? payload.reason.trim() : "";
+    const lines = [
+      interpolateEscaped(
+        payload.request === true ? t.requestWithdrawn : payload.late === true ? t.bookingCancelledLate : t.bookingCancelledByClient,
+        { name: personName(payload) || t.unnamedClient, when: sessionTime(locale, payload.starts_at, timeZone) },
+      ),
+      reason ? interpolateEscaped(t.cancelReasonLine, { reason }) : null,
+    ];
+    return {
+      text: lines.filter(Boolean).join("\n"),
+      buttons: [{ text: t.openSchedule, path: "/trainer/schedule" }],
+    };
+  },
+  // Т4: booking_created's payload with rescheduled_from, the old start; reschedule_my_booking turns Т1 into it.
+  booking_rescheduled: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(payload.debt === true ? t.bookingRescheduledDebt : t.bookingRescheduled, {
       name: personName(payload) || t.unnamedClient,
+      from: sessionTime(locale, payload.rescheduled_from, timeZone),
       when: sessionTime(locale, payload.starts_at, timeZone),
       place: place(t, payload),
     }),
-    buttons: [{ text: t.answerRequest, path: idPath("/trainer/requests", payload.booking_id, "/trainer/requests") }],
-  }),
-  // Т3: payload { booking_id, session_id, starts_at, request, first_name, last_name }; request = a request taken back.
-  booking_cancelled_by_client: ({ t, locale, timeZone, payload }) => ({
-    text: interpolateEscaped(payload.request === true ? t.requestWithdrawn : t.bookingCancelledByClient, {
-      name: personName(payload) || t.unnamedClient,
-      when: sessionTime(locale, payload.starts_at, timeZone),
-    }),
-    buttons: [{ text: t.openSchedule, path: "/trainer/schedule" }],
+    buttons: [{ text: t.openSession, path: idPath("/trainer/sessions", payload.session_id, "/trainer/schedule") }],
   }),
   // К2, К3: payload { booking_id, session_id, starts_at, reason, first_name, last_name } from decide_booking.
   booking_confirmed: ({ t, locale, timeZone, payload }) => ({
