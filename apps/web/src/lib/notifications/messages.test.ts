@@ -373,6 +373,8 @@ describe("plan messages", () => {
         text: "Answer the request",
         web_app: { url: `https://fit.example/trainer/requests/${booking}?source=booking_requested` },
       });
+      const trial = renderMessage({ ...row, kind: "booking_requested", payload: { ...client, ...base, trial: true } }, options);
+      expect(trial?.text).toMatch(/^Запрос на пробное: Анна Смирнова, .*, Зал\. Подтверди или отклони его до начала занятия\.$/);
     });
 
     it("tells the trainer a request was withdrawn", () => {

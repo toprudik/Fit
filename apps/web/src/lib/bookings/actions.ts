@@ -3,9 +3,21 @@
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isTrialToken } from "@/lib/trial-links/link";
 
 /** RPC errors the booking screens explain in words; anything else is "failed". */
-const KNOWN_ERRORS = ["slot_unavailable", "too_late", "request_not_found", "invalid_reason"] as const;
+const KNOWN_ERRORS = [
+  "slot_unavailable",
+  "too_late",
+  "request_not_found",
+  "invalid_reason",
+  "invite_invalid",
+  "trainer_unavailable",
+  "own_invite",
+  "already_client",
+  "trial_used",
+  "plan_limit_reached",
+] as const;
 
 export type BookingError = (typeof KNOWN_ERRORS)[number] | "failed";
 
@@ -47,6 +59,16 @@ export async function bookSlot(slotId: string): Promise<BookResult> {
   if (error) return { status: "error", error: known(error, "booking a slot") };
   refresh();
   return { status: "done", bookingId: data[0].booking_id, confirmed: data[0].status === "confirmed" };
+}
+
+/** "Отправить запрос" on a trial landing (PRD 2.3-5): the caller joins the trainer with a trial request on the slot. */
+export async function bookTrial(token: string, slotId: string): Promise<BookResult> {
+  if (!id.safeParse(slotId).success || !isTrialToken(token)) return { status: "error", error: "failed" };
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("book_trial", { p_token: token, p_slot_id: slotId });
+  if (error) return { status: "error", error: known(error, "booking a trial") };
+  refresh();
+  return { status: "done", bookingId: data[0].booking_id, confirmed: false };
 }
 
 export type BookingActionResult = { status: "done" } | { status: "error"; error: BookingError };

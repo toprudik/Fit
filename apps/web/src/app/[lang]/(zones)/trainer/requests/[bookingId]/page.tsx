@@ -16,6 +16,7 @@ import { getDictionary, getLocale } from "@/i18n/server";
 import { loadTrainerRequest } from "@/lib/bookings/load";
 import { isPairId } from "@/lib/pairs/clients";
 import { loadScheduleOwner } from "@/lib/schedule/load";
+import { formatTrialPrice } from "@/lib/trial-links/link";
 
 // A booking id is known only at request time, so the page renders on request.
 export const instant = false;
@@ -79,10 +80,22 @@ async function RequestDetails({ params }: { params: PageProps<"/[lang]/trainer/r
 
       <div className="flex gap-3 px-1 text-subhead text-ink-2">
         <Wallet aria-hidden size={20} className="shrink-0" />
-        <p>
-          {request.availableSessions > 0 ? interpolate(copy.passLine, { count: request.availableSessions }) : copy.debtLine}
-          {request.debtSessions > 0 ? ` ${interpolate(copy.debtNow, { count: request.debtSessions })}` : null}
-        </p>
+        {request.trial ? (
+          <p>
+            {interpolate(copy.trialLine, {
+              title: request.trial.title,
+              price:
+                request.trial.priceMinor === 0
+                  ? copy.trialFree
+                  : formatTrialPrice(locale, request.trial.priceMinor, request.trial.currency),
+            })}
+          </p>
+        ) : (
+          <p>
+            {request.availableSessions > 0 ? interpolate(copy.passLine, { count: request.availableSessions }) : copy.debtLine}
+            {request.debtSessions > 0 ? ` ${interpolate(copy.debtNow, { count: request.debtSessions })}` : null}
+          </p>
+        )}
       </div>
 
       <DecideRequest bookingId={request.id} />
