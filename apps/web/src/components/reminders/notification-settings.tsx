@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
-import { setDefaultReminders, setNotificationEnabled, setPairReminders, setQuietHours } from "@/lib/reminders/actions";
+import { setDefaultReminders, setDigestTime, setNotificationEnabled, setPairReminders, setQuietHours } from "@/lib/reminders/actions";
 import type { NotificationSettingsData } from "@/lib/reminders/load";
 import { formatOffset } from "@/lib/reminders/offsets";
 import { CLIENT_TOGGLES, TRAINER_TOGGLES, type ToggleType } from "@/lib/reminders/types";
@@ -20,7 +20,7 @@ const DEFAULT_QUIET = { start: "22:00", end: "08:00" };
 
 /**
  * /settings/notifications (screens.md, PRD wave-1 §2.9): the client's reminders per trainer, the trainer's
- * reminders for new clients, quiet hours and the types that can be switched off. Each change saves at once.
+ * reminders for new clients, the time of their daily digest, quiet hours and the types that can be switched off. Each change saves at once.
  */
 export function NotificationSettings({ data }: { data: NotificationSettingsData }) {
   const { t, locale } = useI18n();
@@ -31,6 +31,7 @@ export function NotificationSettings({ data }: { data: NotificationSettingsData 
   const [quiet, setQuiet] = useState(data.quietHours);
   const [quietError, setQuietError] = useState<string | null>(null);
   const [disabled, setDisabled] = useState<ToggleType[]>(data.disabled);
+  const [digestTime, setDigestTimeState] = useState(data.digestTime);
   const [, startTransition] = useTransition();
 
   const summary = (offsets: number[]) =>
@@ -70,6 +71,20 @@ export function NotificationSettings({ data }: { data: NotificationSettingsData 
       const result = await setQuietHours(next);
       if (!result.ok) {
         setQuiet(previous);
+        toast.error(copy.failed);
+      }
+    });
+  }
+
+  function saveDigestTime(next: string) {
+    if (!next || next === digestTime) return;
+    const previous = digestTime;
+    setDigestTimeState(next);
+    startTransition(async () => {
+      const result = await setDigestTime(next);
+      if (result.ok) toast.success(copy.saved);
+      else {
+        setDigestTimeState(previous);
         toast.error(copy.failed);
       }
     });
@@ -135,6 +150,25 @@ export function NotificationSettings({ data }: { data: NotificationSettingsData 
             }
           />
         </ListGroup>
+      ) : null}
+
+      {data.trainerDefaults ? (
+        <section aria-labelledby="daily-digest" className="flex flex-col gap-2">
+          <h2 id="daily-digest" className="px-1 text-footnote text-ink-2">
+            {copy.types.items.daily_digest}
+          </h2>
+          <div className="rounded-lg bg-surface-1 p-4">
+            <TextField
+              key={`digest-${digestTime}`}
+              type="time"
+              label={copy.digest.label}
+              defaultValue={digestTime}
+              disabled={disabled.includes("daily_digest")}
+              onBlur={(event) => saveDigestTime(event.target.value)}
+            />
+          </div>
+          <p className="px-1 text-footnote text-ink-2">{copy.digest.footer}</p>
+        </section>
       ) : null}
 
       <section aria-labelledby="quiet-hours" className="flex flex-col gap-2">
