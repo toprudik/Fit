@@ -153,6 +153,29 @@ describe("verification messages", () => {
   });
 });
 
+describe("feedback message (А2)", () => {
+  const options = { appUrl: "https://fit.example", group: true };
+  const id = "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b";
+
+  it("gives the kind, the zone, the text and the screenshots, and opens the feedback", () => {
+    const message = renderMessage(
+      { ...row, kind: "feedback_received", payload: { feedback_id: id, kind: "bug", zone: "client", excerpt: "Кнопка <не> жмётся", screenshots: 2 } },
+      options,
+    );
+    expect(message?.text).toBe("Новое обращение, ошибка, зона клиента:\n«Кнопка &lt;не&gt; жмётся»\n2 скриншота");
+    expect(message?.buttons).toEqual([{ text: "Открыть обращение", url: `https://fit.example/admin/feedback/${id}?source=feedback_received` }]);
+  });
+
+  it("leaves out screenshots it doesn't have and falls back on an unknown zone", () => {
+    const message = renderMessage(
+      { ...row, kind: "feedback_received", locale: "en", payload: { feedback_id: "nope", kind: "idea", zone: null, excerpt: "Dark mode", screenshots: 0 } },
+      options,
+    );
+    expect(message?.text).toBe("New feedback, idea, zone unknown:\n“Dark mode”");
+    expect(message?.buttons[0]).toEqual({ text: "Open feedback", url: "https://fit.example/admin/feedback?source=feedback_received" });
+  });
+});
+
 describe("intake messages", () => {
   const PAIR = "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b";
   const options = { appUrl: "https://fit.example", group: false };
