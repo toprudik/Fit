@@ -44,6 +44,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "client-progress", path: "/client/progress", title: "Прогресс" },
   { slug: "client-trainers", path: "/client/trainers", title: "Тренеры" },
   { slug: "settings", path: "/settings", title: "Настройки" },
+  { slug: "settings-plan", path: "/settings/plan", title: "Мой тариф" },
   { slug: "profile", path: "/profile", title: "Профиль" },
   { slug: "login", path: "/login", title: "Вход" },
   { slug: "trainer-invite", path: "/onboarding/trainer?code=ABCD-EFGH-JKLM", title: "Инвайт тренера" },
@@ -66,6 +67,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "admin-overview-denied", path: "/admin", title: "Такой страницы нет", documentTitle: false, status: 404 },
   { slug: "admin-users-denied", path: "/admin/users", title: "Такой страницы нет", documentTitle: false, status: 404 },
   { slug: "admin-audit-denied", path: "/admin/audit", title: "Такой страницы нет", documentTitle: false, status: 404 },
+  { slug: "admin-plans-denied", path: "/admin/plans", title: "Такой страницы нет", documentTitle: false, status: 404 },
 ];
 
 const html = (page: Page) => page.locator("html");

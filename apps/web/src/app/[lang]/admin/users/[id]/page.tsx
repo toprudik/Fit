@@ -14,6 +14,7 @@ import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { personName } from "@/lib/admin/people";
 import { requireAdmin } from "@/lib/admin/require-admin";
+import { isPaidPlan, isPlanCode, PLAN_TIER } from "@/lib/plans/plans";
 import { STATUS_TONE } from "@/lib/verification/status";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -41,6 +42,12 @@ async function UserCard({ params }: { params: PageProps<"/[lang]/admin/users/[id
   if (error) throw new Error(`loading the user card failed: ${error.code}`);
   // A trainer's card, the deleted-client stub and unknown ids have no admin card.
   if (!user) notFound();
+  const [trainerPlan, clientPlan] = await Promise.all([
+    user.is_trainer ? supabase.rpc("effective_plan", { p_user: user.user_id, p_side: "trainer" }) : null,
+    supabase.rpc("effective_plan", { p_user: user.user_id, p_side: "client" }),
+  ]);
+  const planBadge = (code: string | null | undefined) =>
+    isPlanCode(code) ? <Badge tone={isPaidPlan(code) ? PLAN_TIER[code] : "neutral"}>{t.plans.names[code]}</Badge> : null;
 
   const dateTime = new Intl.DateTimeFormat(INTL_LOCALE[locale], { dateStyle: "long", timeStyle: "short", timeZone });
   const date = (value: string | null) => (value ? dateTime.format(new Date(value)) : copy.unknown);
@@ -81,6 +88,12 @@ async function UserCard({ params }: { params: PageProps<"/[lang]/admin/users/[id
             trailing={<Badge tone={STATUS_TONE[user.verification_status]}>{t.verification.status[user.verification_status]}</Badge>}
           />
         ) : null}
+      </ListGroup>
+
+      <ListGroup header={copy.plans} headingLevel={2}>
+        {trainerPlan ? <ListRow title={copy.planTrainer} trailing={planBadge(trainerPlan.data)} /> : null}
+        <ListRow title={copy.planClient} trailing={planBadge(clientPlan.data)} />
+        <ListRow title={copy.managePlans} href={`/admin/plans?user=${user.user_id}`} />
       </ListGroup>
 
       <ListGroup header={copy.activity} footer={copy.activityFooter} headingLevel={2}>

@@ -13,6 +13,7 @@ import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { personName, type PersonName } from "@/lib/admin/people";
 import { requireAdmin } from "@/lib/admin/require-admin";
+import { isPlanCode } from "@/lib/plans/plans";
 import { cn } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -28,6 +29,7 @@ const FILTERS: Record<Filter, Action[]> = {
   trainer_invite: ["trainer_invite.create", "trainer_invite.revoke"],
   verification: ["verification.decide"],
   user: ["user.block", "user.unblock"],
+  plan: ["plan.grant", "plan.revoke", "access_request.decline"],
 };
 const isFilter = (value: unknown): value is Filter => typeof value === "string" && Object.hasOwn(FILTERS, value);
 
@@ -106,7 +108,9 @@ async function AuditLog({ searchParams }: { searchParams: PageProps<"/[lang]/adm
             const label = Object.hasOwn(copy.actions, entry.action) ? copy.actions[entry.action as Action] : entry.action;
             const metadata = entry.metadata as Record<string, unknown> | null;
             const decision = entry.action === "verification.decide" ? metadata?.decision : undefined;
-            const decisionLabel = decision === "verified" || decision === "rejected" ? copy.decision[decision] : null;
+            const planCode = entry.action.startsWith("plan.") || entry.action.startsWith("access_request.") ? metadata?.plan : undefined;
+            const detail =
+              decision === "verified" || decision === "rejected" ? copy.decision[decision] : isPlanCode(planCode) ? t.plans.names[planCode] : null;
             const isPerson = Boolean(entry.target_id && entry.target_type && PERSON_TARGETS.has(entry.target_type));
             const actor = entry.actor_id ? personName(byId.get(entry.actor_id), copy.deletedAccount) : null;
             const target = isPerson ? personName(byId.get(entry.target_id!), copy.deletedAccount) : null;
@@ -117,7 +121,7 @@ async function AuditLog({ searchParams }: { searchParams: PageProps<"/[lang]/adm
                 className="relative flex flex-col gap-1 px-4 py-3 before:pointer-events-none before:absolute before:-top-px before:right-0 before:left-4 before:h-px before:bg-line"
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                  <p className="text-body leading-[22px]">{decisionLabel ? `${label}: ${decisionLabel}` : label}</p>
+                  <p className="text-body leading-[22px]">{detail ? `${label}: ${detail}` : label}</p>
                   <time dateTime={entry.created_at} className="text-footnote text-ink-2 tabular-nums">
                     {dateTime.format(new Date(entry.created_at))}
                   </time>

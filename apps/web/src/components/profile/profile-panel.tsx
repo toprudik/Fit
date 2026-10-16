@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, KeyRound, LogOut, Settings, ShieldCheck, User } from "lucide-react";
+import { BadgeCheck, Gem, KeyRound, LogOut, Settings, ShieldCheck, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLayoutEffect, useRef, useState } from "react";
@@ -116,6 +116,7 @@ export function ProfilePanel({ onNavigate, groupSurface = "default" }: ProfilePa
       />
       <ListGroup surface={groupSurface}>
         <ListRow icon={Settings} title={t.profile.settings} href="/settings" onClick={onNavigate} />
+        {account.status === "signed-in" ? <ListRow icon={Gem} title={t.profile.plan} href="/settings/plan" onClick={onNavigate} /> : null}
         {account.status === "signed-in" && account.isAdmin ? (
           <ListRow icon={ShieldCheck} title={t.profile.admin} href="/admin" onClick={onNavigate} />
         ) : null}
