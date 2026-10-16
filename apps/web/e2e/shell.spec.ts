@@ -180,6 +180,21 @@ test.describe("client link and trainer code", () => {
   });
 });
 
+test.describe("pairs", () => {
+  // A pair id that is not a uuid is answered without the database, like a pair of someone else.
+  for (const path of ["/trainer/clients/not-a-pair", "/trainer/clients/not-a-pair/notes", "/client/trainers/not-a-pair"]) {
+    test(`${path} shows the not-found screen`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.getByRole("heading", { name: "Такой страницы нет" })).toBeVisible();
+    });
+  }
+
+  test("signed out, the client list offers the QR and link screen", async ({ page }) => {
+    await page.goto("/trainer/clients?filter=debt&q=anna");
+    await expect(page.getByRole("link", { name: "Показать QR и ссылку" })).toHaveAttribute("href", "/trainer/links");
+  });
+});
+
 test.describe("tab bar at 360px", () => {
   // The narrowest screen the product supports (screens.md §1.1), as a phone.
   test.use({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });

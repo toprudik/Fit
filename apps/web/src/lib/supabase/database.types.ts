@@ -2312,6 +2312,9 @@ isOneToOne: false
 "effective_plan":
 { Args: { "p_side": Database["public"]['Enums']["plan_side"],"p_user": string }; Returns: string
                            },
+"end_coaching":
+{ Args: { "p_coaching_id": string,"p_reason"?: string }; Returns: number
+                           },
 "has_entitlement":
 { Args: { "p_feature": string,"p_pair"?: string,"p_user": string }; Returns: boolean
                            },

@@ -39,15 +39,35 @@ const templates: Partial<Record<NotificationType, Template>> = {
     }),
     buttons: [{ text: t.openQueue, path: "/admin/verification" }],
   }),
-  // Т7 and Т7a. The client screen arrives with the pair card; until then the button opens the list.
+  // Т7 and Т7a: payload { coaching_id, claim_id?, first_name, last_name } from the join RPCs.
   coaching_created: ({ t, payload }) => ({
-    text: interpolateEscaped(t.newClient, { name: clientName(t, payload) }),
-    buttons: [{ text: t.openClients, path: "/trainer/clients" }],
+    text: interpolateEscaped(t.newClient, { name: personName(payload) || t.unnamedClient }),
+    buttons: [{ text: t.openClient, path: pairPath("/trainer/clients", payload) }],
   }),
   managed_client_claim: ({ t, payload }) => ({
-    text: interpolateEscaped(t.newClientWithCards, { name: clientName(t, payload) }),
+    text: interpolateEscaped(t.newClientWithCards, { name: personName(payload) || t.unnamedClient }),
     buttons: [{ text: t.openClients, path: "/trainer/clients" }],
   }),
+  // Т9 and its mirror: payload { coaching_id, ended_by, cancelled, first_name, last_name } from end_coaching,
+  // naming the side that ended the pair. The other side gets it, so the button opens their own zone.
+  coaching_ended: ({ t, payload }) => {
+    const cancelled = Number(payload.cancelled ?? 0);
+    if (payload.ended_by === "trainer") {
+      return {
+        text: interpolateEscaped(cancelled > 0 ? t.coachingEndedByTrainerCancelled : t.coachingEndedByTrainer, {
+          name: personName(payload) || t.unnamedTrainer,
+        }),
+        buttons: [{ text: t.openTrainer, path: pairPath("/client/trainers", payload) }],
+      };
+    }
+    return {
+      text: interpolateEscaped(cancelled > 0 ? t.coachingEndedByClientCancelled : t.coachingEndedByClient, {
+        name: personName(payload) || t.unnamedClient,
+        count: cancelled,
+      }),
+      buttons: [{ text: t.openClient, path: pairPath("/trainer/clients", payload) }],
+    };
+  },
 };
 
 /** Fills {placeholders} in a catalog string, escaping the template and every value. */
@@ -58,10 +78,17 @@ function interpolateEscaped(template: string, values: Record<string, string | nu
   );
 }
 
-/** The client's name from the payload the join RPC queued, or a neutral stand-in. */
-function clientName(t: Dictionary["botMessages"], payload: TemplateContext["payload"]): string {
+/** The person's name from the payload the RPC queued; empty when there is none. */
+function personName(payload: TemplateContext["payload"]): string {
   const part = (value: Json | undefined) => (typeof value === "string" ? value.trim() : "");
-  return [part(payload.first_name), part(payload.last_name)].filter(Boolean).join(" ") || t.unnamedClient;
+  return [part(payload.first_name), part(payload.last_name)].filter(Boolean).join(" ");
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The pair's card under `base`, or `base` itself when the payload has no valid pair id. */
+function pairPath(base: string, payload: TemplateContext["payload"]): string {
+  return typeof payload.coaching_id === "string" && UUID.test(payload.coaching_id) ? `${base}/${payload.coaching_id}` : base;
 }
 
 /** Escapes text for parse_mode HTML. Templates pass catalog strings and every inserted value through it. */
