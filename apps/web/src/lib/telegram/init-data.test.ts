@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { assertInitDataFresh, InitDataError, verifyInitData } from "./init-data";
+import { assertInitDataFresh, InitDataError, verifyInitData, verifyRequestedContact } from "./init-data";
 
 const BOT_TOKEN = "123456:TEST-token_for-unit-tests";
 const NOW = new Date("2026-10-12T12:00:00Z");
@@ -65,5 +65,26 @@ describe("assertInitDataFresh", () => {
     const verified = verifyInitData(sign({ auth_date: String(nowSec - 7200), user }), fresh);
     expect(() => assertInitDataFresh(verified, limits)).toThrow(InitDataError);
     expect(() => assertInitDataFresh(verified, limits)).toThrow("expired");
+  });
+});
+
+describe("verifyRequestedContact", () => {
+  const contact = JSON.stringify({ user_id: 42, phone_number: "79991234567", first_name: "Sam" });
+
+  it("returns the phone number and the Telegram id Telegram signed", () => {
+    const raw = sign({ auth_date: String(nowSec - 5), contact });
+    expect(verifyRequestedContact(raw, opts)).toEqual({ telegramId: 42, phone: "79991234567", authDate: nowSec - 5 });
+  });
+
+  it("rejects a contact someone changed", () => {
+    const raw = sign({ auth_date: String(nowSec), contact }).replace("79991234567", "70000000000");
+    expect(() => verifyRequestedContact(raw, opts)).toThrow(InitDataError);
+  });
+
+  it("rejects a signed answer without a usable contact", () => {
+    expect(() => verifyRequestedContact(sign({ auth_date: String(nowSec), contact: "null" }), opts)).toThrow("malformed contact");
+    expect(() => verifyRequestedContact(sign({ auth_date: String(nowSec), user }), opts)).toThrow("malformed contact");
+    const noPhone = JSON.stringify({ user_id: 42, first_name: "Sam" });
+    expect(() => verifyRequestedContact(sign({ auth_date: String(nowSec), contact: noPhone }), opts)).toThrow("phone");
   });
 });

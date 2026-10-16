@@ -70,6 +70,39 @@ const templates: Partial<Record<NotificationType, Template>> = {
         : { text: t.openClients, path: "/trainer/clients" },
     ],
   }),
+  // С1: payload { request_id, coaching_id, side, first_name, last_name } from request_contact, side being the
+  // requester's. Both buttons open the answer screen, where sharing goes through Telegram's own popup (PRIV-2).
+  contact_request: ({ t, payload }) => {
+    const trainer = payload.side === "trainer";
+    const path = idPath("/contact", payload.request_id, "/");
+    return {
+      text: interpolateEscaped(trainer ? t.contactRequestTrainer : t.contactRequestClient, {
+        name: personName(payload) || (trainer ? t.unnamedTrainer : t.unnamedClient),
+      }),
+      buttons: [
+        { text: t.shareContact, path },
+        { text: t.declineContact, path },
+      ],
+    };
+  },
+  // С2: payload { request_id, coaching_id, side, accepted, first_name, last_name, phone?, telegram_id? } from the
+  // answer RPCs, side being the requester's. On consent the name links to the person's Telegram chat; the phone
+  // number is the one Telegram signed.
+  contact_response: ({ t, payload }) => {
+    const trainer = payload.side === "trainer";
+    const name = personName(payload) || (trainer ? t.unnamedClient : t.unnamedTrainer);
+    const button = trainer
+      ? { text: t.openClient, path: pairPath("/trainer/clients", payload) }
+      : { text: t.openTrainer, path: pairPath("/client/trainers", payload) };
+    const phone = typeof payload.phone === "string" ? payload.phone : "";
+    if (payload.accepted !== true || !phone) {
+      return { text: interpolateEscaped(t.contactDeclined, { name }), buttons: [button] };
+    }
+    const id = payload.telegram_id;
+    const link =
+      typeof id === "number" && Number.isSafeInteger(id) ? `<a href="tg://user?id=${id}">${escapeHtml(name)}</a>` : escapeHtml(name);
+    return { text: interpolate(escapeHtml(t.contactShared), { name: link, phone: escapeHtml(phone) }), buttons: [button] };
+  },
   // Т9 and its mirror: payload { coaching_id, ended_by, cancelled, first_name, last_name, reason? } from
   // end_coaching, naming the side that ended the pair. The other side gets it, so the button opens their own
   // zone. A Free trainer's "new client" past the limit ends it with reason plan_limit_reached: К12 (Q65).
