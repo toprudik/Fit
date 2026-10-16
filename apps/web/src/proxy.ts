@@ -3,7 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { clientEnv } from "@/env/client";
 import { LOCALE_COOKIE } from "@/i18n/config";
-import { adminDeniedPath, isAdminPath, routeRequest } from "@/lib/navigation/routing";
+import { BETA_TERMS_VERSION, CONSENT_COOKIE, consentCookieOptions, consentCookieValue } from "@/lib/consent/beta-terms";
+import { adminDeniedPath, consentRedirect, isAdminPath, routeRequest } from "@/lib/navigation/routing";
 import { ZONE_COOKIE } from "@/lib/navigation/zones";
 import { preferenceCookieOptions } from "@/lib/preferences";
 import { sessionCookieOptions } from "@/lib/supabase/cookie-options";
@@ -16,11 +17,28 @@ async function isAdmin(supabase: SupabaseClient<Database>, userId: string): Prom
   return data !== null;
 }
 
+/** Whether the user accepted the beta terms in force and has not revoked them, read as the user under RLS. */
+async function acceptedBetaTerms(supabase: SupabaseClient<Database>, userId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("consents")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("kind", "beta_terms")
+    .eq("version", BETA_TERMS_VERSION)
+    .is("revoked_at", null)
+    .limit(1)
+    .maybeSingle();
+  // Unreadable is not accepted: the terms screen says so and lets the user try again.
+  if (error) console.error("reading the beta terms consent failed", error.code);
+  return data !== null;
+}
+
 type CookieToSet = { name: string; value: string; options: Parameters<NextResponse["cookies"]["set"]>[2] };
 
 /**
  * Runs on every page request: refreshes the Supabase session cookie, sends "/" to the last zone,
- * remembers the zone (on the device and the account), keeps the admin section to admins and serves
+ * keeps signed-in users on the beta terms until they accept them (AUTH-4), remembers the zone (on the
+ * device and the account), keeps the admin section to admins and serves
  * the page in the user's language (see routeRequest).
  */
 export async function proxy(request: NextRequest) {
@@ -54,6 +72,18 @@ export async function proxy(request: NextRequest) {
   const userId = data?.claims?.sub;
 
   const init = { request: { headers: request.headers } };
+  // The beta terms come before any other screen, also one a link opened (PRD wave-1 §2.1 rules 3, 5). The
+  // cookie spares the database once this device saw the acceptance; it names the user and the version.
+  let consentCookie: string | null = null;
+  const toConsent = decision.kind === "rewrite" ? consentRedirect(request.nextUrl.pathname, request.nextUrl.search) : null;
+  if (userId && toConsent && request.cookies.get(CONSENT_COOKIE)?.value !== consentCookieValue(userId)) {
+    if (!(await acceptedBetaTerms(supabase, userId))) {
+      const redirect = NextResponse.redirect(new URL(toConsent, request.url));
+      for (const { name, value, options } of refreshed) redirect.cookies.set(name, value, options);
+      return redirect;
+    }
+    consentCookie = consentCookieValue(userId);
+  }
   if (decision.kind === "rewrite" && isAdminPath(request.nextUrl.pathname) && !(userId && (await isAdmin(supabase, userId)))) {
     // A real 404 status, not a page that streams "not found" after a 200 (ADM-12).
     const denied = NextResponse.rewrite(new URL(adminDeniedPath(decision.locale), request.url), { ...init, status: 404 });
@@ -65,6 +95,7 @@ export async function proxy(request: NextRequest) {
       ? NextResponse.rewrite(new URL(`${decision.pathname}${request.nextUrl.search}`, request.url), init)
       : NextResponse.next(init);
   for (const { name, value, options } of refreshed) response.cookies.set(name, value, options);
+  if (consentCookie) response.cookies.set(CONSENT_COOKIE, consentCookie, consentCookieOptions);
   if (decision.kind === "rewrite" && decision.rememberZone) {
     response.cookies.set(ZONE_COOKIE, decision.rememberZone, preferenceCookieOptions);
     // The account keeps it too, so a new device opens the same zone (ADR 0015). Only page loads

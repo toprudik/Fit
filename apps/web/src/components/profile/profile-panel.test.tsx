@@ -9,12 +9,15 @@ import { resetMiniAppForTests, setMiniAppSignIn, signInToMiniApp } from "@/lib/t
 import { renderWithProviders } from "@/test/render";
 import { ProfilePanel } from "./profile-panel";
 
-const router = vi.hoisted(() => ({ push: vi.fn() }));
+const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => router,
   usePathname: () => "/trainer/clients",
 }));
+
+const setBotMessages = vi.hoisted(() => vi.fn(async () => true));
+vi.mock("@/lib/consent/bot-actions", () => ({ setBotMessages }));
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: React.ComponentProps<"a"> & { href: string }) => (
@@ -65,7 +68,7 @@ describe("account", () => {
 
   it("shows the name and a way to sign out", () => {
     renderPanel();
-    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: false, isAdmin: false }));
+    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: false, isAdmin: false, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" }));
 
     expect(screen.getByText("Анна Смирнова")).toBeTruthy();
     const signOut = screen.getByRole("button", { name: "Выйти" });
@@ -81,7 +84,7 @@ describe("account", () => {
 
   it("has no sign-out inside Telegram, where the account is the one the Mini App was opened with", async () => {
     renderPanel();
-    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: false, isAdmin: false }));
+    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: false, isAdmin: false, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" }));
     expect(screen.getByRole("button", { name: "Выйти" })).toBeTruthy();
 
     // What the Telegram provider does on every page load.
@@ -97,10 +100,10 @@ describe("account", () => {
 
   it("offers the trainer invite only to people who are not trainers yet (TINV-1)", () => {
     renderPanel();
-    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: false, isAdmin: false }));
+    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: false, isAdmin: false, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" }));
     expect(screen.getByRole("link", { name: "У меня есть инвайт тренера" }).getAttribute("href")).toBe("/onboarding/trainer");
 
-    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: true, isAdmin: false }));
+    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: true, isAdmin: false, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" }));
     expect(screen.queryByRole("link", { name: "У меня есть инвайт тренера" })).toBeNull();
 
     act(() => setAccount({ status: "signed-out" }));
@@ -109,19 +112,19 @@ describe("account", () => {
 
   it("links to the admin section for admins only", () => {
     renderPanel();
-    act(() => setAccount({ status: "signed-in", name: "Давид", photoUrl: null, isTrainer: true, isAdmin: false }));
+    act(() => setAccount({ status: "signed-in", name: "Давид", photoUrl: null, isTrainer: true, isAdmin: false, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" }));
     expect(screen.queryByRole("link", { name: "Админка" })).toBeNull();
 
-    act(() => setAccount({ status: "signed-in", name: "Давид", photoUrl: null, isTrainer: true, isAdmin: true }));
+    act(() => setAccount({ status: "signed-in", name: "Давид", photoUrl: null, isTrainer: true, isAdmin: true, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" }));
     expect(screen.getByRole("link", { name: "Админка" }).getAttribute("href")).toBe("/admin");
   });
 
   it("links trainers to their verification", () => {
     renderPanel();
-    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: false, isAdmin: false }));
+    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: false, isAdmin: false, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" }));
     expect(screen.queryByRole("link", { name: "Верификация" })).toBeNull();
 
-    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: true, isAdmin: false }));
+    act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: true, isAdmin: false, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" }));
     expect(screen.getByRole("link", { name: "Верификация" }).getAttribute("href")).toBe("/trainer/verification");
   });
 
@@ -139,6 +142,29 @@ describe("account", () => {
     signIn.addEventListener("click", (event) => event.preventDefault());
     fireEvent.click(signIn);
     expect(onNavigate).toHaveBeenCalledOnce();
+  });
+});
+
+describe("bot messages (AUTH-7)", () => {
+  const anna = { status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: false, isAdmin: false, botUrl: "https://t.me/fitconnection_bot" } as const;
+
+  it("shows the banner only while the bot cannot write", () => {
+    renderPanel();
+    act(() => setAccount({ ...anna, botBlocked: false }));
+    expect(screen.queryByRole("heading", { name: "Уведомления выключены" })).toBeNull();
+
+    act(() => setAccount({ ...anna, botBlocked: true }));
+    expect(screen.getByRole("heading", { name: "Уведомления выключены" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Открыть бота" }).getAttribute("href")).toBe("https://t.me/fitconnection_bot");
+  });
+
+  it("on the website, checks by turning messages on and sending the test message", async () => {
+    setBotMessages.mockClear();
+    renderPanel();
+    act(() => setAccount({ ...anna, botBlocked: true }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Проверить" })));
+    expect(setBotMessages).toHaveBeenCalledWith(true, true);
+    expect(router.refresh).toHaveBeenCalled();
   });
 });
 

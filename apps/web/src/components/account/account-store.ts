@@ -1,15 +1,25 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * Who is signed in, as the shell shows it: a name, the Telegram photo and which parts of the app
- * the account has (a trainer profile, the admin role). Pages are
+ * Who is signed in, as the shell shows it: a name, the Telegram photo, which parts of the app
+ * the account has (a trainer profile, the admin role) and whether the bot can write to it. Pages are
  * prerendered without a session, so the account arrives separately (AccountLoader → AccountSync)
  * and every client component reads it from here.
  */
 export type Account =
   | { status: "loading" }
   | { status: "signed-out" }
-  | { status: "signed-in"; name: string; photoUrl: string | null; isTrainer: boolean; isAdmin: boolean };
+  | {
+      status: "signed-in";
+      name: string;
+      photoUrl: string | null;
+      isTrainer: boolean;
+      isAdmin: boolean;
+      /** The bot cannot write to the account (AUTH-7): the profile shows the "notifications are off" banner. */
+      botBlocked: boolean;
+      /** The bot's chat, t.me/<bot>: on the website the banner sends the user there to start it. */
+      botUrl: string;
+    };
 
 const LOADING: Account = { status: "loading" };
 
@@ -25,7 +35,7 @@ function subscribe(listener: () => void) {
 
 function sameAccount(a: Account, b: Account): boolean {
   if (a.status !== "signed-in" || b.status !== "signed-in") return a.status === b.status;
-  return a.name === b.name && a.photoUrl === b.photoUrl && a.isTrainer === b.isTrainer && a.isAdmin === b.isAdmin;
+  return a.name === b.name && a.photoUrl === b.photoUrl && a.isTrainer === b.isTrainer && a.isAdmin === b.isAdmin && a.botBlocked === b.botBlocked && a.botUrl === b.botUrl;
 }
 
 /** Replaces the account. A refresh that brings the same data re-renders nothing. */
