@@ -9,7 +9,20 @@ const SELECT_CLASS =
   "h-13 w-full rounded-sm border border-field-line bg-field px-4 text-body text-ink outline-none focus:border-focus-ring focus:shadow-[0_0_0_1px_var(--focus-ring)]";
 
 /** "Срок действия": no expiry or one of the offered day counts (a pass ends at the end of its last day). */
-export function ValidityField({ name, initial, hint, invalid }: { name: string; initial: string; hint?: string; invalid?: boolean }) {
+export function ValidityField({
+  name,
+  initial,
+  hint,
+  invalid,
+  onChange,
+}: {
+  name: string;
+  initial: string;
+  hint?: string;
+  invalid?: boolean;
+  /** For a form that keeps its values in state instead of posting them. */
+  onChange?: (value: string) => void;
+}) {
   const { t, locale } = useI18n();
   const copy = t.money.packages.validity;
   const id = useId();
@@ -22,6 +35,7 @@ export function ValidityField({ name, initial, hint, invalid }: { name: string; 
         id={id}
         name={name}
         defaultValue={(VALIDITY_DAYS as readonly number[]).includes(Number(initial)) ? initial : ""}
+        onChange={onChange ? (event) => onChange(event.target.value) : undefined}
         aria-invalid={invalid ? true : undefined}
         aria-describedby={hint ? `${id}-hint` : undefined}
         className={SELECT_CLASS}

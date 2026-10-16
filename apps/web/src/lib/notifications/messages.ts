@@ -1,6 +1,7 @@
 import { INTL_LOCALE, type Locale } from "@/i18n/config";
 import { dictionaries, type Dictionary } from "@/i18n/dictionaries";
 import { interpolate } from "@/i18n/format";
+import { formatMoney } from "@/lib/money/format";
 import { isPairId } from "@/lib/pairs/clients";
 import { formatSessionTime } from "@/lib/pairs/format";
 import { DEFAULT_TIME_ZONE, formatPlanDate, isPlanCode } from "@/lib/plans/plans";
@@ -81,6 +82,27 @@ const templates: Partial<Record<NotificationType, Template>> = {
         count: cancelled,
       }),
       buttons: [{ text: t.openClient, path: pairPath("/trainer/clients", payload) }],
+    };
+  },
+  // The client said "Я оплатил": payload { coaching_id, payment_id, amount_minor, currency, pass_title?, first_name,
+  // last_name } from the payments_notify_reported trigger. The balance waits for the trainer's confirmation.
+  payment_reported: ({ t, locale, payload }) => {
+    const amount =
+      typeof payload.amount_minor === "number" && typeof payload.currency === "string"
+        ? formatMoney(locale, payload.amount_minor, payload.currency)
+        : "";
+    const name = personName(payload) || t.unnamedClient;
+    return {
+      text:
+        typeof payload.pass_title === "string" && payload.pass_title
+          ? interpolateEscaped(t.paymentReported, { name, amount, pass: payload.pass_title })
+          : interpolateEscaped(t.paymentReportedNoPass, { name, amount }),
+      buttons: [
+        {
+          text: t.openPayments,
+          path: typeof payload.coaching_id === "string" && isPairId(payload.coaching_id) ? `/trainer/clients/${payload.coaching_id}/payments` : "/trainer/money",
+        },
+      ],
     };
   },
   // К7: payload { booking_id, starts_at, kind, title, mode, location_name, location_address, first_name, last_name,

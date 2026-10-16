@@ -52,6 +52,7 @@ export async function ClientPair({ coachingId }: { coachingId: string }) {
             icon={Wallet}
             title={t.pairs.debt}
             value={pair.debtSessions > 0 ? plural(locale, pair.debtSessions, t.pairs.debtSessions) : t.pairs.noDebt}
+            href={pair.debtSessions > 0 ? "/client/passes" : undefined}
           />
         </ListGroup>
 

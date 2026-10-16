@@ -1,4 +1,4 @@
-import { backButton, hapticFeedback, swipeBehavior } from "@tma.js/sdk-react";
+import { backButton, hapticFeedback, openLink, swipeBehavior } from "@tma.js/sdk-react";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
 /**
@@ -160,6 +160,18 @@ export function hapticImpact() {
 /** Success feedback after a finished action: joined a trainer, booked a session (screens.md §1.5). */
 export function hapticSuccess() {
   if (ready) safely(() => hapticFeedback.notificationOccurred("success"));
+}
+
+/**
+ * Opens an outside page, such as the trainer's payment link, in the browser instead of the Mini App (PRD 2.8-15).
+ * Returns false outside Telegram or when the call fails, and the caller lets the link open by itself.
+ */
+export function openExternalLink(url: string): boolean {
+  if (!ready) return false;
+  return safely(() => {
+    openLink(url);
+    return true;
+  }) ?? false;
 }
 
 /** Selection feedback: segmented controls, pickers, switches. */
