@@ -1,6 +1,7 @@
 import type { Locale } from "@/i18n/config";
 import { dictionaries, type Dictionary } from "@/i18n/dictionaries";
 import { interpolate } from "@/i18n/format";
+import { formatPlanDate, isPlanCode } from "@/lib/plans/plans";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import type { InlineButton } from "./telegram";
 
@@ -68,7 +69,31 @@ const templates: Partial<Record<NotificationType, Template>> = {
       buttons: [{ text: t.openClient, path: pairPath("/trainer/clients", payload) }],
     };
   },
+  // П1–П3: payload { plan, expires_at? } from admin_grant_plan and admin_revoke_plan (PLAN-5, §2.14-9).
+  plan_granted: ({ t, locale, timeZone, payload }) => ({
+    text:
+      typeof payload.expires_at === "string"
+        ? interpolateEscaped(t.planGrantedUntil, { plan: planName(payload), date: formatPlanDate(locale, payload.expires_at, timeZone) })
+        : interpolateEscaped(t.planGranted, { plan: planName(payload) }),
+    buttons: [{ text: t.openPlan, path: "/settings/plan" }],
+  }),
+  plan_revoked: ({ t, payload }) => ({
+    text: interpolateEscaped(t.planRevoked, { plan: planName(payload) }),
+    buttons: [{ text: t.openPlan, path: "/settings/plan" }],
+  }),
+  plan_expiring: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(t.planExpiring, {
+      plan: planName(payload),
+      date: typeof payload.expires_at === "string" ? formatPlanDate(locale, payload.expires_at, timeZone) : "",
+    }),
+    buttons: [{ text: t.openPlan, path: "/settings/plan" }],
+  }),
 };
+
+/** "Pro" or "Premium": the same word in every language, from the plan code in the payload. */
+function planName(payload: TemplateContext["payload"]): string {
+  return isPlanCode(payload.plan) ? dictionaries.ru.plans.names[payload.plan] : String(payload.plan ?? "");
+}
 
 /** Fills {placeholders} in a catalog string, escaping the template and every value. */
 function interpolateEscaped(template: string, values: Record<string, string | number>): string {
