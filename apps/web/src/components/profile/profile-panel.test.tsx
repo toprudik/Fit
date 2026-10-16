@@ -116,8 +116,7 @@ describe("account", () => {
     expect(screen.queryByRole("link", { name: "Админка" })).toBeNull();
 
     act(() => setAccount({ status: "signed-in", name: "Давид", photoUrl: null, isTrainer: true, isAdmin: true, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" }));
-    expect(screen.getByRole("link", { name: "Админка" }).getAttribute("href")).toBe("/admin/invites");
-    expect(screen.getByRole("link", { name: "Очередь верификации" }).getAttribute("href")).toBe("/admin/verification");
+    expect(screen.getByRole("link", { name: "Админка" }).getAttribute("href")).toBe("/admin");
   });
 
   it("links trainers to their verification", () => {

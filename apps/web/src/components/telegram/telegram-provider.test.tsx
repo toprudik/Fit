@@ -423,6 +423,16 @@ describe("sign-in", () => {
     expect(reload.reloadPage).toHaveBeenCalledOnce();
   });
 
+  it("tells a blocked account so and re-reads who is signed in (ADM-7)", async () => {
+    launch();
+    signInResponse({ error: "account_blocked" }, false, 403);
+    renderApp();
+
+    await waitFor(() => expect(signInStatus()).toBe("banned"));
+    expect(router.refresh).toHaveBeenCalledOnce();
+    expect(toast.error).toHaveBeenCalledExactlyOnceWith("Твой аккаунт в DaFit заблокирован.");
+  });
+
   it("leaves the toast out on /login, which shows the outcome on the page", async () => {
     window.history.replaceState(null, "", "/login");
     launch();

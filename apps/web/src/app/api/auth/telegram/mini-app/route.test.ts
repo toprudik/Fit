@@ -17,10 +17,17 @@ const session = vi.hoisted(() => ({
   claims: null as { sub: string; app_metadata: { telegram_id?: number } } | null,
   settings: { locale: "ru", theme: "system", last_zone: "client" } as Record<string, string> | null,
   updates: [] as Record<string, unknown>[],
+  signedOut: false,
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({
-    auth: { getClaims: async () => ({ data: session.claims ? { claims: session.claims } : null }) },
+    auth: {
+      getClaims: async () => ({ data: session.claims ? { claims: session.claims } : null }),
+      signOut: async () => {
+        session.signedOut = true;
+        return { error: null };
+      },
+    },
     from: () => ({
       select: () => ({
         eq: () => ({
@@ -37,7 +44,12 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 const signInWithTelegram = vi.hoisted(() => vi.fn(async () => ({ userId: "user-42", newAccount: false })));
-vi.mock("@/lib/auth/sign-in-with-telegram", () => ({ signInWithTelegram }));
+/** Accounts an admin blocked (ADM-7). */
+const blocked = vi.hoisted(() => new Set<string>());
+vi.mock("@/lib/auth/sign-in-with-telegram", async () => {
+  class AccountBlockedError extends Error {}
+  return { AccountBlockedError, signInWithTelegram, isAccountBlocked: async (userId: string) => blocked.has(userId) };
+});
 
 const { POST } = await import("./route");
 
@@ -74,6 +86,8 @@ beforeEach(() => {
   session.claims = null;
   session.settings = { locale: "ru", theme: "system", last_zone: "client" };
   session.updates = [];
+  session.signedOut = false;
+  blocked.clear();
   signInWithTelegram.mockClear();
 });
 
@@ -116,6 +130,27 @@ describe("POST /api/auth/telegram/mini-app", () => {
     const res = await post(initData(10, "999:other-bot"));
 
     expect(res.status).toBe(401);
+    expect(signInWithTelegram).not.toHaveBeenCalled();
+  });
+});
+
+describe("blocked accounts (ADM-7)", () => {
+  it("answers 403 when sign-in finds the account blocked", async () => {
+    const { AccountBlockedError } = await import("@/lib/auth/sign-in-with-telegram");
+    signInWithTelegram.mockRejectedValueOnce(new AccountBlockedError());
+    const res = await post(initData(10));
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "account_blocked" });
+  });
+
+  it("ends the session of an account blocked while it was signed in", async () => {
+    session.claims = { sub: "user-42", app_metadata: { telegram_id: 42 } };
+    blocked.add("user-42");
+    const res = await post(initData(MAX_AGE + 600));
+
+    expect(res.status).toBe(403);
+    expect(session.signedOut).toBe(true);
     expect(signInWithTelegram).not.toHaveBeenCalled();
   });
 });
