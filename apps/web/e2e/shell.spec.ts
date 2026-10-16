@@ -38,6 +38,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "trainer-clients", path: "/trainer/clients", title: "Клиенты" },
   { slug: "trainer-money", path: "/trainer/money", title: "Деньги" },
   { slug: "trainer-more", path: "/trainer/more", title: "Ещё" },
+  { slug: "trainer-packages", path: "/trainer/money/packages", title: "Пакеты и цены" },
   { slug: "client-home", path: "/client", title: "Главная" },
   { slug: "client-sessions", path: "/client/sessions", title: "Занятия" },
   { slug: "client-diary", path: "/client/diary", title: "Дневник" },
@@ -51,6 +52,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "beta-terms", path: "/onboarding/consent?next=%2Fclient", title: "Закрытая бета DaFit" },
   { slug: "onboarding-preferences", path: "/onboarding/preferences?next=%2Fclient", title: "Язык и тема" },
   { slug: "trainer-wizard", path: "/onboarding/trainer/format", title: "Чем ты занимаешься", documentTitle: false },
+  { slug: "trainer-wizard-prices", path: "/onboarding/trainer/prices", title: "Ценовая сетка", documentTitle: false },
   { slug: "trainer-links", path: "/trainer/links", title: "QR и ссылка" },
   { slug: "join", path: "/join?code=abc-def", title: "Код тренера" },
   // A malformed token is answered without the database: the "link no longer works" state.
@@ -187,7 +189,7 @@ test.describe("trainer invite", () => {
   test("signed out, a wizard step sends to sign-in and back to the same step", async ({ page }) => {
     await page.goto("/onboarding/trainer/region");
     await expect(page.getByRole("heading", { level: 1, name: "Часовой пояс и валюта" })).toBeVisible();
-    await expect(page.getByRole("progressbar", { name: "Профиль заполнен" })).toHaveAttribute("aria-valuenow", "43");
+    await expect(page.getByRole("progressbar", { name: "Профиль заполнен" })).toHaveAttribute("aria-valuenow", "38");
     await expect(page.getByRole("link", { name: "Войти через Telegram" })).toHaveAttribute(
       "href",
       `/login?next=${encodeURIComponent("/onboarding/trainer/region")}`,

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useRef, useState } from "react";
+import { TemplateFields } from "@/components/packages/template-fields";
 import { PersonAvatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ChipCheckbox } from "@/components/ui/chip";
@@ -385,6 +386,28 @@ function KindField({ initial }: { initial: string }) {
         onValueChange={setKind}
       />
     </div>
+  );
+}
+
+/**
+ * The price grid step: the template 1/5/10/20 in the trainer's currency (screens.md flow 4.1). A trainer who
+ * already has packages changes them under "Деньги"; here "Далее" just moves on.
+ */
+export function PricesForm({ currency, symbol, hasPackages }: { currency: string; symbol: string; hasPackages: boolean }) {
+  const { t } = useI18n();
+  return (
+    <StepForm step="prices">
+      {({ values, error }) =>
+        hasPackages ? (
+          <>
+            <input type="hidden" name="existing" value="1" />
+            <p className="text-callout text-ink-2">{t.trainerWizard.steps.prices.existing}</p>
+          </>
+        ) : (
+          <TemplateFields currency={currency} symbol={symbol} values={values} error={error} />
+        )
+      }
+    </StepForm>
   );
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { showcaseFrom } from "./load";
+import { showcaseFrom, showcasePricesFrom } from "./load";
 
 const AVAILABLE = {
   status: "available",
@@ -43,5 +43,35 @@ describe("showcaseFrom", () => {
   it("is null for an unavailable showcase or no answer", () => {
     expect(showcaseFrom({ status: "unavailable" } as never)).toBeNull();
     expect(showcaseFrom(undefined)).toBeNull();
+  });
+});
+
+describe("showcasePricesFrom", () => {
+  it("keeps complete rows and drops broken ones", () => {
+    const row = {
+      title: "10 занятий",
+      applies_to: "any" as const,
+      sessions_count: 10,
+      price_minor: 1600000,
+      currency: "RUB",
+      per_session_minor: 160000,
+      validity_days: 90,
+      savings_pct: 20,
+      is_best_value: true,
+    };
+    expect(showcasePricesFrom([row, { ...row, price_minor: null as unknown as number }])).toEqual([
+      {
+        key: "0",
+        title: "10 занятий",
+        sessionsCount: 10,
+        priceMinor: 1600000,
+        currency: "RUB",
+        perSessionMinor: 160000,
+        savingsPct: 20,
+        isBestValue: true,
+        validityDays: 90,
+      },
+    ]);
+    expect(showcasePricesFrom(null)).toEqual([]);
   });
 });
