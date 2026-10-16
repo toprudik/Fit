@@ -2304,10 +2304,19 @@ isOneToOne: false
 "admin_decide_verification":
 { Args: { "p_decision": Database["public"]['Enums']["verification_status"],"p_reason"?: string,"p_trainer_id": string }; Returns: undefined
                            },
+"admin_decline_access_request":
+{ Args: { "p_request_id": string }; Returns: undefined
+                           },
+"admin_grant_plan":
+{ Args: { "p_expires_at"?: string,"p_plan_code": string,"p_reason": string,"p_user_id": string }; Returns: string
+                           },
 "admin_overview":
 { Args: Record<PropertyKey, never>; Returns: {
               "active_invites": number,"active_pairs": number,"blocked_users": number,"trainers": number,"trainers_pending": number,"trainers_verified": number,"users": number
             }[]
+                           },
+"admin_revoke_plan":
+{ Args: { "p_grant_id": string,"p_reason": string }; Returns: undefined
                            },
 "admin_revoke_trainer_invite":
 { Args: { "p_invite_id": string }; Returns: undefined
@@ -2363,6 +2372,16 @@ isOneToOne: false
               "code": string,"created_at": string,"invite_id": string,"token": string,"uses_count": number
             }[]
                            },
+"my_inherited_rights":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "coaching_id": string,"first_name": string,"last_name": string,"trainer_id": string,"username": string
+            }[]
+                           },
+"my_plan":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "active_clients": number,"client_limit": number,"expires_at": string,"plan_code": string,"side": Database["public"]['Enums']["plan_side"]
+            }[]
+                           },
 "record_outbox_result":
 { Args: { "p_error"?: string,"p_id": number,"p_outcome": string,"p_retry_after_s"?: number,"p_telegram_message_id"?: number }; Returns: Database["public"]['Enums']["outbox_status"]
                            },
@@ -2379,6 +2398,9 @@ isOneToOne: false
                            },
 "replace_progress_photo":
 { Args: { "p_blur_method": string,"p_face_blurred": boolean,"p_height": number,"p_new_id": string,"p_note"?: string,"p_photo_id": string,"p_storage_path": string,"p_width": number }; Returns: string
+                           },
+"request_access":
+{ Args: { "p_feature"?: string,"p_plan_code": string }; Returns: string
                            },
 "resolve_client_invite":
 { Args: { "p_code"?: string,"p_token"?: string }; Returns: {

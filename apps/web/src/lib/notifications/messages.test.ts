@@ -91,3 +91,34 @@ describe("escapeHtml", () => {
     expect(escapeHtml(`<b>"Tom" & Jerry</b>`)).toBe("&lt;b&gt;&quot;Tom&quot; &amp; Jerry&lt;/b&gt;");
   });
 });
+
+describe("plan messages", () => {
+  const options = { appUrl: "https://fit.example", group: false };
+
+  it("names the plan and its last day in the recipient's zone and language (PLAN-5)", () => {
+    const payload = { plan: "trainer_pro", expires_at: "2026-11-30T20:59:59Z" };
+    expect(renderMessage({ ...row, kind: "plan_granted", payload }, options)?.text).toBe(
+      "Тебе выдан тариф Pro до 30 ноября 2026. Спасибо, что ты в бете DaFit.",
+    );
+    expect(renderMessage({ ...row, kind: "plan_granted", locale: "en", payload }, options)?.text).toBe(
+      "You now have Pro until November 30, 2026. Thanks for being in the DaFit beta.",
+    );
+  });
+
+  it("says when a plan has no end, and opens My plan", () => {
+    const message = renderMessage({ ...row, kind: "plan_granted", payload: { plan: "client_premium", expires_at: null } }, options);
+    expect(message?.text).toBe("Тебе выдан тариф Premium без срока. Спасибо, что ты в бете DaFit.");
+    expect(message?.buttons).toEqual([
+      { text: "Открыть тариф", web_app: { url: "https://fit.example/settings/plan?source=plan_granted" } },
+    ]);
+  });
+
+  it("tells about a revoked plan and one ending in three days", () => {
+    expect(renderMessage({ ...row, kind: "plan_revoked", payload: { plan: "trainer_pro" } }, options)?.text).toBe(
+      "Тариф Pro отключён. Все твои данные на месте.",
+    );
+    expect(
+      renderMessage({ ...row, kind: "plan_expiring", payload: { plan: "client_premium", expires_at: "2026-11-30T20:59:59Z" } }, options)?.text,
+    ).toBe("Тариф Premium закончится 30 ноября 2026. Если он ещё нужен, запроси доступ в разделе «Мой тариф».");
+  });
+});

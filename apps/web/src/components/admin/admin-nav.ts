@@ -1,4 +1,4 @@
-import { BadgeCheck, KeyRound, LayoutDashboard, ScrollText, Users, type LucideIcon } from "lucide-react";
+import { BadgeCheck, Gem, KeyRound, LayoutDashboard, ScrollText, Users, type LucideIcon } from "lucide-react";
 import type { Dictionary } from "@/i18n/dictionaries";
 
 export type AdminSection = keyof Dictionary["adminShell"]["sections"];
@@ -12,5 +12,6 @@ export const ADMIN_SECTIONS: readonly { id: AdminSection; href: string; segment:
   { id: "invites", href: "/admin/invites", segment: "invites", icon: KeyRound },
   { id: "verification", href: "/admin/verification", segment: "verification", icon: BadgeCheck },
   { id: "users", href: "/admin/users", segment: "users", icon: Users },
+  { id: "plans", href: "/admin/plans", segment: "plans", icon: Gem },
   { id: "audit", href: "/admin/audit", segment: "audit", icon: ScrollText },
 ];
