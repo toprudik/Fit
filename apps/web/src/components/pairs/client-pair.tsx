@@ -1,4 +1,4 @@
-import { CalendarDays, Wallet } from "lucide-react";
+import { CalendarDays, ShieldCheck, Wallet } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Screen } from "@/components/shell/screen";
 import { ClientIntakeRows } from "@/components/intake/intake-rows";
@@ -8,6 +8,7 @@ import { interpolate, plural } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { formatDay, formatNoteTime, formatSessionTime } from "@/lib/pairs/format";
 import { loadPair } from "@/lib/pairs/load";
+import { sharingPath } from "@/lib/sharing/categories";
 import { EndPairRow } from "./pair-controls";
 import { PairNotice, PassRows, WriteButton, pairSubtitle } from "./trainer-pair";
 
@@ -81,6 +82,7 @@ export async function ClientPair({ coachingId }: { coachingId: string }) {
 
         {live ? (
           <ListGroup header={t.pairs.actions}>
+            <ListRow icon={ShieldCheck} title={t.sharing.title} href={sharingPath(pair.coachingId)} />
             <EndPairRow coachingId={pair.coachingId} side="client" partnerName={name} />
           </ListGroup>
         ) : null}
