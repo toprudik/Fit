@@ -9,21 +9,23 @@ import { safely, useInTelegram } from "@/lib/telegram/mini-app";
 
 /**
  * "Поделиться ссылкой": Telegram's chat picker inside the Mini App (shareURL), the system share
- * sheet where the browser has one, otherwise the link goes to the clipboard.
+ * sheet where the browser has one, otherwise the link goes to the clipboard. The showcase passes its
+ * own button label and message.
  */
-export function ShareClientLink({ link }: { link: string }) {
+export function ShareClientLink({ link, label, text }: { link: string; label?: string; text?: string }) {
   const { t } = useI18n();
   const copy = t.trainerWizard.done;
   const inTelegram = useInTelegram();
+  const message = text ?? copy.shareText;
 
   async function share() {
     if (inTelegram && safely(() => shareURL.isAvailable())) {
-      safely(() => shareURL(link, copy.shareText));
+      safely(() => shareURL(link, message));
       return;
     }
     if (typeof navigator.share === "function") {
       try {
-        await navigator.share({ url: link, text: copy.shareText });
+        await navigator.share({ url: link, text: message });
         return;
       } catch (error) {
         // Closing the share sheet is a choice, not a failure.
@@ -40,7 +42,7 @@ export function ShareClientLink({ link }: { link: string }) {
 
   return (
     <Button size="lg" block icon={Share} onClick={() => void share()}>
-      {copy.share}
+      {label ?? copy.share}
     </Button>
   );
 }
