@@ -1024,7 +1024,7 @@ export const en: Dictionary = {
       hide: "Don't show",
       later: "Decide later",
       laterHint: "Until you answer, your trainer can't see the form.",
-      hint: "You can change this later on the intake form page.",
+      hint: "You can change this later on your trainer's card, under “What your trainer sees”.",
       failed: "Couldn't save your answer. Try again.",
     },
     form: {
@@ -1100,6 +1100,23 @@ export const en: Dictionary = {
       notSet: "Not given",
       noAnswer: "No answer",
     },
+  },
+  sharing: {
+    title: "What your trainer sees",
+    header: "Open to {name}",
+    categories: {
+      measurements: { label: "Measurements", hint: "Weight and body measurements" },
+      photos: { label: "Progress photos", hint: "Before and after shots" },
+      workouts: { label: "Your own workouts", hint: "Workouts you log without a trainer" },
+      intake: { label: "Intake form", hint: "Goals, health and PAR-Q answers" },
+    },
+    footer: "Each switch changes access for this trainer only, right away. Other trainers see what you opened to them.",
+    revokeHeader: "Close everything",
+    revokeFooter: "Your trainer will no longer see your intake form, measurements, photos or workouts. You both keep the history of sessions and payments.",
+    ended: "You no longer train with this trainer, so they can't see your data.",
+    failed: "Couldn't save. Try again.",
+    signedOut: "Sign in to open this screen",
+    signedOutText: "Sign in with Telegram to choose what your trainer sees.",
   },
   admin: {
     invites: {
