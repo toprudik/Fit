@@ -120,14 +120,13 @@ async function InviteList() {
 
 /**
  * Trainer invites for admins (screens.md §3.5, PRD wave-1 §4 ADM-1..3): create one with a note and a
- * validity, see its link, code and QR once, follow every invite's status, revoke an unused one. It sits
- * in the app's shell like settings until the admin section gets its own frame.
+ * validity, see its link, code and QR once, follow every invite's status, revoke an unused one.
  */
 export default async function AdminInvitesPage() {
   const t = await getDictionary();
   const copy = t.admin.invites;
   return (
-    <Screen header={<ScreenHeader title={copy.title} back={{ fallbackHref: "/profile" }} />}>
+    <Screen header={<ScreenHeader title={copy.title} back={{ fallbackHref: "/admin" }} />}>
       <div className="flex w-full max-w-2xl flex-col gap-8 pt-4 md:pt-0">
         <section aria-labelledby="new-invite" className="flex flex-col gap-3">
           <h2 id="new-invite" className="px-4 text-footnote text-ink-2">

@@ -28,9 +28,10 @@ export function useInTelegram(): boolean {
  * the server set the session, `failed` when the request or the server failed (another try may
  * work), `reopen` when there is no initData or the server rejected it as too old (only a new launch
  * of the Mini App brings fresh initData), `blocked` when the browser does not keep the app's cookies,
- * as in Telegram Web with third-party cookies blocked (only the Telegram app helps).
+ * as in Telegram Web with third-party cookies blocked (only the Telegram app helps), `banned` when an
+ * admin blocked the account (ADM-7).
  */
-export type MiniAppSignInStatus = "pending" | "signed-in" | "failed" | "reopen" | "blocked";
+export type MiniAppSignInStatus = "pending" | "signed-in" | "failed" | "reopen" | "blocked" | "banned";
 export type MiniAppSignInResult = Exclude<MiniAppSignInStatus, "pending">;
 
 let signInStatus: MiniAppSignInStatus | null = null;
@@ -87,7 +88,7 @@ export function useMiniAppSignIn(): MiniAppSignInStatus | null {
   return useSyncExternalStore(subscribeSignIn, () => signInStatus, () => null);
 }
 
-/** Answers another request may change; `reopen` and `blocked` hold for the whole page load. */
+/** Answers another request may change; `reopen`, `blocked` and `banned` hold for the whole page load. */
 const mayChange = (status: MiniAppSignInStatus | null) => status === "signed-in" || status === "failed";
 
 /** The sign-in as of the current visit: `pending` until an answer arrives during it. */

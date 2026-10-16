@@ -18,8 +18,8 @@ type MiniAppLoginProps = {
  * Mini App was opened with, and Telegram's login page for websites does not load in the Mini App:
  * the page sends initData again (an earlier answer says nothing about the session now) and goes on
  * to `next` once that sign-in succeeds. A failed attempt gets a button to try again; initData that is
- * missing or too old can't be fixed from here, so the page asks to reopen the app, and a browser
- * that drops the app's cookies gets sent to the Telegram app.
+ * missing or too old can't be fixed from here, so the page asks to reopen the app, a browser that
+ * drops the app's cookies gets sent to the Telegram app, and a blocked account is told so.
  */
 export function MiniAppLogin({ next, children }: MiniAppLoginProps) {
   const { t } = useI18n();
@@ -47,10 +47,11 @@ export function MiniAppLogin({ next, children }: MiniAppLoginProps) {
       </>
     );
   }
-  if (status === "reopen" || status === "blocked") {
+  if (status === "reopen" || status === "blocked" || status === "banned") {
+    const message = { reopen: t.telegram.signInExpired, blocked: t.telegram.cookiesBlocked, banned: t.telegram.accountBlocked }[status];
     return (
       <p role="alert" className="text-subhead text-danger">
-        {status === "reopen" ? t.telegram.signInExpired : t.telegram.cookiesBlocked}
+        {message}
       </p>
     );
   }
