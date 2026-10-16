@@ -1,4 +1,4 @@
--- Trainer schedule, part 1, of migration 20261016190000_schedule_slots.sql (PRD wave-1 §2.6.1, §2.6.7):
+-- Trainer schedule, part 1, of migration 20261016193700_schedule_slots.sql (PRD wave-1 §2.6.1, §2.6.7):
 -- local_to_utc, save_week_template, the slot generator, close_schedule_days and reopen_schedule.
 begin;
 \ir _helpers.psql

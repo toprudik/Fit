@@ -730,7 +730,7 @@ create table public.slots (
 create index on public.slots (trainer_id, starts_at);
 create index on public.slots (starts_at) where status = 'open';
 
--- Расписание тренера (миграция 20261016190000_schedule_slots):
+-- Расписание тренера (миграция 20261016193700_schedule_slots):
 -- save_week_template(items, horizon_weeks, buffer_min) сохраняет неделю целиком: убирает будущие свободные
 --   слоты старого шаблона (кроме занятых), заменяет окна и режет новые слоты на horizon_weeks вперёд.
 -- close_schedule_days(from, to) удаляет свободные слоты в эти местные дни, ставит один слот-отметку
