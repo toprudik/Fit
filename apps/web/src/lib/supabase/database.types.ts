@@ -2337,6 +2337,16 @@ isOneToOne: false
               "blocked_at": string,"blocked_reason": string,"bookings_made": number,"client_active_pairs": number,"client_pairs": number,"created_at": string,"first_name": string,"is_admin": boolean,"is_trainer": boolean,"language_code": string,"last_name": string,"last_seen_at": string,"photo_url": string,"sessions_led": number,"telegram_id": number,"trainer_active_pairs": number,"trainer_pairs": number,"user_id": string,"username": string,"verification_status": Database["public"]['Enums']["verification_status"]
             }[]
                            },
+"book_slot":
+{ Args: { "p_slot_id": string }; Returns: {
+              "booking_id": string,"status": Database["public"]['Enums']["booking_status"]
+            }[]
+                           },
+"booking_preview":
+{ Args: { "p_slot_id": string }; Returns: {
+              "confirmed": boolean,"pass_title": string,"sessions_left": number
+            }[]
+                           },
 "bot_messages_blocked":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
@@ -2377,6 +2387,9 @@ isOneToOne: false
 { Args: { "p_coaching_id": string,"p_count"?: number,"p_duration_min": number,"p_location_id"?: string,"p_meeting_url"?: string,"p_mode": Database["public"]['Enums']["session_mode"],"p_starts_at": string,"p_title"?: string,"p_until"?: string,"p_weekdays"?: (number)[] }; Returns: {
               "created": number,"session_id": string
             }[]
+                           },
+"decide_booking":
+{ Args: { "p_accept": boolean,"p_booking_id": string,"p_reason"?: string }; Returns: Database["public"]['Enums']["booking_status"]
                            },
 "effective_plan":
 { Args: { "p_side": Database["public"]['Enums']["plan_side"],"p_user": string }; Returns: string
@@ -2507,6 +2520,9 @@ isOneToOne: false
                            },
 "waive_charge":
 { Args: { "p_charge_id": string,"p_reason"?: string }; Returns: string
+                           },
+"withdraw_booking_request":
+{ Args: { "p_booking_id": string }; Returns: undefined
                            }
           }
           Enums: {

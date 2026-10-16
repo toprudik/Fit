@@ -79,7 +79,7 @@ export type SessionDetail = {
   cancelReason: string | null;
   /** The repeat's weekdays, 1 = Monday, when the session is one of a weekly repeat. */
   repeat: { weekdays: number[]; ended: boolean } | null;
-  clients: { coachingId: string; name: string; status: string }[];
+  clients: { bookingId: string; coachingId: string; name: string; status: string }[];
 };
 
 const RRULE_DAYS = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
@@ -97,7 +97,7 @@ export async function loadSession(owner: ScheduleOwner, sessionId: string): Prom
   if (!session) return null;
 
   const [bookings, location, link, recurrence] = await Promise.all([
-    supabase.from("bookings").select("coaching_id, status").eq("session_id", session.id).order("created_at"),
+    supabase.from("bookings").select("id, coaching_id, status").eq("session_id", session.id).order("created_at"),
     session.location_id
       ? supabase.from("locations").select("id, name, address").eq("id", session.location_id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -133,6 +133,7 @@ export async function loadSession(owner: ScheduleOwner, sessionId: string): Prom
         }
       : null,
     clients: (bookings.data ?? []).map((booking) => ({
+      bookingId: booking.id,
       coachingId: booking.coaching_id,
       name: names.get(booking.coaching_id) ?? "",
       status: booking.status,
