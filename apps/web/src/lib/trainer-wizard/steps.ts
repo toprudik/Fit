@@ -1,9 +1,9 @@
 /**
  * The trainer profile wizard (screens.md §3.1 and flow 4.1, PRD wave-1 §2.3): one screen per step,
  * /onboarding/trainer/<step>, then /onboarding/trainer/done. "Далее" saves the step, so a trainer who
- * leaves halfway keeps what they filled in. The price grid step joins with packages in week 2.
+ * leaves halfway keeps what they filled in.
  */
-export const WIZARD_STEPS = ["profile", "format", "locations", "region", "cancellation", "payment", "certificates"] as const;
+export const WIZARD_STEPS = ["profile", "format", "locations", "region", "cancellation", "payment", "prices", "certificates"] as const;
 
 export type WizardStep = (typeof WIZARD_STEPS)[number];
 
@@ -38,4 +38,4 @@ export function stepNumber(step: WizardStep): number {
 }
 
 /** Steps with nothing the trainer must fill in show "Пропустить". */
-export const SKIPPABLE_STEPS: ReadonlySet<WizardStep> = new Set(["locations", "payment", "certificates"]);
+export const SKIPPABLE_STEPS: ReadonlySet<WizardStep> = new Set(["locations", "payment", "prices", "certificates"]);

@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { serverEnv } from "@/env/server";
 import type { Dictionary } from "@/i18n/dictionaries";
-import { getDictionary } from "@/i18n/server";
+import { getDictionary, getLocale } from "@/i18n/server";
+import { priceGridItems } from "@/lib/packages/present";
 import { isShowcaseSlug, normalizeSlug, showcasePath, showcaseTelegram } from "@/lib/showcase/link";
-import { showcaseFrom, type Showcase } from "@/lib/showcase/load";
+import { showcaseFrom, showcasePricesFrom, type Showcase } from "@/lib/showcase/load";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -75,9 +76,11 @@ async function ShowcaseContent({ params }: { params: PageProps<"/[lang]/trainers
   if (!isShowcaseSlug(slug)) return <Unavailable t={t} text={copy.unavailableText} />;
 
   const supabase = await createSupabaseServerClient();
-  const [{ data: session }, { data, error }] = await Promise.all([
+  const [locale, { data: session }, { data, error }, prices] = await Promise.all([
+    getLocale(),
     supabase.auth.getClaims(),
     supabase.rpc("get_trainer_showcase", { p_slug: slug }),
+    supabase.rpc("get_trainer_showcase_prices", { p_slug: slug }),
   ]);
   if (error) {
     console.error("loading a showcase failed", error.code);
@@ -85,10 +88,12 @@ async function ShowcaseContent({ params }: { params: PageProps<"/[lang]/trainers
   }
   const showcase = showcaseFrom(data[0]);
   if (!showcase) return <Unavailable t={t} text={copy.unavailableText} />;
+  // Prices are extra: a failed read leaves them out instead of closing the page.
+  if (prices.error) console.error("loading showcase prices failed", prices.error.code);
 
   return (
     <div className="flex flex-col gap-8">
-      <ShowcaseProfile t={t} showcase={showcase} />
+      <ShowcaseProfile t={t} showcase={showcase} prices={priceGridItems(showcasePricesFrom(prices.data), t, locale)} />
       <Actions t={t} showcase={showcase} signedIn={Boolean(session?.claims.sub)} />
     </div>
   );

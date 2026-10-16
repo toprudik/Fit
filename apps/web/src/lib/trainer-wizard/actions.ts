@@ -3,8 +3,11 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { dictionaries } from "@/i18n/dictionaries";
+import { formLocale, formStrings, TEMPLATE_FIELDS, templateInput, templateRows } from "@/lib/packages/input";
+import { paymentLinkInput } from "@/lib/payment-links/input";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { CANCELLATION_HOURS, CURRENCIES, isSpecialty, isTimeZone, PAYMENT_LINK_KINDS } from "./options";
+import { CANCELLATION_HOURS, CURRENCIES, isSpecialty, isTimeZone } from "./options";
 import { isWizardStep, nextPath, type WizardStep } from "./steps";
 
 /** What was typed, so the form shows it again after React resets it on submit. */
@@ -60,16 +63,6 @@ const cancellationInput = z.object({
     .number()
     .int()
     .refine((value) => (CANCELLATION_HOURS as readonly number[]).includes(value)),
-});
-
-const paymentInput = z.object({
-  title: z.string().trim().min(1).max(64),
-  url: z
-    .string()
-    .trim()
-    .max(500)
-    .refine((value) => URL.canParse(value) && new URL(value).protocol === "https:", { path: ["url"] }),
-  kind: z.enum(PAYMENT_LINK_KINDS),
 });
 
 const text = (form: FormData, name: string) => String(form.get(name) ?? "");
@@ -175,9 +168,22 @@ async function saveStep(supabase: Supabase, user: string, step: WizardStep, form
     }
     case "payment": {
       if (!text(form, "title").trim() && !text(form, "url").trim()) return { status: "skipped" };
-      const parsed = paymentInput.safeParse({ title: text(form, "title"), url: text(form, "url"), kind: text(form, "kind") });
+      const parsed = paymentLinkInput.safeParse({ title: text(form, "title"), url: text(form, "url"), kind: text(form, "kind") });
       if (!parsed.success) return invalid(parsed.error);
       const { error } = await supabase.from("payment_links").insert({ trainer_id: user, ...parsed.data });
+      return done(step, error);
+    }
+    case "prices": {
+      // A trainer who already has packages edits them under "Деньги"; "Далее" just moves on.
+      if (text(form, "existing") === "1" || !text(form, "dropIn").trim()) return { status: "skipped" };
+      const parsed = templateInput.safeParse(formStrings(form, TEMPLATE_FIELDS));
+      if (!parsed.success) return invalid(parsed.error);
+      const trainer = await supabase.from("trainer_profiles").select("default_currency").eq("user_id", user).single();
+      if (trainer.error) return done(step, trainer.error);
+      const locale = formLocale(form);
+      const { error } = await supabase
+        .from("packages")
+        .insert(templateRows(parsed.data, { id: user, currency: trainer.data.default_currency }, dictionaries[locale], locale));
       return done(step, error);
     }
     case "certificates":
