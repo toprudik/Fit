@@ -36,7 +36,9 @@ export async function ClientPair({ coachingId }: { coachingId: string }) {
       <div className="flex flex-col gap-6 pt-3 md:pt-0">
         {live ? null : (
           <PairNotice>
-            {interpolate(t.pairs.end.endedClient, { date: formatDay(locale, pair.endedAt ?? pair.startedAt, pair.timeZone) })}
+            {pair.endedForLimit
+              ? interpolate(t.pairs.end.endedForLimit, { name })
+              : interpolate(t.pairs.end.endedClient, { date: formatDay(locale, pair.endedAt ?? pair.startedAt, pair.timeZone) })}
           </PairNotice>
         )}
 
@@ -51,6 +53,7 @@ export async function ClientPair({ coachingId }: { coachingId: string }) {
             icon={Wallet}
             title={t.pairs.debt}
             value={pair.debtSessions > 0 ? plural(locale, pair.debtSessions, t.pairs.debtSessions) : t.pairs.noDebt}
+            href={pair.debtSessions > 0 ? "/client/passes" : undefined}
           />
         </ListGroup>
 

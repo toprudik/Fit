@@ -1,3 +1,4 @@
+import type { PriceGridSource } from "@/lib/packages/present";
 import type { Database, Json } from "@/lib/supabase/database.types";
 
 type ShowcaseRow = Database["public"]["Functions"]["get_trainer_showcase"]["Returns"][number];
@@ -49,4 +50,27 @@ export function showcaseFrom(row: ShowcaseRow | undefined): Showcase | null {
     isOwn: row.is_own === true,
     coachingId: row.coaching_id ?? null,
   };
+}
+
+type ShowcasePriceRow = Database["public"]["Functions"]["get_trainer_showcase_prices"]["Returns"][number];
+
+/** The grid get_trainer_showcase_prices answered, ready for priceGridItems; rows missing a number are dropped. */
+export function showcasePricesFrom(rows: readonly ShowcasePriceRow[] | null): PriceGridSource[] {
+  return (rows ?? []).flatMap((row, index) =>
+    typeof row.sessions_count === "number" && typeof row.price_minor === "number" && typeof row.per_session_minor === "number" && row.currency
+      ? [
+          {
+            key: `${index}`,
+            title: row.title,
+            sessionsCount: row.sessions_count,
+            priceMinor: row.price_minor,
+            currency: row.currency,
+            perSessionMinor: row.per_session_minor,
+            savingsPct: row.savings_pct ?? null,
+            isBestValue: row.is_best_value === true,
+            validityDays: row.validity_days ?? null,
+          },
+        ]
+      : [],
+  );
 }

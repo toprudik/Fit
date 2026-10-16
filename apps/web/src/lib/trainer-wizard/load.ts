@@ -17,7 +17,7 @@ function telegramName(profile: { first_name: string | null; last_name: string | 
 
 async function read(supabase: Supabase, user: string) {
   // Columns are listed: profiles hides some by grant, so select("*") fails there (CLAUDE.md).
-  const [trainer, settings, profile, locations, paymentLinks] = await Promise.all([
+  const [trainer, settings, profile, locations, paymentLinks, packages] = await Promise.all([
     supabase
       .from("trainer_profiles")
       .select(
@@ -29,8 +29,9 @@ async function read(supabase: Supabase, user: string) {
     supabase.from("profiles").select("first_name, last_name, username, photo_url").eq("id", user).maybeSingle(),
     supabase.from("locations").select("id, name, address").eq("trainer_id", user).is("archived_at", null).order("created_at"),
     supabase.from("payment_links").select("id, title, url, kind").eq("trainer_id", user).is("archived_at", null).order("created_at"),
+    supabase.from("packages").select("id", { count: "exact", head: true }).eq("trainer_id", user).is("archived_at", null),
   ]);
-  const failed = [trainer, settings, profile, locations, paymentLinks].find((result) => result.error);
+  const failed = [trainer, settings, profile, locations, paymentLinks, packages].find((result) => result.error);
   if (failed?.error) throw new Error(`reading the trainer wizard failed: ${failed.error.code}`);
   if (!trainer.data) return null;
 
@@ -44,6 +45,8 @@ async function read(supabase: Supabase, user: string) {
     timeZone: settings.data?.time_zone ?? "Europe/Moscow",
     locations: locations.data ?? [],
     paymentLinks: paymentLinks.data ?? [],
+    /** Live packages: with any, the price grid step only points to "Деньги". */
+    packageCount: packages.count ?? 0,
   };
 }
 

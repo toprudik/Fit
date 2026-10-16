@@ -1,4 +1,4 @@
--- Messages around the intake, migration 20261016193000_intake_notifications.sql (PRD wave-1 §2.4 INTK-2,
+-- Messages around the intake, migration 20261016224700_intake_notifications.sql (PRD wave-1 §2.4 INTK-2,
 -- INTK-5; screens.md §2.2): intake_submitted to the trainers who see it, on the first version only, and
 -- remind_intake from the trainer's intake screen.
 begin;

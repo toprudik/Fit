@@ -8,13 +8,16 @@ import {
   FormatForm,
   LocationsForm,
   PaymentForm,
+  PricesForm,
   ProfileForm,
   RegionForm,
 } from "@/components/trainer-wizard/step-forms";
 import { WizardScreen, WizardSkeleton } from "@/components/trainer-wizard/wizard-screen";
 import { Button } from "@/components/ui/button";
 import { interpolate } from "@/i18n/format";
-import { getDictionary } from "@/i18n/server";
+import type { Locale } from "@/i18n/config";
+import { getDictionary, getLocale } from "@/i18n/server";
+import { currencySymbol } from "@/lib/money/format";
 import { loadWizard, type WizardData } from "@/lib/trainer-wizard/load";
 import { timeZones } from "@/lib/trainer-wizard/options";
 import { isWizardStep, previousPath, stepNumber, stepPath, WIZARD_STEPS, type WizardStep } from "@/lib/trainer-wizard/steps";
@@ -38,7 +41,7 @@ function zoneOptions(): { id: string; label: string }[] {
   });
 }
 
-function StepFields({ step, data }: { step: WizardStep; data: NonNullable<WizardData> }) {
+function StepFields({ step, data, locale }: { step: WizardStep; data: NonNullable<WizardData>; locale: Locale }) {
   const { trainer } = data;
   switch (step) {
     case "profile":
@@ -55,13 +58,15 @@ function StepFields({ step, data }: { step: WizardStep; data: NonNullable<Wizard
       return <CancellationForm hours={trainer.cancellation_deadline_hours} />;
     case "payment":
       return <PaymentForm links={data.paymentLinks} />;
+    case "prices":
+      return <PricesForm currency={trainer.default_currency} symbol={currencySymbol(locale, trainer.default_currency)} hasPackages={data.packageCount > 0} />;
     case "certificates":
       return <CertificatesForm uploadHref={CERTIFICATES_PATH} />;
   }
 }
 
 async function StepContent({ step }: { step: WizardStep }) {
-  const [t, wizard] = await Promise.all([getDictionary(), loadWizard()]);
+  const [t, locale, wizard] = await Promise.all([getDictionary(), getLocale(), loadWizard()]);
   if (wizard.status === "not-trainer") redirect("/onboarding/trainer");
   if (wizard.status === "signed-out") {
     return (
@@ -73,7 +78,7 @@ async function StepContent({ step }: { step: WizardStep }) {
       </div>
     );
   }
-  return <StepFields step={step} data={wizard.data} />;
+  return <StepFields step={step} data={wizard.data} locale={locale} />;
 }
 
 async function StepScreen({ params }: { params: PageProps<"/[lang]/onboarding/trainer/[step]">["params"] }) {

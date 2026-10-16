@@ -24,7 +24,7 @@
 - Каждый столбец, на который ссылается политика (`trainer_id`, `client_id`, `coaching_id`, `session_id`, `user_id`), проиндексирован.
 - Политики чтения больших таблиц (`coachings`, `bookings`, `ledger_entries`, `passes`, `payments`, `money_events`, `sessions`, `measurements`, `progress_photos`) не вызывают помощник со столбцом строки: такой вызов идёт на каждую строку и не даёт планировщику взять индекс, и чтение без фильтра просматривало строки всех тренеров. Они сравнивают столбец с массивом, который помощник считает один раз: `coaching_id = any ((select private.trainer_coaching_ids('{passes}'))::uuid[])`. Тест `000_schema_invariants` это проверяет.
 - Новые функции по умолчанию не исполняются ролью `PUBLIC` (базовая миграция меняет default privileges), поэтому каждая RPC выдаёт права явно, а забытый `revoke` не открывает её для `anon`.
-- Анонимной роли (`anon`) доступны только SECURITY DEFINER-функции витрины (`get_trainer_showcase`, `get_trial_link`), не таблицы. В волне 1 у `anon` есть `resolve_client_invite(token)`: лендинг ссылки клиента `/i/<token>` показывает карточку тренера до входа (коды тренера проверяются только после входа), и `get_trainer_showcase(slug)`: витрина `/trainers/<slug>`. Витрина отвечает «недоступна», когда тренер выключил её (`is_public = false`), его верификация отклонена (R16, Q60), аккаунт заблокирован или ждёт удаления; неизвестный адрес выглядит так же. «Стать клиентом» с витрины (`join_by_showcase`, только после входа) идёт через ссылку клиента тренера. `get_trial_link(token)` показывает тренера и условия пробного на `/trial/<token>`; пока записи на пробное нет (неделя 2), «Стать клиентом» по ней (`join_by_trial_link`) создаёт пару с источником `trial_link`.
+- Анонимной роли (`anon`) доступны только SECURITY DEFINER-функции витрины (`get_trainer_showcase`, `get_trainer_showcase_prices`, `get_trial_link`), не таблицы. В волне 1 у `anon` есть `resolve_client_invite(token)`: лендинг ссылки клиента `/i/<token>` показывает карточку тренера до входа (коды тренера проверяются только после входа), и `get_trainer_showcase(slug)`: витрина `/trainers/<slug>`. Витрина отвечает «недоступна», когда тренер выключил её (`is_public = false`), его верификация отклонена (R16, Q60), аккаунт заблокирован или ждёт удаления; неизвестный адрес выглядит так же. Цены витрины отдаёт `get_trainer_showcase_prices(slug)`: живые пакеты с `is_public` в валюте тренера по умолчанию, с ценой за занятие и выгодой из `price_grid`; метку «выгоднее всего» функция ставит заново среди этих строк, чтобы её не забрал скрытый пакет. У закрытой витрины цен нет. «Стать клиентом» с витрины (`join_by_showcase`, только после входа) идёт через ссылку клиента тренера. `get_trial_link(token)` показывает тренера и условия пробного на `/trial/<token>`; пока записи на пробное нет (неделя 2), «Стать клиентом» по ней (`join_by_trial_link`) создаёт пару с источником `trial_link`.
 - После каждой DDL-миграции запускаются Supabase security advisors (CLAUDE.md).
 
 ### 1.2. Идентификаторы и общие столбцы
@@ -602,10 +602,10 @@ create index on public.managed_client_claims (trainer_id);
 create unique index on public.managed_client_claims (new_coaching_id) where status = 'pending';
 ```
 
-- Создание: RPC `create_managed_client(display_name, note)` (тренер). Серверный код создаёт пользователя Supabase Auth **без** `telegram_id` (синтетический email `managed-<uuid>@users.fit.invalid`, `banned_until = 'infinity'`), строку `profiles` с `managed_by_trainer_id = uid`, пару `coachings(source = 'manual')` и `data_shares` со всеми категориями `true` (данные вносит тренер; разрешения клиента не применимы, пока клиента нет). Войти под карточкой невозможно: `signInWithTelegram()` ищет только по `app_metadata.telegram_id` (ADR 0004).
+- Создание: RPC `create_managed_client(display_name, contact, note)` (тренер, definer). Функция создаёт пользователя Supabase Auth **без** `telegram_id` (синтетический email `managed-<uuid>@users.fit.invalid`, `banned_until = 'infinity'`), строку `profiles` с `managed_by_trainer_id = uid`, пару `coachings(source = 'manual')` и `data_shares` со всеми категориями `true` (данные вносит тренер; разрешения клиента не применимы, пока клиента нет). Контакт ложится в `coaching_trainer_meta.contact`, заметка в `coaching_notes` (скрыта от клиента). Лимит Free проверяет `assert_can_add_client`. Войти под карточкой невозможно: `signInWithTelegram()` ищет только по `app_metadata.telegram_id` (ADR 0004).
 - Уведомления: `private.enqueue_notification()` пропускает получателей с `managed_by_trainer_id is not null`; запись на слоты и напоминания для пары-карточки недоступны.
 - RLS: карточку видят только её тренер и его делегаты (политика `profiles` через `managed_by_trainer_id = uid` / `is_coaching_trainer`); в остальном работают обычные политики пары.
-- Переход (claim): `join_by_invite` / `join_by_code` создают пару как обычно, а если у тренера есть карточки без аккаунта, ещё и строку `managed_client_claims (pending)` и уведомление тренеру. Лимит Free (R91, решение Q65): эти две RPC пропускают `assert_can_add_client`, только когда у тренера есть непривязанная карточка, и тогда всегда создают запрос; `resolve_managed_client_claim` с ответом «новый клиент» проверяет лимит снова и при превышении завершает новую пару с `plan_limit_reached`. Человеку приложение тогда прямо объясняет, что на бесплатном тарифе тренер сейчас не может добавить новых клиентов. Слияние возвращает счётчик к прежнему. RPC `resolve_managed_client_claim(claim_id, managed_client_id | null)` (тренер) в одной транзакции: переносит все строки карточки на `claimant_id` (`update … set client_id = claimant` в `coachings`, `sessions`/`bookings`, `passes`, `ledger_entries`, `payments`, `coaching_notes`, `measurements`, `workout_logs`, `personal_records` …), объединяет пару карточки с новой парой (история переносится в пару карточки, новая пара удаляется, `coachings.source` остаётся `manual`, сохраняется `started_at` карточки), сбрасывает `data_shares` на умолчания клиента (`intake = false`, `intake_decided_at = null` → клиенту показывается шаг согласия), ставит `profiles.claimed_by`, пишет `booking_events`/журнал пары и удаляет пользователя Auth карточки. `null` → `rejected`, карточка остаётся. Слияние необратимо.
+- Переход (claim): `join_by_invite` / `join_by_code` создают пару как обычно, а если у тренера есть карточки без аккаунта, ещё и строку `managed_client_claims (pending)` и уведомление тренеру. Лимит Free (R91, решение Q65): эти две RPC пропускают `assert_can_add_client`, только когда у тренера есть непривязанная карточка, и тогда всегда создают запрос; `resolve_managed_client_claim` с ответом «новый клиент» проверяет лимит снова и при превышении завершает новую пару с `plan_limit_reached`. Человеку приложение тогда прямо объясняет, что на бесплатном тарифе тренер сейчас не может добавить новых клиентов. Слияние возвращает счётчик к прежнему. RPC `resolve_managed_client_claim(claim_id, managed_client_id | null)` (тренер) в одной транзакции: переносит все строки карточки на `claimant_id` (`update … set client_id = claimant` в `coachings`, `sessions`/`bookings`, `passes`, `ledger_entries`, `payments`, `coaching_notes`, `measurements`, `workout_logs`, `personal_records` …), объединяет пару карточки с новой парой (история переносится в пару карточки, новая пара удаляется, `coachings.source` остаётся `manual`, сохраняется `started_at` карточки), сбрасывает `data_shares` на умолчания клиента (`intake = false`, `intake_decided_at = null` → клиенту показывается шаг согласия), ставит `profiles.claimed_by` и удаляет пользователя Auth карточки. Составные ключи пары (`*_pair_fkey`) на время переноса откладываются (`set constraints … deferred`), поэтому строки новой пары сначала переезжают в пару карточки, а `client_id` пары карточки каскадом обновляет её дочерние строки. Фото прогресса меняют владельца, но файлы в Storage остаются по старому пути. `null` → `rejected`, карточка остаётся. Слияние необратимо. Экран «Это тот же клиент?» получает всё одним вызовом `get_managed_client_claim(claim_id)`: человека, карточки со счётчиками того, что перейдёт, и `limit_full`.
 
 
 ```sql
@@ -643,7 +643,7 @@ create table public.intakes (                  -- версии анкеты кл
   submitted_at  timestamptz not null default now()
 );
 create index on public.intakes (user_id, submitted_at desc);
--- Уведомления (миграция 20261016193000_intake_notifications.sql): триггер intakes_notify_trainers после первой версии
+-- Уведомления (миграция 20261016224700_intake_notifications.sql): триггер intakes_notify_trainers после первой версии
 -- ставит intake_submitted (Т8, с parq_flagged) каждому тренеру живой пары с share:intake; кнопка «Напомнить» тренера
 -- вызывает RPC remind_intake(coaching_id), которая ставит клиенту intake_reminder не чаще раза в сутки на пару и
 -- только пока анкеты нет и клиент её этому тренеру показывает (иначе intake_filled / intake_hidden).
@@ -733,6 +733,40 @@ create table public.slots (
 );
 create index on public.slots (trainer_id, starts_at);
 create index on public.slots (starts_at) where status = 'open';
+
+-- Расписание тренера (миграция 20261016193700_schedule_slots):
+-- save_week_template(items, horizon_weeks, buffer_min) сохраняет неделю целиком: убирает будущие свободные
+--   слоты старого шаблона (кроме занятых), заменяет окна и режет новые слоты на horizon_weeks вперёд.
+-- close_schedule_days(from, to) удаляет свободные слоты в эти местные дни, ставит один слот-отметку
+--   status = 'closed' без template_item_id на весь период и возвращает оставшиеся занятия для предупреждения.
+-- reopen_schedule(slot_id) снимает отметку и дорезает слоты из шаблона.
+-- Одиночный слот тренер закрывает и открывает обычным update status под RLS.
+-- pg_cron «slots-roll» (00:15 UTC) каждый день досоздаёт слоты до горизонта: private.roll_slots().
+-- Местное время в UTC переводит private.local_to_utc: время в «дыре» перехода на летнее время уходит
+--   на конец дыры, неоднозначное берёт первое прочтение (PRD 2.6.7-3).
+--
+-- Занятия и повторы (миграция 20261016204500_schedule_sessions, PRD 2.6.2, 2.6.5):
+-- create_session(coaching, starts_at, duration, mode, …, weekdays, until | count) назначает клиенту одно
+--   занятие или еженедельный повтор: запись сразу confirmed (source trainer или recurrence) со строкой
+--   booking_events, свободные слоты под занятием удаляются, клиенту одно К1 на весь повтор.
+-- Повтор хранится в recurrences в местном времени тренера; private.materialize_recurrence создаёт
+--   занятия на полгода вперёд, pg_cron «recurrences-roll» (00:20 UTC) досоздаёт остальные.
+-- session_conflicts(from, to, ignore) отдаёт пересекающиеся занятия тренера: это предупреждение, не запрет.
+-- update_session(…, following) переносит одно занятие (is_exception у вхождения повтора) или это и следующие:
+--   каждое переезжает на новое время в свой день, повтор тоже; клиенту одно К6 «было → стало».
+-- cancel_session(id, reason, following) отменяет занятия и записи тренером без списаний, освобождает слоты,
+--   при following останавливает повтор (ended_at); клиенту одно К5 со списком дат.
+--
+-- Запись клиента и запросы (миграция 20261016221900_client_bookings, PRD 2.6.4, 2.6.5-6):
+-- private.booking_auto_confirm(coaching, kind, starts_at) решает по §3.5: (true, pass_id) по абонементу,
+--   (true, null) по разрешённому долгу, (false, null) = запрос. Только читает; правило денег меняется здесь.
+-- booking_preview(slot_id) отдаёт экрану подтверждения то же решение и остаток абонемента после записи.
+-- book_slot(slot_id) создаёт персональное занятие на слоте (ссылка онлайн берётся из окна шаблона), слот
+--   становится booked, запись confirmed с reserved_pass_id или requested (source client_slot); тренеру Т1 или Т2.
+-- decide_booking(id, accept, reason) тренер подтверждает запрос (К2, абонемент подбирается заново) или
+--   отклоняет (К3); withdraw_booking_request(id) клиент отзывает запрос, тренеру Т3. Занятие отклонённого или
+--   отозванного запроса отменяется, слот снова open, если время впереди и его не закрыли и не заняли.
+-- pg_cron «booking-requests-expire» (каждые 5 минут) переводит запросы без ответа к началу занятия в expired, К4.
 
 create table public.recurrences (
   id                uuid primary key default gen_random_uuid(),
@@ -959,6 +993,14 @@ create table public.pass_freezes (
 ```
 
 Абонемент создаёт RPC вместе со строкой `grant` в журнале. Напрямую тренер меняет только `title` и `note`; отмена, срок, заморозки и остальное идут через RPC. Срок (`expires_at`) меняется только с причиной: RPC ставит `fit.change_reason`, без неё триггер отвечает `reason_required` для любой роли (PRD 2.8-8). Удалить абонемент может тренер пары, пока в журнале по нему есть только `grant` и на него не ссылается ни один платёж; строка `grant` уходит каскадом (R27, PRD 2.8-16). Абонемент с движением по журналу отменяют, а не удаляют.
+
+Сделано (миграция `20261016214300_passes_payments`):
+
+- `create_pass(coaching_id, package_id | null, title, sessions, price_minor, currency, validity_days, applies_to, starts_on, note, payment_minor, payment_method, paid_at)` (тренер) создаёт абонемент из пакета или свой, пишет `grant`, гасит долг (§3.4) и, если передана сумма, подтверждённый платёж. Возвращает `pass_id` и число погашенных долговых занятий. Срок: начало дня после `starts_on + validity_days − 1` в зоне тренера.
+- `cancel_pass(pass_id, reason)` пишет `refund` на остаток с причиной в `note`, снимает `reserved_pass_id` у будущих подтверждённых записей; повторный вызов ничего не меняет.
+- `change_pass_expiry(pass_id, last_day | null, reason)` меняет срок только с причиной (`null` = бессрочный).
+- Общие функции для списаний: `private.pick_pass(coaching_id, kind, at, prefer)` выбирает абонемент по §3.4, `private.pass_next_share(pass_id)` даёт справедливую долю следующего списания, `private.settle_debt(pass_id)` гасит долг. Их вызывают будущие `post_charge`, прощение и дозапись проведённого.
+- Платёж клиента «Я оплатил» (`status = 'reported'`) ставит тренеру `payment_reported` триггером `payments_notify_reported`.
 
 **История денег** (`money_events`, PRD строка 27, Q21 «История с причинами»). Записи пишут `booking_events`, журнал сам себе история, а абонементы, заморозки и платежи меняются и напрямую. Поэтому каждое их изменение записывает триггер `BEFORE` на этих таблицах (для всех ролей, кроме каскадов). Таблица только для добавления.
 
@@ -2406,7 +2448,7 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `sessions` | T; участники с записью в любом статусе (R80); клиенты живых пар: `open_for_booking and status = 'scheduled'`. `meeting_url` не выдаётся, ссылку отдаёт `session_meeting_url()` (R25) | T (`scheduled`, личное или групповое); S (повторы) | T: `title`, `capacity`, `open_for_booking`; время, отмена и статус через RPC | никто (без записей удаляет RPC, R93) |
 | `bookings` | C (свои); T | **только S-RPC** (`book_slot`, `book_session`, `assign_client`, `waitlist_accept`) | **только S-RPC** (`confirm`, `decline`, `cancel_booking`, `reschedule`, `mark_attendance`) | никто (каскад) |
 | `booking_events` | как `bookings` | S (внутри RPC) | никто | никто |
-| `packages` | T; клиенты тренера в любом статусе пары; **pub** витрина (`is_public`) | T | T | никто (архив) |
+| `packages` | T; клиенты тренера в любом статусе пары; **pub** витрина через `get_trainer_showcase_prices(slug)` (`is_public`) | T | T | никто (архив) |
 | `passes` | C; T | S-RPC `create_pass` (T), пишет `grant` | T: `title`, `note` у активного абонемента; срок, отмена и остальное через RPC (срок только с причиной) | T, пока в журнале только `grant` и нет платежей (R27) |
 | `pass_freezes` | C; T | T | T | T (ещё не начавшиеся) |
 | `ledger_entries` | C; T | **только S-RPC/триггеры** (`post_charge`, `waive_charge`, `adjust_balance`: T) | никто (триггер запрещает, кроме переноса пары, R28) | никто (только каскад) |

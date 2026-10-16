@@ -23,7 +23,7 @@ vi.mock("@/lib/supabase/server", () => ({
       const chain = {
         then: (resolve: (value: Answer) => unknown) => resolve(db.answer),
       } as Record<string, unknown>;
-      for (const step of ["insert", "update", "delete", "select", "eq"]) {
+      for (const step of ["insert", "update", "delete", "select", "eq", "maybeSingle"]) {
         chain[step] = (...args: unknown[]) => {
           steps.push(step, ...args);
           return chain;
@@ -42,7 +42,7 @@ vi.mock("@/lib/supabase/server", () => ({
   },
 }));
 
-const { addNote, deleteNote, endCoaching, setArchived, setSelfBookOnDebt, updateNote } = await import("./actions");
+const { addNote, createCard, deleteNote, endCoaching, resolveClaim, setArchived, setSelfBookOnDebt, updateNote } = await import("./actions");
 
 const PAIR = "0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f";
 const NOTE = "1c8d3a5f-2e3b-4d4c-8f9a-8b7c6d5e4f3a";
@@ -129,5 +129,52 @@ describe("endCoaching", () => {
   it("refuses a reason over 500 characters", async () => {
     expect(await endCoaching({ coachingId: PAIR, reason: "x".repeat(501) })).toEqual({ ok: false, reason: "invalid" });
     expect(db.calls).toEqual([]);
+  });
+});
+
+describe("createCard", () => {
+  it("creates a card with the trimmed fields and returns its pair", async () => {
+    db.answer = { data: PAIR, error: null };
+    expect(await createCard({ name: "  Аня ", contact: " +7 900 ", note: "  " })).toEqual({ ok: true, coachingId: PAIR });
+    expect(db.calls).toEqual([["rpc", "create_managed_client", { p_display_name: "Аня", p_contact: "+7 900", p_note: undefined }]]);
+    expect(next.refresh).toHaveBeenCalledOnce();
+  });
+
+  it("refuses a missing or too long name and a too long contact without a call", async () => {
+    expect(await createCard({ name: "  " })).toEqual({ ok: false, reason: "invalid" });
+    expect(await createCard({ name: "x".repeat(101) })).toEqual({ ok: false, reason: "invalid" });
+    expect(await createCard({ name: "Аня", contact: "x".repeat(201) })).toEqual({ ok: false, reason: "invalid" });
+    expect(db.calls).toEqual([]);
+  });
+
+  it("reports the Free limit", async () => {
+    db.answer = { data: null, error: { message: "plan_limit_reached", code: "P0001" } };
+    expect(await createCard({ name: "Аня" })).toEqual({ ok: false, reason: "limit" });
+  });
+});
+
+describe("resolveClaim", () => {
+  const CLAIM = "2d9e4b6a-3f4c-4e5d-9a0b-9c8d7e6f5a4b";
+
+  it("merges a card and returns the card pair", async () => {
+    db.answer = { data: PAIR, error: null };
+    expect(await resolveClaim({ claimId: CLAIM, cardId: NOTE })).toEqual({ ok: true, coachingId: PAIR, outcome: "merged" });
+    expect(db.calls).toEqual([["rpc", "resolve_managed_client_claim", { p_claim_id: CLAIM, p_managed_client_id: NOTE }]]);
+  });
+
+  it("keeps a new client and tells whether the pair closed on Free", async () => {
+    db.answer = { data: PAIR, error: null };
+    // The mock answers the status query with the same row, which has no status: the pair stays.
+    expect(await resolveClaim({ claimId: CLAIM, cardId: null })).toEqual({ ok: true, coachingId: PAIR, outcome: "new" });
+    expect(db.calls[0]).toEqual(["rpc", "resolve_managed_client_claim", { p_claim_id: CLAIM, p_managed_client_id: undefined }]);
+    expect(db.calls[1]).toEqual(["coachings", "select", "status", "eq", "id", PAIR, "maybeSingle"]);
+  });
+
+  it("reads a decided claim and a bad id apart from a failure", async () => {
+    expect(await resolveClaim({ claimId: "nope", cardId: null })).toEqual({ ok: false, reason: "invalid" });
+    db.answer = { data: null, error: { message: "claim_decided", code: "P0001" } };
+    expect(await resolveClaim({ claimId: CLAIM, cardId: null })).toEqual({ ok: false, reason: "decided" });
+    db.answer = { data: null, error: { message: "card_not_found", code: "P0001" } };
+    expect(await resolveClaim({ claimId: CLAIM, cardId: NOTE })).toEqual({ ok: false, reason: "invalid" });
   });
 });

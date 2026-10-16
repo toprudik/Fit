@@ -3,12 +3,15 @@ import { MasterDetail, Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { Skeleton, SkeletonRows } from "@/components/ui/skeleton";
 import { getDictionary } from "@/i18n/server";
-import { ClientList } from "./client-list";
-import { TrainerPair } from "./trainer-pair";
+import { AddClientButton, ClientList } from "./client-list";
+import { TrainerPair, type PairTab } from "./trainer-pair";
 
-async function PairFromParams({ params, tab }: { params: Promise<{ coachingId: string }>; tab: "overview" | "notes" | "intake" }) {
-  const { coachingId } = await params;
-  return <TrainerPair coachingId={coachingId} tab={tab} />;
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+async function PairFromParams({ params, tab, searchParams }: { params: Promise<{ coachingId: string }>; tab: PairTab; searchParams?: SearchParams }) {
+  const [{ coachingId }, search] = await Promise.all([params, searchParams]);
+  const action = typeof search?.action === "string" ? search.action : undefined;
+  return <TrainerPair coachingId={coachingId} tab={tab} action={action} />;
 }
 
 async function ListFromParams({ params }: { params: Promise<{ coachingId: string }> }) {
@@ -20,13 +23,22 @@ async function ListFromParams({ params }: { params: Promise<{ coachingId: string
  * /trainer/clients/[coachingId] and its sections: the card as a pushed screen on a phone, next to the
  * client list from 1280px (desktop-clients.png).
  */
-export async function TrainerPairPage({ params, tab }: { params: Promise<{ coachingId: string }>; tab: "overview" | "notes" | "intake" }) {
+export async function TrainerPairPage({
+  params,
+  tab,
+  searchParams,
+}: {
+  params: Promise<{ coachingId: string }>;
+  tab: PairTab;
+  /** "?action=new" opens "Отметить оплату" on the payments tab (the t_pay_ link). */
+  searchParams?: SearchParams;
+}) {
   const t = await getDictionary();
   return (
     <MasterDetail
       show="detail"
       list={
-        <Screen header={<ScreenHeader title={t.tabs.trainer.clients} />}>
+        <Screen header={<ScreenHeader title={t.tabs.trainer.clients} actions={<AddClientButton label={t.pairs.cards.add} />} />}>
           <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
             <ListFromParams params={params} />
           </Suspense>
@@ -42,7 +54,7 @@ export async function TrainerPairPage({ params, tab }: { params: Promise<{ coach
             </div>
           }
         >
-          <PairFromParams params={params} tab={tab} />
+          <PairFromParams params={params} tab={tab} searchParams={searchParams} />
         </Suspense>
       }
     />

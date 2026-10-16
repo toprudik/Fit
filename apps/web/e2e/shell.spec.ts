@@ -35,22 +35,36 @@ type Screen = {
 const SCREENS: readonly Screen[] = [
   { slug: "trainer-today", path: "/trainer", title: "Сегодня" },
   { slug: "trainer-schedule", path: "/trainer/schedule", title: "Расписание" },
+  { slug: "trainer-week-template", path: "/trainer/schedule/template", title: "Шаблон недели" },
+  { slug: "trainer-slots", path: "/trainer/schedule/slots", title: "Слоты" },
+  { slug: "trainer-new-session", path: "/trainer/sessions/new", title: "Новое занятие" },
+  { slug: "trainer-session", path: "/trainer/sessions/0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f", title: "Занятие" },
+  { slug: "trainer-requests", path: "/trainer/requests", title: "Запросы на запись" },
+  { slug: "trainer-request", path: "/trainer/requests/0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f", title: "Запрос на запись" },
   { slug: "trainer-clients", path: "/trainer/clients", title: "Клиенты" },
+  { slug: "trainer-new-card", path: "/trainer/clients/new", title: "Добавить клиента вручную" },
   { slug: "trainer-money", path: "/trainer/money", title: "Деньги" },
   { slug: "trainer-more", path: "/trainer/more", title: "Ещё" },
+  { slug: "trainer-packages", path: "/trainer/money/packages", title: "Пакеты и цены" },
+  { slug: "client-passes", path: "/client/passes", title: "Абонементы" },
   { slug: "client-home", path: "/client", title: "Главная" },
   { slug: "client-sessions", path: "/client/sessions", title: "Занятия" },
+  { slug: "client-book", path: "/client/book", title: "Запись на занятие" },
+  { slug: "client-booking", path: "/client/bookings/0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f", title: "Запись" },
   { slug: "client-diary", path: "/client/diary", title: "Дневник" },
   { slug: "client-progress", path: "/client/progress", title: "Прогресс" },
   { slug: "client-trainers", path: "/client/trainers", title: "Тренеры" },
   { slug: "settings", path: "/settings", title: "Настройки" },
   { slug: "settings-plan", path: "/settings/plan", title: "Мой тариф" },
+  { slug: "settings-notifications", path: "/settings/notifications", title: "Уведомления" },
+  { slug: "settings-calendar", path: "/settings/calendar", title: "Календарь" },
   { slug: "profile", path: "/profile", title: "Профиль" },
   { slug: "login", path: "/login", title: "Вход" },
   { slug: "trainer-invite", path: "/onboarding/trainer?code=ABCD-EFGH-JKLM", title: "Инвайт тренера" },
   { slug: "beta-terms", path: "/onboarding/consent?next=%2Fclient", title: "Закрытая бета DaFit" },
   { slug: "onboarding-preferences", path: "/onboarding/preferences?next=%2Fclient", title: "Язык и тема" },
   { slug: "trainer-wizard", path: "/onboarding/trainer/format", title: "Чем ты занимаешься", documentTitle: false },
+  { slug: "trainer-wizard-prices", path: "/onboarding/trainer/prices", title: "Ценовая сетка", documentTitle: false },
   { slug: "trainer-links", path: "/trainer/links", title: "QR и ссылка" },
   { slug: "join", path: "/join?code=abc-def", title: "Код тренера" },
   // A malformed token is answered without the database: the "link no longer works" state.
@@ -122,6 +136,12 @@ for (const scheme of SCHEMES) {
   });
 }
 
+// A malformed feed token is refused before the database, like a reissued one (CAL-3).
+test("a calendar feed with a malformed token is a 404", async ({ request }) => {
+  const response = await request.get("/api/calendar/not-a-token.ics");
+  expect(response.status()).toBe(404);
+});
+
 test.describe("navigation", () => {
   test("the trainer zone has Сегодня, Расписание, Клиенты, Деньги, Ещё", async ({ page }, testInfo) => {
     await page.goto("/trainer");
@@ -189,7 +209,7 @@ test.describe("trainer invite", () => {
   test("signed out, a wizard step sends to sign-in and back to the same step", async ({ page }) => {
     await page.goto("/onboarding/trainer/region");
     await expect(page.getByRole("heading", { level: 1, name: "Часовой пояс и валюта" })).toBeVisible();
-    await expect(page.getByRole("progressbar", { name: "Профиль заполнен" })).toHaveAttribute("aria-valuenow", "43");
+    await expect(page.getByRole("progressbar", { name: "Профиль заполнен" })).toHaveAttribute("aria-valuenow", "38");
     await expect(page.getByRole("link", { name: "Войти через Telegram" })).toHaveAttribute(
       "href",
       `/login?next=${encodeURIComponent("/onboarding/trainer/region")}`,
@@ -227,7 +247,15 @@ test.describe("client link and trainer code", () => {
 
 test.describe("pairs", () => {
   // A pair id that is not a uuid is answered without the database, like a pair of someone else.
-  for (const path of ["/trainer/clients/not-a-pair", "/trainer/clients/not-a-pair/notes", "/client/trainers/not-a-pair"]) {
+  for (const path of [
+    "/trainer/clients/not-a-pair",
+    "/trainer/clients/not-a-pair/notes",
+    "/trainer/clients/not-a-pair/passes",
+    "/trainer/clients/not-a-pair/payments",
+    "/trainer/clients/claims/not-a-claim",
+    "/client/trainers/not-a-pair",
+    "/client/passes/not-a-pass",
+  ]) {
     test(`${path} shows the not-found screen`, async ({ page }) => {
       await page.goto(path);
       await expect(page.getByRole("heading", { name: "Такой страницы нет" })).toBeVisible();
@@ -237,6 +265,15 @@ test.describe("pairs", () => {
   test("signed out, the client list offers the QR and link screen", async ({ page }) => {
     await page.goto("/trainer/clients?filter=debt&q=anna");
     await expect(page.getByRole("link", { name: "Показать QR и ссылку" })).toHaveAttribute("href", "/trainer/links");
+    await expect(page.getByRole("main").getByRole("link", { name: "Добавить клиента вручную" })).toHaveAttribute("href", "/trainer/clients/new");
+    await expect(page.getByRole("link", { name: "Добавить клиента", exact: true })).toHaveAttribute("href", "/trainer/clients/new");
+  });
+
+  test("a card needs a name before anything is sent", async ({ page }) => {
+    await page.goto("/trainer/clients/new");
+    await expect(page.getByRole("link", { name: /Отправить ссылку или QR/ })).toHaveAttribute("href", "/trainer/links");
+    await page.getByRole("button", { name: "Создать" }).click();
+    await expect(page.getByText("Напиши имя клиента")).toBeVisible();
   });
 });
 

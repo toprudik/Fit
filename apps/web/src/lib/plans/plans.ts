@@ -34,6 +34,17 @@ export const PLAN_FEATURES: Record<PaidPlan, readonly FeatureCode[]> = {
   client_premium: ["client.trends", "client.nutrition_advanced", "client.progress_photos_unlimited", "client.self_training"],
 };
 
+/** A request this recent still shows as sent: request_access returns it instead of making a new one (PLAN-4). */
+const REQUEST_DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Plans with a request that is open or was made within a day: their button already says "Запрос отправлен". */
+export function requestedPlans(requests: { plan_code: string; status: string; created_at: string }[]): Set<string> {
+  const since = Date.now() - REQUEST_DAY_MS;
+  return new Set(
+    requests.filter((request) => request.status === "open" || new Date(request.created_at).getTime() > since).map((request) => request.plan_code),
+  );
+}
+
 export function isPlanCode(value: unknown): value is PlanCode {
   return value === "trainer_free" || value === "trainer_pro" || value === "client_free" || value === "client_premium";
 }

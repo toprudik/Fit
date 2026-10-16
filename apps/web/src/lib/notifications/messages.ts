@@ -1,7 +1,11 @@
-import type { Locale } from "@/i18n/config";
+import { INTL_LOCALE, type Locale } from "@/i18n/config";
 import { dictionaries, type Dictionary } from "@/i18n/dictionaries";
 import { interpolate } from "@/i18n/format";
-import { formatPlanDate, isPlanCode } from "@/lib/plans/plans";
+import { formatMoney } from "@/lib/money/format";
+import { isPairId } from "@/lib/pairs/clients";
+import { formatSessionTime } from "@/lib/pairs/format";
+import { DEFAULT_TIME_ZONE, formatPlanDate, isPlanCode } from "@/lib/plans/plans";
+import { formatOffset } from "@/lib/reminders/offsets";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import type { InlineButton } from "./telegram";
 
@@ -47,12 +51,23 @@ const templates: Partial<Record<NotificationType, Template>> = {
   }),
   managed_client_claim: ({ t, payload }) => ({
     text: interpolateEscaped(t.newClientWithCards, { name: personName(payload) || t.unnamedClient }),
-    buttons: [{ text: t.openClients, path: "/trainer/clients" }],
+    buttons: [
+      typeof payload.claim_id === "string" && isPairId(payload.claim_id)
+        ? { text: t.answerClaim, path: `/trainer/clients/claims/${payload.claim_id}` }
+        : { text: t.openClients, path: "/trainer/clients" },
+    ],
   }),
-  // Т9 and its mirror: payload { coaching_id, ended_by, cancelled, first_name, last_name } from end_coaching,
-  // naming the side that ended the pair. The other side gets it, so the button opens their own zone.
+  // Т9 and its mirror: payload { coaching_id, ended_by, cancelled, first_name, last_name, reason? } from
+  // end_coaching, naming the side that ended the pair. The other side gets it, so the button opens their own
+  // zone. A Free trainer's "new client" past the limit ends it with reason plan_limit_reached: К12 (Q65).
   coaching_ended: ({ t, payload }) => {
     const cancelled = Number(payload.cancelled ?? 0);
+    if (payload.ended_by === "trainer" && payload.reason === "plan_limit_reached") {
+      return {
+        text: interpolateEscaped(t.coachingEndedPlanLimit, { name: personName(payload) || t.unnamedTrainer }),
+        buttons: [{ text: t.openTrainer, path: pairPath("/client/trainers", payload) }],
+      };
+    }
     if (payload.ended_by === "trainer") {
       return {
         text: interpolateEscaped(cancelled > 0 ? t.coachingEndedByTrainerCancelled : t.coachingEndedByTrainer, {
@@ -67,6 +82,49 @@ const templates: Partial<Record<NotificationType, Template>> = {
         count: cancelled,
       }),
       buttons: [{ text: t.openClient, path: pairPath("/trainer/clients", payload) }],
+    };
+  },
+  // The client said "Я оплатил": payload { coaching_id, payment_id, amount_minor, currency, pass_title?, first_name,
+  // last_name } from the payments_notify_reported trigger. The balance waits for the trainer's confirmation.
+  payment_reported: ({ t, locale, payload }) => {
+    const amount =
+      typeof payload.amount_minor === "number" && typeof payload.currency === "string"
+        ? formatMoney(locale, payload.amount_minor, payload.currency)
+        : "";
+    const name = personName(payload) || t.unnamedClient;
+    return {
+      text:
+        typeof payload.pass_title === "string" && payload.pass_title
+          ? interpolateEscaped(t.paymentReported, { name, amount, pass: payload.pass_title })
+          : interpolateEscaped(t.paymentReportedNoPass, { name, amount }),
+      buttons: [
+        {
+          text: t.openPayments,
+          path: typeof payload.coaching_id === "string" && isPairId(payload.coaching_id) ? `/trainer/clients/${payload.coaching_id}/payments` : "/trainer/money",
+        },
+      ],
+    };
+  },
+  // К7: payload { booking_id, starts_at, kind, title, mode, location_name, location_address, first_name, last_name,
+  // offset_min } from private.sync_booking_reminders. The meeting link stays in DaFit (SCHED-21).
+  session_reminder: ({ t, locale, timeZone, payload }) => {
+    const text = (value: Json | undefined) => (typeof value === "string" ? value.trim() : "");
+    const offset = Number(payload.offset_min);
+    const values = {
+      lead: Number.isInteger(offset) && offset > 0 ? formatOffset(locale, offset, dictionaries[locale].reminders.units) : "",
+      name: personName(payload) || t.unnamedTrainer,
+      time: typeof payload.starts_at === "string" ? formatSessionTime(locale, payload.starts_at, timeZone ?? DEFAULT_TIME_ZONE) : "",
+      title: text(payload.title),
+    };
+    const place = [text(payload.location_name), text(payload.location_address)].filter(Boolean).join(", ");
+    const lines = [
+      interpolateEscaped(payload.kind === "group" && values.title ? t.sessionReminderGroup : t.sessionReminder, values),
+      payload.mode === "online" ? escapeHtml(t.reminderOnline) : place ? interpolateEscaped(t.reminderPlace, { place }) : null,
+    ];
+    const booking = isPairId(payload.booking_id) ? payload.booking_id : null;
+    return {
+      text: lines.filter(Boolean).join("\n"),
+      buttons: [{ text: t.openSession, path: booking ? `/client/sessions?booking=${booking}` : "/client/sessions" }],
     };
   },
   // П1–П3: payload { plan, expires_at? } from admin_grant_plan and admin_revoke_plan (PLAN-5, §2.14-9).
@@ -100,7 +158,122 @@ const templates: Partial<Record<NotificationType, Template>> = {
     text: interpolateEscaped(t.intakeReminder, { name: personName(payload) || t.someTrainer }),
     buttons: [{ text: t.fillIntake, path: intakePath("/client/trainers", payload) }],
   }),
+  // К1: payload { session_id, starts_at, mode, location, count, until, first_name, last_name } from create_session,
+  // one message for a whole repeat (PRD 2.6.2-5).
+  booking_assigned: ({ t, locale, timeZone, payload }) => {
+    const count = Number(payload.count ?? 1);
+    const values = {
+      name: personName(payload) || t.sessionTrainer,
+      when: sessionTime(locale, payload.starts_at, timeZone),
+      place: place(t, payload),
+    };
+    const text =
+      typeof payload.until === "string"
+        ? interpolateEscaped(t.sessionsAssignedUntil, { ...values, until: formatPlanDate(locale, `${payload.until}T12:00:00Z`, "UTC") })
+        : count > 1
+          ? interpolateEscaped(t.sessionsAssigned, { ...values, count })
+          : interpolateEscaped(t.sessionAssigned, values);
+    return { text, buttons: [{ text: t.openSessions, path: "/client/sessions" }] };
+  },
+  // К6: payload { session_id, before_starts_at, starts_at, mode, location, count, first_name, last_name } from
+  // update_session, "было → стало" for the first session the change touched.
+  session_changed: ({ t, locale, timeZone, payload }) => {
+    const count = Number(payload.count ?? 1);
+    const before = sessionTime(locale, payload.before_starts_at, timeZone);
+    const after = sessionTime(locale, payload.starts_at, timeZone);
+    const values = { name: personName(payload) || t.sessionTrainer, before, after, when: after, place: place(t, payload), count };
+    const template = before !== after ? (count > 1 ? t.sessionsMoved : t.sessionMoved) : count > 1 ? t.sessionsChanged : t.sessionChanged;
+    return { text: interpolateEscaped(template, values), buttons: [{ text: t.openSessions, path: "/client/sessions" }] };
+  },
+  // К5: payload { session_id, dates, reason, first_name, last_name } from cancel_session, every cancelled date in one
+  // message (PRD 2.6.2-5); the trainer cancels without a charge (2.6.5).
+  booking_cancelled_by_trainer: ({ t, locale, timeZone, payload }) => {
+    const dates = (Array.isArray(payload.dates) ? payload.dates : []).filter((date): date is string => typeof date === "string");
+    const shown = dates.slice(0, MAX_DATES).map((date) => sessionTime(locale, date, timeZone));
+    if (dates.length > MAX_DATES) shown.push(interpolate(t.moreDates, { count: dates.length - MAX_DATES }));
+    return {
+      text: interpolateEscaped(dates.length > 1 ? t.sessionsCancelled : t.sessionCancelled, {
+        name: personName(payload) || t.sessionTrainer,
+        dates: shown.join("; "),
+        reason: String(payload.reason ?? ""),
+      }),
+      buttons: [{ text: t.openSessions, path: "/client/sessions" }],
+    };
+  },
+  // Т1: payload { booking_id, session_id, starts_at, mode, location, debt, first_name, last_name } from book_slot,
+  // a booking confirmed at once by a pass or allowed debt (PRD 2.6.4-2).
+  booking_created: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(payload.debt === true ? t.bookingCreatedDebt : t.bookingCreated, {
+      name: personName(payload) || t.unnamedClient,
+      when: sessionTime(locale, payload.starts_at, timeZone),
+      place: place(t, payload),
+    }),
+    buttons: [{ text: t.openSession, path: idPath("/trainer/sessions", payload.session_id, "/trainer/schedule") }],
+  }),
+  // Т2: the same payload for a request; the button opens it to confirm or decline (PRD 2.6.4).
+  booking_requested: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(t.bookingRequested, {
+      name: personName(payload) || t.unnamedClient,
+      when: sessionTime(locale, payload.starts_at, timeZone),
+      place: place(t, payload),
+    }),
+    buttons: [{ text: t.answerRequest, path: idPath("/trainer/requests", payload.booking_id, "/trainer/requests") }],
+  }),
+  // Т3: payload { booking_id, session_id, starts_at, request, first_name, last_name }; request = a request taken back.
+  booking_cancelled_by_client: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(payload.request === true ? t.requestWithdrawn : t.bookingCancelledByClient, {
+      name: personName(payload) || t.unnamedClient,
+      when: sessionTime(locale, payload.starts_at, timeZone),
+    }),
+    buttons: [{ text: t.openSchedule, path: "/trainer/schedule" }],
+  }),
+  // К2, К3: payload { booking_id, session_id, starts_at, reason, first_name, last_name } from decide_booking.
+  booking_confirmed: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(t.requestConfirmed, {
+      name: personName(payload) || t.sessionTrainer,
+      when: sessionTime(locale, payload.starts_at, timeZone),
+    }),
+    buttons: [{ text: t.openBooking, path: idPath("/client/bookings", payload.booking_id, "/client/sessions") }],
+  }),
+  booking_declined: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(typeof payload.reason === "string" && payload.reason.trim() ? t.requestDeclinedReason : t.requestDeclined, {
+      name: personName(payload) || t.sessionTrainer,
+      when: sessionTime(locale, payload.starts_at, timeZone),
+      reason: typeof payload.reason === "string" ? payload.reason.trim() : "",
+    }),
+    buttons: [{ text: t.bookAgain, path: "/client/book" }],
+  }),
+  // К4: payload { booking_id, session_id, starts_at, first_name, last_name } from the expiry job (PRD 2.6.4-5).
+  booking_expired: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(t.requestExpired, {
+      name: personName(payload) || t.sessionTrainer,
+      when: sessionTime(locale, payload.starts_at, timeZone),
+    }),
+    buttons: [{ text: t.bookAgain, path: "/client/book" }],
+  }),
 };
+
+/** A cancelled repeat lists this many dates, then "and N more". */
+const MAX_DATES = 5;
+
+/** "пн, 26 октября в 18:00" in the recipient's zone (PRD 2.6.7-4). */
+function sessionTime(locale: Locale, value: Json | undefined, timeZone: string | null): string {
+  if (typeof value !== "string") return "";
+  const date = new Date(value);
+  const options: Intl.DateTimeFormatOptions = { weekday: "short", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" };
+  const format = (zone: string) => new Intl.DateTimeFormat(INTL_LOCALE[locale], { ...options, timeZone: zone }).format(date);
+  try {
+    return format(timeZone ?? DEFAULT_TIME_ZONE);
+  } catch {
+    return format(DEFAULT_TIME_ZONE);
+  }
+}
+
+/** Where a session happens: the trainer's place by name, or in person or online. */
+function place(t: TemplateContext["t"], payload: TemplateContext["payload"]): string {
+  if (payload.mode === "online") return t.placeOnline;
+  return typeof payload.location === "string" && payload.location.trim() ? payload.location.trim() : t.placeOffline;
+}
 
 /** "Pro" or "Premium": the same word in every language, from the plan code in the payload. */
 function planName(payload: TemplateContext["payload"]): string {
@@ -132,6 +305,11 @@ function pairPath(base: string, payload: TemplateContext["payload"]): string {
 function intakePath(base: string, payload: TemplateContext["payload"]): string {
   const pair = pairPath(base, payload);
   return pair === base ? base : `${pair}/intake`;
+}
+
+/** `${base}/${id}` for a valid id in the payload, else `fallback`. */
+function idPath(base: string, id: Json | undefined, fallback: string): string {
+  return typeof id === "string" && UUID.test(id) ? `${base}/${id}` : fallback;
 }
 
 /** Escapes text for parse_mode HTML. Templates pass catalog strings and every inserted value through it. */
