@@ -37,6 +37,8 @@ const SCREENS: readonly Screen[] = [
   { slug: "trainer-schedule", path: "/trainer/schedule", title: "Расписание" },
   { slug: "trainer-week-template", path: "/trainer/schedule/template", title: "Шаблон недели" },
   { slug: "trainer-slots", path: "/trainer/schedule/slots", title: "Слоты" },
+  { slug: "trainer-new-session", path: "/trainer/sessions/new", title: "Новое занятие" },
+  { slug: "trainer-session", path: "/trainer/sessions/0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f", title: "Занятие" },
   { slug: "trainer-clients", path: "/trainer/clients", title: "Клиенты" },
   { slug: "trainer-new-card", path: "/trainer/clients/new", title: "Добавить клиента вручную" },
   { slug: "trainer-money", path: "/trainer/money", title: "Деньги" },

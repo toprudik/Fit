@@ -7,11 +7,21 @@ import { cn } from "@/lib/utils";
 
 type Copy = Dictionary["schedule"];
 
+/** Session id → the client's name, for personal sessions and trials. */
+export type SessionNames = ReadonlyMap<string, string>;
+
 /** "Анна", "Группа", "Свободно": what the item is. */
-function itemTitle(item: DayItem, copy: Copy): string {
+function itemTitle(item: DayItem, copy: Copy, names: SessionNames): string {
   if (item.type === "free") return copy.free;
   const { session } = item;
-  return session.title ?? (session.kind === "trial" ? copy.trial : session.kind === "group" ? copy.group : copy.session);
+  return (
+    session.title ?? names.get(session.id) ?? (session.kind === "trial" ? copy.trial : session.kind === "group" ? copy.group : copy.session)
+  );
+}
+
+/** A session opens its screen; a free slot opens a new session at its time. */
+function itemHref(item: DayItem, day: string): string {
+  return item.type === "session" ? `/trainer/sessions/${item.id}` : `/trainer/sessions/new?date=${day}&time=${formatMinutes(item.startMin)}`;
 }
 
 /** "18:30–19:30, онлайн, 5 из 8". */
@@ -44,12 +54,14 @@ export function DayList({
   selected,
   today,
   copy,
+  names,
 }: {
   week: readonly WeekDay[];
   labels: ReadonlyMap<string, DayLabel>;
   selected: string;
   today: string;
   copy: Copy;
+  names: SessionNames;
 }) {
   const day = week.find((entry) => entry.day === selected) ?? week[0];
   const label = labels.get(day.day)!;
@@ -87,9 +99,14 @@ export function DayList({
         {day.items.length === 0 && !day.closed ? <p className="px-1 text-callout text-ink-2">{copy.emptyDay}</p> : null}
         <ul className="flex flex-col gap-2">
           {day.items.map((item) => (
-            <li key={item.id} className={cn("flex flex-col gap-0.5 rounded-md px-4 py-3", itemClass(item))}>
-              <span className="text-headline">{itemTitle(item, copy)}</span>
-              <span className="text-subhead tabular-nums text-ink-2">{itemDetail(item, copy)}</span>
+            <li key={item.id}>
+              <Link
+                href={itemHref(item, day.day)}
+                className={cn("flex flex-col gap-0.5 rounded-md px-4 py-3 outline-offset-2", itemClass(item))}
+              >
+                <span className="text-headline">{itemTitle(item, copy, names)}</span>
+                <span className="text-subhead tabular-nums text-ink-2">{itemDetail(item, copy)}</span>
+              </Link>
             </li>
           ))}
         </ul>
@@ -106,11 +123,13 @@ export function WeekGrid({
   labels,
   today,
   copy,
+  names,
 }: {
   week: readonly WeekDay[];
   labels: ReadonlyMap<string, DayLabel>;
   today: string;
   copy: Copy;
+  names: SessionNames;
 }) {
   const { from, to } = gridHours(week);
   const hours = Array.from({ length: to - from }, (_, index) => from + index);
@@ -160,11 +179,16 @@ export function WeekGrid({
               {entry.items.map((item) => (
                 <li
                   key={item.id}
-                  className={cn("absolute inset-x-1 flex flex-col overflow-hidden rounded-sm px-2 py-1", itemClass(item))}
+                  className="absolute inset-x-1"
                   style={{ top: top(item.startMin) + 1, height: Math.max(((item.endMin - item.startMin) / 60) * HOUR_PX - 2, 22) }}
                 >
-                  <span className="truncate text-footnote font-semibold">{itemTitle(item, copy)}</span>
-                  <span className="truncate text-caption tabular-nums text-ink-2">{itemDetail(item, copy)}</span>
+                  <Link
+                    href={itemHref(item, entry.day)}
+                    className={cn("flex size-full flex-col overflow-hidden rounded-sm px-2 py-1", itemClass(item))}
+                  >
+                    <span className="truncate text-footnote font-semibold">{itemTitle(item, copy, names)}</span>
+                    <span className="truncate text-caption tabular-nums text-ink-2">{itemDetail(item, copy)}</span>
+                  </Link>
                 </li>
               ))}
             </ul>
