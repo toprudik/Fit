@@ -71,6 +71,7 @@ describe("joinTrainer", () => {
     ["trainer_unavailable", "unavailable"],
     ["own_invite", "own"],
     ["plan_limit_reached", "limit"],
+    ["account_deleting", "deleting"],
     ["something_else", "failed"],
   ])("maps %s to %s", async (message, reason) => {
     db.answer = { data: null, error: { message, code: "P0001" } };

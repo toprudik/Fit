@@ -23,6 +23,7 @@ const KNOWN_ERRORS = [
   "seats_available",
   "waitlist_not_found",
   "offer_expired",
+  "account_deleting",
 ] as const;
 
 export type BookingError = (typeof KNOWN_ERRORS)[number] | "failed";
