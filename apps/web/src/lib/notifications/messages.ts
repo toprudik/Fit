@@ -188,6 +188,57 @@ const templates: Partial<Record<NotificationType, Template>> = {
       buttons: [{ text: t.openSessions, path: "/client/sessions" }],
     };
   },
+  // Т1: payload { booking_id, session_id, starts_at, mode, location, debt, first_name, last_name } from book_slot,
+  // a booking confirmed at once by a pass or allowed debt (PRD 2.6.4-2).
+  booking_created: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(payload.debt === true ? t.bookingCreatedDebt : t.bookingCreated, {
+      name: personName(payload) || t.unnamedClient,
+      when: sessionTime(locale, payload.starts_at, timeZone),
+      place: place(t, payload),
+    }),
+    buttons: [{ text: t.openSession, path: idPath("/trainer/sessions", payload.session_id, "/trainer/schedule") }],
+  }),
+  // Т2: the same payload for a request; the button opens it to confirm or decline (PRD 2.6.4).
+  booking_requested: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(t.bookingRequested, {
+      name: personName(payload) || t.unnamedClient,
+      when: sessionTime(locale, payload.starts_at, timeZone),
+      place: place(t, payload),
+    }),
+    buttons: [{ text: t.answerRequest, path: idPath("/trainer/requests", payload.booking_id, "/trainer/requests") }],
+  }),
+  // Т3: payload { booking_id, session_id, starts_at, request, first_name, last_name }; request = a request taken back.
+  booking_cancelled_by_client: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(payload.request === true ? t.requestWithdrawn : t.bookingCancelledByClient, {
+      name: personName(payload) || t.unnamedClient,
+      when: sessionTime(locale, payload.starts_at, timeZone),
+    }),
+    buttons: [{ text: t.openSchedule, path: "/trainer/schedule" }],
+  }),
+  // К2, К3: payload { booking_id, session_id, starts_at, reason, first_name, last_name } from decide_booking.
+  booking_confirmed: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(t.requestConfirmed, {
+      name: personName(payload) || t.sessionTrainer,
+      when: sessionTime(locale, payload.starts_at, timeZone),
+    }),
+    buttons: [{ text: t.openBooking, path: idPath("/client/bookings", payload.booking_id, "/client/sessions") }],
+  }),
+  booking_declined: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(typeof payload.reason === "string" && payload.reason.trim() ? t.requestDeclinedReason : t.requestDeclined, {
+      name: personName(payload) || t.sessionTrainer,
+      when: sessionTime(locale, payload.starts_at, timeZone),
+      reason: typeof payload.reason === "string" ? payload.reason.trim() : "",
+    }),
+    buttons: [{ text: t.bookAgain, path: "/client/book" }],
+  }),
+  // К4: payload { booking_id, session_id, starts_at, first_name, last_name } from the expiry job (PRD 2.6.4-5).
+  booking_expired: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(t.requestExpired, {
+      name: personName(payload) || t.sessionTrainer,
+      when: sessionTime(locale, payload.starts_at, timeZone),
+    }),
+    buttons: [{ text: t.bookAgain, path: "/client/book" }],
+  }),
 };
 
 /** A cancelled repeat lists this many dates, then "and N more". */
@@ -236,6 +287,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** The pair's card under `base`, or `base` itself when the payload has no valid pair id. */
 function pairPath(base: string, payload: TemplateContext["payload"]): string {
   return typeof payload.coaching_id === "string" && UUID.test(payload.coaching_id) ? `${base}/${payload.coaching_id}` : base;
+}
+
+/** `${base}/${id}` for a valid id in the payload, else `fallback`. */
+function idPath(base: string, id: Json | undefined, fallback: string): string {
+  return typeof id === "string" && UUID.test(id) ? `${base}/${id}` : fallback;
 }
 
 /** Escapes text for parse_mode HTML. Templates pass catalog strings and every inserted value through it. */

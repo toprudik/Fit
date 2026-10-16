@@ -115,7 +115,13 @@ async function SessionDetails({ params }: { params: PageProps<"/[lang]/trainer/s
       {session.clients.length > 0 ? (
         <ListGroup header={session.clients.length > 1 ? copy.clients : copy.client}>
           {session.clients.map((client) => (
-            <ListRow key={client.coachingId} icon={User} title={client.name} href={`/trainer/clients/${client.coachingId}`} />
+            <ListRow
+              key={client.coachingId}
+              icon={User}
+              title={client.name}
+              subtitle={client.status === "requested" ? t.schedule.clientSessions.status.requested : undefined}
+              href={client.status === "requested" ? `/trainer/requests/${client.bookingId}` : `/trainer/clients/${client.coachingId}`}
+            />
           ))}
         </ListGroup>
       ) : null}
