@@ -26,6 +26,9 @@ select tests.set_share(t, 'client_c', c, true)
 from unnest(array['trainer_a', 'trainer_b']) t, unnest(enum_range(null::public.share_category)) c;
 select tests.set_share('trainer_a', 'client_e', c, true) from unnest(enum_range(null::public.share_category)) c;
 
+-- The imported wger catalog (20261016231700_wger_catalog.sql) is replaced by one row, so the counts below are
+-- this test's rows only.
+delete from public.exercises where source = 'wger';
 insert into public.exercises (id, source, wger_id, name, license)
 values ('00000000-0000-4000-8000-000000000950', 'wger', 950, 'Squat', 'CC-BY-SA-4.0');
 
