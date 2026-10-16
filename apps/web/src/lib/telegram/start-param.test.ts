@@ -24,6 +24,13 @@ describe("startParamPath", () => {
     expect(startParamPath("tl_short")).toBeNull();
   });
 
+  it("opens a client's new payment for t_pay_<coachingId> and a pass for c_pass_<passId>", () => {
+    const id = "0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f";
+    expect(startParamPath(`t_pay_${id}`)).toBe(`/trainer/clients/${id}/payments?action=new`);
+    expect(startParamPath(`c_pass_${id}`)).toBe(`/client/passes/${id}`);
+    expect(startParamPath("c_pass_42")).toBeNull();
+  });
+
   it("opens the trainer showcase for tp_<slug>", () => {
     expect(startParamPath("tp_anna-fit")).toBe("/trainers/anna-fit");
   });

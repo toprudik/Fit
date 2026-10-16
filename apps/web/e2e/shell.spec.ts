@@ -46,6 +46,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "trainer-money", path: "/trainer/money", title: "Деньги" },
   { slug: "trainer-more", path: "/trainer/more", title: "Ещё" },
   { slug: "trainer-packages", path: "/trainer/money/packages", title: "Пакеты и цены" },
+  { slug: "client-passes", path: "/client/passes", title: "Абонементы" },
   { slug: "client-home", path: "/client", title: "Главная" },
   { slug: "client-sessions", path: "/client/sessions", title: "Занятия" },
   { slug: "client-book", path: "/client/book", title: "Запись на занятие" },
@@ -247,8 +248,11 @@ test.describe("pairs", () => {
   for (const path of [
     "/trainer/clients/not-a-pair",
     "/trainer/clients/not-a-pair/notes",
+    "/trainer/clients/not-a-pair/passes",
+    "/trainer/clients/not-a-pair/payments",
     "/trainer/clients/claims/not-a-claim",
     "/client/trainers/not-a-pair",
+    "/client/passes/not-a-pass",
   ]) {
     test(`${path} shows the not-found screen`, async ({ page }) => {
       await page.goto(path);
