@@ -35,6 +35,8 @@ type Screen = {
 const SCREENS: readonly Screen[] = [
   { slug: "trainer-today", path: "/trainer", title: "Сегодня" },
   { slug: "trainer-schedule", path: "/trainer/schedule", title: "Расписание" },
+  { slug: "trainer-week-template", path: "/trainer/schedule/template", title: "Шаблон недели" },
+  { slug: "trainer-slots", path: "/trainer/schedule/slots", title: "Слоты" },
   { slug: "trainer-clients", path: "/trainer/clients", title: "Клиенты" },
   { slug: "trainer-money", path: "/trainer/money", title: "Деньги" },
   { slug: "trainer-more", path: "/trainer/more", title: "Ещё" },
