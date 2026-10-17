@@ -3849,6 +3849,9 @@ isOneToOne: false
 "copy_food_meal":
 { Args: { "p_from": string,"p_meal": Database["public"]['Enums']["meal_type"],"p_to": string,"p_to_meal"?: Database["public"]['Enums']["meal_type"] }; Returns: number
                            },
+"correct_payment":
+{ Args: { "p_amount_minor": number,"p_method": Database["public"]['Enums']["payment_method"],"p_paid_at": string,"p_payment_id": string,"p_reason": string }; Returns: string
+                           },
 "create_calendar_feed":
 { Args: { "p_zone": Database["public"]['Enums']["app_zone"] }; Returns: string
                            },

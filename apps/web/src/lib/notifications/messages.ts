@@ -229,6 +229,13 @@ const templates: Partial<Record<NotificationType, Template>> = {
   charge_posted: (context) => chargeMessage(context, "posted"),
   // К9: the same payload for the waiver, with the reason and start of the forgiven charge.
   charge_waived: (context) => chargeMessage(context, "waived"),
+  // К10 and Т6: payload { pass_id, coaching_id, title, condition, available, expires_at, first_name, last_name,
+  // username, payment_url? } from private.queue_pass_ending, the person being the other side of the pair.
+  pass_ending: (context) => passEndingMessage(context, "client"),
+  client_pass_ending: (context) => passEndingMessage(context, "trainer"),
+  // К11: payload { coaching_id, charge_id, starts_at, amount_minor, currency, debt_sessions, debt_amounts, username,
+  // payment_url?, first_name, last_name } from private.notify_debt, when an attended session is charged without a pass.
+  debt: debtMessage,
   // К7: payload { booking_id, starts_at, kind, title, mode, location_name, location_address, first_name, last_name,
   // offset_min } from private.sync_booking_reminders. The meeting link stays in DaFit (SCHED-21).
   session_reminder: ({ t, locale, timeZone, payload }) => {
@@ -718,6 +725,62 @@ function chargeMessage({ t, locale, timeZone, payload }: TemplateContext, kind: 
     text: interpolateEscaped(template, values),
     buttons: [{ text: t.openPass, path: passId ? `/client/passes/${passId}` : "/client/passes" }],
   };
+}
+
+function passEndingMessage({ t, locale, timeZone, payload }: TemplateContext, recipient: "client" | "trainer") {
+  const client = recipient === "client";
+  const available = Number(payload.available ?? 0);
+  const values = {
+    name: personName(payload) || (client ? t.unnamedTrainer : t.unnamedClient),
+    pass: typeof payload.title === "string" ? payload.title : "",
+    left: plural(locale, available, t.passSessions),
+    date: typeof payload.expires_at === "string" ? formatPlanDate(locale, payload.expires_at, timeZone) : "",
+  };
+  const template =
+    payload.condition === "expiry"
+      ? client
+        ? t.passEndingExpiry
+        : t.clientPassEndingExpiry
+      : available > 0
+        ? client
+          ? t.passEndingLow
+          : t.clientPassEndingLow
+        : client
+          ? t.passEndingBooked
+          : t.clientPassEndingBooked;
+  const passId = typeof payload.pass_id === "string" && isPairId(payload.pass_id) ? payload.pass_id : null;
+  const username = typeof payload.username === "string" && TELEGRAM_USERNAME.test(payload.username) ? payload.username : null;
+  const buttons: TemplateButton[] = [];
+  if (client) {
+    // «Оплатить» opens the trainer's payment link; without one, the pass, where the client sees how to pay.
+    const url = typeof payload.payment_url === "string" && isButtonUrl(payload.payment_url) ? payload.payment_url : null;
+    buttons.push(url ? { text: t.pay, href: url } : { text: t.openPass, path: passId ? `/client/passes/${passId}` : "/client/passes" });
+    if (username) buttons.push({ text: t.writeToTrainer, href: `https://t.me/${username}` });
+  } else {
+    const pair = pairPath("/trainer/clients", payload);
+    buttons.push({ text: t.openClient, path: pair === "/trainer/clients" ? pair : `${pair}/passes` });
+    if (username) buttons.push({ text: t.writeToClient, href: `https://t.me/${username}` });
+  }
+  return { text: interpolateEscaped(template, values), buttons };
+}
+
+/** К11: which session went into debt, and how much the pair owes now, in sessions and in money. */
+function debtMessage({ t, locale, timeZone, payload }: TemplateContext) {
+  const amounts = nested(payload.debt_amounts);
+  const amount = Object.entries(amounts)
+    .filter((entry): entry is [string, number] => typeof entry[1] === "number" && entry[1] > 0)
+    .map(([currency, minor]) => formatMoney(locale, minor, currency))
+    .join(" + ");
+  const values = {
+    name: personName(payload) || t.unnamedTrainer,
+    when: typeof payload.starts_at === "string" ? formatSessionTime(locale, payload.starts_at, timeZone ?? DEFAULT_TIME_ZONE) : "",
+    debt: plural(locale, Math.max(1, Number(payload.debt_sessions ?? 1)), dictionaries[locale].pairs.debtSessions),
+    amount,
+  };
+  const url = typeof payload.payment_url === "string" && isButtonUrl(payload.payment_url) ? payload.payment_url : null;
+  const buttons: TemplateButton[] = url ? [{ text: t.pay, href: url }] : [];
+  buttons.push({ text: t.openPasses, path: "/client/passes" });
+  return { text: interpolateEscaped(amount ? t.debtWithAmount : t.debt, values), buttons };
 }
 
 /** A nested object of the payload, such as a person from private.person_name; empty for anything else. */
