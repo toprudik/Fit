@@ -206,6 +206,17 @@ describe("feedback message (А2)", () => {
   });
 });
 
+describe("feedback reply (ADM-10)", () => {
+  it("brings the admin's answer to the author and offers to write again", () => {
+    const message = renderMessage(
+      { ...row, kind: "feedback_reply", payload: { feedback_id: "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b", kind: "bug", reply: "Fixed <b>it</b>" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe("Команда DaFit ответила на твоё обращение:\nFixed &lt;b&gt;it&lt;/b&gt;");
+    expect(message?.buttons).toEqual([{ text: "Написать ещё", web_app: { url: "https://fit.example/feedback?source=feedback_reply" } }]);
+  });
+});
+
 describe("intake messages", () => {
   const PAIR = "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b";
   const options = { appUrl: "https://fit.example", group: false };

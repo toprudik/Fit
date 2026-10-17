@@ -65,6 +65,11 @@ const templates: Partial<Record<NotificationType, Template>> = {
       buttons: [{ text: t.openFeedback, path: id ? `/admin/feedback/${id}` : "/admin/feedback" }],
     };
   },
+  // ADM-10 to the author: payload { feedback_id, kind, reply } from admin_reply_feedback.
+  feedback_reply: ({ t, payload }) => ({
+    text: interpolateEscaped(t.feedbackReply, { reply: String(payload.reply ?? "") }),
+    buttons: [{ text: t.writeAgain, path: "/feedback" }],
+  }),
   // Т7 and Т7a: payload { coaching_id, claim_id?, first_name, last_name } from the join RPCs.
   coaching_created: ({ t, payload }) => ({
     text: interpolateEscaped(t.newClient, { name: personName(payload) || t.unnamedClient }),
