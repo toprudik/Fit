@@ -4472,6 +4472,10 @@ export const ru = {
     bookingRequested: "Запрос на запись: {name}, {when}, {place}. Подтверди или отклони его до начала занятия.",
     referralBonusReferrer: "Бонус за друга: {friend} теперь занимается с тренером {trainer}, а у тебя +{sessions}.",
     referralBonusReferee: "Бонус по приглашению: у тебя +{sessions} с тренером {trainer}.",
+    referralBonusReferrerWaiting:
+      "Бонус за друга: {friend} теперь занимается с тренером {trainer}. +{sessions} добавим в твой следующий абонемент.",
+    referralBonusRefereeWaiting: "Бонус по приглашению: +{sessions} с тренером {trainer} добавим в твой следующий абонемент.",
+    referralBonusApplied: "Обещанный бонус: +{sessions} уже в твоём новом абонементе.",
     referralSessions: { one: "{count} занятие", few: "{count} занятия", many: "{count} занятий", other: "{count} занятия" },
     bookingRequestedOnSite: "Запрос на место: {name} на занятии {when}, {place}, но без записи. Подтверди или отклони его.",
     /** Т3: the client took back a request or cancelled a booking. */

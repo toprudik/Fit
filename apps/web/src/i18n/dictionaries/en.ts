@@ -4407,6 +4407,10 @@ export const en: Dictionary = {
     bookingRequested: "Booking request: {name}, {when}, {place}. Confirm or decline it before the session starts.",
     referralBonusReferrer: "Referral bonus: {friend} now trains with {trainer}, and you get +{sessions}.",
     referralBonusReferee: "Invitation bonus: you get +{sessions} with {trainer}.",
+    referralBonusReferrerWaiting:
+      "Referral bonus: {friend} now trains with {trainer}. We'll add +{sessions} to your next pass.",
+    referralBonusRefereeWaiting: "Invitation bonus: we'll add +{sessions} with {trainer} to your next pass.",
+    referralBonusApplied: "The promised bonus: your new pass now has +{sessions}.",
     referralSessions: { one: "{count} session", few: "{count} sessions", many: "{count} sessions", other: "{count} sessions" },
     bookingRequestedOnSite: "Request for a spot: {name} came to the session {when}, {place}, without a booking. Confirm or decline it.",
     /** Т3: the client took back a request or cancelled a booking. */

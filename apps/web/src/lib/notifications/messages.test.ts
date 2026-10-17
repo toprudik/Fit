@@ -896,6 +896,20 @@ describe("referral bonus message", () => {
     const message = renderMessage({ ...row, locale: "en", kind: "referral_bonus", payload: { ...payload, sessions: 1, side: "referee" } }, options);
     expect(message?.text).toBe("Invitation bonus: you get +1 session with Ирина Котова.");
   });
+
+  it("says the sessions wait for the next pass when there is no active one", () => {
+    const waiting = { ...payload, pass_id: undefined, side: "referrer", waiting: true };
+    const message = renderMessage({ ...row, kind: "referral_bonus", payload: waiting }, options);
+    expect(message?.text).toBe("Бонус за друга: Фёдор теперь занимается с тренером Ирина Котова. +2 занятия добавим в твой следующий абонемент.");
+    expect(message?.buttons).toEqual([
+      { text: "Открыть абонемент", web_app: { url: "https://fit.example/client/passes?source=referral_bonus" } },
+    ]);
+  });
+
+  it("says the next pass has taken the waiting sessions", () => {
+    const message = renderMessage({ ...row, kind: "referral_bonus", payload: { ...payload, side: "referrer", applied: true } }, options);
+    expect(message?.text).toBe("Обещанный бонус: +2 занятия уже в твоём новом абонементе.");
+  });
 });
 
 describe("monthly report message (wave-3 §4)", () => {

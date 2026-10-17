@@ -1,9 +1,10 @@
--- Referral offers, migration 20261017040300_referral_offers.sql (PRD wave-3 §3.1): the trainer's offer, the
--- client's link, a friend joining by it, the bonus after a payment that meets the offer, taking it back when the
+-- Referral offers, migrations 20261017040300_referral_offers.sql and 20261017152437_referral_bonus_active_pass.sql
+-- (PRD wave-3 §3.1): the trainer's offer, the client's link, a friend joining by it, the bonus sessions in the
+-- active pass after a payment that meets the offer, a bonus waiting for the next pass, taking it back when the
 -- payment is voided, declining, and a pair that ends.
 begin;
 \ir _helpers.psql
-select plan(30);
+select plan(38);
 
 select tests.create_trainer('trainer_a');
 select tests.create_trainer('trainer_b');
@@ -14,6 +15,8 @@ select tests.create_user('friend_f');
 select tests.create_user('friend_g');
 select tests.create_user('friend_h');
 select tests.create_user('friend_k');
+select tests.create_user('friend_m');
+select tests.create_user('friend_n');
 select tests.create_pair('trainer_a', 'client_c');
 select tests.create_pair('trainer_a', 'client_e');
 update public.profiles set first_name = 'Анна' where id = tests.user_id('client_c');
@@ -30,10 +33,18 @@ grant select on tests.codes to anon;
 create function tests.code(p_name text) returns text language sql stable set search_path = '' as $$
   select code from tests.codes where name = p_name
 $$;
--- The bonus pass a referral (by the friend's pair) gave to one side (by that side's pair).
-create function tests.bonus_pass(p_side uuid, p_friend uuid) returns public.passes language sql stable set search_path = '' as $$
-  select p.* from public.bonuses b join public.referrals r on r.id = b.referral_id join public.passes p on p.id = b.pass_id
-  where r.coaching_id = p_friend and p.coaching_id = p_side
+-- Sessions left on a pass, and the pass of the offer's package in a pair.
+create function tests.left_on(p_pass uuid) returns integer language sql stable set search_path = '' as $$
+  select coalesce(sum(sessions_delta), 0)::integer from public.ledger_entries where pass_id = p_pass
+$$;
+create function tests.pack_pass(p_pair uuid) returns uuid language sql stable set search_path = '' as $$
+  select p.id from public.passes p join public.packages k on k.id = p.package_id
+  where p.coaching_id = p_pair and k.title = 'Pack 8' order by p.created_at limit 1
+$$;
+-- The sessions bonus a referral (by the friend's pair) gave to one side (by that side's pair).
+create function tests.bonus(p_side uuid, p_friend uuid) returns public.bonuses language sql stable set search_path = '' as $$
+  select b.* from public.bonuses b join public.referrals r on r.id = b.referral_id
+  where r.coaching_id = p_friend and b.coaching_id = p_side
 $$;
 
 insert into tests.ids values ('pair_c', tests.pair_id('trainer_a', 'client_c')), ('pair_e', tests.pair_id('trainer_a', 'client_e'));
@@ -100,11 +111,13 @@ select public.create_pass(tests.id('pair_f'), p_package_id => tests.id('pack'), 
 select tests.clear_authentication();
 select is((select status::text from public.referrals where coaching_id = tests.id('pair_f')), 'qualified',
   'payment: the package of the offer qualifies it (3.2)');
-select results_eq($$ select sessions_total::integer, price_minor, status::text from tests.bonus_pass(tests.id('pair_c'), tests.id('pair_f')) $$,
-  $$ values (2, 0::bigint, 'active'::text) $$, 'payment: the client gets a bonus pass of 2 sessions at price 0 (3.7)');
-select is((select sum(sessions_delta)::integer from public.ledger_entries where pass_id = (tests.bonus_pass(tests.id('pair_c'), tests.id('pair_f'))).id), 2,
-  'payment: its sessions are granted');
-select is((select sessions_total::integer from tests.bonus_pass(tests.id('pair_f'), tests.id('pair_f'))), 1, 'payment: the friend gets their session');
+select is(tests.left_on(tests.id('pass_c')), 7, 'payment: the client gets 2 sessions in their active pass (3.6)');
+select results_eq($$ select status::text, pass_id from tests.bonus(tests.id('pair_c'), tests.id('pair_f')) $$,
+  $$ values ('granted'::text, tests.id('pass_c')) $$, 'payment: the bonus is granted with that pass');
+select is(tests.left_on(tests.pack_pass(tests.id('pair_f'))), 9, 'payment: the friend gets their session in the pass they paid for');
+select is((select count(*) from public.passes where is_bonus), 0::bigint, 'payment: no separate bonus pass');
+select is((select coalesce(sum(amount_minor), 0) from public.ledger_entries where note = 'referral_bonus'), 0::numeric,
+  'payment: the bonus sessions carry no money');
 select ok(exists (select 1 from public.notification_outbox o where o.type = 'referral_bonus'
                   and o.user_id = tests.user_id('client_c') and (o.payload ->> 'sessions')::integer = 2),
   'payment: the client is told');
@@ -118,25 +131,64 @@ update public.payments set status = 'voided', void_reason = 'mistake'
 where coaching_id = tests.id('pair_f') and amount_minor = 800000;
 select tests.clear_authentication();
 select ok((select status::text from public.referrals where coaching_id = tests.id('pair_f')) = 'void'
-          and (tests.bonus_pass(tests.id('pair_c'), tests.id('pair_f'))).status = 'cancelled'
-          and (select sum(sessions_delta) from public.ledger_entries where pass_id = (tests.bonus_pass(tests.id('pair_c'), tests.id('pair_f'))).id) = 0,
-  'void: unused bonuses are taken back (3.4)');
+          and (tests.bonus(tests.id('pair_c'), tests.id('pair_f'))).status = 'void'
+          and tests.left_on(tests.id('pass_c')) = 5 and tests.left_on(tests.pack_pass(tests.id('pair_f'))) = 8,
+  'void: unused bonus sessions are taken back (3.4)');
 
--- A used bonus stays
+-- A partly used bonus
 select tests.authenticate_as('friend_g');
 insert into tests.ids select 'pair_g', public.join_by_referral(tests.code('c'));
 select tests.authenticate_as('trainer_a');
 select public.create_pass(tests.id('pair_g'), p_package_id => tests.id('pack'), p_payment_minor => 800000,
   p_payment_method => 'cash');
 select tests.clear_authentication();
+select is(tests.left_on(tests.id('pass_c')), 7, 'used: the bonus is in the pass again');
 insert into public.ledger_entries (coaching_id, entry_type, pass_id, sessions_delta, amount_minor, occurred_at, charge_reason, note)
-values (tests.id('pair_c'), 'charge', (tests.bonus_pass(tests.id('pair_c'), tests.id('pair_g'))).id, -1, 0, now(), 'manual', 'used');
+select tests.id('pair_c'), 'charge', tests.id('pass_c'), -1, 0, now(), 'manual', 'used' from generate_series(1, 6);
 select tests.authenticate_as('trainer_a');
 update public.payments set status = 'voided', void_reason = 'mistake'
 where coaching_id = tests.id('pair_g') and amount_minor = 800000;
 select tests.clear_authentication();
-select ok((tests.bonus_pass(tests.id('pair_c'), tests.id('pair_g'))).status = 'active' and (tests.bonus_pass(tests.id('pair_g'), tests.id('pair_g'))).status = 'cancelled',
-  'void: a used bonus stays, the unused one goes');
+select ok(tests.left_on(tests.id('pass_c')) = 0 and tests.left_on(tests.pack_pass(tests.id('pair_g'))) = 8,
+  'void: only the free part of a used bonus goes back');
+
+-- No active pass: the bonus waits for the next one
+select tests.authenticate_as('client_e');
+insert into tests.codes select 'e', code from public.client_referral(tests.id('pair_e'));
+select tests.authenticate_as('friend_m');
+insert into tests.ids select 'pair_m', public.join_by_referral(tests.code('e'));
+select tests.authenticate_as('friend_n');
+insert into tests.ids select 'pair_n', public.join_by_referral(tests.code('e'));
+select tests.authenticate_as('trainer_a');
+select public.create_pass(tests.id('pair_m'), p_package_id => tests.id('pack'), p_payment_minor => 800000,
+  p_payment_method => 'cash');
+select public.create_pass(tests.id('pair_n'), p_package_id => tests.id('pack'), p_payment_minor => 800000,
+  p_payment_method => 'cash');
+select tests.clear_authentication();
+select results_eq($$ select status::text, pass_id from tests.bonus(tests.id('pair_e'), tests.id('pair_m')) $$,
+  $$ values ('pending'::text, null::uuid) $$, 'waiting: without an active pass the bonus is pending');
+select ok(exists (select 1 from public.notification_outbox o where o.type = 'referral_bonus'
+                  and o.user_id = tests.user_id('client_e') and (o.payload ->> 'waiting')::boolean),
+  'waiting: the client is told it waits for the next pass');
+select tests.authenticate_as('trainer_a');
+update public.payments set status = 'voided', void_reason = 'mistake'
+where coaching_id = tests.id('pair_n') and amount_minor = 800000;
+select public.create_pass(tests.id('pair_e'), p_title => 'One', p_sessions => 1, p_price_minor => 100000,
+  p_currency => 'RUB', p_payment_minor => 100000, p_payment_method => 'cash');
+select tests.clear_authentication();
+select ok((tests.bonus(tests.id('pair_e'), tests.id('pair_n'))).status = 'void'
+          and (tests.bonus(tests.id('pair_e'), tests.id('pair_m'))).status = 'pending',
+  'waiting: a voided payment voids its waiting bonus; a drop-in visit does not take the other');
+select tests.authenticate_as('trainer_a');
+select public.create_pass(tests.id('pair_e'), p_package_id => tests.id('pack'));
+select tests.clear_authentication();
+select results_eq($$ select status::text, pass_id from tests.bonus(tests.id('pair_e'), tests.id('pair_m')) $$,
+  $$ values ('granted'::text, tests.pack_pass(tests.id('pair_e'))) $$, 'waiting: the next pass takes the bonus');
+select ok(tests.left_on(tests.pack_pass(tests.id('pair_e'))) = 10
+          and exists (select 1 from public.notification_outbox o where o.type = 'referral_bonus'
+                      and o.user_id = tests.user_id('client_e') and (o.payload ->> 'applied')::boolean
+                      and o.payload ->> 'pass_id' = tests.pack_pass(tests.id('pair_e'))::text),
+  'waiting: its 2 sessions are in that pass and the client is told');
 
 -- Declining and an ended pair
 select tests.authenticate_as('friend_h');
