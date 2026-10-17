@@ -4044,7 +4044,7 @@ isOneToOne: false
                            },
 "get_trial_link":
 { Args: { "p_token": string }; Returns: {
-              "coaching_id": string,"currency": string,"description": string,"duration_min": number,"headline": string,"location_address": string,"location_name": string,"mode": Database["public"]['Enums']["session_mode"],"name": string,"photo_url": string,"price_minor": number,"specialties": (string)[],"status": string,"title": string,"trainer_id": string,"verified": boolean,"works_offline": boolean,"works_online": boolean
+              "coaching_id": string,"currency": string,"description": string,"duration_min": number,"headline": string,"location_address": string,"location_name": string,"mode": Database["public"]['Enums']["session_mode"],"name": string,"photo_url": string,"price_minor": number,"specialties": (string)[],"status": string,"time_zone": string,"title": string,"trainer_id": string,"verified": boolean,"works_offline": boolean,"works_online": boolean
             }[]
                            },
 "get_trial_slots":
