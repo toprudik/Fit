@@ -2878,6 +2878,7 @@ export const en: Dictionary = {
   /** Trainer schedule: the week, the week template and slots (PRD wave-1 §2.6.1, screens.md §3.2). */
   schedule: {
     newSession: "Session",
+    trainerTime: "{time} on your trainer's clock",
     weekLabel: "Week",
     previousWeek: "Previous week",
     nextWeek: "Next week",

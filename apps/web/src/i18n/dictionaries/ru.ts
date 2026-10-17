@@ -2890,6 +2890,7 @@ export const ru = {
   /** Trainer schedule: the week, the week template and slots (PRD wave-1 §2.6.1, screens.md §3.2). */
   schedule: {
     newSession: "Занятие",
+    trainerTime: "{time} по времени тренера",
     weekLabel: "Неделя",
     previousWeek: "Прошлая неделя",
     nextWeek: "Следующая неделя",
