@@ -3680,12 +3680,12 @@ isOneToOne: false
                            },
 "admin_analytics_clients":
 { Args: { "p_days"?: number,"p_limit"?: number }; Returns: {
-              "adds_photos": boolean,"attended": number,"client_id": string,"first_name": string,"last_active": string,"last_name": string,"logs_workouts": boolean,"pairs": number,"takes_measurements": boolean,"username": string
+              "adds_photos": boolean,"attended": number,"client_id": string,"first_name": string,"has_target": boolean,"keeps_diary": boolean,"last_active": string,"last_name": string,"logs_activity": boolean,"logs_workouts": boolean,"pairs": number,"takes_measurements": boolean,"username": string
             }[]
                            },
 "admin_analytics_platform":
 { Args: { "p_days"?: number }; Returns: {
-              "active_30": number,"active_7": number,"bookings": number,"cancellations": number,"cards": number,"clients": number,"clients_logging_workouts": number,"clients_with_measurements": number,"clients_with_photos": number,"held_sessions": number,"held_without_edits": number,"invites_created": number,"no_shows": number,"opens": number,"opens_from_bot": number,"sessions": number,"trainers_registered": number,"trainers_verified": number,"trainers_with_client": number,"trainers_with_session": number
+              "active_30": number,"active_7": number,"bookings": number,"cancellations": number,"cards": number,"clients": number,"clients_keeping_diary": number,"clients_logging_activity": number,"clients_logging_workouts": number,"clients_with_measurements": number,"clients_with_photos": number,"clients_with_target": number,"held_sessions": number,"held_without_edits": number,"invites_created": number,"no_shows": number,"opens": number,"opens_from_bot": number,"sessions": number,"trainers_registered": number,"trainers_verified": number,"trainers_with_client": number,"trainers_with_session": number
             }[]
                            },
 "admin_analytics_trainer":
