@@ -1,8 +1,8 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
-import { useEffect } from "react";
-import { DURATION, EASE_OVERSHOOT, EASE_STANDARD } from "@/lib/motion";
+import { animate } from "motion/mini";
+import { useEffect, useLayoutEffect, useRef } from "react";
+import { DURATION, EASE_OVERSHOOT, EASE_STANDARD, prefersReducedMotion } from "@/lib/motion";
 import { hapticSuccess } from "@/lib/telegram/mini-app";
 import { cn } from "@/lib/utils";
 
@@ -28,20 +28,46 @@ type DaRingProps = {
  * of it with the one celebratory animation of the product and Telegram's success vibration. With reduced motion
  * the ring shows its final state at once and the vibration stays.
  */
-export function DaRing({ state, value = 0, size = 44, animate = false, label, className }: DaRingProps) {
-  const reduced = useReducedMotion();
-  const play = animate && state === "done" && !reduced;
+export function DaRing({ state, value = 0, size = 44, animate: celebrate = false, label, className }: DaRingProps) {
+  const play = celebrate && state === "done";
   const stroke = size >= 64 ? 4 : 5;
+  const svgRef = useRef<SVGSVGElement>(null);
+  const arcRef = useRef<SVGPathElement>(null);
+  const checkRef = useRef<SVGPathElement>(null);
 
   useEffect(() => {
-    if (animate && state === "done") hapticSuccess();
-  }, [animate, state]);
+    if (celebrate && state === "done") hapticSuccess();
+  }, [celebrate, state]);
 
-  const draw = (delay: number, duration: number) =>
-    play ? { initial: { pathLength: 0 }, animate: { pathLength: 1 }, transition: { delay, duration, ease: EASE_STANDARD } } : {};
+  // The paths render undrawn (dash offset 1 of pathLength 1) and draw themselves in; with reduced motion they
+  // jump to the drawn state. Motion's WAAPI animate() keeps the engine of motion/react out of the page.
+  useLayoutEffect(() => {
+    const [svg, arc, check] = [svgRef.current, arcRef.current, checkRef.current];
+    if (!play || !svg || !arc || !check) return;
+    if (prefersReducedMotion()) {
+      for (const path of [arc, check]) path.style.strokeDashoffset = "0";
+      return;
+    }
+    const draw = (path: SVGPathElement, delay: number, duration: number) => {
+      const run = animate(path, { strokeDashoffset: ["1", "0"] }, { delay, duration, ease: EASE_STANDARD });
+      void run.then(() => {
+        path.style.strokeDashoffset = "0";
+      });
+      return run;
+    };
+    const runs = [
+      draw(arc, 0, 0.42),
+      draw(check, 0.38, 0.26),
+      animate(svg, { transform: ["scale(1)", "scale(1.12)", "scale(1)"] }, { delay: 0.56, duration: 0.3, ease: EASE_OVERSHOOT }),
+    ];
+    return () => runs.forEach((run) => run.stop());
+  }, [play]);
+
+  const undrawn = play ? { pathLength: 1, strokeDasharray: "1 1", strokeDashoffset: 1 } : {};
 
   return (
-    <motion.svg
+    <svg
+      ref={svgRef}
       width={size}
       height={size}
       viewBox="0 0 48 48"
@@ -49,21 +75,19 @@ export function DaRing({ state, value = 0, size = 44, animate = false, label, cl
       role={label ? "img" : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}
-      className={cn("shrink-0", className)}
-      {...(play
-        ? { initial: { scale: 1 }, animate: { scale: [1, 1.12, 1] }, transition: { delay: 0.56, duration: 0.3, ease: EASE_OVERSHOOT } }
-        : {})}
+      className={cn("shrink-0 origin-center", className)}
     >
       {state === "done" ? (
         <>
-          <motion.path d={ARC} className="stroke-accent" strokeWidth={stroke} strokeLinecap="round" {...draw(0, 0.42)} />
-          <motion.path
+          <path ref={arcRef} d={ARC} className="stroke-accent" strokeWidth={stroke} strokeLinecap="round" {...undrawn} />
+          <path
+            ref={checkRef}
             d={CHECK}
             className="stroke-accent"
             strokeWidth={stroke}
             strokeLinecap="round"
             strokeLinejoin="round"
-            {...draw(0.38, 0.26)}
+            {...undrawn}
           />
         </>
       ) : (
@@ -85,6 +109,6 @@ export function DaRing({ state, value = 0, size = 44, animate = false, label, cl
           ) : null}
         </>
       )}
-    </motion.svg>
+    </svg>
   );
 }

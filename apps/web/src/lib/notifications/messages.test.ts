@@ -762,7 +762,7 @@ describe("charge_posted and charge_waived", () => {
       { ...row, kind: "charge_posted", payload: { reason: "late_cancel", starts_at: STARTS, debt_sessions: 2 } },
       { appUrl: "https://fit.example", group: false },
     );
-    expect(message?.text).toContain("Абонемента не было, занятие ушло в долг: 2 занятия.");
+    expect(message?.text).toContain("Абонемента не было, поэтому занятие ушло в долг. Всего в долге: 2 занятия.");
     expect(message?.buttons[0]).toEqual({ text: "Открыть абонемент", web_app: { url: "https://fit.example/client/passes?source=charge_posted" } });
   });
 
