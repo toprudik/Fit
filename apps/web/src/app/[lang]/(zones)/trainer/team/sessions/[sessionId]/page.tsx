@@ -15,6 +15,7 @@ import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { loadDelegatedSession } from "@/lib/delegations/load";
 import { isPairId } from "@/lib/pairs/clients";
+import { substitutePath } from "@/lib/workouts/substitute";
 
 // The shell reads the route segments (AppShell), and a session id is known only at request time.
 export const instant = false;
@@ -77,6 +78,13 @@ async function DelegatedSession({ params }: { params: PageProps<"/[lang]/trainer
           />
         ))}
       </ListGroup>
+      {session.participants.length ? (
+        <ListGroup header={t.substitute.group} footer={t.substitute.groupFooter} headingLevel={2}>
+          {session.participants.map((person) => (
+            <ListRow key={person.bookingId} title={person.name} href={substitutePath(session.id, person.bookingId)} />
+          ))}
+        </ListGroup>
+      ) : null}
     </div>
   );
 }

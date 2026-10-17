@@ -4220,6 +4220,18 @@ export const ru = {
   },
   /** Steps, water and sleep (wave-2 §4). */
   /** Streaks and badges (PRD wave-3 §2.1–2.2): "Прогресс", "Значки" and the client card. */
+  /** A participant of the session a substitute runs (PRD wave-3 §1 "Подмена" rule 4). */
+  substitute: {
+    title: "Участник",
+    group: "Тренировка и анкета",
+    groupFooter: "Записать тренировку за это занятие и открыть анкету участника можно до конца занятия.",
+    logs: "Тренировка за это занятие",
+    logsFooter: "Тренировка попадёт в дневник клиента и к его тренеру.",
+    noLogs: "Тренировку не записали",
+    intakeFooter: "Анкету видно, только если клиент показывает её своему тренеру.",
+    noIntake: "Анкеты нет",
+    noIntakeText: "Клиент ещё не заполнил анкету или не показывает её своему тренеру.",
+  },
   gamification: {
     title: "Серии и значки",
     streaks: {

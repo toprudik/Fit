@@ -4190,6 +4190,17 @@ export const en: Dictionary = {
   },
   /** Steps, water and sleep (wave-2 §4). */
   /** Streaks and badges (PRD wave-3 §2.1–2.2): "Progress", "Badges" and the client card. */
+  substitute: {
+    title: "Participant",
+    group: "Workout and intake",
+    groupFooter: "You can log this session's workout and open a participant's intake until the session ends.",
+    logs: "Workout for this session",
+    logsFooter: "The workout goes to the client's diary and to their trainer.",
+    noLogs: "No workout logged",
+    intakeFooter: "The intake shows only if the client shares it with their trainer.",
+    noIntake: "No intake",
+    noIntakeText: "The client hasn't filled in the intake yet or doesn't share it with their trainer.",
+  },
   gamification: {
     title: "Streaks and badges",
     streaks: {

@@ -15,28 +15,63 @@ import { localDay, todayIn } from "@/lib/passes/present";
 import { loadTrainerShares } from "@/lib/sharing/load";
 import { draftFromLog, type LogDraft } from "@/lib/workouts/log";
 import { loadBookingStart, loadLog, loadLogs, loadWorkoutPair, viewerId, viewerTimeZone } from "@/lib/workouts/logs";
+import { loadSubstituteParticipant, substitutePath } from "@/lib/workouts/substitute";
 import { weightUnit } from "@/lib/workouts/units";
 import { LogEditor } from "./log-editor";
 import { LogList } from "./log-list";
 import { LogView } from "./log-view";
 
-/** Where the screens of one side live: the trainer's pair tab or the client's diary. */
-export type LogPlace = { side: "trainer"; coachingId: string } | { side: "client" };
+/**
+ * Where the screens of one side live: the trainer's pair tab, the client's diary, or a participant of the
+ * session a substitute runs (PRD wave-3 §1 "Подмена" rule 4: the log of that session only).
+ */
+export type LogPlace = { side: "trainer"; coachingId: string } | { side: "client" } | { side: "substitute"; sessionId: string; bookingId: string };
 
-const listHref = (place: LogPlace) => (place.side === "trainer" ? `/trainer/clients/${place.coachingId}/workouts` : "/client/diary");
-const hrefBase = (place: LogPlace) =>
-  place.side === "trainer" ? `/trainer/clients/${place.coachingId}/workouts` : "/client/diary/workouts";
+function listHref(place: LogPlace): string {
+  if (place.side === "trainer") return `/trainer/clients/${place.coachingId}/workouts`;
+  if (place.side === "substitute") return substitutePath(place.sessionId, place.bookingId);
+  return "/client/diary";
+}
+
+function hrefBase(place: LogPlace): string {
+  if (place.side === "trainer") return `/trainer/clients/${place.coachingId}/workouts`;
+  if (place.side === "substitute") return `${substitutePath(place.sessionId, place.bookingId)}/log`;
+  return "/client/diary/workouts";
+}
+
+/** The trainer's view of a log, for the substitute too. */
+const viewSide = (place: LogPlace) => (place.side === "client" ? "client" : "trainer");
+
+type PlaceClient = {
+  clientId: string;
+  canWrite: boolean;
+  /** A substitute's booking: the only session its logs may belong to, with the session's start. */
+  booking?: { id: string; coachingId: string; startsAt: string };
+};
 
 /** Whose logs the place shows and whether the viewer may write one there; null when it is not theirs. */
-async function placeClient(place: LogPlace): Promise<{ clientId: string; canWrite: boolean } | null> {
+async function placeClient(place: LogPlace): Promise<PlaceClient | null> {
   if (place.side === "client") {
     const me = await viewerId();
     return me ? { clientId: me, canWrite: true } : null;
+  }
+  if (place.side === "substitute") {
+    const participant = await loadSubstituteParticipant(place.sessionId, place.bookingId);
+    if (!participant) return null;
+    return {
+      clientId: participant.clientId,
+      canWrite: participant.live,
+      booking: { id: participant.bookingId, coachingId: participant.coachingId, startsAt: participant.startsAt },
+    };
   }
   const pair = await loadWorkoutPair(place.coachingId);
   if (!pair?.viewerIsTrainer) return null;
   return { clientId: pair.clientId, canWrite: pair.live };
 }
+
+/** A log the place may show: the client's, and at a substitute's place only the log of its booking. */
+const belongs = (client: PlaceClient, log: { clientId: string; bookingId: string | null }) =>
+  log.clientId === client.clientId && (!client.booking || log.bookingId === client.booking.id);
 
 function NotFound({ t }: { t: Dictionary }) {
   return <EmptyState icon={Dumbbell} title={t.workouts.logs.notFoundTitle} description={t.workouts.logs.notFoundText} />;
@@ -84,7 +119,7 @@ export async function LogListSection({ place }: { place: LogPlace }) {
         locale={locale}
         logs={logs}
         hrefBase={hrefBase(place)}
-        side={place.side}
+        side={viewSide(place)}
         empty={{ ...empty, action: logs?.length ? undefined : action }}
       />
     </div>
@@ -94,7 +129,7 @@ export async function LogListSection({ place }: { place: LogPlace }) {
 async function LogDetail({ t, locale, place, logId }: { t: Dictionary; locale: Locale; place: LogPlace; logId: Promise<string> }) {
   const [id, client] = await Promise.all([logId, placeClient(place)]);
   const log = client ? await loadLog(id, locale) : null;
-  if (!client || !log || log.clientId !== client.clientId) {
+  if (!client || !log || !belongs(client, log)) {
     return (
       <Screen header={<ScreenHeader title={t.workouts.logs.untitled} back={{ fallbackHref: listHref(place) }} />}>
         <NotFound t={t} />
@@ -103,7 +138,7 @@ async function LogDetail({ t, locale, place, logId }: { t: Dictionary; locale: L
   }
   return (
     <Screen header={<ScreenHeader title={log.title || t.workouts.logs.untitled} back={{ fallbackHref: listHref(place) }} />}>
-      <LogView t={t} locale={locale} log={log} side={place.side} hrefBase={hrefBase(place)} listHref={listHref(place)} />
+      <LogView t={t} locale={locale} log={log} side={viewSide(place)} hrefBase={hrefBase(place)} listHref={listHref(place)} />
     </Screen>
   );
 }
@@ -157,7 +192,12 @@ async function NewLogForm({
       />
     );
   }
-  const sessionStart = place.side === "trainer" && bookingId ? await loadBookingStart(bookingId, place.coachingId) : null;
+  const sessionStart = client.booking
+    ? client.booking.startsAt
+    : place.side === "trainer" && bookingId
+      ? await loadBookingStart(bookingId, place.coachingId)
+      : null;
+  const logBookingId = client.booking?.id ?? bookingId;
   const initial: LogDraft = {
     title: "",
     date: sessionStart ? localDay(sessionStart, timeZone) : todayIn(timeZone),
@@ -168,8 +208,8 @@ async function NewLogForm({
   return (
     <LogEditor
       clientId={client.clientId}
-      coachingId={place.side === "trainer" ? place.coachingId : undefined}
-      bookingId={sessionStart ? bookingId : undefined}
+      coachingId={place.side === "trainer" ? place.coachingId : client.booking?.coachingId}
+      bookingId={sessionStart ? logBookingId : undefined}
       sessionStart={sessionStart ?? undefined}
       timeZone={timeZone}
       initial={initial}
@@ -205,7 +245,7 @@ export async function NewLogPage({
 async function EditLogForm({ t, locale, place, logId }: { t: Dictionary; locale: Locale; place: LogPlace; logId: Promise<string> }) {
   const [id, client, timeZone] = await Promise.all([logId, placeClient(place), viewerTimeZone()]);
   const log = client ? await loadLog(id, locale) : null;
-  if (!client || !log || log.clientId !== client.clientId || !log.editable) return <NotFound t={t} />;
+  if (!client || !log || !belongs(client, log) || !log.editable) return <NotFound t={t} />;
   return (
     <LogEditor
       clientId={log.clientId}
