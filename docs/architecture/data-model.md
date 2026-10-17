@@ -220,7 +220,7 @@ create type public.share_category as enum ('nutrition', 'measurements', 'photos'
 | R57 | Индекс `access_requests` | Один открытый запрос на пользователя и тариф | старый индекс с приведением даты не компилировался |
 | R58 | `has_entitlement` | Публичная обёртка не отвечает о чужих пользователях (кроме админа); наследование требует клиента пары, живую пару и платный тариф тренера; `nutrition_advanced` наследуется с волны 2. Живая пара включает `trial`, как и везде ([Q63](../decisions.md#12-решения-по-поручению-владельца)) | старая версия позволяла узнать чужой тариф |
 | R59 | Админ и выдачи тарифов | `plan_grants` читают сам пользователь и админ | админке нужна история |
-| R60 | Столбцы поздних волн | Не созданы: `coachings.broadcasts_muted`, `primary_nutrition_group_id`, `churn_hidden_until`, `user_settings.leaderboard_opt_in`, `trainer_profiles.referred_by_trainer_id`, `locations.club_id`, `sessions.conducted_by`, `notification_outbox.broadcast_id` | nullable-столбец добавляется мгновенно |
+| R60 | Столбцы поздних волн | Не созданы: `coachings.broadcasts_muted`, `primary_nutrition_group_id`, `churn_hidden_until`, `trainer_profiles.referred_by_trainer_id`, `locations.club_id`, `sessions.conducted_by`, `notification_outbox.broadcast_id` | nullable-столбец добавляется мгновенно |
 | R61 | Свои упражнения ушедшего тренера | `owner_id on delete set null`; такое упражнение видно только через записи клиента | каскад блокировал удаление аккаунта |
 | R62 | Свои тренировки | `coaching_id is null and created_by = client_id`; записи удалённой пары видит только клиент | иначе записи старой пары видны другим тренерам |
 | R63 | Блокировка админом | `profiles.blocked_at`, `blocked_reason`, не выданы пользователям | ADM-7 |
@@ -313,7 +313,6 @@ create table public.user_settings (
   quiet_hours_start    time default '22:00',       -- оба null = тихие часы выключены (PRD 2.9-7)
   quiet_hours_end      time default '08:00',
   daily_digest_time    time not null default '08:00',  -- время утренней сводки (daily digest), если пользователь тренер
-  -- W3: leaderboard_opt_in boolean not null default false добавляется вместе с лидербордами
   updated_at           timestamptz not null default now(),
   check ((quiet_hours_start is null) = (quiet_hours_end is null))
 );
@@ -2037,7 +2036,7 @@ create index on public.delegation_clients (coaching_id);
 
 Как сделано (миграция `20261017090713_delegations.sql`): `delegate_trainer_id` пуст, пока приглашение не принято по одноразовой ссылке (`invite_hash`, sha256 токена); `scopes` никогда не содержат `passes` и `payments` (PRD волны 3 §1 правило 3), поэтому деньги видит только владелец, а чтение `ledger_entries` идёт по scope `passes`. Подмене выдаются `attendance` и `workouts` до конца занятия, анкета участников идёт через `can_view('intake')`. Помощник на всех клиентов (`all_clients`) проходит `acts_for_trainer` для строк тренера без пары (расписание). Выключатель клиента «доступ помощника к прогрессу» хранится в `assistant_progress_blocks (coaching_id)`. Действия делегата в `booking_events` помечаются `actor_role = 'delegate'` и `payload.on_behalf_of`.
 
-Геймификация (серии и значки: миграция `20261017100917_streaks_badges.sql`, волна 3 §2.1–2.2; челленджи ниже ещё не сделаны):
+Геймификация (серии и значки: миграция `20261017100917_streaks_badges.sql`, волна 3 §2.1–2.2; челленджи и лидерборды: `20261017103914_group_challenges.sql`, §2.3–2.4, ниже):
 
 ```sql
 create table public.badges (                      -- каталог, сидится миграцией; названия в словарях приложения
@@ -2066,37 +2065,37 @@ create table public.workout_week_goals (           -- цель серии «Тр
 Серии не хранятся: `public.my_streaks()` и `public.pair_streaks(coaching)` (тренер живой пары; дневник только при доступе «питание», шаги при доступе «шаги») считают их на чтении из занятий, логов, дневника и шагов. «Тренировки»: недели пн–вс по дню клиента, неделя засчитана при `per_week` тренировок (отмеченные занятия + логи без занятия), неделя с отменой тренером или заморозкой абонемента пропускается, первый пропуск в календарном месяце прощает заморозка. «Дневник» и «Шаги» так же по дням (шаги: ручное значение дня, иначе iOS, против `steps_target` нормы дня, иначе 8000). Текущая неделя или день серию не обрывают, пока не закончились. Значки выдают триггеры на `bookings`, `workout_logs`, `food_diary_entries`, `personal_records`, `homework_occurrences` через `private.award_badges`, вместе с сообщением бота `badge`; значки занятий снимаются, когда отмеченных занятий стало меньше порога. «Дней дневника» считаются всего, не подряд (допущение).
 
 ```sql
-create type public.challenge_metric as enum ('sessions', 'steps', 'food_diary_days', 'homework_done', 'nutrition_adherence');
-create type public.challenge_status as enum ('draft', 'active', 'finished', 'cancelled');
 create table public.challenges (
-  id          uuid primary key default gen_random_uuid(),
-  trainer_id  uuid not null references public.trainer_profiles(user_id) on delete cascade,
-  group_id    uuid references public.groups(id) on delete cascade,   -- челлендж группы (марафон)
-  title       text not null,
-  description text,
-  metric      public.challenge_metric not null,
-  starts_on   date not null,
-  ends_on     date not null check (ends_on >= starts_on),
-  status      public.challenge_status not null default 'draft',
-  created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now()
+  id           uuid primary key default gen_random_uuid(),
+  trainer_id   uuid not null references public.trainer_profiles(user_id) on delete cascade,
+  group_id     uuid not null references public.groups(id) on delete cascade,   -- марафон = челлендж группы (Q29)
+  title        text not null,                     -- 1–80 знаков
+  metric       text not null check (metric in ('workouts', 'steps', 'diary_days', 'adherence_days')),  -- веса, замеров, фото нет
+  goal         integer,                           -- необязательная цель, 1–10 000 000
+  starts_on    date not null,
+  ends_on      date not null,                     -- целые недели, 1–12
+  leaderboard  boolean not null default true,
+  cancelled_at timestamptz,
+  finished_at  timestamptz,                       -- итог подведён, значки выданы
+  created_at   timestamptz not null default now()
 );
-create index on public.challenges (trainer_id);
 
 create table public.challenge_participants (
-  challenge_id         uuid references public.challenges(id) on delete cascade,
-  coaching_id          uuid references public.coachings(id) on delete cascade,
-  user_id              uuid not null references public.profiles(id) on delete cascade,
-  show_on_leaderboard  boolean not null default false,   -- участие в лидерборде по желанию (Q40)
-  score                numeric(12,2) not null default 0,  -- пересчитывает cron
-  score_updated_at     timestamptz,
-  joined_at            timestamptz not null default now(),
+  challenge_id        uuid not null references public.challenges(id) on delete cascade,
+  coaching_id         uuid not null references public.coachings(id) on delete cascade,
+  user_id             uuid not null references public.profiles(id) on delete cascade,
+  show_on_leaderboard boolean not null default false,   -- по желанию (Q40)
+  alias               text,                             -- псевдоним в лидерборде, до 30 знаков
+  score               integer not null default 0,       -- кеш; пересчитывается, пока метрика открыта тренеру
+  score_updated_at    timestamptz,
+  joined_at           timestamptz not null default now(),
   primary key (challenge_id, coaching_id)
 );
-create index on public.challenge_participants (user_id);
 ```
 
-Лидерборд не хранится в таблице: SECURITY DEFINER-функция `get_challenge_leaderboard(challenge_id)` возвращает имя (`display_name`), аватар и `score` только участников с `show_on_leaderboard`; вызвать могут участники и тренер челленджа. Счёт отдаётся агрегатом, сырых данных (шагов по дням, питания) функция не отдаёт.
+Челлендж создаёт тренер группы с фичей `trainer.groups` через `create_challenge` (старт сегодня или позже, бот зовёт всех клиентов живых пар группы сообщением `challenge`); отменяет `cancel_challenge`. Клиент вступает сам через `join_challenge`: нужна открытая тренеру категория метрики (`workouts`, `steps`, для дневника и нормы `nutrition`), иначе ошибка `share_needed`; показ в лидерборде выключен, пока клиент его не включит (`set_challenge_leaderboard`, с псевдонимом); `leave_challenge` выходит. Счёт считается по дням клиента от `starts_on` до конца или сегодняшнего дня (дни в норме только прошедшие): тренировки как в серии, сумма шагов (ручные, иначе iOS), дни с дневником, дни в пределах ±10% нормы (`adherence_counts`). Закрытая категория замораживает счёт на последнем значении, лидерборд помечает его скрытым. `my_challenges()` отдаёт клиенту челленджи его групп с его участием. Каждый час `finish_challenges()` подводит итог челленджей, чей последний день у тренера прошёл: значок `challenge_done` за цель, `challenge_winner` первым трём местам со счётом больше нуля, если лидерборд включён. Пара, ушедшая из группы или завершённая, выходит из идущих челленджей тренера, значки остаются.
+
+Лидерборд не хранится в таблице: SECURITY DEFINER-функция `challenge_board(challenge_id)` возвращает место (по счёту среди всех участников), псевдоним или имя (`first_name`) и итоговый `score`. Тренер челленджа видит всех, участник видит показанных в лидерборде и себя, остальные ничего. Сырых данных (шагов по дням, питания) функция не отдаёт.
 
 Рефералка (миграция `20261017040300_referral_offers.sql`, волна 3 §3.1; бонусы тренерам за тренеров, §3.2, в `20261017090519_trainer_referrals.sql`, ниже):
 
@@ -2553,8 +2552,8 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `delegation_clients` | owner; delegate | owner | никто | owner |
 | `badges` | все authenticated | никто (миграции) | никто | никто |
 | `user_badges`, `workout_week_goals` | сам; T активных пар | S (`award_badges`); цель: `set_workout_week_goal` (сам или T пары) | S; `mark_badges_seen` (сам) | S |
-| `challenges` | T; участники | T | T | никто |
-| `challenge_participants` | T; сам; лидерборд: **pub-для-участников** `get_challenge_leaderboard` | C (вступить в челлендж своей группы); T | C: `show_on_leaderboard`; S: `score` | C (выйти); T |
+| `challenges` | T; клиенты группы | T (`create_challenge`) | T (`cancel_challenge`); S (`finish_challenges`) | никто |
+| `challenge_participants` | T; сам; лидерборд: **pub-для-участников** `challenge_board` | C (`join_challenge`, челлендж своей группы) | C: `set_challenge_leaderboard`; S: `score` | C (`leave_challenge`); S (пара ушла из группы или завершена) |
 | `referral_codes` | через `client_referral` (сам) | S | никто | никто |
 | `trainer_referral_codes` | через `my_trainer_referral` (сам) | S | никто | никто |
 | `trainer_referral_terms` | через `trainer_referral_terms` (тренеры, админы) | миграция | A (`admin_set_trainer_referral_bonus`) | никто |
@@ -2729,7 +2728,7 @@ erDiagram
 29. **Метрика «ведёт всё расписание 2 недели»**: тренер провёл занятия в каждой из двух последних недель, и у всех его занятий за 14 дней есть итог (`completed`/`cancelled`). Это приближение, уточнить с Давидом.
 30. **Календарный фид** (решение Q62): токен на зону (тренер/клиент); в базе только его sha256, ссылка показывается один раз, при создании. Потом настройки показывают, что фид подключён, дату создания и `last_accessed_at`; потерянную ссылку перевыпускают, перевыпуск отзывает старую. В событиях нет заметок и данных тела.
 31. **Рефералка**: бонус клиенту выдаётся бонусным абонементом на N занятий с ценой 0; аннулирование квалифицирующей оплаты в течение 14 дней отзывает бонус, если он ещё не использован, иначе бонус сохраняется (решение, как в wave-3). Тренер за тренера (Q15): реферал создаётся при переходе по реферальной ссылке тренера, зона приглашённого открывается сразу (Q55); бонус `pending` до покупки тарифа (после беты, `plan_subscriptions`).
-32. **Лидерборд** показывает только агрегированный счёт участников, явно включивших показ; согласие на лидерборд нужно и глобальное (`user_settings`), и на челлендж.
+32. **Лидерборд** показывает другим участникам только агрегированный счёт тех, кто явно включил показ при вступлении или позже; согласие даётся на каждый челлендж отдельно (Q40), глобального `user_settings.leaderboard_opt_in` нет.
 33. **Чек-ин по QR**: ротируемый HMAC-токен без хранения; чек-ин досрочно отмечает посещение.
 34. **Месячный отчёт** строится на лету, без кеша; карточка для сторис хранит только напечатанные на ней цифры и живёт 30 дней.
 35. **W4-гео**: бадди хранит только центр ячейки сетки ~2 км; клубы хранят точную точку (публичные места). PostGIS включается в W4.
