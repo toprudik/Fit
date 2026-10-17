@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Clock, Inbox, Link2, MapPin, Wallet } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { BookingHistory } from "@/components/bookings/booking-history";
 import { DecideRequest } from "@/components/bookings/decide-request";
 import { ScheduleSignIn } from "@/components/schedule/sign-in-state";
 import { Screen } from "@/components/shell/screen";
@@ -13,6 +14,7 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
+import { loadBookingHistory } from "@/lib/bookings/history";
 import { loadTrainerRequest } from "@/lib/bookings/load";
 import { isPairId } from "@/lib/pairs/clients";
 import { loadScheduleOwner } from "@/lib/schedule/load";
@@ -97,6 +99,8 @@ async function RequestDetails({ params }: { params: PageProps<"/[lang]/trainer/r
           </p>
         )}
       </div>
+
+      <BookingHistory items={await loadBookingHistory(owner, [request.id])} timeZone={owner.timeZone} />
 
       <DecideRequest bookingId={request.id} />
     </div>
