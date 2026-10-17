@@ -1,4 +1,4 @@
--- Emergency access (migration 20261017174213_break_glass_open.sql, PRD wave-1 §4 ADM-13..15): only an admin opens
+-- Emergency access (migration 20261017194837_break_glass_open.sql, PRD wave-1 §4 ADM-13..15): only an admin opens
 -- it, with a reason, for at most an hour; each call is logged and tells the user; access ends with the grant.
 begin;
 \ir _helpers.psql
