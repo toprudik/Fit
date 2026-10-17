@@ -3960,6 +3960,7 @@ export const ru = {
     /** Wave-2 §3.12: payload { day, body, first_name, last_name, display_name } from add_food_comment. */
     trainerComment: "Комментарий тренера {name} к твоему питанию за {date}: «{body}»",
     openFoodDay: "Открыть день",
+    replyToTrainer: "Ответить",
     /** The other side of a live pair is deleting the account: payload { side, first_name, last_name, cancelled, scheduled_for }. */
     clientDeleting: "{name} удаляет аккаунт в DaFit. Занятия, абонементы и оплаты останутся у тебя, а с {date} клиент будет называться «Удалённый клиент».",
     clientDeletingCancelled: "{name} удаляет аккаунт в DaFit. Будущих записей отменено: {count}. Занятия, абонементы и оплаты останутся у тебя, а с {date} клиент будет называться «Удалённый клиент».",

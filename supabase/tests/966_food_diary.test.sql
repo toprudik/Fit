@@ -3,7 +3,7 @@
 -- trainer's comments on a day.
 begin;
 \ir _helpers.psql
-select plan(67);
+select plan(69);
 
 -- C trains with A; D trains with B; E is nobody's client.
 select tests.create_trainer('trainer_a');
@@ -201,6 +201,7 @@ select tests.clear_authentication();
 -- =========================================================================================================
 -- The trainer's comments (§3.11–3.14)
 
+update public.profiles set username = 'coach_anna_demo' where id = tests.user_id('trainer_a');
 select tests.authenticate_as('trainer_a');
 insert into tests.ids values ('comment', public.add_food_comment(tests.id('a_c'), current_date, 'Добавь белка на ужин'));
 select throws_ok(
@@ -212,6 +213,14 @@ select is(
   (select count(*)::int from public.notification_outbox
    where type = 'trainer_comment' and user_id = tests.user_id('client_c') and payload ->> 'day' = current_date::text),
   1, '3.12: the client gets one message with the day');
+select is(
+  (select payload ->> 'username' from public.notification_outbox
+   where type = 'trainer_comment' and user_id = tests.user_id('client_c')),
+  'coach_anna_demo', '3.13: the message carries the trainer''s username for «Ответить»');
+select is(
+  (select payload ->> 'coaching_id' from public.notification_outbox
+   where type = 'trainer_comment' and user_id = tests.user_id('client_c')),
+  tests.id('a_c')::text, '3.13: and the pair, for the fallback without a username');
 
 select tests.authenticate_as('trainer_b');
 select throws_ok(

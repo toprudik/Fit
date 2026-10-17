@@ -623,6 +623,31 @@ describe("trainer_comment", () => {
       { text: "Открыть день", web_app: { url: "https://fit.example/client/diary/food?day=2026-10-17&source=trainer_comment" } },
     ]);
   });
+
+  it("answers in the trainer's Telegram chat by username (wave-2 §3.13)", () => {
+    const message = renderMessage(
+      {
+        ...row,
+        kind: "trainer_comment",
+        payload: { day: "2026-10-17", body: "Ок", first_name: "Анна", coaching_id: PAIR, username: "coach_anna_demo" },
+      },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.buttons[0]).toEqual({ text: "Ответить", url: "https://t.me/coach_anna_demo" });
+  });
+
+  it("falls back to the pair screen without a username, and ignores a malformed one", () => {
+    for (const username of [null, "bad name", "x"]) {
+      const message = renderMessage(
+        { ...row, kind: "trainer_comment", payload: { day: "2026-10-17", body: "Ок", coaching_id: PAIR, username } },
+        { appUrl: "https://fit.example", group: false },
+      );
+      expect(message?.buttons[0]).toEqual({
+        text: "Ответить",
+        web_app: { url: `https://fit.example/client/trainers/${PAIR}?source=trainer_comment` },
+      });
+    }
+  });
 });
 
 describe("account messages", () => {

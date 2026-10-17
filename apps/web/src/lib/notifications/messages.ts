@@ -422,7 +422,10 @@ const templates: Partial<Record<NotificationType, Template>> = {
         date: day ? diaryDay(locale, day) : "",
         body: typeof payload.body === "string" ? payload.body : "",
       }),
-      buttons: [{ text: t.openFoodDay, path: day ? `/client/diary/food?day=${day}` : "/client/diary/food" }],
+      buttons: [
+        ...replyToTrainer(t, payload),
+        { text: t.openFoodDay, path: day ? `/client/diary/food?day=${day}` : "/client/diary/food" },
+      ],
     };
   },
   // Т8: payload { coaching_id, first_name, last_name, parq_flagged } from the intakes trigger.
@@ -703,10 +706,25 @@ function personName(payload: TemplateContext["payload"]): string {
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** A Telegram username as t.me accepts it: 5 to 32 letters, digits or underscores. */
+const TELEGRAM_USERNAME = /^[A-Za-z0-9_]{5,32}$/;
 
 /** The pair's card under `base`, or `base` itself when the payload has no valid pair id. */
 function pairPath(base: string, payload: TemplateContext["payload"]): string {
   return typeof payload.coaching_id === "string" && UUID.test(payload.coaching_id) ? `${base}/${payload.coaching_id}` : base;
+}
+
+/**
+ * «Ответить» under a trainer's message (wave-2 §3.13, Q39): DaFit has no chat, so the button opens the trainer's
+ * Telegram chat by username; without one it opens the pair, where the client can ask the trainer to get in touch.
+ */
+function replyToTrainer(t: TemplateContext["t"], payload: TemplateContext["payload"]): TemplateButton[] {
+  const username = payload.username;
+  if (typeof username === "string" && TELEGRAM_USERNAME.test(username)) {
+    return [{ text: t.replyToTrainer, href: `https://t.me/${username}` }];
+  }
+  const pair = pairPath("/client/trainers", payload);
+  return pair === "/client/trainers" ? [] : [{ text: t.replyToTrainer, path: pair }];
 }
 
 /** The pair's intake under `base`, or `base` itself when the payload has no valid pair id. */
