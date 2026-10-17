@@ -3900,6 +3900,15 @@ export const en: Dictionary = {
     /** Wave-2 §6.9: a trainer's broadcast to a group, with the trainer's name above the text. */
     broadcastFrom: "Message from your trainer {name}",
     broadcastLink: "Open the link",
+    /** Wave-3 §1: payload { event, delegation_id, coaching_id, session_id, starts_at, delegate_name, owner_name }. */
+    delegationSubstitute: "{delegate} runs your session {when}. If that doesn't suit you, cancel the booking with no charge.",
+    delegationAssistant: "Your trainer {owner} now works with an assistant, {delegate}. The assistant sees only what you share with your trainer, and you can turn off their access to your progress.",
+    delegationAccepted: "{delegate} runs your session {when}. Your clients have been told.",
+    delegationAssistantAccepted: "{delegate} now helps you with your clients.",
+    delegationDeclined: "The invite was declined. You can send a new link to another trainer.",
+    delegationPending: "Nobody has taken the session {when} yet.",
+    openTeam: "Open team",
+    openAccess: "Set up access",
     /** Wave-2 §3.12: payload { day, body, first_name, last_name, display_name } from add_food_comment. */
     trainerComment: "Your trainer {name} commented on your food for {date}: “{body}”",
     openFoodDay: "Open the day",
