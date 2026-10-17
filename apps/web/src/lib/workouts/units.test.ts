@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { formatDuration, fromKg, parseAmount, parseDuration, toKg, weightUnit } from "./units";
 
 describe("weights (PRD 2.10-9, WORK-6)", () => {
-  it("shows pounds in English and kilograms in Russian", () => {
-    expect(weightUnit("en")).toBe("lb");
+  it("shows kilograms in both languages (Q67)", () => {
+    expect(weightUnit("en")).toBe("kg");
     expect(weightUnit("ru")).toBe("kg");
   });
 

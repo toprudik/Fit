@@ -3,7 +3,7 @@ import { ListChecks, Store } from "lucide-react";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { Suspense } from "react";
-import { ShowcaseAddressForm, ShowcaseVisibilityForm } from "@/components/showcase/showcase-forms";
+import { ShowcaseAddressForm, ShowcaseVisibilityForm, StoryCardsSwitch } from "@/components/showcase/showcase-forms";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { ShareClientLink } from "@/components/trainer-wizard/share-client-link";
@@ -91,7 +91,7 @@ async function ShowcaseEditor() {
 
   const { data: trainer, error } = await supabase
     .from("trainer_profiles")
-    .select("slug, is_public, verification_status, headline, specialties")
+    .select("slug, is_public, verification_status, headline, specialties, story_card_showcase")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) console.error("loading the showcase failed", error.code);
@@ -115,6 +115,7 @@ async function ShowcaseEditor() {
         </ListGroup>
       ) : null}
       <ShowcaseAddressForm slug={trainer.slug} />
+      <StoryCardsSwitch enabled={trainer.story_card_showcase} />
       <ShowcaseVisibilityForm visible={trainer.is_public} />
     </div>
   );
