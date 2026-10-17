@@ -1565,6 +1565,24 @@ export const ru = {
       errors: { kcal: "Целое число от 500 до 10 000", grams: "Целое число граммов" },
     },
   },
+  /** Nutrition adherence (wave-2 §5): the trainer's «Питание» list and the card on the pair's tab. */
+  adherence: {
+    title: "Питание клиентов",
+    moreText: "Кто держит норму, а кто нет",
+    periodsLabel: "Период",
+    periods: { "7": "7 дней", "30": "30 дней", "90": "90 дней" },
+    share: "{value}%",
+    noTarget: "Нет нормы",
+    noDays: "Нет записей",
+    filled: "Дней с записями: {logged} из {days}",
+    last: "последняя запись {date}",
+    never: "дневник ещё не вёлся",
+    trend: { up: "Лучше, чем в прошлом периоде", down: "Хуже, чем в прошлом периоде", flat: "Как в прошлом периоде" },
+    rule: "День в норме, если калории отличаются от нормы не больше чем на 10%. Сегодняшний день попадёт в расчёт завтра.",
+    emptyTitle: "Пока некого показать",
+    emptyText: "Здесь появятся клиенты, которые открыли тебе питание.",
+    card: { title: "Попадание в норму", week: "За 7 дней", month: "За 30 дней" },
+  },
   /** Food diary (wave-2 §3; screens.md /client/diary/food, its add and own-foods screens, the trainer's «Питание» tab). */
   foodDiary: {
     title: "Питание",
