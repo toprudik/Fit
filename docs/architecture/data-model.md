@@ -974,7 +974,7 @@ create table public.passes (                    -- абонемент: экзе�
   currency       public.currency_code not null,
   applies_to     public.package_applies_to not null default 'any',
   is_drop_in     boolean not null default false, -- разовое занятие = абонемент на 1
-  -- W3: is_bonus boolean not null default false: бонусный абонемент рефералки, цена 0 (20261017040300_referral_offers.sql).
+  -- W3: is_bonus boolean not null default false: бонусный абонемент рефералки, цена 0 (20261017040300_referral_offers.sql); с 20261017174813 новые не создаются, бонус идёт в действующий абонемент.
   starts_on      date not null,                  -- дата продажи в поясе тренера
   expires_at     timestamptz,                    -- базовый срок без учёта заморозок; null = бессрочно
   status         public.pass_status not null default 'active',
@@ -2159,8 +2159,9 @@ create table public.bonuses (
   beneficiary_id uuid not null references public.profiles(id) on delete cascade,
   kind           public.bonus_kind not null,
   sessions       smallint check (sessions > 0),
-  pass_id        uuid references public.passes(id) on delete set null,   -- бонусный абонемент
-  status         public.bonus_status not null default 'pending',
+  coaching_id    uuid references public.coachings(id) on delete set null, -- пара, в абонемент которой идут занятия (20261017174813)
+  pass_id        uuid references public.passes(id) on delete set null,   -- абонемент, куда добавлены занятия
+  status         public.bonus_status not null default 'pending',          -- pending = ждёт следующего абонемента
   granted_at     timestamptz,
   voided_at      timestamptz,
   created_at     timestamptz not null default now()
@@ -2169,7 +2170,7 @@ create table public.bonuses (
 
 Все четыре таблицы под RLS без грантов: читают и пишут только функции. Тренер: `save_referral_offer` (Pro, `trainer.referral_offers`; новая акция архивирует прежнюю), `stop_referral_offer`, `trainer_referral_offer`, `trainer_referrals`, `decline_referral` (только `pending`). Клиент: `client_referral(coaching_id)` создаёт код при первом вызове, если у тренера идёт акция. Лендинг: `resolve_referral(code)` (доступна anon, как `resolve_client_invite`), `join_by_referral(code)` делает пару через `private.join_pair` с `source = 'referral'` и, если человек новый для тренера и акция идёт, `pending`-реферал.
 
-«Только после факта оплаты» (Q50): триггер `payments_referral` (`after insert or update of status on payments`) на `confirmed`-платеже `direction = 'in'` в паре приглашённого вызывает `private.qualify_referral`: если платёж подходит под условие акции (пакет оплаченного абонемента или сумма в валюте акции), реферал становится `qualified`, каждой стороне создаётся бонусный абонемент (`is_bonus`, цена 0, `grant` в журнале, гасит долг) и уходит `referral_bonus`. Пригласившему не больше 10 бонусов на акцию. Если этот платёж переведён в `voided` в течение 14 дней после `qualified_at`, `private.revoke_referral` отменяет бонусные абонементы без списаний и погашений (`refund` остатка, `cancelled`), бонусы и реферал становятся `void`; использованный бонус остаётся (wave-3 §3.1-7). Завершение пары аннулирует её `pending`-рефералы с обеих сторон.
+«Только после факта оплаты» (Q50): триггер `payments_referral` (`after insert or update of status on payments`) на `confirmed`-платеже `direction = 'in'` в паре приглашённого вызывает `private.qualify_referral`: если платёж подходит под условие акции (пакет оплаченного абонемента или сумма в валюте акции), реферал становится `qualified`, и каждой стороне `private.grant_referral_bonus` добавляет занятия в действующий абонемент её пары (§3.1-6, `20261017174813_referral_bonus_active_pass.sql`): `adjustment` с `note = 'referral_bonus'` и суммой 0, затем гашение долга. Абонемент выбирает `private.referral_bonus_pass`: обычный (не разовый, не старый `is_bonus`), `active` или `frozen` по `pass_balances`; у приглашённого первым идёт оплаченный абонемент, дальше тот, что действует дольше. Выручку бонус не меняет: абонемент зарабатывает цену за первые `sessions_total` занятий (`pass_share_minor`). Если действующего абонемента нет, бонус `pending` с `coaching_id` пары, а триггер `ledger_entries_referral_bonus` на `grant` следующего обычного абонемента этой пары добавляет его туда и ставит `granted`. Уведомление `referral_bonus` уходит в обоих случаях (`waiting: true`, когда ждёт; `applied: true`, когда дождался). Пригласившему не больше 10 бонусов на акцию, ждущие тоже считаются. Если этот платёж переведён в `voided` в течение 14 дней после `qualified_at`, `private.revoke_referral` забирает бонусы: ждущий становится `void`, у добавленного в абонемент снимается свободная часть (`least(sessions, available)`, `adjustment` с `note = 'referral_bonus_voided'`), полностью использованный остаётся `granted`; реферал становится `void` (wave-3 §3.1-7). Бонусные абонементы `is_bonus`, выданные до этой миграции, отменяются по-старому: без списаний и погашений `refund` остатка и `cancelled`. Завершение пары аннулирует её `pending`-рефералы с обеих сторон.
 
 Тренер приводит тренера (§3.2, `20261017090519_trainer_referrals.sql`):
 

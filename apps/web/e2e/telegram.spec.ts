@@ -99,11 +99,29 @@ test.describe("theme inside Telegram", () => {
 });
 
 test.describe("Telegram's buttons", () => {
-  test("BackButton: hidden on a tab root, shown while the profile sheet is open, with swipes locked", async ({ page }) => {
+  test("stays put: vertical swipes off from the start, closing asks first, fullscreen on a phone", async ({ page }) => {
+    await openInTelegram(page, "/client");
+    await expectMiniAppReady(page);
+    await expect.poll(() => verticalSwipesAllowed(page)).toBe(false);
+    expect(await lastPosted(page, "web_app_setup_closing_behavior")).toEqual({ need_confirmation: true });
+    expect((await posted(page)).some(([type]) => type === "web_app_expand")).toBe(true);
+    await expect.poll(async () => (await posted(page)).some(([type]) => type === "web_app_request_fullscreen")).toBe(true);
+  });
+
+  test("on a computer: full height, no fullscreen", async ({ page }) => {
+    await openInTelegram(page, "/client", { platform: "tdesktop" });
+    await expectMiniAppReady(page);
+    expect((await posted(page)).some(([type]) => type === "web_app_expand")).toBe(true);
+    // The viewport is mounted (it asked for the safe areas) before fullscreen would be asked for.
+    await expect.poll(async () => (await posted(page)).some(([type]) => type === "web_app_request_safe_area")).toBe(true);
+    expect((await posted(page)).some(([type]) => type === "web_app_request_fullscreen")).toBe(false);
+  });
+
+  test("BackButton: hidden on a tab root, shown while the profile sheet is open, swipes off throughout", async ({ page }) => {
     await openInTelegram(page, "/trainer");
     await expectMiniAppReady(page);
     expect(await backButtonVisible(page)).toBe(false);
-    expect(await verticalSwipesAllowed(page)).toBe(true);
+    await expect.poll(() => verticalSwipesAllowed(page)).toBe(false);
 
     await page.getByRole("button", { name: "Профиль", exact: true }).click();
     const sheet = page.getByRole("dialog", { name: "Профиль" });
@@ -111,11 +129,11 @@ test.describe("Telegram's buttons", () => {
     await expect.poll(() => backButtonVisible(page)).toBe(true);
     await expect.poll(() => verticalSwipesAllowed(page)).toBe(false);
 
-    // Telegram's BackButton closes the sheet and lets go of both.
+    // Telegram's BackButton closes the sheet and lets go of the button; swipes stay off for the app.
     await receive(page, "back_button_pressed");
     await expect(sheet).toBeHidden();
     await expect.poll(() => backButtonVisible(page)).toBe(false);
-    await expect.poll(() => verticalSwipesAllowed(page)).toBe(true);
+    expect(await verticalSwipesAllowed(page)).toBe(false);
     expect(pathname(page)).toBe("/trainer");
   });
 
@@ -152,7 +170,7 @@ test.describe("Telegram's buttons", () => {
     await expect.poll(() => pathname(page)).toBe("/settings");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect.poll(() => backButtonVisible(page)).toBe(true);
-    await expect.poll(() => verticalSwipesAllowed(page)).toBe(true);
+    expect(await verticalSwipesAllowed(page)).toBe(false);
 
     await receive(page, "back_button_pressed");
     await expect.poll(() => pathname(page)).toBe("/trainer");

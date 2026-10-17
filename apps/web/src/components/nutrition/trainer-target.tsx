@@ -13,18 +13,21 @@ import { clearPairTarget, setPairTarget } from "@/lib/nutrition/actions";
 import {
   KCAL_MAX,
   KCAL_MIN,
+  STEPS_MAX,
+  WATER_ML_MAX,
   gramsOfPercent,
   kcalOfMacros,
   macrosDisagree,
   minKcal,
   percentOfGrams,
+  type ActivityGoals,
   type CalcSex,
   type Macro,
   type Macros,
 } from "@/lib/nutrition/target";
 import { formatValue } from "@/lib/progress/measurements";
 
-type Field = "kcal" | Macro;
+type Field = "kcal" | Macro | "water" | "steps";
 type Unit = "g" | "pct";
 const MACROS = ["protein", "fat", "carbs"] as const satisfies readonly Macro[];
 const GRAMS_MAX: Record<Macro, number> = { protein: 1000, fat: 1000, carbs: 2000 };
@@ -33,7 +36,7 @@ const gramsOf = (macros: Macros | null, macro: Macro) => macros?.[`${macro}G`] ?
 const whole = (text: string, max: number): number | null | "invalid" => {
   const trimmed = text.trim();
   if (!trimmed) return null;
-  if (!/^\d{1,5}$/.test(trimmed)) return "invalid";
+  if (!/^\d{1,6}$/.test(trimmed)) return "invalid";
   const value = Number(trimmed);
   return value <= max ? value : "invalid";
 };
@@ -41,9 +44,20 @@ const whole = (text: string, max: number): number | null | "invalid" => {
 /**
  * "Задать норму" / "Изменить норму" on the client's "Питание" tab (wave-2 §2.11–2.12): kcal, optional macros in
  * grams or in % of the kcal with a note when they disagree with the kcal by more than 5%, and a confirmation under
- * 1200/1500 kcal. Shares are saved as the grams they give.
+ * 1200/1500 kcal. Shares are saved as the grams they give. Water and steps goals a day are optional too (§4 rules 5
+ * and 7): empty keeps 30 ml per kg of weight and 8000 steps.
  */
-export function TrainerTargetForm({ coachingId, current, sex }: { coachingId: string; current: Macros | null; sex: CalcSex | null }) {
+export function TrainerTargetForm({
+  coachingId,
+  current,
+  goals,
+  sex,
+}: {
+  coachingId: string;
+  current: Macros | null;
+  goals: ActivityGoals | null;
+  sex: CalcSex | null;
+}) {
   const { t, locale } = useI18n();
   const copy = t.nutrition.trainer;
   const [open, setOpen] = useState(false);
@@ -89,14 +103,18 @@ export function TrainerTargetForm({ coachingId, current, sex }: { coachingId: st
   function read(formData: FormData) {
     const kcal = whole(String(formData.get("kcal") ?? ""), KCAL_MAX);
     const { typed, ...macros } = gramsFrom(formData, typeof kcal === "number" ? kcal : null, unit);
+    const waterMl = whole(String(formData.get("water") ?? ""), WATER_ML_MAX);
+    const steps = whole(String(formData.get("steps") ?? ""), STEPS_MAX);
     const next: Partial<Record<Field, string>> = {};
     if (typeof kcal !== "number" || kcal < KCAL_MIN) next.kcal = copy.errors.kcal;
     for (const macro of MACROS) if (typed[macro] === "invalid") next[macro] = unit === "pct" ? copy.errors.percent : copy.errors.grams;
     const shares = MACROS.reduce((sum, macro) => sum + (typeof typed[macro] === "number" ? typed[macro] : 0), 0);
     if (unit === "pct" && !next.protein && !next.fat && !next.carbs && shares > 100) next.carbs = copy.errors.percentSum;
+    if (waterMl === "invalid") next.water = copy.activity.errors.water;
+    if (steps === "invalid") next.steps = copy.activity.errors.steps;
     setErrors(next);
-    if (Object.keys(next).length || typeof kcal !== "number") return null;
-    return { kcal, ...macros };
+    if (Object.keys(next).length || typeof kcal !== "number" || waterMl === "invalid" || steps === "invalid") return null;
+    return { kcal, ...macros, waterMl, steps };
   }
 
   /** Switches the macro fields between grams and %, carrying the typed numbers over at the current kcal. */
@@ -117,7 +135,7 @@ export function TrainerTargetForm({ coachingId, current, sex }: { coachingId: st
         ) as Record<Macro, number | null>,
       );
     }
-    setErrors((errors) => ({ kcal: errors.kcal }));
+    setErrors((errors) => ({ kcal: errors.kcal, water: errors.water, steps: errors.steps }));
     setUnit(next);
   }
 
@@ -135,7 +153,7 @@ export function TrainerTargetForm({ coachingId, current, sex }: { coachingId: st
   const mismatch = draft && macrosDisagree(draft) ? kcalOfMacros(draft.proteinG, draft.fatG, draft.carbsG) : null;
   const field = (name: Field, label: string, suffix: string, value: number | null | undefined, hint?: string) => (
     <TextField
-      key={`${name}-${name === "kcal" ? "" : unit}`}
+      key={`${name}-${name === "kcal" || name === "water" || name === "steps" ? "" : unit}`}
       name={name}
       label={label}
       suffix={suffix}
@@ -205,6 +223,10 @@ export function TrainerTargetForm({ coachingId, current, sex }: { coachingId: st
               {interpolate(copy.mismatch, { kcal: formatValue(locale, mismatch) })}
             </p>
           ) : null}
+          <div className="grid grid-cols-2 gap-3">
+            {field("water", copy.activity.water, copy.activity.ml, goals?.waterMl, copy.activity.waterHint)}
+            {field("steps", copy.activity.steps, copy.activity.stepsUnit, goals?.steps, copy.activity.stepsHint)}
+          </div>
           <Button type="submit" size="lg" block loading={pending && !low}>
             {copy.save}
           </Button>

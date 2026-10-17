@@ -10,7 +10,7 @@ describe("story card text", () => {
 
   it("prints the weight change with a minus sign in the reader's unit", () => {
     expect(cardText(dictionaries.ru, "ru", { kind: "weight", month: "2026-09-01", data: { change: -1.5 } }).figure).toBe("−1,5 кг");
-    expect(cardText(dictionaries.en, "en", { kind: "weight", month: "2026-09-01", data: { change: 1.5 } }).figure).toBe("+3.3 lb");
+    expect(cardText(dictionaries.en, "en", { kind: "weight", month: "2026-09-01", data: { change: 1.5 } }).figure).toBe("+1.5 kg");
   });
 
   it("prints the new records with the latest one", () => {
