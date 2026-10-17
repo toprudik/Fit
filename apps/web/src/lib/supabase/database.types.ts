@@ -3698,6 +3698,11 @@ isOneToOne: false
               "action": string,"at": string,"booking_id": string,"delegate_name": string,"owner_name": string,"workout_log_id": string
             }[]
                            },
+"delegated_session":
+{ Args: { "p_session_id": string }; Returns: {
+              "ends_at": string,"id": string,"kind": Database["public"]['Enums']["session_kind"],"location": string,"mode": Database["public"]['Enums']["session_mode"],"owner_name": string,"participants": Json,"starts_at": string,"title": string
+            }[]
+                           },
 "delegation_invite":
 { Args: { "p_token": string }; Returns: {
               "all_clients": boolean,"clients": number,"ends_at": string,"kind": Database["public"]['Enums']["delegation_kind"],"owner_name": string,"scopes": (Database["public"]['Enums']["delegation_scope"])[],"session_starts_at": string
