@@ -755,6 +755,9 @@ create index on public.slots (starts_at) where status = 'open';
 --   каждое переезжает на новое время в свой день, повтор тоже; клиенту одно К6 «было → стало».
 -- cancel_session(id, reason, following) отменяет занятия и записи тренером без списаний, освобождает слоты,
 --   при following останавливает повтор (ended_at); клиенту одно К5 со списком дат.
+-- cancel_participant(booking, reason) (миграция 20261018012317_cancel_participant, PRD 2.6.3-4) снимает одного
+--   участника будущего группового занятия: запись cancelled тренером без списания, клиенту К5 с booking_only,
+--   освободившееся место уходит очереди; помощник со scope schedule тоже может.
 --
 -- Запись клиента и запросы (миграция 20261016221900_client_bookings, PRD 2.6.4, 2.6.5-6):
 -- private.booking_auto_confirm(coaching, kind, starts_at) решает по §3.5: (true, pass_id) по абонементу,

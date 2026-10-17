@@ -466,6 +466,17 @@ describe("plan messages", () => {
       expect(odd?.buttons.map((button) => button.text)).toEqual(["Выбрать другое время"]);
     });
 
+    it("speaks of the client's booking when the trainer takes them off a group that goes on", () => {
+      const dates = ["2026-10-26T15:00:00Z"];
+      const message = renderMessage(
+        { ...row, kind: "booking_cancelled_by_trainer", payload: { ...trainer, dates, reason: "Травма", booking_only: true } },
+        options,
+      );
+      expect(message?.text).toContain("отменил твою запись на занятие");
+      expect(message?.text).toContain("«Травма»");
+      expect(message?.text).not.toContain("отменено");
+    });
+
     it("sends one message for a whole repeat", () => {
       const counted = renderMessage(
         {
