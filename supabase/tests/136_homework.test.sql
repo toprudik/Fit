@@ -1,9 +1,9 @@
--- Homework (migration 20261017035100_homework.sql, PRD wave-2 §10): save_homework lays out occurrences,
+-- Homework (migrations 20261017035100_homework.sql and 20261017035700_homework_exercises.sql, PRD wave-2 §10): save_homework lays out occurrences,
 -- the client marks and unmarks them, reminders at 10:00 in the client's time zone, the trainer's note when
 -- turned on, archiving on pair end, and the RLS of both tables (10.5).
 begin;
 \ir _helpers.psql
-select plan(39);
+select plan(50);
 
 select tests.create_trainer('trainer_a');
 select tests.create_trainer('trainer_b');
@@ -216,6 +216,87 @@ select results_eq(
      where type = 'homework_reminder' $$,
   $$ values (tests.user_id('client_c'), 'Планка', 'trainer_a') $$,
   'reminder: to the client, with the title and the trainer''s name'
+);
+
+-- =========================================================================================================
+-- Exercises and the log of sets (10.2)
+
+select tests.clear_authentication();
+insert into public.exercises (id, source, wger_id, name, license)
+values ('00000000-0000-4000-8000-000000000136', 'wger', 136, 'Plank', 'CC-BY-SA-4.0');
+insert into public.exercises (id, source, owner_id, name)
+values ('00000000-0000-4000-8000-000000001360', 'custom', tests.user_id('trainer_a'), 'Bird dog'),
+       ('00000000-0000-4000-8000-000000001361', 'custom', tests.user_id('trainer_b'), 'Move of B');
+
+select tests.authenticate_as('trainer_a');
+select throws_ok(
+  format('select public.save_homework(%L)', jsonb_build_object(
+    'coaching_id', :'pair_a', 'title', 'x', 'due_date', :'today',
+    'exercises', '[{"exercise_id": "00000000-0000-4000-8000-000000001361"}]'::jsonb)),
+  'P0001', 'bad_exercise', 'exercises: not another trainer''s own exercise'
+);
+select public.save_homework(jsonb_build_object(
+  'coaching_id', :'pair_a', 'title', 'Кор', 'due_date', :'today',
+  'exercises', '[{"exercise_id": "00000000-0000-4000-8000-000000001360", "prescription": " 3 × 10 "},
+                 {"exercise_id": "00000000-0000-4000-8000-000000000136"}]'::jsonb)) as hw_ex \gset
+select results_eq(
+  format('select position::int, exercise_id::text, prescription from public.homework_exercises
+          where homework_id = %L order by position', :'hw_ex'),
+  $$ values (1, '00000000-0000-4000-8000-000000001360', '3 × 10'),
+            (2, '00000000-0000-4000-8000-000000000136', null) $$,
+  'exercises: kept in order with the prescription'
+);
+select lives_ok(
+  format('select public.save_homework(%L)', jsonb_build_object('id', :'hw_ex', 'title', 'Кор', 'due_date', :'today')),
+  'exercises: an edit without the list'
+);
+select is(
+  (select count(*)::int from public.homework_exercises where homework_id = :'hw_ex'), 2,
+  'exercises: an edit without the list keeps it'
+);
+
+select tests.authenticate_as('client_c');
+select is(
+  (select count(*)::int from public.homework_exercises where homework_id = :'hw_ex'), 2,
+  'exercises: the client reads them'
+);
+select tests.authenticate_as('trainer_b');
+select is((select count(*)::int from public.homework_exercises), 0, 'exercises: trainer B reads none');
+
+select tests.clear_authentication();
+select id as occ_ex from public.homework_occurrences where homework_id = :'hw_ex' \gset
+insert into public.workout_logs (client_id, performed_at, local_date, created_by)
+values (tests.user_id('client_c'), now(), :'today', tests.user_id('client_c')) returning id as log_self \gset
+insert into public.workout_logs (client_id, coaching_id, performed_at, local_date, created_by)
+values (tests.user_id('client_c'), :'pair_a', now(), :'today', tests.user_id('trainer_a')) returning id as log_pair \gset
+insert into public.workout_logs (client_id, performed_at, local_date, created_by)
+values (tests.user_id('stranger_s'), now(), :'today', tests.user_id('stranger_s')) returning id as log_other \gset
+
+select tests.authenticate_as('client_c');
+select throws_ok(
+  format('select public.mark_homework_done(%L, null, %L)', :'occ_ex', :'log_pair'),
+  'P0001', 'bad_log', 'log: not a pair log'
+);
+select throws_ok(
+  format('select public.mark_homework_done(%L, null, %L)', :'occ_ex', :'log_other'),
+  'P0001', 'bad_log', 'log: not someone else''s log'
+);
+select public.mark_homework_done(:'occ_ex', null, :'log_self');
+select is(
+  (select workout_log_id from public.homework_occurrences where id = :'occ_ex'), :'log_self'::uuid,
+  'log: the mark keeps the client''s own log of sets'
+);
+select public.mark_homework_done(:'occ_ex', 'Тяжело');
+select is(
+  (select workout_log_id from public.homework_occurrences where id = :'occ_ex'), :'log_self'::uuid,
+  'log: changing the comment keeps the log'
+);
+select public.unmark_homework_done(:'occ_ex');
+select results_eq(
+  format($$ select o.workout_log_id is null, exists (select 1 from public.workout_logs l where l.id = %L)
+            from public.homework_occurrences o where o.id = %L $$, :'log_self', :'occ_ex'),
+  $$ values (true, true) $$,
+  'log: taking the mark back unlinks the log and keeps it'
 );
 
 -- =========================================================================================================
