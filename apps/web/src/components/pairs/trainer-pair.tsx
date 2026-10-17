@@ -20,6 +20,7 @@ import { loadPairMoney } from "@/lib/passes/load";
 import { formatLocalDay, lastValidDay } from "@/lib/passes/present";
 import { TrainerProgress } from "@/components/progress/sections";
 import { LogListSection } from "@/components/workouts/log-screens";
+import { AskContactButton } from "./ask-contact";
 import { PairMilestones } from "./milestones";
 import { NoteComposer, NoteItem, NoteVisibility } from "./notes";
 import { PairTabs } from "./pair-tabs";
@@ -38,9 +39,16 @@ export function PairNotice({ children }: { children: React.ReactNode }) {
   return <p className="rounded-lg bg-surface-1 px-4 py-3 text-subhead text-ink-2">{children}</p>;
 }
 
-/** "Написать": Telegram chat with the person (PRIV-1); without a username the contact request comes later. */
-export function WriteButton({ t, username }: { t: Dictionary; username: string | null }) {
-  if (!username) return null;
+/**
+ * "Написать": Telegram chat with the person (PRIV-1). Without a username, "Попросить связаться" (PRIV-2), while
+ * the pair is live and the person has an account.
+ */
+export function WriteButton({ t, pair }: { t: Dictionary; pair: PairDetail }) {
+  const { username } = pair.partner;
+  if (!username) {
+    if (pair.partner.isCard || pair.status === "ended") return null;
+    return <AskContactButton coachingId={pair.coachingId} requestedAt={pair.contactRequestedAt} timeZone={pair.timeZone} />;
+  }
   return (
     <IconButton asChild icon={MessageCircle} label={t.pairs.write}>
       <a href={`https://t.me/${encodeURIComponent(username)}`} target="_blank" rel="noopener noreferrer" />
@@ -188,7 +196,7 @@ export async function TrainerPair({ coachingId, tab, action }: { coachingId: str
           title={name}
           subtitle={pairSubtitle(t, locale, pair)}
           back={{ fallbackHref: "/trainer/clients" }}
-          actions={<WriteButton t={t} username={pair.partner.username} />}
+          actions={<WriteButton t={t} pair={pair} />}
         />
       }
     >

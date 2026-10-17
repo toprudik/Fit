@@ -31,7 +31,7 @@ export async function ClientPair({ coachingId }: { coachingId: string }) {
           title={name}
           subtitle={pairSubtitle(t, locale, pair)}
           back={{ fallbackHref: "/client/trainers" }}
-          actions={<WriteButton t={t} username={pair.partner.username} />}
+          actions={<WriteButton t={t} pair={pair} />}
         />
       }
     >
