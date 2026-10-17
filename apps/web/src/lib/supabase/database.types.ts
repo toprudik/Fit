@@ -2361,7 +2361,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "accept_waitlist_offer":
+            "accept_contact_request":
+{ Args: { "p_phone": string,"p_request_id": string,"p_user": string }; Returns: Database["public"]['Enums']["contact_request_status"]
+                           },
+"accept_waitlist_offer":
 { Args: { "p_entry_id": string }; Returns: {
               "booking_id": string,"status": Database["public"]['Enums']["booking_status"]
             }[]
@@ -2501,6 +2504,9 @@ isOneToOne: false
 "decide_booking":
 { Args: { "p_accept": boolean,"p_booking_id": string,"p_reason"?: string }; Returns: Database["public"]['Enums']["booking_status"]
                            },
+"decline_contact_request":
+{ Args: { "p_request_id": string }; Returns: Database["public"]['Enums']["contact_request_status"]
+                           },
 "effective_plan":
 { Args: { "p_side": Database["public"]['Enums']["plan_side"],"p_user": string }; Returns: string
                            },
@@ -2620,6 +2626,9 @@ isOneToOne: false
                            },
 "request_account_deletion":
 { Args: Record<PropertyKey, never>; Returns: string
+                           },
+"request_contact":
+{ Args: { "p_coaching_id": string }; Returns: string
                            },
 "request_data_export":
 { Args: Record<PropertyKey, never>; Returns: string

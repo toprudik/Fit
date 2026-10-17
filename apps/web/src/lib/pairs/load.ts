@@ -128,6 +128,8 @@ export type PairDetail = {
   endedForLimit: boolean;
   timeZone: string;
   partner: { name: string; photoUrl: string | null; username: string | null; isCard: boolean };
+  /** When the viewer last asked the partner to get in touch ("Попросить связаться"), or null. */
+  contactRequestedAt: string | null;
   attended: number;
   milestones: Milestone[];
   nextSessionAt: string | null;
@@ -161,7 +163,7 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
   if (!pair) return null;
 
   const partnerId = side === "trainer" ? pair.client_id : pair.trainer_id;
-  const [person, meta, balance, stats, passes, notes, milestones] = await Promise.all([
+  const [person, meta, balance, stats, passes, notes, milestones, contact] = await Promise.all([
     supabase.from("profiles").select(PERSON_COLUMNS).eq("id", partnerId).maybeSingle(),
     side === "trainer"
       ? supabase.from("coaching_trainer_meta").select("client_alias, archived_at").eq("coaching_id", pair.id).maybeSingle()
@@ -179,8 +181,16 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
       .eq("coaching_id", pair.id)
       .order("created_at", { ascending: false }),
     supabase.from("milestones").select("id, kind, achieved_at").eq("coaching_id", pair.id).order("achieved_at"),
+    supabase
+      .from("contact_requests")
+      .select("created_at")
+      .eq("requester_id", userId)
+      .eq("recipient_id", partnerId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
-  for (const [what, result] of Object.entries({ person, meta, balance, stats, passes, notes, milestones })) {
+  for (const [what, result] of Object.entries({ person, meta, balance, stats, passes, notes, milestones, contact })) {
     if (result.error) fail(what, result.error);
   }
 
@@ -199,6 +209,7 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
       username: person.data?.username ?? null,
       isCard: Boolean(person.data?.managed_by_trainer_id),
     },
+    contactRequestedAt: contact.data?.created_at ?? null,
     attended: stats.data?.attended_count ?? 0,
     milestones: (milestones.data ?? []).map((row) => ({ id: row.id, kind: row.kind, achievedAt: row.achieved_at })),
     nextSessionAt: stats.data?.next_session_at ?? null,

@@ -398,6 +398,18 @@ export const ru = {
       rejectedText: "Этот человек уже отмечен как новый клиент.",
       openClient: "Открыть клиента",
     },
+    /** "Попросить связаться" in the pair header when the other side has no Telegram username (PRIV-2). */
+    contact: {
+      action: "Попросить связаться",
+      title: "Попросить связаться",
+      text: "Написать напрямую не получится: у этого человека нет юзернейма в Telegram. Бот передаст просьбу, и если на неё согласятся, контакт придёт тебе в боте.",
+      confirm: "Попросить",
+      cancel: "Не сейчас",
+      close: "Понятно",
+      sent: "Просьба отправлена",
+      waiting: "Просьба уже отправлена. Следующую можно отправить после {time}.",
+      unavailable: "Сейчас попросить связаться нельзя.",
+    },
     end: {
       trainerAction: "Завершить работу с клиентом",
       trainerTitle: "Завершить работу с клиентом?",
@@ -1227,6 +1239,26 @@ export const ru = {
       notSet: "Не указано",
       noAnswer: "Нет ответа",
     },
+  },
+  /** The asked side of "Попросить связаться", /contact/<id> (PRIV-2). */
+  contactRequest: {
+    title: "Просьба связаться",
+    askedByTrainer: "Тренер {name} просит связаться",
+    askedByClient: "Клиент {name} просит связаться",
+    text: "Если поделишься контактом, бот перешлёт твой номер телефона и ссылку на тебя в Telegram. Без твоего согласия ничего не уйдёт.",
+    telegramOnly: "Поделиться контактом можно только в Telegram: номер передаёт сам Telegram.",
+    openTelegram: "Открыть в Telegram",
+    share: "Поделиться контактом",
+    decline: "Отказаться",
+    notShared: "Telegram не передал контакт. Попробуй ещё раз.",
+    failed: "Не получилось, попробуй ещё раз.",
+    done: {
+      accepted: "Контакт отправлен. {name} сможет написать тебе в Telegram.",
+      declined: "Просьба отклонена. {name} получит об этом сообщение в боте.",
+      expired: "Эта просьба устарела: прошло больше 7 дней.",
+    },
+    signedOut: "Войди, чтобы ответить",
+    signedOutText: "Просьбу связаться видит только тот, кого просят. Войди через Telegram.",
   },
   sharing: {
     title: "Что видит тренер",
@@ -2768,6 +2800,14 @@ export const ru = {
     unnamedClient: "клиент без имени",
     openClients: "Открыть клиентов",
     openClient: "Открыть клиента",
+    /** С1: one side of a pair asks the other, who has no username, to share the contact (PRIV-2). */
+    contactRequestTrainer: "Тренер {name} просит связаться с тобой. У тебя нет юзернейма в Telegram, поэтому написать напрямую не получается. Делиться контактом или нет, решаешь ты.",
+    contactRequestClient: "Клиент {name} просит связаться с тобой. У тебя нет юзернейма в Telegram, поэтому написать напрямую не получается. Делиться контактом или нет, решаешь ты.",
+    shareContact: "Поделиться контактом",
+    declineContact: "Отказаться",
+    /** С2: the answer. {name} is a link that opens the chat. */
+    contactShared: "На просьбу связаться ответили. {name}: {phone}. Нажми на имя, чтобы открыть чат в Telegram.",
+    contactDeclined: "{name}: просьба связаться отклонена.",
     /** Т9 and its mirror: one side of a pair ended it. */
     coachingEndedByClient: "{name} больше не занимается у тебя.",
     coachingEndedByClientCancelled: "{name} больше не занимается у тебя. Будущих занятий отменено: {count}.",

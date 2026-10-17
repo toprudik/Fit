@@ -31,6 +31,12 @@ describe("startParamPath", () => {
     expect(startParamPath("c_pass_42")).toBeNull();
   });
 
+  it("opens the answer to a contact request for cr_<request id>", () => {
+    const id = "0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f";
+    expect(startParamPath(`cr_${id}`)).toBe(`/contact/${id}`);
+    expect(startParamPath("cr_42")).toBeNull();
+  });
+
   it("opens the trainer showcase for tp_<slug>", () => {
     expect(startParamPath("tp_anna-fit")).toBe("/trainers/anna-fit");
   });

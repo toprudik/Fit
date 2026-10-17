@@ -394,6 +394,18 @@ export const en: Dictionary = {
       rejectedText: "This person is already marked as a new client.",
       openClient: "Open client",
     },
+    /** "Попросить связаться" in the pair header when the other side has no Telegram username (PRIV-2). */
+    contact: {
+      action: "Ask to get in touch",
+      title: "Ask to get in touch",
+      text: "You can't message them directly: they have no Telegram username. The bot will pass on your request, and if they agree, their contact will come to you in the bot.",
+      confirm: "Ask",
+      cancel: "Not now",
+      close: "Got it",
+      sent: "Request sent",
+      waiting: "You've already asked. You can ask again after {time}.",
+      unavailable: "You can't ask to get in touch right now.",
+    },
     end: {
       trainerAction: "Stop working with this client",
       trainerTitle: "Stop working with this client?",
@@ -1220,6 +1232,26 @@ export const en: Dictionary = {
       notSet: "Not given",
       noAnswer: "No answer",
     },
+  },
+  /** The asked side of "Попросить связаться", /contact/<id> (PRIV-2). */
+  contactRequest: {
+    title: "Request to get in touch",
+    askedByTrainer: "Trainer {name} asks to get in touch",
+    askedByClient: "Client {name} asks to get in touch",
+    text: "If you share your contact, the bot will pass on your phone number and a link to your Telegram. Nothing goes out without your consent.",
+    telegramOnly: "You can share your contact only in Telegram: Telegram itself passes the number on.",
+    openTelegram: "Open in Telegram",
+    share: "Share contact",
+    decline: "Decline",
+    notShared: "Telegram didn't share the contact. Try again.",
+    failed: "Something went wrong, try again.",
+    done: {
+      accepted: "Contact sent. {name} can now message you in Telegram.",
+      declined: "Request declined. {name} will hear about it from the bot.",
+      expired: "This request is out of date: it's more than 7 days old.",
+    },
+    signedOut: "Sign in to answer",
+    signedOutText: "Only the person asked can see this request. Sign in with Telegram.",
   },
   sharing: {
     title: "What your trainer sees",
@@ -2735,6 +2767,14 @@ export const en: Dictionary = {
     unnamedClient: "a client with no name",
     openClients: "Open clients",
     openClient: "Open client",
+    /** С1: one side of a pair asks the other, who has no username, to share the contact (PRIV-2). */
+    contactRequestTrainer: "Trainer {name} asks to get in touch. You have no Telegram username, so they can't message you directly. It's up to you whether to share your contact.",
+    contactRequestClient: "Client {name} asks to get in touch. You have no Telegram username, so they can't message you directly. It's up to you whether to share your contact.",
+    shareContact: "Share contact",
+    declineContact: "Decline",
+    /** С2: the answer. {name} is a link that opens the chat. */
+    contactShared: "Your request to get in touch was answered. {name}: {phone}. Tap the name to open a chat in Telegram.",
+    contactDeclined: "{name} declined your request to get in touch.",
     /** Т9 and its mirror: one side of a pair ended it. */
     coachingEndedByClient: "{name} no longer trains with you.",
     coachingEndedByClientCancelled: "{name} no longer trains with you. Future sessions cancelled: {count}.",
