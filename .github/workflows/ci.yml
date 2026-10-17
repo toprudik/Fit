@@ -52,6 +52,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: First-load JS budget (docs/prd/quality.md)
+        run: node scripts/perf-budget.mjs
 
   web-e2e:
     runs-on: ubuntu-latest

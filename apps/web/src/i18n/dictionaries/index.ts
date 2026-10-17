@@ -4,5 +4,8 @@ import { ru, type Dictionary } from "./ru";
 
 export type { Dictionary };
 
-/** Both catalogs are small, so they ship statically; adding a language is a catalog plus a line here. */
+/**
+ * Both catalogs, for server code. The browser gets only the active one, through I18nProvider.
+ * Adding a language is a catalog plus a line here.
+ */
 export const dictionaries: Record<Locale, Dictionary> = { ru, en };

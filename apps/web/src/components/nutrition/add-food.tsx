@@ -14,26 +14,17 @@ import { Spinner } from "@/components/ui/spinner";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
-import type { Dictionary } from "@/i18n/dictionaries";
-import type { Locale } from "@/i18n/config";
 import { ENTRY_GRAMS_MAX, ENTRY_KCAL_MAX, MEALS, SERVINGS_MAX, amountOf, parseAmount, type Meal } from "@/lib/nutrition/diary";
 import { addEntry, findBarcode, findFoods, setFavorite } from "@/lib/nutrition/diary-actions";
 import type { Food } from "@/lib/nutrition/foods";
 import type { FoodShelf } from "@/lib/nutrition/diary-load";
 import { formatValue } from "@/lib/progress/measurements";
 import { BarcodeScanner } from "./barcode-scanner";
+import { foodSubtitle } from "./food-subtitle";
 import { FOOD_PATH, OWN_FOODS_PATH } from "./paths";
 
 type Tab = "search" | "barcode" | "quick" | "mine";
 const SEARCH_DELAY_MS = 400;
-
-/** "250 ккал на 100 г" with the brand when there is one. */
-export function foodSubtitle(t: Dictionary, locale: Locale, food: Food): string {
-  const copy = t.foodDiary.addScreen;
-  const kcal = formatValue(locale, food.kcal100);
-  if (food.kind === "dish") return `${copy.dish}, ${interpolate(copy.per100, { kcal })}`;
-  return food.brand ? interpolate(copy.brandPer100, { brand: food.brand, kcal }) : interpolate(copy.per100, { kcal });
-}
 
 function FoodRows({ foods, onPick }: { foods: Food[]; onPick: (food: Food) => void }) {
   const { t, locale } = useI18n();

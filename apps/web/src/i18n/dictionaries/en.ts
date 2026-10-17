@@ -109,7 +109,7 @@ export const en: Dictionary = {
   },
   profile: {
     title: "Profile",
-    signedOutText: "Log in with Telegram to see your name and photo here.",
+    signedOutText: "Sign in with Telegram to see your name and photo here.",
     signIn: "Log in with Telegram",
     feedback: "Feedback",
     settings: "Settings",
@@ -614,7 +614,7 @@ export const en: Dictionary = {
     },
     done: {
       title: "Your profile is ready",
-      text: "Show a client the QR code or send them the link. Once they open it, they show up in your clients.",
+      text: "Show a client the QR code or send them the link. Once they open it, they appear in your client list.",
       preview: "How clients see you",
       formats: {
         offline: "In person",
@@ -1543,7 +1543,7 @@ export const en: Dictionary = {
       clear: "Remove target",
       cleared: "Target removed",
       formTitle: "Client's target",
-      formText: "Calories are required, macros can stay empty. The new target applies from the client's today.",
+      formText: "Calories are required, macros can stay empty. The new target applies from today in the client's time zone.",
       kcal: "Calories",
       protein: "Protein",
       fat: "Fat",

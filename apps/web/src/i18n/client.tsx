@@ -2,15 +2,16 @@
 
 import { createContext, use, useMemo } from "react";
 import { LOCALE_COOKIE, type Locale } from "./config";
-import { dictionaries, type Dictionary } from "./dictionaries";
+import type { Dictionary } from "./dictionaries";
 import { preferenceCookie, saveAccountPreferences } from "@/lib/preferences";
 
 type I18nValue = { locale: Locale; t: Dictionary };
 
 const I18nContext = createContext<I18nValue | null>(null);
 
-export function I18nProvider({ locale, children }: { locale: Locale; children: React.ReactNode }) {
-  const value = useMemo(() => ({ locale, t: dictionaries[locale] }), [locale]);
+/** Provides the catalog it is given; the app wraps it per language in i18n/providers, tests use it directly. */
+export function I18nProvider({ locale, t, children }: { locale: Locale; t: Dictionary; children: React.ReactNode }) {
+  const value = useMemo(() => ({ locale, t }), [locale, t]);
   return <I18nContext value={value}>{children}</I18nContext>;
 }
 
