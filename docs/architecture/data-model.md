@@ -1832,6 +1832,7 @@ create table public.ingest_tokens (              -- личный токен iOS 
   window_count  smallint not null default 0
 );
 create unique index on public.ingest_tokens (user_id) where revoked_at is null;
+-- Выдача и отзыв: S-RPC issue_ingest_token (старый отзывается сразу, токен возвращается один раз), revoke_ingest_token.
 ```
 
 Группы, рассылки:
@@ -2509,7 +2510,7 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `food_diary_entries` | share:nutrition; BG | **только C** | C | C |
 | `food_day_comments` | C (без `hidden_by_client_at`-скрытых в UI); автор; T/D[nutrition] share:nutrition | T/D[nutrition] share:nutrition | автор: `body`; C: `hidden_by_client_at` | автор |
 | `nutrition_daily_summaries` | share:nutrition | S (cron) | S | S |
-| `activity_entries` | `metric = 'water'` → share:nutrition; `steps`/`sleep` → share:steps; BG | C (manual); S (ios_shortcut через ingest) | C | C |
+| `activity_entries` | `metric = 'water'` → share:nutrition; `steps`/`sleep` → share:steps; BG | C через S-RPC `set_activity` (шаги, сон), `add_water`; S `ingest_steps` (ios_shortcut, только service_role по токену) | C: `set_activity` (ручное значение дня) | C: `set_activity(null)`, `undo_water` |
 | `ingest_tokens` | сам (без `token_hash`) | S-RPC `create_ingest_token` | S-RPC (отзыв), S (счётчики) | никто |
 | `groups` | T; D[schedule]; C: свои группы (только `name`, `goal` через вью `my_groups`) | T | T | никто (архив) |
 | `group_members` | T; C: свои строки | T (пара своя, `with check`) | никто | T |
