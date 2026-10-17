@@ -1,4 +1,4 @@
--- my_nutrition_target of migration 20261017183117_group_target_name.sql (PRD wave-2 §2 rule 15): a group template
+-- my_nutrition_target of migration 20261017211853_group_target_name.sql (PRD wave-2 §2 rule 15): a group template
 -- names its group, a trainer's or the calculator's target does not.
 begin;
 \ir _helpers.psql
