@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CalendarClock, CalendarX, Clock, Link2, MapPin, MessageCircle, UserRound } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { BookingHistory } from "@/components/bookings/booking-history";
 import { CancelBooking } from "@/components/bookings/cancel-booking";
 import { ScanCheckIn } from "@/components/check-in/scan-check-in";
 import { WithdrawRequest } from "@/components/bookings/withdraw-request";
@@ -17,6 +18,7 @@ import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { bookingTone } from "@/lib/bookings/book";
+import { loadBookingHistory } from "@/lib/bookings/history";
 import { loadClientBooking } from "@/lib/bookings/load";
 import { isPairId } from "@/lib/pairs/clients";
 import { loadScheduleOwner } from "@/lib/schedule/load";
@@ -133,6 +135,8 @@ async function BookingDetails({
           <ListRow title={booking.cancelReason} />
         </ListGroup>
       ) : null}
+
+      <BookingHistory items={await loadBookingHistory(owner, [booking.id])} timeZone={owner.timeZone} />
 
       {live && deadlineText ? (
         <p className="px-1 text-subhead text-ink-2">{free ? interpolate(copy.deadline, { date: deadlineText }) : copy.lateText}</p>
