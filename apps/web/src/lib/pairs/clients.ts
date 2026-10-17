@@ -1,6 +1,7 @@
 import type { Database } from "@/lib/supabase/database.types";
 
 export type CoachingStatus = Database["public"]["Enums"]["coaching_status"];
+export type ClientGoal = Database["public"]["Enums"]["goal_type"];
 
 /** The trainer's client list filters (PRD wave-1 §2.5-2). "all" is every live client not in the archive. */
 export const CLIENT_FILTERS = ["all", "debt", "ending", "noPass", "archive"] as const;
@@ -55,7 +56,8 @@ export type ClientItem = {
   /** The client asked to delete their account and can still cancel (R10). */
   deleting: boolean;
   /** The client's account is gone and the pair points to the «Удалённый клиент» stub. */
-  deleted: boolean;
+  deleted: boolean;  /** The client's goal; null when not chosen or not shared with this trainer (wave-2 §1.2). */
+  goal: ClientGoal | null;
 };
 
 /** A live pair: trial or active. An ended one keeps its history and sits in the archive filter. */

@@ -113,12 +113,14 @@ describe("renderMessage", () => {
     expect(message?.buttons).toEqual([{ text: "Открыть клиентов", web_app: { url: "https://fit.example/trainer/clients?source=managed_client_claim" } }]);
   });
 
-  it("opens the claim itself when the payload names it (Т7a)", () => {
+  it("answers the claim in the bot or opens it when the payload names it (Т7a)", () => {
     const message = renderMessage(
       { ...row, kind: "managed_client_claim", payload: { claim_id: PAIR, first_name: "Иван" } },
       { appUrl: "https://fit.example", group: false },
     );
     expect(message?.buttons).toEqual([
+      { text: "Это он(а)", callback_data: `mcy:${PAIR}` },
+      { text: "Новый клиент", callback_data: `mcn:${PAIR}` },
       { text: "Ответить", web_app: { url: `https://fit.example/trainer/clients/claims/${PAIR}?source=managed_client_claim` } },
     ]);
   });
@@ -833,6 +835,19 @@ describe("waitlist messages", () => {
     );
     expect(renderMessage({ ...row, kind: "waitlist_closed", payload: { ...payload, reason: "cancelled" } }, options)?.text).toMatch(
       /отменено/,
+    );
+  });
+
+  it("speaks of the trainer's time for a booked personal slot", () => {
+    const slot = { ...payload, title: null, slot_id: PAIR };
+    expect(renderMessage({ ...row, kind: "waitlist_offer", payload: slot }, options)?.text).toBe(
+      "Освободилось время у тренера Анна Смирнова: пн, 26 октября в 18:00, Студия. Оно ждёт тебя до 12:30.",
+    );
+    expect(renderMessage({ ...row, kind: "waitlist_closed", payload: { ...slot, reason: "started" } }, options)?.text).toBe(
+      "Время у тренера Анна Смирнова (пн, 26 октября в 18:00) так и не освободилось. Очередь закрыта.",
+    );
+    expect(renderMessage({ ...row, kind: "waitlist_closed", payload: { ...slot, reason: "cancelled" } }, options)?.text).toMatch(
+      /убрал время/,
     );
   });
 });
