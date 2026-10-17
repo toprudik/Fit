@@ -1,6 +1,7 @@
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { formatNumber, plural } from "@/i18n/format";
+import { isBadgeCode } from "@/lib/gamification/gamification";
 import { formatRecord } from "@/lib/workouts/present";
 import { fromKg, weightUnit } from "@/lib/workouts/units";
 import { formatMonth, type StoryCard } from "./report";
@@ -29,6 +30,17 @@ export function cardText(t: Dictionary, locale: Locale, card: StoryCard): CardTe
           ? `${card.data.name}: ${formatRecord(t, locale, { type: card.data.type, value: card.data.value }, unit)}`
           : null;
       return { month, figure: formatNumber(locale, count), label: label(copy.records), detail };
+    }
+    case "streak_workouts":
+      return { month, figure: formatNumber(locale, count), label: label(copy.streakWorkouts), detail: null };
+    case "streak_diary":
+      return { month, figure: formatNumber(locale, count), label: label(copy.streakDiary), detail: null };
+    case "streak_steps":
+      return { month, figure: formatNumber(locale, count), label: label(copy.streakSteps), detail: null };
+    case "badges": {
+      const code = card.data.code;
+      const detail = isBadgeCode(code) ? t.gamification.badges.items[code].title : null;
+      return { month, figure: formatNumber(locale, count), label: label(copy.badges), detail };
     }
     case "weight": {
       const unit = weightUnit(locale);

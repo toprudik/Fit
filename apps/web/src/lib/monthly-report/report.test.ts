@@ -55,6 +55,21 @@ describe("monthly report", () => {
     expect(storyOptions(still).map((option) => option.kind)).not.toContain("weight");
   });
 
+  it("offers a card per running streak and one for the new badges", () => {
+    const parsed = reportFrom({ ...report, streaks: { workouts: 2, steps: 5 }, badges: ["sessions_1"] })!;
+    expect(storyOptions(parsed).map((option) => option.kind)).toEqual([
+      "sessions",
+      "trainer",
+      "trainer",
+      "records",
+      "streak_workouts",
+      "streak_steps",
+      "badges",
+      "weight",
+    ]);
+    expect(storyCardFrom({ kind: "badges", month: "2026-09-01", data: { count: 2, code: "diary_7" } })?.data.code).toBe("diary_7");
+  });
+
   it("reads a story card", () => {
     expect(storyCardFrom({ kind: "sessions", month: "2026-09-01", data: { count: 2 } })?.data.count).toBe(2);
     expect(storyCardFrom({ kind: "photo", month: "2026-09-01", data: {} })).toBeNull();
