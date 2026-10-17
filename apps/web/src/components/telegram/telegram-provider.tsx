@@ -2,6 +2,7 @@
 
 import {
   backButton,
+  closingBehavior,
   init,
   isTMA,
   miniApp,
@@ -19,6 +20,7 @@ import { useI18n } from "@/i18n/client";
 import { isLocale, LOCALE_COOKIE, type Locale } from "@/i18n/config";
 import { reloadPage } from "@/lib/navigation/reload";
 import { readCookie } from "@/lib/preferences";
+import { displayModeFor } from "@/lib/telegram/display-mode";
 import { startParamPath } from "@/lib/telegram/start-param";
 import {
   markMiniAppReady,
@@ -27,6 +29,7 @@ import {
   safelyAsync,
   setMiniAppSignIn,
   signInToMiniApp,
+  useTelegramVerticalSwipeLock,
 } from "@/lib/telegram/mini-app";
 import { THEME_BG } from "@/lib/theme/colors";
 import { applyThemePreference, setTelegramScheme } from "@/lib/theme/store";
@@ -121,6 +124,21 @@ function followTelegramScheme() {
 }
 
 /**
+ * Takes the screen: fullscreen on a phone when the client supports it (Mini Apps 8.0+), otherwise
+ * the full height. Fullscreen does not wait for the viewport mount, which waits on Telegram's
+ * answers; a reload that finds the app in fullscreen already gets ALREADY_FULLSCREEN, which the SDK
+ * takes as success. Content keeps clear of Telegram's buttons through --safe-* in globals.css,
+ * which add the content safe area to the device's.
+ */
+function takeScreen() {
+  safely(() => viewport.expand());
+  const platform = safely(() => retrieveLaunchParams().tgWebAppPlatform);
+  if (displayModeFor(platform) === "fullscreen" && safely(() => viewport.requestFullscreen.isAvailable())) {
+    void safelyAsync(() => viewport.requestFullscreen());
+  }
+}
+
+/**
  * Initializes the SDK from the launch params and reads initData. Returns undefined when that fails
  * (launch params the SDK can't parse, no Telegram bridge): the app then stays the website.
  */
@@ -137,8 +155,9 @@ function launchMiniApp() {
 }
 
 /**
- * Inside Telegram: mounts the Mini App SDK, takes the light/dark scheme and safe areas from
- * Telegram (never its colors), keeps Telegram's chrome in DaFit's background color, routes the
+ * Inside Telegram: mounts the Mini App SDK, opens fullscreen on a phone and at full height on a
+ * computer, keeps vertical swipes off and asks before closing, takes the light/dark scheme and safe
+ * areas from Telegram (never its colors), keeps Telegram's chrome in DaFit's background color, routes the
  * Settings item of Telegram's menu to /settings and signs the user in from initData (verified on
  * the server) on every page load. A launch with `startapp` (t.me/<bot>?startapp=ti_…) opens the screen
  * it names, once per tab. After a full page load the URL has no launch hash; the SDK then
@@ -150,6 +169,8 @@ function launchMiniApp() {
 export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { locale, t } = useI18n();
+  // Telegram's swipe down would pull the whole app down or fold it while the page scrolls: the app stays put.
+  useTelegramVerticalSwipeLock(true);
 
   const openSettings = useEffectEvent(() => {
     if (window.location.pathname !== SETTINGS_HREF) router.push(SETTINGS_HREF);
@@ -215,6 +236,9 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     safely(() => backButton.mount());
     safely(() => settingsButton.mount());
     safely(() => swipeBehavior.mount());
+    safely(() => closingBehavior.mount());
+    // Closing the app (the cross, a swipe) first asks Telegram's own "close anyway?" question.
+    safely(() => closingBehavior.enableConfirmation());
 
     // The scheme first: it may change data-theme, and the chrome is painted from data-theme.
     keep(followTelegramScheme());
@@ -226,11 +250,11 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     safely(() => settingsButton.show());
     keep(safely(() => settingsButton.onClick(() => openSettings())));
 
-    safely(() => viewport.expand());
     // Safe-area insets become --tg-viewport-* variables, read by --safe-* in globals.css. They are
     // bound right away and fill in once the mount has asked Telegram for the insets.
     keep(safely(() => viewport.bindCssVars()));
     void safelyAsync(() => viewport.mount());
+    takeScreen();
 
     markMiniAppReady();
     // The screen checks the parameter on the server and waits for the session itself (screens.md §1.7).

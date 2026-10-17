@@ -17,7 +17,7 @@ import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { bookingTone, segmentBookings } from "@/lib/bookings/book";
-import { loadClientBookings, type ClientBooking } from "@/lib/bookings/load";
+import { findSessionBooking, loadClientBookings, type ClientBooking } from "@/lib/bookings/load";
 import { isPairId } from "@/lib/pairs/clients";
 import { loadScheduleOwner } from "@/lib/schedule/load";
 
@@ -33,11 +33,17 @@ function now(): Date {
 
 async function Bookings({ searchParams }: { searchParams: PageProps<"/[lang]/client/sessions">["searchParams"] }) {
   const [t, locale, params] = await Promise.all([getDictionary(), getLocale(), searchParams]);
-  // The bot's session reminder links here with ?booking=<id>: open that booking.
-  if (isPairId(params.booking)) redirect(`/client/bookings/${params.booking}`);
+  // The bot links here with ?booking=<id> (reminder) or ?session=<id> (the trainer set or changed a session), plus
+  // ?action=cancel for «Отменить»: open that booking, with the cancel sheet.
+  const action = params.action === "cancel" ? "?action=cancel" : "";
+  if (isPairId(params.booking)) redirect(`/client/bookings/${params.booking}${action}`);
   const copy = t.schedule.clientSessions;
   const owner = await loadScheduleOwner();
   if (!owner) return <ScheduleSignIn title={t.tabs.client.sessions} next="/client/sessions" />;
+  if (isPairId(params.session)) {
+    const booking = await findSessionBooking(owner, params.session);
+    if (booking) redirect(`/client/bookings/${booking}${action}`);
+  }
 
   const { upcoming, past, requests } = segmentBookings(await loadClientBookings(owner), now());
   const format = new Intl.DateTimeFormat(INTL_LOCALE[locale], {

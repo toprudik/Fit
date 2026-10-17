@@ -1117,17 +1117,29 @@ isOneToOne: false
                   ]
                 },"feedback": {
                   Row: {
-                    "app_version": string | null,"attachment_paths": (string)[],"body": string,"created_at": string,"github_issue_url": string | null,"id": string,"kind": Database["public"]['Enums']["feedback_kind"],"locale": Database["public"]['Enums']["app_locale"] | null,"platform": string | null,"route": string | null,"status": Database["public"]['Enums']["feedback_status"],"theme": Database["public"]['Enums']["app_theme"] | null,"updated_at": string,"user_id": string | null,"zone": Database["public"]['Enums']["app_zone"] | null
+                    "app_version": string | null,"attachment_paths": (string)[],"body": string,"created_at": string,"github_issue_url": string | null,"id": string,"kind": Database["public"]['Enums']["feedback_kind"],"locale": Database["public"]['Enums']["app_locale"] | null,"platform": string | null,"replied_at": string | null,"replied_by": string | null,"reply": string | null,"route": string | null,"status": Database["public"]['Enums']["feedback_status"],"theme": Database["public"]['Enums']["app_theme"] | null,"updated_at": string,"user_id": string | null,"zone": Database["public"]['Enums']["app_zone"] | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "app_version"?: string | null,"attachment_paths"?: (string)[],"body": string,"created_at"?: string,"github_issue_url"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["feedback_kind"],"locale"?: Database["public"]['Enums']["app_locale"] | null,"platform"?: string | null,"route"?: string | null,"status"?: Database["public"]['Enums']["feedback_status"],"theme"?: Database["public"]['Enums']["app_theme"] | null,"updated_at"?: string,"user_id"?: string | null,"zone"?: Database["public"]['Enums']["app_zone"] | null
+                    "app_version"?: string | null,"attachment_paths"?: (string)[],"body": string,"created_at"?: string,"github_issue_url"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["feedback_kind"],"locale"?: Database["public"]['Enums']["app_locale"] | null,"platform"?: string | null,"replied_at"?: string | null,"replied_by"?: string | null,"reply"?: string | null,"route"?: string | null,"status"?: Database["public"]['Enums']["feedback_status"],"theme"?: Database["public"]['Enums']["app_theme"] | null,"updated_at"?: string,"user_id"?: string | null,"zone"?: Database["public"]['Enums']["app_zone"] | null
                   }
                   Update: {
-                    "app_version"?: string | null,"attachment_paths"?: (string)[],"body"?: string,"created_at"?: string,"github_issue_url"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["feedback_kind"],"locale"?: Database["public"]['Enums']["app_locale"] | null,"platform"?: string | null,"route"?: string | null,"status"?: Database["public"]['Enums']["feedback_status"],"theme"?: Database["public"]['Enums']["app_theme"] | null,"updated_at"?: string,"user_id"?: string | null,"zone"?: Database["public"]['Enums']["app_zone"] | null
+                    "app_version"?: string | null,"attachment_paths"?: (string)[],"body"?: string,"created_at"?: string,"github_issue_url"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["feedback_kind"],"locale"?: Database["public"]['Enums']["app_locale"] | null,"platform"?: string | null,"replied_at"?: string | null,"replied_by"?: string | null,"reply"?: string | null,"route"?: string | null,"status"?: Database["public"]['Enums']["feedback_status"],"theme"?: Database["public"]['Enums']["app_theme"] | null,"updated_at"?: string,"user_id"?: string | null,"zone"?: Database["public"]['Enums']["app_zone"] | null
                   }
                   Relationships: [
                     {
+      foreignKeyName: "feedback_replied_by_fkey"
+      columns: ["replied_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "feedback_replied_by_fkey"
+      columns: ["replied_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "feedback_user_id_fkey"
       columns: ["user_id"]
 isOneToOne: false
@@ -3713,6 +3725,9 @@ isOneToOne: false
               "active_invites": number,"active_pairs": number,"blocked_users": number,"trainers": number,"trainers_pending": number,"trainers_verified": number,"users": number
             }[]
                            },
+"admin_reply_feedback":
+{ Args: { "p_body": string,"p_feedback_id": string }; Returns: string
+                           },
 "admin_revoke_plan":
 { Args: { "p_grant_id": string,"p_reason": string }; Returns: undefined
                            },
@@ -4315,7 +4330,7 @@ isOneToOne: false
 { Args: { "p_carbs_g"?: number,"p_confirm_low"?: boolean,"p_fat_g"?: number,"p_group_id": string,"p_kcal": number,"p_protein_g"?: number,"p_steps_target"?: number,"p_water_ml"?: number }; Returns: string
                            },
 "set_nutrition_target":
-{ Args: { "p_carbs_g"?: number,"p_coaching_id": string,"p_confirm_low"?: boolean,"p_fat_g"?: number,"p_kcal": number,"p_protein_g"?: number }; Returns: string
+{ Args: { "p_carbs_g"?: number,"p_coaching_id": string,"p_confirm_low"?: boolean,"p_fat_g"?: number,"p_kcal": number,"p_protein_g"?: number,"p_steps_target"?: number,"p_water_ml"?: number }; Returns: string
                            },
 "set_primary_nutrition_group":
 { Args: { "p_coaching_id": string,"p_group_id": string }; Returns: undefined

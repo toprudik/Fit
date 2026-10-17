@@ -49,7 +49,7 @@ def test_start_en(settings: Settings, code: str) -> None:
     assert button_url(sent) == "https://app.example/?source=bot_start"
     assert menu.chat_id == CHAT_ID
     assert isinstance(menu.menu_button, MenuButtonWebApp)
-    assert menu.menu_button.text == "Open DaFit"
+    assert menu.menu_button.text == "DaFit"
     assert menu.menu_button.web_app.url == "https://app.example/?source=bot_menu"
 
 

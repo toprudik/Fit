@@ -242,7 +242,7 @@ def test_happy_path(harness: Harness) -> None:
     assert harness.telegram.short_description == {None: ru.short_description, "en": en.short_description}
     (menu,) = harness.telegram.of(SetChatMenuButton)
     assert menu.chat_id is None
-    assert menu.menu_button.text == "Открыть DaFit"  # type: ignore[union-attr]
+    assert menu.menu_button.text == "DaFit"  # type: ignore[union-attr]
     assert menu.menu_button.web_app.url == "https://app.example/?source=bot_menu"  # type: ignore[union-attr]
     # probes: one without the secret, one with it (a group message no handler answers)
     assert [authenticated for authenticated, _ in harness.deployment.posts] == [False, True]
@@ -432,7 +432,15 @@ def test_check_finds_a_drifted_menu_button(harness: Harness) -> None:
     }
     assert harness.run(check_only=True) == 1
     assert harness.status("menu button (default)") == "differs"
+    assert 'now web_app "Открыть DaFit"' in harness.line("menu button (default)")
     assert "old.example" not in harness.report
+
+
+def test_check_names_a_menu_button_of_another_type(harness: Harness) -> None:
+    assert harness.run() == 0
+    harness.telegram.menu_button = {"type": "commands"}
+    assert harness.run(check_only=True) == 1
+    assert "now commands, not what DaFit sets" in harness.line("menu button (default)")
 
 
 @pytest.mark.parametrize(
