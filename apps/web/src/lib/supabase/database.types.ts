@@ -3839,7 +3839,7 @@ isOneToOne: false
             }[]
                            },
 "close_schedule_days":
-{ Args: { "p_from": string,"p_to": string }; Returns: {
+{ Args: { "p_from": string,"p_to": string,"p_trainer_id"?: string }; Returns: {
               "session_id": string,"starts_at": string,"title": string
             }[]
                            },
@@ -3861,7 +3861,7 @@ isOneToOne: false
             }[]
                            },
 "create_group_session":
-{ Args: { "p_capacity": number,"p_count"?: number,"p_duration_min": number,"p_location_id"?: string,"p_meeting_url"?: string,"p_mode": Database["public"]['Enums']["session_mode"],"p_open_for_booking"?: boolean,"p_starts_at": string,"p_title": string,"p_until"?: string,"p_weekdays"?: (number)[] }; Returns: {
+{ Args: { "p_capacity": number,"p_count"?: number,"p_duration_min": number,"p_location_id"?: string,"p_meeting_url"?: string,"p_mode": Database["public"]['Enums']["session_mode"],"p_open_for_booking"?: boolean,"p_starts_at": string,"p_title": string,"p_trainer_id"?: string,"p_until"?: string,"p_weekdays"?: (number)[] }; Returns: {
               "created": number,"session_id": string
             }[]
                            },
@@ -4213,7 +4213,7 @@ isOneToOne: false
 { Args: { "p_active_to"?: string,"p_currency"?: string,"p_min_amount_minor"?: number,"p_package_id"?: string,"p_referee_sessions"?: number,"p_referrer_sessions": number }; Returns: string
                            },
 "save_week_template":
-{ Args: { "p_buffer_min"?: number,"p_horizon_weeks"?: number,"p_items": Json }; Returns: number
+{ Args: { "p_buffer_min"?: number,"p_horizon_weeks"?: number,"p_items": Json,"p_trainer_id"?: string }; Returns: number
                            },
 "save_workout_log":
 { Args: { "p_log": Json }; Returns: string
@@ -4263,7 +4263,7 @@ isOneToOne: false
             }[]
                            },
 "session_conflicts":
-{ Args: { "p_ends_at": string,"p_ignore"?: string,"p_starts_at": string }; Returns: {
+{ Args: { "p_ends_at": string,"p_ignore"?: string,"p_starts_at": string,"p_trainer_id"?: string }; Returns: {
               "coaching_id": string,"ends_at": string,"kind": Database["public"]['Enums']["session_kind"],"session_id": string,"starts_at": string,"title": string
             }[]
                            },
