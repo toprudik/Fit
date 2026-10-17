@@ -1,4 +1,4 @@
--- cancel_preview of migration 20261017023900_cancel_preview.sql (screens.md §4.3, PRD 2.6.5-3): what a late
+-- cancel_preview of migration 20261017025100_cancel_preview.sql (screens.md §4.3, PRD 2.6.5-3): what a late
 -- cancellation would charge, without changing anything.
 begin;
 \ir _helpers.psql
