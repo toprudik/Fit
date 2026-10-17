@@ -1,4 +1,4 @@
--- Template writes of migration 20261017001430_workout_template_save.sql (PRD wave-1 §2.10-7, WORK-5): a whole
+-- Template writes of migration 20261017004430_workout_template_save.sql (PRD wave-1 §2.10-7, WORK-5): a whole
 -- template saved in one call by a trainer, edited only by its owner, and never with another trainer's exercise.
 begin;
 \ir _helpers.psql
