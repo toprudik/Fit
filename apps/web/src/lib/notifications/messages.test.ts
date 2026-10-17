@@ -504,6 +504,11 @@ describe("plan messages", () => {
         options,
       );
       expect(late?.text).toMatch(/^Запись на .* отменена позже срока, клиент: Анна Смирнова\. Занятие списано\.\nПричина: Заболел &lt;сильно&gt;$/);
+      expect(late?.buttons[0]).toEqual({
+        text: "Простить",
+        web_app: { url: `https://fit.example/trainer/sessions/${PAIR}?action=waive&booking=${booking}&source=booking_cancelled_by_client` },
+      });
+      expect(free?.buttons[0].text).toBe("Открыть расписание");
     });
 
     it("tells the trainer about a move, confirmed or as a request", () => {

@@ -370,9 +370,13 @@ const templates: Partial<Record<NotificationType, Template>> = {
       ),
       reason ? interpolateEscaped(t.cancelReasonLine, { reason }) : null,
     ];
+    // A late cancellation is charged: "Простить" opens the waiver of the session page (screens.md §4.3).
+    const late = payload.request !== true && payload.late === true && isPairId(payload.booking_id) && isPairId(payload.session_id);
     return {
       text: lines.filter(Boolean).join("\n"),
-      buttons: [{ text: t.openSchedule, path: "/trainer/schedule" }],
+      buttons: late
+        ? [{ text: t.waiveCharge, path: `/trainer/sessions/${payload.session_id}?action=waive&booking=${payload.booking_id}` }]
+        : [{ text: t.openSchedule, path: "/trainer/schedule" }],
     };
   },
   // Т4: booking_created's payload with rescheduled_from, the old start; reschedule_my_booking turns Т1 into it.
