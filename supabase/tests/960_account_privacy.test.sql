@@ -1,4 +1,4 @@
--- Account deletion and data export of migration 20261017020300_account_privacy.sql (PRD wave-1 §2.12 rules 6-8,
+-- Account deletion and data export of migration 20261017023300_account_privacy.sql (PRD wave-1 §2.12 rules 6-8,
 -- PRIV-6, PRIV-7; data-model §1.6): the 30-day request and its cancellation, what the request cancels at once,
 -- the anonymization onto the "deleted client" stub, and the export queue of the privacy route.
 begin;
