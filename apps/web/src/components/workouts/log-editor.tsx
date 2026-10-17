@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Flame, Plus, Search, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ClipboardList, Flame, Plus, Search, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,9 @@ import {
 } from "@/lib/workouts/log";
 import { findExercises, lastResults, saveWorkoutLog, type ExerciseHit, type LastResult } from "@/lib/workouts/log-actions";
 import { formatLogDay, formatSet } from "@/lib/workouts/present";
+import { logExercisesFromTemplate, type TemplateItem } from "@/lib/workouts/template";
 import { weightUnit } from "@/lib/workouts/units";
+import { TemplatePicker } from "./template-picker";
 
 type LogEditorProps = {
   clientId: string;
@@ -46,6 +48,8 @@ type LogEditorProps = {
   initial: LogDraft;
   /** After saving, the log opens at `${hrefBase}/${id}`. */
   hrefBase: string;
+  /** Offer "Из шаблона": the trainer fills a new log from a template (WORK-5). */
+  templates?: boolean;
 };
 
 let keySeed = 0;
@@ -55,7 +59,17 @@ const newKey = () => `x${++keySeed}`;
  * Writes or edits a workout log (PRD wave-1 §2.10-4, 2.10-5, WORK-3): exercises from the library, sets of
  * reps, weight and time, and for each exercise what the client did last time. Saves the whole log at once.
  */
-export function LogEditor({ clientId, coachingId, bookingId, log, sessionStart, timeZone, initial, hrefBase }: LogEditorProps) {
+export function LogEditor({
+  clientId,
+  coachingId,
+  bookingId,
+  log,
+  sessionStart,
+  timeZone,
+  initial,
+  hrefBase,
+  templates = false,
+}: LogEditorProps) {
   const { t, locale } = useI18n();
   const copy = t.workouts.editor;
   const unit = weightUnit(locale);
@@ -63,6 +77,8 @@ export function LogEditor({ clientId, coachingId, bookingId, log, sessionStart, 
   const [draft, setDraft] = useState(initial);
   const [errors, setErrors] = useState<DraftError[]>([]);
   const [picking, setPicking] = useState(false);
+  const [pickingTemplate, setPickingTemplate] = useState(false);
+  const [templateId, setTemplateId] = useState(log?.templateId);
   const [last, setLast] = useState<Record<string, LastResult | null>>({});
   const [pending, startTransition] = useTransition();
   const before = log?.performedAt ?? sessionStart;
@@ -107,6 +123,18 @@ export function LogEditor({ clientId, coachingId, bookingId, log, sessionStart, 
     setPicking(false);
   }
 
+  function applyTemplate(template: { id: string; title: string; items: TemplateItem[] }) {
+    setDraft((d) => ({
+      ...d,
+      title: d.title.trim() ? d.title : template.title,
+      exercises: logExercisesFromTemplate(template.items, unit, locale === "ru" ? "," : "."),
+    }));
+    setTemplateId(template.id);
+    setErrors([]);
+    setPickingTemplate(false);
+    toast.success(interpolate(t.workouts.templates.applied, { title: template.title }));
+  }
+
   function save(event: React.FormEvent) {
     event.preventDefault();
     const keep = log?.performedAt ?? sessionStart;
@@ -116,7 +144,7 @@ export function LogEditor({ clientId, coachingId, bookingId, log, sessionStart, 
       clientId,
       coachingId,
       bookingId,
-      templateId: log?.templateId,
+      templateId,
       performedAt,
     });
     if (!result.ok) {
@@ -197,6 +225,11 @@ export function LogEditor({ clientId, coachingId, bookingId, log, sessionStart, 
             {copy.addExercise}
           </Button>
         ) : null}
+        {templates && !log ? (
+          <Button type="button" variant="ghost" icon={ClipboardList} onClick={() => setPickingTemplate(true)} block>
+            {t.workouts.templates.fromTemplate}
+          </Button>
+        ) : null}
       </section>
 
       <TextArea
@@ -210,6 +243,7 @@ export function LogEditor({ clientId, coachingId, bookingId, log, sessionStart, 
         {copy.save}
       </Button>
       <ExercisePicker open={picking} onOpenChange={setPicking} onPick={add} />
+      {templates && !log ? <TemplatePicker open={pickingTemplate} onOpenChange={setPickingTemplate} onPick={applyTemplate} /> : null}
     </form>
   );
 }
@@ -353,7 +387,7 @@ function ExerciseBlock({
   );
 }
 
-function SetInput({
+export function SetInput({
   label,
   value,
   invalid,
@@ -387,7 +421,7 @@ function SetInput({
 }
 
 /** "Выбери упражнение": the library search in a sheet (PRD 2.10-1..3). */
-function ExercisePicker({
+export function ExercisePicker({
   open,
   onOpenChange,
   onPick,

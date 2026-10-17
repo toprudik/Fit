@@ -1,4 +1,4 @@
-import { Dumbbell, Plus } from "lucide-react";
+import { Dumbbell, EyeOff, Plus } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Screen } from "@/components/shell/screen";
@@ -10,6 +10,7 @@ import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { localDay, todayIn } from "@/lib/passes/present";
+import { loadTrainerShares } from "@/lib/sharing/load";
 import { draftFromLog, type LogDraft } from "@/lib/workouts/log";
 import { loadBookingStart, loadLog, loadLogs, loadWorkoutPair, viewerId, viewerTimeZone } from "@/lib/workouts/logs";
 import { weightUnit } from "@/lib/workouts/units";
@@ -57,7 +58,10 @@ export function NewLogButton({ t, place }: { t: Dictionary; place: LogPlace }) {
 export async function LogListSection({ place }: { place: LogPlace }) {
   const [t, locale, client] = await Promise.all([getDictionary(), getLocale(), placeClient(place)]);
   if (!client) return <NotFound t={t} />;
-  const logs = await loadLogs(client.clientId, locale);
+  const [logs, shares] = await Promise.all([
+    loadLogs(client.clientId, locale),
+    place.side === "trainer" ? loadTrainerShares(place.coachingId) : null,
+  ]);
   const copy = t.workouts.logs;
   const empty =
     place.side === "client"
@@ -66,6 +70,12 @@ export async function LogListSection({ place }: { place: LogPlace }) {
   const action = client.canWrite ? <NewLogButton t={t} place={place} /> : undefined;
   return (
     <div className="flex flex-col gap-4">
+      {client.canWrite && shares && !shares.workouts ? (
+        <p className="flex items-start gap-2 px-1 text-footnote text-ink-2">
+          <EyeOff aria-hidden size={16} className="mt-0.5 shrink-0" />
+          {copy.sharingOff}
+        </p>
+      ) : null}
       {logs?.length && action ? action : null}
       <LogList
         t={t}
@@ -132,6 +142,7 @@ async function NewLogForm({ t, place, booking }: { t: Dictionary; place: LogPlac
       timeZone={timeZone}
       initial={initial}
       hrefBase={hrefBase(place)}
+      templates={place.side === "trainer"}
     />
   );
 }
