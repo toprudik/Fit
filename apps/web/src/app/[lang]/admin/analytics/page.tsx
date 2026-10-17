@@ -91,6 +91,9 @@ async function Analytics({ searchParams }: { searchParams: SearchParams }) {
         <ListRow title={copy.features.workouts} value={partText(copy, platform.clients_logging_workouts, featureClients)} />
         <ListRow title={copy.features.measurements} value={partText(copy, platform.clients_with_measurements, featureClients)} />
         <ListRow title={copy.features.photos} value={partText(copy, platform.clients_with_photos, featureClients)} />
+        <ListRow title={copy.features.diary} value={partText(copy, platform.clients_keeping_diary, featureClients)} />
+        <ListRow title={copy.features.activity} value={partText(copy, platform.clients_logging_activity, featureClients)} />
+        <ListRow title={copy.features.target} value={partText(copy, platform.clients_with_target, featureClients)} />
       </ListGroup>
 
       <ListGroup header={copy.trainers.header} headingLevel={2}>
@@ -117,6 +120,9 @@ async function Analytics({ searchParams }: { searchParams: SearchParams }) {
             client.logs_workouts && copy.clients.flags.workouts,
             client.takes_measurements && copy.clients.flags.measurements,
             client.adds_photos && copy.clients.flags.photos,
+            client.keeps_diary && copy.clients.flags.diary,
+            client.logs_activity && copy.clients.flags.activity,
+            client.has_target && copy.clients.flags.target,
           ].filter((flag): flag is string => Boolean(flag));
           return (
             <ListRow

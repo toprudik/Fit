@@ -3,7 +3,8 @@
  * next; error codes are short and never carry the token, which is part of the request URL.
  */
 
-export type InlineButton = { text: string; web_app: { url: string } } | { text: string; url: string };
+/** callback_data: a button that acts right in the bot, which passes the tap to POST /api/bot/actions (ADR 0006). */
+export type InlineButton = { text: string; web_app: { url: string } } | { text: string; url: string } | { text: string; callback_data: string };
 
 export type OutgoingMessage = {
   chatId: number;

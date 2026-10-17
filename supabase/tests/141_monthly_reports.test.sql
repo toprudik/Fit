@@ -108,7 +108,7 @@ select tests.clear_authentication();
 select tests.authenticate_as_anon();
 select is(public.story_card(tests.card('sessions')), '{"kind": "sessions", "month": "2026-09-01", "data": {"count": 2}}'::jsonb,
           'cards: the image route reads a card by its id without an account');
-select is(public.story_card(tests.card('trainer'))->'data', '{"count": 2, "name": "Ира Тренер"}'::jsonb,
+select is((public.story_card(tests.card('trainer'))->'data') - 'slug', '{"count": 2, "name": "Ира Тренер"}'::jsonb,
           'cards: sessions with the trainer');
 select is(public.story_card(tests.card('weight'))->'data', '{"change": -1.5}'::jsonb, 'cards: the confirmed weight change');
 select throws_ok($$ select * from public.story_cards $$, '42501', null, 'cards: anon cannot read the table');

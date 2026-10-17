@@ -106,7 +106,10 @@ function Analytics({ copy, locale, details }: { copy: Copy["analytics"]; locale:
         title={copy.weight}
         value={change === null ? copy.few : interpolate(copy.weightValue, { change: `${change > 0 ? "+" : ""}${formatValue(locale, change)}` })}
       />
-      <ListRow title={copy.adherence} value={copy.adherenceLater} />
+      <ListRow
+        title={copy.adherence}
+        value={analytics.adherence === null ? copy.few : interpolate(copy.adherenceValue, { share: analytics.adherence })}
+      />
     </ListGroup>
   );
 }

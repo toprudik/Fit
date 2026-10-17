@@ -8,7 +8,9 @@ import { formatSessionTime } from "@/lib/pairs/format";
 import { DEFAULT_TIME_ZONE, formatPlanDate, isPlanCode } from "@/lib/plans/plans";
 import { isButtonUrl } from "@/lib/groups/rules";
 import { isBadgeCode } from "@/lib/gamification/gamification";
+import { bookingDecisionData } from "@/lib/bot-actions/callback-data";
 import { isChallengeMetric } from "@/lib/challenges/challenges";
+import { invitePath, isInviteToken } from "@/lib/delegations/rules";
 import { formatOffset } from "@/lib/reminders/offsets";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import type { InlineButton } from "./telegram";
@@ -25,9 +27,10 @@ type TemplateContext = {
 
 /**
  * A button opens an app route (path), which the dispatcher turns into a Mini App or a link button, or an outside
- * https address (href) the trainer put in a broadcast.
+ * https address (href) the trainer put in a broadcast, or acts right in the bot (action, the callback_data of
+ * lib/bot-actions; private chats only).
  */
-type TemplateButton = { text: string; path: string } | { text: string; href: string };
+type TemplateButton = { text: string; path: string } | { text: string; href: string } | { text: string; action: string };
 type Template = (context: TemplateContext) => { text: string; buttons: TemplateButton[] };
 
 /**
@@ -70,6 +73,21 @@ const templates: Partial<Record<NotificationType, Template>> = {
     text: interpolateEscaped(t.feedbackReply, { reply: String(payload.reply ?? "") }),
     buttons: [{ text: t.writeAgain, path: "/feedback" }],
   }),
+  // ADM-14 to the user: payload { grant_id, categories, reason, expires_at } from admin_open_break_glass.
+  break_glass: ({ t, locale, timeZone, payload }) => {
+    const names = t.breakGlassCategories;
+    const categories = (Array.isArray(payload.categories) ? payload.categories : [])
+      .map((category) => names[category as keyof typeof names])
+      .filter(Boolean);
+    return {
+      text: interpolateEscaped(t.breakGlass, {
+        categories: categories.join(", "),
+        until: typeof payload.expires_at === "string" ? formatSessionTime(locale, payload.expires_at, timeZone ?? DEFAULT_TIME_ZONE) : "",
+        reason: String(payload.reason ?? ""),
+      }),
+      buttons: [{ text: t.open, path: "/" }],
+    };
+  },
   // Т7 and Т7a: payload { coaching_id, claim_id?, first_name, last_name } from the join RPCs.
   coaching_created: ({ t, payload }) => ({
     text: interpolateEscaped(t.newClient, { name: personName(payload) || t.unnamedClient }),
@@ -436,6 +454,15 @@ const templates: Partial<Record<NotificationType, Template>> = {
         };
       case "pending":
         return { text: interpolateEscaped(t.delegationPending, { when }), buttons: team };
+      // Rule 1: the owner sent the invite to this trainer by search; the button opens the one-time invite.
+      case "invited":
+        return {
+          text:
+            payload.kind === "substitute"
+              ? interpolateEscaped(t.delegationInviteSubstitute, { owner, when })
+              : interpolateEscaped(t.delegationInviteAssistant, { owner }),
+          buttons: isInviteToken(payload.token) ? [{ text: t.openInvite, path: invitePath(payload.token) }] : team,
+        };
       default:
         return { text: escapeHtml(t.delegationDeclined), buttons: team };
     }
@@ -564,7 +591,8 @@ const templates: Partial<Record<NotificationType, Template>> = {
     }),
     buttons: [{ text: t.openSession, path: idPath("/trainer/sessions", payload.session_id, "/trainer/schedule") }],
   }),
-  // Т2: the same payload for a request, with trial = a trial request; the button opens it to confirm or decline (PRD 2.6.4, 2.3-5).
+  // Т2: the same payload for a request, with trial = a trial request; "Подтвердить" and "Отклонить" answer it right in
+  // the bot (SCHED-4), the third button opens it (PRD 2.6.4, 2.3-5).
   // A move that became a request carries rescheduled_from, the old start (PRD 2.6.5); on_site = asked at a QR
   // check-in without a booking (PRD wave-3 §5 rule 6).
   booking_requested: ({ t, locale, timeZone, payload }) => ({
@@ -583,7 +611,15 @@ const templates: Partial<Record<NotificationType, Template>> = {
         place: place(t, payload),
       },
     ),
-    buttons: [{ text: t.answerRequest, path: idPath("/trainer/requests", payload.booking_id, "/trainer/requests") }],
+    buttons: [
+      ...(isPairId(payload.booking_id)
+        ? [
+            { text: t.confirmRequest, action: bookingDecisionData(payload.booking_id, true) },
+            { text: t.declineRequest, action: bookingDecisionData(payload.booking_id, false) },
+          ]
+        : []),
+      { text: t.answerRequest, path: idPath("/trainer/requests", payload.booking_id, "/trainer/requests") },
+    ],
   }),
   // Т3: payload { booking_id, session_id, starts_at, request, late, reason, first_name, last_name }; request = a
   // request taken back, late = cancelled after the deadline with a charge (PRD 2.6.5).
@@ -640,9 +676,10 @@ const templates: Partial<Record<NotificationType, Template>> = {
     buttons: withTrainerChat(t, payload, [{ text: t.bookAgain, path: "/client/book" }]),
   }),
   // К-лист: payload { entry_id, session_id, title, starts_at, mode, location, expires_at, first_name, last_name } from
-  // private.waitlist_offer_next or trainer_offer_waitlist; sent in quiet hours too, since it lasts minutes.
+  // private.waitlist_offer_next or trainer_offer_waitlist; sent in quiet hours too, since it lasts minutes. A booked
+  // personal slot sends slot_id and no title (private.slot_offer_to).
   waitlist_offer: ({ t, locale, timeZone, payload }) => ({
-    text: interpolateEscaped(t.waitlistOffer, {
+    text: interpolateEscaped(payload.slot_id ? t.waitlistSlotOffer : t.waitlistOffer, {
       title: typeof payload.title === "string" ? payload.title : "",
       name: personName(payload) || t.sessionTrainer,
       when: sessionTime(locale, payload.starts_at, timeZone),
@@ -652,15 +689,25 @@ const templates: Partial<Record<NotificationType, Template>> = {
     buttons: [{ text: t.answerOffer, path: idPath("/client/waitlist", payload.entry_id, "/client/book") }],
   }),
   // payload { entry_id, session_id, reason: started | cancelled, title, starts_at, first_name, last_name } from
-  // private.waitlist_close (PRD wave-2 §9 rule 8).
-  waitlist_closed: ({ t, locale, timeZone, payload }) => ({
-    text: interpolateEscaped(payload.reason === "cancelled" ? t.waitlistCancelled : t.waitlistClosed, {
-      title: typeof payload.title === "string" ? payload.title : "",
-      name: personName(payload) || t.sessionTrainer,
-      when: sessionTime(locale, payload.starts_at, timeZone),
-    }),
-    buttons: [{ text: t.bookAgain, path: "/client/book" }],
-  }),
+  // private.waitlist_close (PRD wave-2 §9 rule 8); slot_id and no title from private.slot_waitlist_close.
+  waitlist_closed: ({ t, locale, timeZone, payload }) => {
+    const cancelled = payload.reason === "cancelled";
+    const template = payload.slot_id
+      ? cancelled
+        ? t.waitlistSlotCancelled
+        : t.waitlistSlotClosed
+      : cancelled
+        ? t.waitlistCancelled
+        : t.waitlistClosed;
+    return {
+      text: interpolateEscaped(template, {
+        title: typeof payload.title === "string" ? payload.title : "",
+        name: personName(payload) || t.sessionTrainer,
+        when: sessionTime(locale, payload.starts_at, timeZone),
+      }),
+      buttons: [{ text: t.bookAgain, path: "/client/book" }],
+    };
+  },
 };
 
 /** "18:30" in the recipient's zone. */
@@ -894,7 +941,9 @@ export function renderMessage(
   const buttons = new URL(options.appUrl).protocol === "https:" ? rendered.buttons : [];
   return {
     text: rendered.text,
-    buttons: buttons.map((button) => {
+    // A tap in a group would act for whoever tapped, so action buttons go to private chats only.
+    buttons: buttons.filter((button) => !(options.group && "action" in button)).map((button) => {
+      if ("action" in button) return { text: button.text, callback_data: button.action };
       if ("href" in button) return { text: button.text, url: button.href };
       const url = new URL(button.path, options.appUrl);
       url.searchParams.set("source", row.kind);

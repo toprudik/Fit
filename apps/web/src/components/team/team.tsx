@@ -2,7 +2,7 @@
 
 import { Check, Repeat, Trash2, UserPlus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { ReferralShare } from "@/components/referrals/referral-share";
 import { Button } from "@/components/ui/button";
 import { ChipCheckbox } from "@/components/ui/chip";
@@ -14,16 +14,89 @@ import { Switch } from "@/components/ui/switch";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
-import { answerInvite, createAssistant, createSubstitute, markDelegatedAttendance, revokeDelegation, setAssistantProgress } from "@/lib/delegations/actions";
+import {
+  answerInvite,
+  createAssistant,
+  createSubstitute,
+  inviteDelegate,
+  markDelegatedAttendance,
+  revokeDelegation,
+  searchDelegates,
+  setAssistantProgress,
+  type DelegateCandidate,
+  type DelegationInvite,
+} from "@/lib/delegations/actions";
 import { ASSISTANT_SCOPES, type AssistantScope } from "@/lib/delegations/rules";
 
-/** The one-time invite link in a sheet: copy or share it (rule 1). */
-function InviteSheet({ link, onClose }: { link: string | null; onClose: () => void }) {
+/** Trainers found by name or @username, each with «Пригласить» (rule 1). */
+function DelegateSearch({ delegationId, onInvited }: { delegationId: string; onInvited: () => void }) {
+  const { t } = useI18n();
+  const copy = t.team.link;
+  const [query, setQuery] = useState("");
+  const [found, setFound] = useState<DelegateCandidate[] | null>(null);
+  const [searching, startSearch] = useTransition();
+  const [inviting, startInvite] = useTransition();
+  const latest = useRef("");
+
+  function search(value: string) {
+    setQuery(value);
+    latest.current = value;
+    if (value.replace(/^@/, "").trim().length < 2) return setFound(null);
+    startSearch(async () => {
+      const result = await searchDelegates(value);
+      // Typing on starts newer searches; only the last one's answer is shown.
+      if (latest.current === value) setFound(result.ok ? result.value : []);
+    });
+  }
+
+  function invite(candidate: DelegateCandidate) {
+    startInvite(async () => {
+      const result = await inviteDelegate(delegationId, candidate.trainerId);
+      if (!result.ok) {
+        toast.error(result.reason === "expired" ? copy.inviteExpired : t.team.failed);
+        return;
+      }
+      toast.success(interpolate(copy.invited, { name: candidate.name ?? copy.unnamed }));
+      onInvited();
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <TextField type="search" label={copy.searchLabel} hint={copy.searchHint} value={query} onChange={(event) => search(event.target.value)} />
+      {found === null ? null : found.length === 0 && !searching ? (
+        <p className="px-1 text-callout text-ink-2">{copy.noResults}</p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {found.map((candidate) => (
+            <li key={candidate.trainerId} className="flex items-center gap-3">
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-body text-ink">{candidate.name ?? copy.unnamed}</span>
+                {candidate.username ? <span className="truncate text-footnote text-ink-2">@{candidate.username}</span> : null}
+              </div>
+              <Button size="sm" variant="secondary" disabled={inviting} onClick={() => invite(candidate)}>
+                {copy.invite}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** The one-time invite in a sheet: copy or share the link, or send it to a trainer found by search (rule 1). */
+function InviteSheet({ invite, onClose }: { invite: DelegationInvite | null; onClose: () => void }) {
   const { t } = useI18n();
   const copy = t.team.link;
   return (
-    <Sheet open={link !== null} onOpenChange={(open) => !open && onClose()} title={copy.title} description={copy.text}>
-      {link ? <ReferralShare link={link} shareText={copy.shareText} /> : null}
+    <Sheet open={invite !== null} onOpenChange={(open) => !open && onClose()} title={copy.title} description={copy.text}>
+      {invite ? (
+        <div className="flex flex-col gap-6">
+          <ReferralShare link={invite.link} shareText={copy.shareText} />
+          <DelegateSearch delegationId={invite.id} onInvited={onClose} />
+        </div>
+      ) : null}
     </Sheet>
   );
 }
@@ -38,7 +111,7 @@ export function AddAssistantButton({ clients }: { clients: { coachingId: string;
   const [picked, setPicked] = useState<string[]>([]);
   const [endsOn, setEndsOn] = useState("");
   const [error, setError] = useState<"scopes" | "clients" | null>(null);
-  const [link, setLink] = useState<string | null>(null);
+  const [invite, setInvite] = useState<DelegationInvite | null>(null);
   const [pending, startTransition] = useTransition();
 
   const toggle = <T,>(list: T[], value: T) => (list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
@@ -59,7 +132,7 @@ export function AddAssistantButton({ clients }: { clients: { coachingId: string;
         return;
       }
       setOpen(false);
-      setLink(result.value);
+      setInvite(result.value);
     });
   }
 
@@ -134,7 +207,7 @@ export function AddAssistantButton({ clients }: { clients: { coachingId: string;
           </Button>
         </form>
       </Sheet>
-      <InviteSheet link={link} onClose={() => setLink(null)} />
+      <InviteSheet invite={invite} onClose={() => setInvite(null)} />
     </>
   );
 }
@@ -143,7 +216,7 @@ export function AddAssistantButton({ clients }: { clients: { coachingId: string;
 export function SubstituteButton({ sessionId }: { sessionId: string }) {
   const { t } = useI18n();
   const copy = t.team;
-  const [link, setLink] = useState<string | null>(null);
+  const [invite, setInvite] = useState<DelegationInvite | null>(null);
   const [pending, startTransition] = useTransition();
   return (
     <>
@@ -154,14 +227,14 @@ export function SubstituteButton({ sessionId }: { sessionId: string }) {
         onClick={() =>
           startTransition(async () => {
             const result = await createSubstitute(sessionId);
-            if (result.ok) setLink(result.value);
+            if (result.ok) setInvite(result.value);
             else toast.error(result.reason === "taken" ? copy.substitute.taken : copy.failed);
           })
         }
       >
         {copy.substitute.button}
       </Button>
-      <InviteSheet link={link} onClose={() => setLink(null)} />
+      <InviteSheet invite={invite} onClose={() => setInvite(null)} />
     </>
   );
 }

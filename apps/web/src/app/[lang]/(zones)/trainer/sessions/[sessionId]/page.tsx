@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CalendarX, Clock, Link2, MapPin, Repeat, User, Users } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { BookingHistory } from "@/components/bookings/booking-history";
 import { CheckInQr } from "@/components/check-in/check-in-qr";
 import { AttendanceMarks } from "@/components/passes/attendance-marks";
 import { SessionWaivers } from "@/components/passes/session-waivers";
@@ -20,6 +21,8 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
+import { loadBookingHistory } from "@/lib/bookings/history";
+import { loadSlotWaitlist } from "@/lib/bookings/slot-waitlist";
 import { loadSessionDelegation } from "@/lib/delegations/load";
 import { isPairId } from "@/lib/pairs/clients";
 import { loadBookingCharges } from "@/lib/passes/session-charges";
@@ -95,7 +98,8 @@ async function SessionDetails({
             ),
         )
       : [];
-  const waitlist = group && editable ? await loadSessionWaitlist(owner, session.id) : [];
+  // A personal session shows the queue for its slot (PRD wave-2 §9); it goes out on its own once the slot frees.
+  const waitlist = editable ? await (group ? loadSessionWaitlist(owner, session.id) : loadSlotWaitlist(owner, session.id)) : [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -182,7 +186,7 @@ async function SessionDetails({
             ...entry,
             offeredUntil: entry.offerExpiresAt ? time.format(new Date(entry.offerExpiresAt)) : null,
           }))}
-          canOffer={participants.length + waitlist.filter((entry) => entry.status === "offered").length < session.capacity}
+          canOffer={group && participants.length + waitlist.filter((entry) => entry.status === "offered").length < session.capacity}
         />
       ) : null}
 
@@ -207,6 +211,16 @@ async function SessionDetails({
           const client = session.clients.find((candidate) => candidate.bookingId === charge.bookingId);
           return client ? [{ ...charge, name: client.name, status: client.status }] : [];
         })}
+      />
+
+      <BookingHistory
+        items={await loadBookingHistory(
+          owner,
+          session.clients.map((client) => client.bookingId),
+        )}
+        timeZone={owner.timeZone}
+        clients={group ? new Map(session.clients.map((client) => [client.bookingId, client.name])) : undefined}
+        header={group ? t.schedule.booking.history.sessionHeader : undefined}
       />
 
       {session.status === "cancelled" && session.cancelReason ? (
