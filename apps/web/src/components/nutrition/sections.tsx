@@ -86,6 +86,14 @@ export async function TrainerNutrition({ coachingId, day }: { coachingId: string
   if (!nutrition || nutrition.state === "closed") {
     return <EmptyState icon={EyeOff} title={copy.closedTitle} description={copy.closedText} />;
   }
+  const { waterMl, steps } = nutrition.mineGoals;
+  const goalsLine =
+    [
+      waterMl !== null ? interpolate(copy.activity.waterLine, { value: formatValue(locale, waterMl) }) : null,
+      steps !== null ? interpolate(copy.activity.stepsLine, { value: formatValue(locale, steps) }) : null,
+    ]
+      .filter(Boolean)
+      .join(", ") || null;
   return (
     <div className="flex flex-col gap-6">
       <ListGroup>
@@ -93,8 +101,9 @@ export async function TrainerNutrition({ coachingId, day }: { coachingId: string
       </ListGroup>
       {nutrition.mine ? (
         <TargetCard t={t} locale={locale} macros={nutrition.mine} source={copy.active[nutrition.active]} heading={copy.mine}>
+          {goalsLine ? <p className="text-footnote text-ink-2">{goalsLine}</p> : null}
           <div className="mt-3 flex flex-wrap gap-2">
-            <TrainerTargetForm coachingId={coachingId} current={nutrition.mine} sex={nutrition.sex} />
+            <TrainerTargetForm coachingId={coachingId} current={nutrition.mine} goals={nutrition.mineGoals} sex={nutrition.sex} />
             <ClearTargetButton coachingId={coachingId} />
           </div>
         </TargetCard>
@@ -102,7 +111,7 @@ export async function TrainerNutrition({ coachingId, day }: { coachingId: string
         <section aria-label={copy.mine} className="flex flex-col items-start gap-3 rounded-lg bg-surface-1 p-4">
           <p className="text-callout">{copy.none}</p>
           <p className="text-footnote text-ink-2">{copy.active[nutrition.active]}</p>
-          <TrainerTargetForm coachingId={coachingId} current={null} sex={nutrition.sex} />
+          <TrainerTargetForm coachingId={coachingId} current={null} goals={null} sex={nutrition.sex} />
         </section>
       )}
       {nutrition.calculator ? (
