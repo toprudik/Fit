@@ -36,7 +36,13 @@ export type TeamData = {
   delegations: Delegation[];
   /** Live pairs an assistant can be given. */
   clients: { coachingId: string; name: string }[];
+  /** What delegates did for the owner's pairs, newest first (rule 8). */
+  journal: JournalEntry[];
 };
+
+export type JournalEntry = { at: string; action: string; delegateName: string | null; clientName: string | null };
+
+const JOURNAL_SIZE = 30;
 
 async function loadDelegations(owner: Owner): Promise<Delegation[]> {
   const { data, error } = await owner.supabase.rpc("my_delegations");
@@ -60,7 +66,7 @@ async function loadDelegations(owner: Owner): Promise<Delegation[]> {
 export async function loadTeam(): Promise<TeamData | null> {
   const owner = await loadScheduleOwner();
   if (!owner) return null;
-  const [plan, requests, profile, delegations, pairs] = await Promise.all([
+  const [plan, requests, profile, delegations, pairs, journal] = await Promise.all([
     owner.supabase.rpc("has_entitlement", {
       p_user: owner.userId,
       p_feature: "trainer.delegation",
@@ -69,22 +75,31 @@ export async function loadTeam(): Promise<TeamData | null> {
     owner.supabase.from("trainer_profiles").select("verification_status").eq("user_id", owner.userId).maybeSingle(),
     loadDelegations(owner),
     owner.supabase.from("coachings").select("id").eq("trainer_id", owner.userId).in("status", ["trial", "active"]),
+    owner.supabase.rpc("delegate_journal").limit(JOURNAL_SIZE),
   ]);
   if (plan.error) fail("plan", plan.error);
   if (requests.error) fail("access requests", requests.error);
   if (profile.error) fail("trainer profile", profile.error);
   if (pairs.error) fail("pairs", pairs.error);
-  const names = await clientNames(
-    owner.supabase,
-    pairs.data.map((pair) => pair.id),
-  );
+  if (journal.error) fail("delegate journal", journal.error);
+  const live = new Set(pairs.data.map((pair) => pair.id));
+  const names = await clientNames(owner.supabase, [...live, ...journal.data.map((row) => row.coaching_id)]);
   return {
     timeZone: owner.timeZone,
     canDelegate: plan.data === true,
     requested: requestedPlans(requests.data).has(PAID_PLAN.trainer),
     verified: profile.data?.verification_status === "verified",
     delegations,
-    clients: [...names].map(([coachingId, name]) => ({ coachingId, name })).sort((a, b) => a.name.localeCompare(b.name)),
+    clients: [...names]
+      .filter(([coachingId]) => live.has(coachingId))
+      .map(([coachingId, name]) => ({ coachingId, name }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    journal: journal.data.map((row) => ({
+      at: row.at,
+      action: row.action,
+      delegateName: row.delegate_name,
+      clientName: names.get(row.coaching_id) ?? null,
+    })),
   };
 }
 
