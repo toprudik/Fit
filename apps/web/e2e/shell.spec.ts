@@ -77,6 +77,8 @@ const SCREENS: readonly Screen[] = [
   { slug: "client-own-foods", path: "/client/diary/food/foods", title: "Мои продукты" },
   { slug: "client-food-new", path: "/client/diary/food/foods/new", title: "Новый продукт" },
   { slug: "client-dish-new", path: "/client/diary/food/foods/dish", title: "Новое блюдо" },
+  { slug: "client-activity", path: "/client/diary/activity", title: "Активность" },
+  { slug: "client-shortcut", path: "/client/diary/activity/shortcut", title: "Шаги с iPhone" },
   { slug: "client-trainers", path: "/client/trainers", title: "Тренеры" },
   { slug: "settings", path: "/settings", title: "Настройки" },
   { slug: "settings-plan", path: "/settings/plan", title: "Мой тариф" },
