@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookingDecisionData, parseBotAction } from "./callback-data";
+import { bookingDecisionData, claimAnswerData, parseBotAction } from "./callback-data";
 
 const ID = "4f1c2a3b-5d6e-4f70-8a9b-0c1d2e3f4a5b";
 
@@ -10,6 +10,11 @@ describe("bot action callback_data", () => {
       expect(new TextEncoder().encode(data).length).toBeLessThanOrEqual(64);
       expect(parseBotAction(data)).toEqual({ kind: "booking", accept, bookingId: ID });
     }
+  });
+
+  it("round-trips a claim answer", () => {
+    expect(parseBotAction(claimAnswerData(ID, true))).toEqual({ kind: "claim", merge: true, claimId: ID });
+    expect(parseBotAction(claimAnswerData(ID, false))).toEqual({ kind: "claim", merge: false, claimId: ID });
   });
 
   it.each(["", "bky", "bky:", "bky:not-a-uuid", `bkx:${ID}`, `bky:${ID}:1`, `bky:${ID.toUpperCase()}`])("refuses %j", (data) => {

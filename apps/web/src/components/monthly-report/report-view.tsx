@@ -1,8 +1,9 @@
-import { CalendarCheck, CalendarDays, ClipboardCheck, Dumbbell, Footprints, Moon, Ruler, Trophy, Utensils } from "lucide-react";
+import { Award, CalendarCheck, CalendarDays, ClipboardCheck, Dumbbell, Flame, Footprints, Moon, Ruler, Trophy, Utensils } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { formatNumber, interpolate, plural } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
+import { isBadgeCode } from "@/lib/gamification/gamification";
 import { loadMonthlyReport } from "@/lib/monthly-report/load";
 import { formatMonth, formatSleep, monthParam, storyOptions } from "@/lib/monthly-report/report";
 import { formatMeasurement, type MeasurementKind } from "@/lib/progress/measurements";
@@ -20,6 +21,9 @@ export async function MonthlyReportView({ month }: { month: string }) {
   if (!report) return <EmptyState icon={CalendarDays} title={copy.emptyTitle} description={copy.emptyText} />;
 
   const units = t.progress.measurements.units;
+  const streakNames = t.gamification.streaks;
+  const badgeItems = t.gamification.badges.items;
+  const badges = (report.badges ?? []).filter(isBadgeCode);
   const monthName = formatMonth(locale, report.month);
   const signed = (kind: MeasurementKind, change: number) => {
     const text = formatMeasurement(locale, kind, Math.abs(change), units);
@@ -62,6 +66,28 @@ export async function MonthlyReportView({ month }: { month: string }) {
               subtitle={t.workouts.logs.recordTypes[record.type]}
               value={formatRecord(t, locale, record, weightUnit(locale))}
             />
+          ))}
+        </ListGroup>
+      ) : null}
+
+      {report.streaks ? (
+        <ListGroup header={copy.streaks.header} footer={copy.streaks.footer}>
+          {report.streaks.workouts ? (
+            <ListRow icon={Flame} title={streakNames.workouts} value={plural(locale, report.streaks.workouts, streakNames.weeks)} />
+          ) : null}
+          {report.streaks.diary ? (
+            <ListRow icon={Flame} title={streakNames.diary} value={plural(locale, report.streaks.diary, streakNames.days)} />
+          ) : null}
+          {report.streaks.steps ? (
+            <ListRow icon={Flame} title={streakNames.steps} value={plural(locale, report.streaks.steps, streakNames.days)} />
+          ) : null}
+        </ListGroup>
+      ) : null}
+
+      {badges.length ? (
+        <ListGroup header={copy.badges}>
+          {badges.map((code) => (
+            <ListRow key={code} icon={Award} title={badgeItems[code].title} subtitle={badgeItems[code].text} />
           ))}
         </ListGroup>
       ) : null}

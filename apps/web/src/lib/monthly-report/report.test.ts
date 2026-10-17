@@ -18,6 +18,13 @@ describe("monthly report", () => {
     expect(reportFrom({ month: "2026-09-02" })).toBeNull();
   });
 
+  it("reads the streaks and the new badges", () => {
+    const parsed = reportFrom({ ...report, streaks: { workouts: 2, diary: 3 }, badges: ["sessions_1", "diary_7"] });
+    expect(parsed?.streaks).toEqual({ workouts: 2, diary: 3 });
+    expect(parsed?.badges).toEqual(["sessions_1", "diary_7"]);
+    expect(reportFrom(report)?.streaks).toBeUndefined();
+  });
+
   it("turns months into URL parts and back", () => {
     expect(monthFromParam("2026-09")).toBe("2026-09-01");
     expect(monthFromParam("2026-13")).toBeNull();

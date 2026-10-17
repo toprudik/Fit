@@ -109,6 +109,12 @@ def test_when_the_web_is_unreachable_the_popup_says_so(
     assert session.requests[0].text == CATALOG[code].action_failed  # type: ignore[index]
 
 
+@pytest.mark.parametrize("prefix", ["bky", "bkn", "mcy", "mcn"])
+def test_every_action_prefix_is_forwarded(settings: Settings, monkeypatch: pytest.MonkeyPatch, prefix: str) -> None:
+    _, forwarded = tap(settings, monkeypatch, f"{prefix}:{BOOKING}", ActionAnswer("Ок.", False))
+    assert [payload["data"] for payload in forwarded] == [f"{prefix}:{BOOKING}"]
+
+
 def test_an_unknown_button_just_stops_the_spinner(settings: Settings, monkeypatch: pytest.MonkeyPatch) -> None:
     session, forwarded = tap(settings, monkeypatch, "old:button", ActionAnswer("x", True))
     assert forwarded == []

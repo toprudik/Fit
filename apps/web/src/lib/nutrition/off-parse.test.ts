@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeBarcode, parseOffDraft, parseOffProduct } from "./off-parse";
+import { localNamesFirst, normalizeBarcode, parseOffDraft, parseOffProduct } from "./off-parse";
 
 describe("parseOffProduct", () => {
   it("reads the search hit in the interface language", () => {
@@ -74,5 +74,17 @@ describe("parseOffDraft", () => {
     expect(parseOffDraft({ ...bare, nutriments: { "energy-kcal_100g": 5000 } }, "ru")).toBeNull();
     expect(parseOffDraft({ code: "4600000000017", nutriments: {} }, "ru")).toBeNull();
     expect(parseOffDraft(null, "ru")).toBeNull();
+  });
+});
+
+describe("localNamesFirst", () => {
+  it("puts products named in the interface language first and keeps OFF's order inside each part", () => {
+    const items = [
+      { code: "1", lang: "en" },
+      { code: "2", lang: "ru" },
+      { code: "3", lang: null },
+      { code: "4", lang: "ru" },
+    ];
+    expect(localNamesFirst(items, "ru").map((item) => item.code)).toEqual(["2", "4", "1", "3"]);
   });
 });
