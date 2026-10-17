@@ -17,6 +17,7 @@ import { BOOKING_DAYS, loadBookingPage, loadBookingTrainers, loadClientBooking }
 import { formatMoney } from "@/lib/money/format";
 import { isPairId } from "@/lib/pairs/clients";
 import { loadScheduleOwner } from "@/lib/schedule/load";
+import { loadTrainerZones } from "@/lib/schedule/trainer-zone";
 import { today } from "@/lib/schedule/time";
 
 // A booking id is known only at request time, so the page renders on request.
@@ -63,7 +64,7 @@ async function Reschedule({ params }: { params: PageProps<"/[lang]/client/bookin
     );
   }
 
-  const page = await loadBookingPage(owner, trainer, at);
+  const [page, zones] = await Promise.all([loadBookingPage(owner, trainer, at), loadTrainerZones(owner.supabase, [trainer.trainerId])]);
   const intl = INTL_LOCALE[locale];
   const when = new Intl.DateTimeFormat(intl, {
     weekday: "long",
@@ -82,6 +83,7 @@ async function Reschedule({ params }: { params: PageProps<"/[lang]/client/bookin
       ) : (
         <BookPicker
           timeZone={owner.timeZone}
+          trainerTimeZone={zones.get(trainer.trainerId)}
           days={dayRange(today(owner.timeZone), BOOKING_DAYS)}
           slots={page.slots}
           // Only a personal booking moves, and only to a personal slot.

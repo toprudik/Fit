@@ -223,7 +223,7 @@ def test_happy_path(harness: Harness) -> None:
     (set_webhook,) = harness.telegram.of(SetWebhook)
     assert set_webhook.url.endswith("/telegram/webhook")
     assert set_webhook.secret_token == webhook_secret()
-    assert set_webhook.allowed_updates == ["message"]
+    assert set_webhook.allowed_updates == ["callback_query", "message"]
     assert set_webhook.max_connections == 10
     assert set_webhook.drop_pending_updates is False
     # RU is the default language (no language_code), EN is "en"; the name has no language.
@@ -258,7 +258,7 @@ def test_happy_path(harness: Harness) -> None:
     assert "configured, commit 0123456, env production" in harness.line("deployment /healthz")
     assert (harness.status("webhook without secret"), harness.detail("webhook without secret")) == ("ok", "401")
     assert (harness.status("webhook with secret"), harness.detail("webhook with secret")) == ("ok", "200")
-    assert "allowed_updates=message, max_connections=10" in harness.line("setWebhook")
+    assert "allowed_updates=callback_query,message, max_connections=10" in harness.line("setWebhook")
     assert "pending 0, no delivery errors since" in harness.line("webhook info")
 
 
@@ -448,9 +448,9 @@ def test_check_names_a_menu_button_of_another_type(harness: Harness) -> None:
     [
         ({"url": "https://elsewhere.example/hook"}, "webhook url", "https://elsewhere.example/hook, expected"),
         (
-            {"allowed_updates": ["message", "callback_query"]},
+            {"allowed_updates": ["message"]},
             "webhook settings",
-            "allowed_updates=callback_query,message",
+            "allowed_updates=message, expected callback_query,message",
         ),
         ({"max_connections": 40}, "webhook settings", "max_connections=40, expected 10"),
         ({"has_custom_certificate": True}, "webhook settings", "a custom certificate is set"),

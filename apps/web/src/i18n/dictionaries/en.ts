@@ -692,6 +692,9 @@ export const en: Dictionary = {
       show: "Turn the showcase on",
       hide: "Turn the showcase off",
       hideHint: "Nobody sees a showcase that's off. Your clients and links stay.",
+      storyCards: "Name and QR on clients' cards",
+      storyCardsHint: "Clients share their month in stories. Their sessions-with-a-trainer card will show your name and showcase QR.",
+      storyCardsFailed: "Couldn't save, try again",
       toggleFailed: "That didn't work. Try again.",
       checklist: {
         title: "Missing from your showcase",
@@ -1482,6 +1485,7 @@ export const en: Dictionary = {
       trainer: { one: "session with my trainer", few: "sessions with my trainer", many: "sessions with my trainer", other: "sessions with my trainer" },
       records: { one: "new record", few: "new records", many: "new records", other: "new records" },
       weight: "weight this month",
+      showcase: "Trainer showcase",
     },
   },
   nutrition: {
@@ -2073,6 +2077,13 @@ export const en: Dictionary = {
       title: "Invite link",
       text: "Send the link to a trainer. Access starts once they accept it. The link works once.",
       shareText: "An invite to a DaFit team",
+      searchLabel: "Or find a trainer on DaFit",
+      searchHint: "Name or @username. You'll find verified trainers with a public page and the ones you've worked with on a team.",
+      noResults: "Nobody found",
+      invite: "Invite",
+      invited: "Invite sent to {name}. The link above no longer works.",
+      inviteExpired: "This invite was already accepted or has expired.",
+      unnamed: "Unnamed trainer",
     },
     substitute: {
       header: "Substitute",
@@ -2231,14 +2242,14 @@ export const en: Dictionary = {
     },
     analytics: {
       header: "Group analytics",
-      footer: "Averages appear once at least three clients count. Weight counts only for clients who share measurements.",
+      footer: "Averages appear once at least three clients count. Weight counts only for clients who share measurements, the target only for those who share nutrition.",
       members: "Clients in the group",
       attendance: "Attendance over 30 days",
       attendanceValue: "{share}%",
       weight: "Average weight change over 30 days",
       weightValue: "{change} kg",
-      adherence: "Hitting the target",
-      adherenceLater: "Comes with the food diary",
+      adherence: "Hitting the target over 30 days",
+      adherenceValue: "{share}%",
       few: "Too few clients",
     },
     broadcast: {
@@ -2575,10 +2586,13 @@ export const en: Dictionary = {
     },
     features: {
       header: "What clients use",
-      footer: "Share of clients with a live pair in the period. The entries themselves are not shown here.",
+      footer: "Share of clients with a live pair in the period; the nutrition target as of today. The entries themselves are not shown here.",
       workouts: "Keep a workout diary",
       measurements: "Log measurements",
       photos: "Add progress photos",
+      diary: "Keep a food diary",
+      activity: "Log steps, water or sleep",
+      target: "Have a nutrition target",
     },
     trainers: {
       header: "Trainers",
@@ -2598,7 +2612,7 @@ export const en: Dictionary = {
       subtitle: "{pairs} pairs, {attended} attended",
       lastActive: "active {date}",
       never: "never signed in",
-      flags: { workouts: "workouts", measurements: "measurements", photos: "photos" },
+      flags: { workouts: "workouts", measurements: "measurements", photos: "photos", diary: "food", activity: "activity", target: "target" },
     },
     noName: "No name",
     trainer: {
@@ -2874,6 +2888,7 @@ export const en: Dictionary = {
   /** Trainer schedule: the week, the week template and slots (PRD wave-1 §2.6.1, screens.md §3.2). */
   schedule: {
     newSession: "Session",
+    trainerTime: "{time} on your trainer's clock",
     weekLabel: "Week",
     previousWeek: "Previous week",
     nextWeek: "Next week",
@@ -4372,6 +4387,16 @@ export const en: Dictionary = {
     retry: "Try again",
     feedback: "Send feedback",
   },
+  botActions: {
+    bookingConfirmed: "Booking confirmed. The client will get a message.",
+    bookingConfirmedLine: "Confirmed.",
+    bookingDeclined: "Request declined. The client will get a message.",
+    bookingDeclinedLine: "Declined.",
+    requestClosed: "This request no longer needs an answer.",
+    requestClosedLine: "This request is already closed.",
+    noAccount: "Sign in to DaFit to answer requests.",
+    failed: "That didn't work. Answer the request in the app.",
+  },
   botMessages: {
     open: "Open DaFit",
     botTest: "Done, DaFit can now message you here. Session reminders and other notifications will come to this chat.",
@@ -4436,6 +4461,15 @@ export const en: Dictionary = {
     openFeedback: "Open feedback",
     feedbackReply: "The DaFit team answered your feedback:\n{reply}",
     writeAgain: "Write again",
+    breakGlass: "A DaFit admin opened access to your {categories}. Access ends {until}.\nReason: {reason}",
+    breakGlassCategories: {
+      nutrition: "nutrition",
+      measurements: "measurements",
+      photos: "progress photos",
+      steps: "steps",
+      intake: "intake form",
+      workouts: "your own workouts",
+    },
     /** П1–П3: plan granted, revoked and ending in three days (PRD §2.14-8, 9). */
     planGranted: "You now have {plan} with no end date. Thanks for being in the DaFit beta.",
     planGrantedUntil: "You now have {plan} until {date}. Thanks for being in the DaFit beta.",
@@ -4460,6 +4494,9 @@ export const en: Dictionary = {
     delegationAssistantAccepted: "{delegate} now helps you with your clients.",
     delegationDeclined: "The invite was declined. You can send a new link to another trainer.",
     delegationPending: "Nobody has taken the session {when} yet.",
+    delegationInviteSubstitute: "{owner} asks you to run their session {when}. See what they hand over, then accept or decline.",
+    delegationInviteAssistant: "{owner} invites you to their DaFit team as an assistant. See what you'd get access to, then accept or decline.",
+    openInvite: "View invite",
     openTeam: "Open team",
     openAccess: "Set up access",
     /** Wave-2 §3.12: payload { day, body, first_name, last_name, display_name } from add_food_comment. */
@@ -4596,6 +4633,8 @@ export const en: Dictionary = {
     requestDeclinedReason: "Your request to {name} for {when} was declined. Reason: “{reason}”.",
     requestExpired: "Your request to {name} for {when} got no answer, so the booking did not happen.",
     answerRequest: "Answer the request",
+    confirmRequest: "Confirm",
+    declineRequest: "Decline",
     openSchedule: "Open schedule",
     waiveCharge: "Forgive",
     openBooking: "Open booking",

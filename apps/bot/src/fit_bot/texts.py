@@ -24,6 +24,8 @@ class Texts:
     command_help: str
     description: str
     short_description: str
+    #: Popup on an action button when the app could not be asked (PRD §3 Т2).
+    action_failed: str
 
 
 _RU: Final = Texts(
@@ -51,6 +53,7 @@ _RU: Final = Texts(
         "Бот открывает приложение и присылает напоминания перед занятием."
     ),
     short_description="Расписание, абонементы и прогресс для персональных тренеров и их клиентов.",
+    action_failed="Не получилось. Ответь на запрос в приложении.",
 )
 
 _EN: Final = Texts(
@@ -79,6 +82,7 @@ _EN: Final = Texts(
         "The bot opens the app and sends a reminder before each session."
     ),
     short_description="Schedule, passes, and progress for personal trainers and their clients.",
+    action_failed="That didn't work. Answer the request in the app.",
 )
 
 CATALOG: Final[Mapping[Locale, Texts]] = MappingProxyType({"ru": _RU, "en": _EN})

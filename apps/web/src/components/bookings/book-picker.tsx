@@ -27,9 +27,12 @@ import { previewReschedule, rescheduleBooking } from "@/lib/bookings/changes";
 import type { BookableGroup, BookableSlot, BusyTime } from "@/lib/bookings/load";
 import type { QueueSlot } from "@/lib/bookings/slot-waitlist";
 import { localToUtc } from "@/lib/schedule/time";
+import { trainerClock } from "@/lib/schedule/trainer-clock";
 
 type BookPickerProps = {
   timeZone: string;
+  /** The trainer's time zone: when their clock differs, the confirmation adds their time (SCHED-19). */
+  trainerTimeZone?: string | null;
   /** Local days of the strip, today first. */
   days: string[];
   slots: BookableSlot[];
@@ -55,6 +58,7 @@ type Item = ({ type: "slot" } & BookableSlot) | ({ type: "group" } & BookableGro
  */
 export function BookPicker({
   timeZone,
+  trainerTimeZone,
   days,
   slots,
   groups,
@@ -92,6 +96,10 @@ export function BookPicker({
   const timeFormat = new Intl.DateTimeFormat(intl, { hour: "2-digit", minute: "2-digit", timeZone });
   const range = (item: { startsAt: string; endsAt: string }) =>
     `${timeFormat.format(new Date(item.startsAt))}–${timeFormat.format(new Date(item.endsAt))}`;
+  const trainerTime = (item: { startsAt: string; endsAt: string }) => {
+    const clock = trainerClock(item, timeZone, trainerTimeZone, intl);
+    return clock ? `, ${interpolate(t.schedule.trainerTime, { time: clock })}` : "";
+  };
   const where = (item: BookableSlot) => (item.mode === "online" ? copy.online : (item.place ?? copy.offline));
 
   const open = (next: Exclude<Item, { type: "queue" }>) => {
@@ -186,7 +194,7 @@ export function BookPicker({
                   key={item.id}
                   icon={Hourglass}
                   title={<span className="tabular-nums">{range(item)}</span>}
-                  subtitle={`${where(item)}, ${item.myEntryId ? waitCopy.inQueueRow : waitCopy.bookedRow}`}
+                  subtitle={`${where(item)}${trainerTime(item)}, ${item.myEntryId ? waitCopy.inQueueRow : waitCopy.bookedRow}`}
                   href={item.myEntryId ? `/client/waitlist/${item.myEntryId}` : undefined}
                   onClick={
                     item.myEntryId
@@ -205,7 +213,7 @@ export function BookPicker({
                   key={item.id}
                   icon={Clock}
                   title={<span className="tabular-nums">{range(item)}</span>}
-                  subtitle={where(item)}
+                  subtitle={`${where(item)}${trainerTime(item)}`}
                   onClick={() => open(item)}
                 />
               );
@@ -220,7 +228,7 @@ export function BookPicker({
                     <span className="tabular-nums">{range(item)}</span>, {item.title}
                   </>
                 }
-                subtitle={`${where(item)}, ${state.text}`}
+                subtitle={`${where(item)}${trainerTime(item)}, ${state.text}`}
                 href={state.href}
                 onClick={state.onClick}
               />
@@ -240,7 +248,7 @@ export function BookPicker({
         title={
           slot?.type === "group" ? interpolate(groupCopy.confirmTitle, { title: slot.title }) : moveBookingId ? copy.moveTitle : copy.confirmTitle
         }
-        description={slot ? `${dayFormat.format(new Date(slot.startsAt))}, ${range(slot)}, ${where(slot)}` : undefined}
+        description={slot ? `${dayFormat.format(new Date(slot.startsAt))}, ${range(slot)}${trainerTime(slot)}, ${where(slot)}` : undefined}
         actions={
           <>
             <Button type="button" block loading={pending} disabled={!ready} onClick={confirm}>
@@ -293,7 +301,9 @@ export function BookPicker({
         title={
           queueFor?.type === "group" ? interpolate(waitCopy.joinTitle, { title: queueFor.title }) : waitCopy.joinSlotTitle
         }
-        description={queueFor ? `${dayFormat.format(new Date(queueFor.startsAt))}, ${range(queueFor)}, ${where(queueFor)}` : undefined}
+        description={
+          queueFor ? `${dayFormat.format(new Date(queueFor.startsAt))}, ${range(queueFor)}${trainerTime(queueFor)}, ${where(queueFor)}` : undefined
+        }
         actions={
           <>
             <Button type="button" block loading={pending} onClick={joinQueue}>

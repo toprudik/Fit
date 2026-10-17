@@ -1,4 +1,4 @@
--- Waitlist for booked personal slots of migration 20261017181547_slot_waitlist.sql (PRD wave-2 §9): joining a
+-- Waitlist for booked personal slots of migration 20261017203517_slot_waitlist.sql (PRD wave-2 §9): joining a
 -- booked slot, the offer to the first in line when the slot opens again, an offer holding the slot, accept with
 -- and without a pass, decline and expiry passing it on, the offer deadline, the queue closing, the trainer's offer.
 -- Slots freed inside a transaction reach the queue at commit (deferred triggers), so the test fires them with

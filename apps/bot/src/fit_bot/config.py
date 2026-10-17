@@ -17,6 +17,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 WEBHOOK_PATH: Final = "/telegram/webhook"
 HEALTH_PATH: Final = "/healthz"
 WEBHOOK_SECRET_LABEL: Final = b"dafit/telegram-webhook-secret/v1"
+#: The web route that decides taps on action buttons (ADR 0006, "Action buttons").
+ACTIONS_PATH: Final = "/api/bot/actions"
+ACTIONS_SECRET_LABEL: Final = b"dafit/bot-actions/v1"
 #: Never polled locally; setup expects it by default.
 PRODUCTION_BOT_USERNAME: Final = "fitconnection_bot"
 
@@ -89,6 +92,19 @@ class Settings(BaseSettings):
         if self.telegram_webhook_secret is not None:
             return self.telegram_webhook_secret.get_secret_value()
         return derive_webhook_secret(self.telegram_bot_token.get_secret_value())
+
+    def actions_secret(self) -> str:
+        """Bearer secret of the web's ACTIONS_PATH: hex(HMAC-SHA256(key=token, msg=ACTIONS_SECRET_LABEL)).
+
+        apps/web/src/lib/bot-actions/secret.ts derives the same value from its copy of the token.
+        """
+        token = self.telegram_bot_token.get_secret_value()
+        return hmac.new(token.encode(), ACTIONS_SECRET_LABEL, hashlib.sha256).hexdigest()
+
+    def actions_url(self) -> str:
+        """ACTIONS_PATH on the WEBAPP_URL origin."""
+        parts = urlsplit(str(self.webapp_url))
+        return urlunsplit(("https", parts.netloc, ACTIONS_PATH, "", ""))
 
     def webhook_url(self) -> str:
         """The URL Telegram calls: the BOT_WEBHOOK_URL origin plus WEBHOOK_PATH."""
