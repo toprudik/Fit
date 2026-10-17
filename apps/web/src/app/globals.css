@@ -331,6 +331,10 @@
     scroll-padding-top: calc(var(--size-header) + var(--safe-top));
     scroll-padding-bottom: calc(var(--size-tabbar) + 1px + var(--safe-bottom));
   }
+  /* In the Mini App the page does not rubber-band past its ends: the app stays put while scrolling. */
+  html[data-telegram] {
+    overscroll-behavior: none;
+  }
   @media (min-width: 48rem) {
     /* From 768px there is no header bar or tab bar over the content. */
     html {

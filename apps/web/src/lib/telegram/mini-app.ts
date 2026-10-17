@@ -186,21 +186,24 @@ export function hapticSelection() {
 
 /*
  * Telegram has one BackButton, but a push screen and a sheet opened on it may both want it.
- * Handlers form a stack: the newest one gets the press, and the button hides when the stack is empty.
+ * Handlers form a stack: the newest one gets the press. Under the stack lies the fallback the shell
+ * sets for every screen that is not a root (useTelegramBackFallback), so a screen that forgot its
+ * own "Back" still has one; the button hides when both are empty.
  */
 const backStack: { current: () => void }[] = [];
+let backFallback: { current: () => void } | null = null;
 let detachClick: (() => void) | null = null;
 
 function syncBackButton() {
   if (!ready) return;
   safely(() => {
-    if (backStack.length === 0) {
+    if (backStack.length === 0 && !backFallback) {
       backButton.hide();
       detachClick?.();
       detachClick = null;
       return;
     }
-    if (!detachClick) detachClick = backButton.onClick(() => backStack.at(-1)?.current());
+    if (!detachClick) detachClick = backButton.onClick(() => (backStack.at(-1) ?? backFallback)?.current());
     backButton.show();
   });
 }
@@ -222,6 +225,28 @@ export function useTelegramBackButton(onBack: (() => void) | null) {
     syncBackButton();
     return () => {
       backStack.splice(backStack.indexOf(entry), 1);
+      syncBackButton();
+    };
+  }, [active]);
+}
+
+/**
+ * Sets the BackButton's fallback: pressed when no screen or sheet holds the button. Pass null on a
+ * root screen. One holder at a time (the shell), unlike useTelegramBackButton.
+ */
+export function useTelegramBackFallback(onBack: (() => void) | null) {
+  const handler = useRef(onBack);
+  useEffect(() => {
+    handler.current = onBack;
+  });
+  const active = onBack !== null;
+  useEffect(() => {
+    if (!active) return;
+    const entry = { current: () => handler.current?.() };
+    backFallback = entry;
+    syncBackButton();
+    return () => {
+      if (backFallback === entry) backFallback = null;
       syncBackButton();
     };
   }, [active]);

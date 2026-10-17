@@ -251,14 +251,14 @@ isOneToOne: true
                   ]
                 },"bonuses": {
                   Row: {
-                    "beneficiary_id": string,"created_at": string,"discount_percent": number | null,"granted_at": string | null,"id": string,"kind": Database["public"]['Enums']["bonus_kind"],"pass_id": string | null,"referral_id": string,"sessions": number | null,"status": Database["public"]['Enums']["bonus_status"],"voided_at": string | null
+                    "beneficiary_id": string,"coaching_id": string | null,"created_at": string,"discount_percent": number | null,"granted_at": string | null,"id": string,"kind": Database["public"]['Enums']["bonus_kind"],"pass_id": string | null,"referral_id": string,"sessions": number | null,"status": Database["public"]['Enums']["bonus_status"],"voided_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "beneficiary_id": string,"created_at"?: string,"discount_percent"?: number | null,"granted_at"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["bonus_kind"],"pass_id"?: string | null,"referral_id": string,"sessions"?: number | null,"status"?: Database["public"]['Enums']["bonus_status"],"voided_at"?: string | null
+                    "beneficiary_id": string,"coaching_id"?: string | null,"created_at"?: string,"discount_percent"?: number | null,"granted_at"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["bonus_kind"],"pass_id"?: string | null,"referral_id": string,"sessions"?: number | null,"status"?: Database["public"]['Enums']["bonus_status"],"voided_at"?: string | null
                   }
                   Update: {
-                    "beneficiary_id"?: string,"created_at"?: string,"discount_percent"?: number | null,"granted_at"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["bonus_kind"],"pass_id"?: string | null,"referral_id"?: string,"sessions"?: number | null,"status"?: Database["public"]['Enums']["bonus_status"],"voided_at"?: string | null
+                    "beneficiary_id"?: string,"coaching_id"?: string | null,"created_at"?: string,"discount_percent"?: number | null,"granted_at"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["bonus_kind"],"pass_id"?: string | null,"referral_id"?: string,"sessions"?: number | null,"status"?: Database["public"]['Enums']["bonus_status"],"voided_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -272,6 +272,24 @@ isOneToOne: false
       columns: ["beneficiary_id"]
 isOneToOne: false
       referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bonuses_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_balances"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "bonuses_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_stats"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "bonuses_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coachings"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "bonuses_pass_id_fkey"
@@ -3725,6 +3743,21 @@ isOneToOne: false
               "active_invites": number,"active_pairs": number,"blocked_users": number,"trainers": number,"trainers_pending": number,"trainers_verified": number,"users": number
             }[]
                            },
+"admin_owner_cohorts":
+{ Args: { "p_weeks"?: number }; Returns: {
+              "cohort_week": string,"retained": (number)[],"size": number
+            }[]
+                           },
+"admin_owner_summary":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "attended": number,"bookings": number,"cards": number,"client_referrals": number,"client_referrals_qualified": number,"clients": number,"clients_active_30": number,"clients_active_7": number,"dau": number,"held_sessions": number,"joins_by_source": Json,"mau": number,"pairs": number,"passes_sold": number,"trainer_invites_created": number,"trainer_invites_redeemed": number,"trainer_referrals": number,"trainers": number,"trainers_active_30": number,"trainers_active_7": number,"trainers_verified": number,"turnover": Json,"turnover_30": Json,"users": number,"wau": number
+            }[]
+                           },
+"admin_owner_weekly":
+{ Args: { "p_weeks"?: number }; Returns: {
+              "active_clients": number,"active_trainers": number,"active_users": number,"attended": number,"bookings": number,"held_sessions": number,"new_pairs": number,"new_trainers": number,"new_users": number,"passes_sold": number,"referrals": number,"trainer_invites_created": number,"trainer_invites_redeemed": number,"turnover": Json,"week_start": string
+            }[]
+                           },
 "admin_reply_feedback":
 { Args: { "p_body": string,"p_feedback_id": string }; Returns: string
                            },
@@ -4006,7 +4039,7 @@ isOneToOne: false
                            },
 "group_analytics":
 { Args: { "p_group_id": string }; Returns: {
-              "attendance": number,"attendance_clients": number,"members": number,"weight_change_kg": number,"weight_clients": number
+              "adherence": number,"adherence_clients": number,"attendance": number,"attendance_clients": number,"members": number,"weight_change_kg": number,"weight_clients": number
             }[]
                            },
 "group_booking_preview":
