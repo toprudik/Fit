@@ -1,4 +1,4 @@
--- Feature use of migration 20261017174613_admin_feature_use.sql (PRD wave-2 §8 rule 2): the platform slice counts
+-- Feature use of migration 20261017200317_admin_feature_use.sql (PRD wave-2 §8 rule 2): the platform slice counts
 -- clients who keep the food diary, log activity or have a live nutrition target, the clients slice has the same
 -- yes/no flags, and neither says anything about what was eaten, walked or set.
 begin;
