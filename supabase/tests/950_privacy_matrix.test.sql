@@ -87,6 +87,7 @@ begin
   insert into public.waitlist_entries (session_id, coaching_id, client_id, trainer_id)
   values (v_session, v_pair, v_client, v_trainer);
   insert into public.app_opens (user_id, source) values (v_client, 'session_reminder');
+  insert into public.trainer_churn_dismissals (coaching_id, hidden_until) values (v_pair, now() + interval '30 days');
   v_pass := tests.create_pass(p_trainer, p_client, 10, 10000);
   insert into public.pass_freezes (pass_id, period, reason)
   values (v_pass, daterange(current_date + 10, current_date + 12), 'trip');
@@ -103,6 +104,9 @@ begin
   values (v_client, 'waist', 80, now(), current_date, v_trainer);
   insert into public.contact_requests (coaching_id, requester_id, recipient_id) values (v_pair, v_trainer, v_client);
   insert into public.managed_client_claims (trainer_id, claimant_id, new_coaching_id) values (v_trainer, v_client, v_pair);
+  with h as (
+    insert into public.homework (coaching_id, title, due_date) values (v_pair, 'Plank', current_date + 1) returning id)
+  insert into public.homework_occurrences (homework_id, due_on) select h.id, current_date + 1 from h;
   insert into public.nutrition_targets (source, client_id, coaching_id, kcal, effective_from, set_by)
   values ('trainer', v_client, v_pair, 1800, current_date, v_trainer);
   insert into public.food_day_comments (client_id, coaching_id, author_id, local_date, body)
@@ -192,6 +196,8 @@ insert into tests.pair_tables values
   ('payments',              't.id::text',          't.coaching_id = %L'),
   ('money_events',          't.id::text',          't.coaching_id = %L'),
   ('milestones',            't.id::text',          't.coaching_id = %L'),
+  ('homework',              't.id::text',          't.coaching_id = %L'),
+  ('homework_occurrences',  't.id::text',          't.homework_id in (select h.id from public.homework h where h.coaching_id = %L)'),
   ('workout_logs',          't.id::text',          't.coaching_id = %L'),
   ('nutrition_targets',     't.id::text',          't.coaching_id = %L'),
   ('food_day_comments',     't.id::text',          't.coaching_id = %L');

@@ -1007,6 +1007,58 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"homework": {
+                  Row: {
+                    "archived_at": string | null,"coaching_id": string,"created_at": string,"description": string | null,"due_date": string,"id": string,"repeat_until": string | null,"repeat_weekdays": (number)[] | null,"title": string,"updated_at": string,"video_url": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archived_at"?: string | null,"coaching_id": string,"created_at"?: string,"description"?: string | null,"due_date": string,"id"?: string,"repeat_until"?: string | null,"repeat_weekdays"?: (number)[] | null,"title": string,"updated_at"?: string,"video_url"?: string | null
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"coaching_id"?: string,"created_at"?: string,"description"?: string | null,"due_date"?: string,"id"?: string,"repeat_until"?: string | null,"repeat_weekdays"?: (number)[] | null,"title"?: string,"updated_at"?: string,"video_url"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "homework_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_balances"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "homework_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_stats"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "homework_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coachings"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"homework_occurrences": {
+                  Row: {
+                    "comment": string | null,"done_at": string | null,"due_on": string,"homework_id": string,"id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "comment"?: string | null,"done_at"?: string | null,"due_on": string,"homework_id": string,"id"?: string
+                  }
+                  Update: {
+                    "comment"?: string | null,"done_at"?: string | null,"due_on"?: string,"homework_id"?: string,"id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "homework_occurrences_homework_id_fkey"
+      columns: ["homework_id"]
+isOneToOne: false
+      referencedRelation: "homework"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"intakes": {
                   Row: {
                     "answers": NonNullable<Json>,"form_version": string,"id": string,"parq_answers": NonNullable<Json>,"parq_flagged": boolean,"submitted_at": string,"user_id": string
@@ -2107,6 +2159,38 @@ isOneToOne: false
       referencedColumns: ["user_id"]
     }
                   ]
+                },"trainer_churn_dismissals": {
+                  Row: {
+                    "coaching_id": string,"created_at": string,"hidden_until": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "coaching_id": string,"created_at"?: string,"hidden_until": string
+                  }
+                  Update: {
+                    "coaching_id"?: string,"created_at"?: string,"hidden_until"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "trainer_churn_dismissals_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: true
+      referencedRelation: "coaching_balances"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "trainer_churn_dismissals_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: true
+      referencedRelation: "coaching_stats"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "trainer_churn_dismissals_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: true
+      referencedRelation: "coachings"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"trainer_invites": {
                   Row: {
                     "code_hash": string,"code_hint": string,"created_at": string,"created_by": string | null,"expires_at": string | null,"id": string,"note": string | null,"redeemed_at": string | null,"redeemed_by": string | null,"revoked_at": string | null
@@ -2830,6 +2914,9 @@ isOneToOne: false
 "archive_food":
 { Args: { "p_id": string }; Returns: boolean
                            },
+"archive_homework":
+{ Args: { "p_homework": string }; Returns: undefined
+                           },
 "book_group_session":
 { Args: { "p_session_id": string }; Returns: {
               "booking_id": string,"status": Database["public"]['Enums']["booking_status"]
@@ -3025,6 +3112,9 @@ isOneToOne: false
 "hide_food_comment":
 { Args: { "p_hidden"?: boolean,"p_id": string }; Returns: boolean
                            },
+"homework_today":
+{ Args: { "p_coaching": string }; Returns: string
+                           },
 "join_by_code":
 { Args: { "p_code": string }; Returns: string
                            },
@@ -3052,6 +3142,9 @@ isOneToOne: false
                            },
 "mark_attendance":
 { Args: { "p_booking_id": string,"p_reason"?: string,"p_status": Database["public"]['Enums']["booking_status"] }; Returns: Database["public"]['Enums']["booking_status"]
+                           },
+"mark_homework_done":
+{ Args: { "p_comment"?: string,"p_occurrence": string }; Returns: string
                            },
 "my_client_invite":
 { Args: Record<PropertyKey, never>; Returns: {
@@ -3157,6 +3250,9 @@ isOneToOne: false
 "save_food":
 { Args: { "p_barcode"?: string,"p_brand"?: string,"p_carbs"?: number,"p_fat"?: number,"p_id": string,"p_kcal": number,"p_name": string,"p_protein"?: number,"p_serving_g"?: number,"p_serving_label"?: string }; Returns: string
                            },
+"save_homework":
+{ Args: { "p_homework": Json }; Returns: string
+                           },
 "save_week_template":
 { Args: { "p_buffer_min"?: number,"p_horizon_weeks"?: number,"p_items": Json }; Returns: number
                            },
@@ -3235,11 +3331,42 @@ isOneToOne: false
 "submit_trainer_verification":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
+"trainer_analytics":
+{ Args: { "p_from": string,"p_to": string }; Returns: {
+              "active_clients": number,"attended": number,"client_cancels": number,"debt": Json,"debt_clients": number,"ending_passes": number,"held_sessions": number,"late_cancels": number,"no_shows": number,"trainer_cancels": number
+            }[]
+                           },
+"trainer_churn_risk":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "client_alias": string,"client_id": string,"coaching_id": string,"days_absent": number,"display_name": string,"first_name": string,"last_name": string,"pass_ended_at": string,"reasons": (string)[],"username": string
+            }[]
+                           },
+"trainer_dismiss_churn":
+{ Args: { "p_coaching_id": string }; Returns: string
+                           },
+"trainer_ending_passes":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "client_alias": string,"client_id": string,"coaching_id": string,"display_name": string,"effective_expires_at": string,"first_name": string,"last_name": string,"remaining": number,"title": string,"username": string
+            }[]
+                           },
+"trainer_finance":
+{ Args: { "p_from": string,"p_to": string }; Returns: {
+              "charges": number,"currency": string,"earned_minor": number,"received_minor": number
+            }[]
+                           },
 "trainer_invite_status":
 { Args: { "p_code": string }; Returns: string
                            },
 "trainer_offer_waitlist":
 { Args: { "p_entry_id": string }; Returns: undefined
+                           },
+"trainer_price_hints":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "a": string,"b": string,"currency": string,"kind": string,"value": number
+            }[]
+                           },
+"unmark_homework_done":
+{ Args: { "p_occurrence": string }; Returns: undefined
                            },
 "update_food_entry":
 { Args: { "p_grams"?: number,"p_id": string,"p_kcal"?: number,"p_meal": Database["public"]['Enums']["meal_type"],"p_servings"?: number }; Returns: boolean

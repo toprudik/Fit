@@ -20,6 +20,7 @@ import { loadPairMoney } from "@/lib/passes/load";
 import { formatLocalDay, lastValidDay } from "@/lib/passes/present";
 import { TrainerNutrition } from "@/components/nutrition/sections";
 import { TrainerProgress } from "@/components/progress/sections";
+import { TrainerHomework } from "@/components/homework/trainer-homework";
 import { LogListSection } from "@/components/workouts/log-screens";
 import { AskContactButton } from "./ask-contact";
 import { PairMilestones } from "./milestones";
@@ -238,7 +239,10 @@ export async function TrainerPair({ coachingId, tab, action, day }: { coachingId
         {tab === "overview" ? (
           <Overview t={t} locale={locale} pair={pair} />
         ) : tab === "workouts" ? (
-          <LogListSection place={{ side: "trainer", coachingId: pair.coachingId }} />
+          <>
+            <TrainerHomework coachingId={pair.coachingId} />
+            <LogListSection place={{ side: "trainer", coachingId: pair.coachingId }} />
+          </>
         ) : tab === "progress" ? (
           <TrainerProgress coachingId={pair.coachingId} />
         ) : tab === "nutrition" ? (

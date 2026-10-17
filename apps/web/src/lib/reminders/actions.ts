@@ -4,7 +4,7 @@ import { refresh } from "next/cache";
 import { isPairId } from "@/lib/pairs/clients";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isValidOffsets, sortOffsets } from "./offsets";
-import { isToggleType, shortTime } from "./types";
+import { isToggleType, OFF_BY_DEFAULT, shortTime } from "./types";
 
 export type SettingsActionResult = { ok: boolean };
 
@@ -78,13 +78,22 @@ export async function setDigestTime(time: string): Promise<SettingsActionResult>
 }
 
 /**
- * Turns one notification type on or off (PRD 2.9-8, NOTIF-7). A row exists only for a type switched off;
- * turning it back on deletes the row, so the default applies again.
+ * Turns one notification type on or off (PRD 2.9-8, NOTIF-7). A row exists only for a type switched away from
+ * its default; switching back deletes the row, so the default applies again.
  */
 export async function setNotificationEnabled(input: { type: string; enabled: boolean }): Promise<SettingsActionResult> {
   if (!isToggleType(input.type)) return { ok: false };
   const { supabase, userId } = await signedIn();
   if (!userId) return { ok: false };
+  if (OFF_BY_DEFAULT.includes(input.type)) {
+    if (!input.enabled) {
+      const { error } = await supabase.from("notification_preferences").delete().eq("user_id", userId).eq("type", input.type);
+      return done("turning a notification off", error);
+    }
+    const { error } = await supabase.from("notification_preferences").insert({ user_id: userId, type: input.type, enabled: true });
+    // Already on: the row is there.
+    return done("turning a notification on", error?.code === "23505" ? null : error);
+  }
   if (input.enabled) {
     const { error } = await supabase.from("notification_preferences").delete().eq("user_id", userId).eq("type", input.type);
     return done("turning a notification on", error);

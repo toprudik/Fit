@@ -1,7 +1,10 @@
 /** Types the user can switch off on /settings/notifications (PRD 2.9-8); the rest of wave 1 is mandatory or not sent yet. */
-export const CLIENT_TOGGLES = ["session_reminder", "coaching_ended"] as const;
-export const TRAINER_TOGGLES = ["daily_digest", "coaching_created"] as const;
+export const CLIENT_TOGGLES = ["session_reminder", "coaching_ended", "homework_reminder"] as const;
+export const TRAINER_TOGGLES = ["daily_digest", "coaching_created", "homework_done"] as const;
 export type ToggleType = (typeof CLIENT_TOGGLES)[number] | (typeof TRAINER_TOGGLES)[number];
+
+/** Types that are off until the user turns them on (a row with enabled = true): "Клиент выполнил задание" (PRD 10-5). */
+export const OFF_BY_DEFAULT: readonly ToggleType[] = ["homework_done"];
 
 export function isToggleType(value: unknown): value is ToggleType {
   return (CLIENT_TOGGLES as readonly unknown[]).includes(value) || (TRAINER_TOGGLES as readonly unknown[]).includes(value);

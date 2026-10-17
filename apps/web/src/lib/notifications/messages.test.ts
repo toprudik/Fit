@@ -778,3 +778,47 @@ describe("contact requests", () => {
     ]);
   });
 });
+
+describe("homework messages (Д1, Д2)", () => {
+  const HOMEWORK = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
+  const app = { appUrl: "https://fit.example", group: false };
+
+  it("reminds the client on the day with the title and the trainer's name, escaped", () => {
+    const message = renderMessage(
+      { ...row, kind: "homework_reminder", payload: { coaching_id: PAIR, homework_id: HOMEWORK, title: "Планка <3>", first_name: "Ира" } },
+      app,
+    );
+    expect(message).toEqual({
+      text: "Сегодня срок домашнего задания «Планка &lt;3&gt;» от тренера Ира.",
+      buttons: [{ text: "Открыть задание", web_app: { url: "https://fit.example/client/sessions/homework?source=homework_reminder" } }],
+    });
+  });
+
+  it("tells the trainer a homework is done, with the comment, and opens it", () => {
+    const message = renderMessage(
+      { ...row, kind: "homework_done", payload: { coaching_id: PAIR, homework_id: HOMEWORK, title: "Планка", name: "Анна", comment: "Тяжело" } },
+      app,
+    );
+    expect(message).toEqual({
+      text: "Анна: задание «Планка» выполнено.\nКомментарий: Тяжело",
+      buttons: [
+        {
+          text: "Открыть задание",
+          web_app: { url: `https://fit.example/trainer/clients/${PAIR}/workouts/homework/${HOMEWORK}?source=homework_done` },
+        },
+      ],
+    });
+  });
+
+  it("leaves the comment out when there is none and falls back to the pair's workouts", () => {
+    const message = renderMessage(
+      { ...row, kind: "homework_done", payload: { coaching_id: PAIR, homework_id: "x", title: "Планка", name: "Анна", comment: null } },
+      app,
+    );
+    expect(message?.text).toBe("Анна: задание «Планка» выполнено.");
+    expect(message?.buttons[0]).toEqual({
+      text: "Открыть задание",
+      web_app: { url: `https://fit.example/trainer/clients/${PAIR}/workouts?source=homework_done` },
+    });
+  });
+});
