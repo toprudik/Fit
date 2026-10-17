@@ -42,6 +42,9 @@ declare
   v_workout  uuid;
 begin
   insert into public.locations (trainer_id, name) values (v_trainer, 'Gym of ' || p_trainer);
+  insert into public.location_check_in_tokens (location_id, trainer_id, token)
+  select l.id, v_trainer, pg_catalog.rpad(pg_catalog.left(pg_catalog.md5(p_trainer), 20), 22, '_')
+  from public.locations l where l.trainer_id = v_trainer;
   insert into public.week_templates (trainer_id, name, time_zone) values (v_trainer, 'Week', 'Europe/Moscow')
   returning id into v_template;
   insert into public.week_template_items (template_id, iso_weekday, start_time, end_time, duration_min)
@@ -113,10 +116,21 @@ begin
   insert into public.groups (trainer_id, name, goal) values (v_trainer, 'Group of ' || p_trainer, 'lose') returning id into v_group;
   insert into public.group_members (group_id, coaching_id, client_id) values (v_group, v_pair, v_client);
   insert into public.broadcasts (trainer_id, group_id, body, created_by) values (v_trainer, v_group, 'Hello', v_trainer);
+  insert into public.referral_codes (coaching_id, code) values (v_pair, left(md5(v_pair::text), 10));
 end $$;
 select tests.fill_pair('trainer_a', 'client_c');
 select tests.fill_pair('trainer_b', 'client_c');
 select tests.fill_pair('trainer_a', 'client_e');
+-- C brought E to A by a referral offer, and C got a bonus.
+insert into public.referral_offers (trainer_id, referrer_sessions) values (tests.user_id('trainer_a'), 1);
+with r as (
+  insert into public.referrals (offer_id, trainer_id, referrer_id, referee_id, coaching_id, referrer_coaching_id)
+  select o.id, o.trainer_id, tests.user_id('client_c'), tests.user_id('client_e'), tests.pair_id('trainer_a', 'client_e'),
+         tests.pair_id('trainer_a', 'client_c')
+  from public.referral_offers o where o.trainer_id = tests.user_id('trainer_a')
+  returning id
+)
+insert into public.bonuses (referral_id, beneficiary_id, kind, sessions) select r.id, tests.user_id('client_c'), 'sessions', 1 from r;
 
 -- Personal data of C and E: a self log with a set (which builds a personal record), a measurement, a photo, an
 -- intake; C also has an export, a calendar feed, notification preferences, a consent, feedback and an outbox row.

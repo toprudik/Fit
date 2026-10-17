@@ -1,7 +1,8 @@
-import { checkInPath, parseCheckInStartParam } from "@/lib/check-in/link";
+import { checkInPath, parseCheckInStartParam, parsePlaceCheckInStartParam } from "@/lib/check-in/link";
 import { CLIENT_LINK_START_PREFIX, clientLinkPath, isClientLinkToken } from "@/lib/client-links/link";
 import { CONTACT_START_PREFIX, contactRequestPath, isContactRequestId } from "@/lib/contact/request";
 import { isPairId } from "@/lib/pairs/clients";
+import { isReferralCode, REFERRAL_START_PREFIX, referralPath } from "@/lib/referrals/link";
 import { isShowcaseSlug, SHOWCASE_START_PREFIX, showcasePath } from "@/lib/showcase/link";
 import { INVITE_START_PREFIX, redeemPath } from "@/lib/trainer-invites/code";
 import { isTrialToken, TRIAL_START_PREFIX, trialPath } from "@/lib/trial-links/link";
@@ -32,6 +33,11 @@ export function startParamPath(param: string | null | undefined): string | null 
     const slug = param.slice(SHOWCASE_START_PREFIX.length);
     return isShowcaseSlug(slug) ? showcasePath(slug) : null;
   }
+  // rf_<code>: a client's referral link (PRD wave-3 §3.1-3).
+  if (param.startsWith(REFERRAL_START_PREFIX)) {
+    const code = param.slice(REFERRAL_START_PREFIX.length);
+    return isReferralCode(code) ? referralPath(code) : null;
+  }
   // cr_<request id>: the answer to "Попросить связаться", opened from the website (PRIV-2).
   if (param.startsWith(CONTACT_START_PREFIX)) {
     const id = param.slice(CONTACT_START_PREFIX.length);
@@ -45,6 +51,9 @@ export function startParamPath(param: string | null | undefined): string | null 
   // ck_<session id>_<code>: the trainer's check-in QR (PRD wave-3 §5).
   const checkIn = parseCheckInStartParam(param);
   if (checkIn) return checkInPath(checkIn.sessionId, checkIn.code);
+  // cl_<token>: the printed check-in QR of a location (§5 rule 2b).
+  const place = parsePlaceCheckInStartParam(param);
+  if (place) return place;
   if (param.startsWith(CLIENT_PASS_PREFIX)) {
     const id = param.slice(CLIENT_PASS_PREFIX.length);
     return isPairId(id) ? `/client/passes/${id}` : null;
