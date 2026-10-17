@@ -966,6 +966,25 @@ describe("badge messages (wave-3 §2.2-7)", () => {
       { text: "Message the client", url: "https://t.me/anna_client_demo" },
     ]);
   });
+  it("tells the client a session went into debt, with the total and the trainer's payment link (К11)", () => {
+    const payload = {
+      coaching_id: PAIR, charge_id: PAIR, starts_at: "2026-11-02T07:00:00Z", amount_minor: 250000, currency: "RUB", debt_sessions: 2,
+      debt_amounts: { RUB: 500000 }, username: "coach_ira_demo", payment_url: "https://pay.example/ira",
+      first_name: "Ира", last_name: null,
+    };
+    const message = renderMessage({ ...row, kind: "debt", payload }, { appUrl: "https://fit.example", group: false });
+    expect(message?.text).toMatch(/^Тренер Ира: занятие .+ прошло без абонемента и ушло в долг\. Всего в долге: 2 занятия, это 5\s000\s₽\.$/);
+    expect(message?.buttons).toEqual([
+      { text: "Оплатить", url: "https://pay.example/ira" },
+      { text: "Открыть абонементы", web_app: { url: "https://fit.example/client/passes?source=debt" } },
+    ]);
+    const free = renderMessage(
+      { ...row, locale: "en", kind: "debt", payload: { ...payload, debt_sessions: 1, debt_amounts: {}, payment_url: null } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(free?.text).toMatch(/had no pass, so it went into debt\. You now owe 1 session in total\.$/);
+    expect(free?.buttons).toEqual([{ text: "Open my passes", web_app: { url: "https://fit.example/client/passes?source=debt" } }]);
+  });
 });
 
 describe("challenge invitations (wave-3 §2.3-11)", () => {

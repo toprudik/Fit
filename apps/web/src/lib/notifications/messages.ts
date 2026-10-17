@@ -233,6 +233,9 @@ const templates: Partial<Record<NotificationType, Template>> = {
   // username, payment_url? } from private.queue_pass_ending, the person being the other side of the pair.
   pass_ending: (context) => passEndingMessage(context, "client"),
   client_pass_ending: (context) => passEndingMessage(context, "trainer"),
+  // К11: payload { coaching_id, charge_id, starts_at, amount_minor, currency, debt_sessions, debt_amounts, username,
+  // payment_url?, first_name, last_name } from private.notify_debt, when an attended session is charged without a pass.
+  debt: debtMessage,
   // К7: payload { booking_id, starts_at, kind, title, mode, location_name, location_address, first_name, last_name,
   // offset_min } from private.sync_booking_reminders. The meeting link stays in DaFit (SCHED-21).
   session_reminder: ({ t, locale, timeZone, payload }) => {
@@ -759,6 +762,25 @@ function passEndingMessage({ t, locale, timeZone, payload }: TemplateContext, re
     if (username) buttons.push({ text: t.writeToClient, href: `https://t.me/${username}` });
   }
   return { text: interpolateEscaped(template, values), buttons };
+}
+
+/** К11: which session went into debt, and how much the pair owes now, in sessions and in money. */
+function debtMessage({ t, locale, timeZone, payload }: TemplateContext) {
+  const amounts = nested(payload.debt_amounts);
+  const amount = Object.entries(amounts)
+    .filter((entry): entry is [string, number] => typeof entry[1] === "number" && entry[1] > 0)
+    .map(([currency, minor]) => formatMoney(locale, minor, currency))
+    .join(" + ");
+  const values = {
+    name: personName(payload) || t.unnamedTrainer,
+    when: typeof payload.starts_at === "string" ? formatSessionTime(locale, payload.starts_at, timeZone ?? DEFAULT_TIME_ZONE) : "",
+    debt: plural(locale, Math.max(1, Number(payload.debt_sessions ?? 1)), dictionaries[locale].pairs.debtSessions),
+    amount,
+  };
+  const url = typeof payload.payment_url === "string" && isButtonUrl(payload.payment_url) ? payload.payment_url : null;
+  const buttons: TemplateButton[] = url ? [{ text: t.pay, href: url }] : [];
+  buttons.push({ text: t.openPasses, path: "/client/passes" });
+  return { text: interpolateEscaped(amount ? t.debtWithAmount : t.debt, values), buttons };
 }
 
 /** A nested object of the payload, such as a person from private.person_name; empty for anything else. */

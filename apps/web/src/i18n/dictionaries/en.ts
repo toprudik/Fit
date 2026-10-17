@@ -3401,6 +3401,7 @@ export const en: Dictionary = {
         badge: "Achievements",
         challenge: "Challenges",
         pass_ending: "Pass running out",
+        debt: "Session went into debt",
         client_pass_ending: "Client's pass running out",
       },
     },
@@ -4283,6 +4284,10 @@ export const en: Dictionary = {
     writeToTrainer: "Message your trainer",
     writeToClient: "Message the client",
     openPass: "Open my pass",
+    /** К11: payload { coaching_id, charge_id, starts_at, amount_minor, currency, debt_sessions, debt_amounts, username, payment_url?, first_name, last_name } from private.notify_debt. */
+    debt: "Trainer {name}: your session on {when} had no pass, so it went into debt. You now owe {debt} in total.",
+    debtWithAmount: "Trainer {name}: your session on {when} had no pass, so it went into debt. You now owe {debt} in total, which is {amount}.",
+    openPasses: "Open my passes",
     intakeSubmitted: "New intake form from {name}.",
     intakeSubmittedFlagged: "New intake form from {name}. There's a yes in PAR-Q, so read it before the session.",
     openIntake: "Open the intake form",

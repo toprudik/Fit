@@ -3412,6 +3412,7 @@ export const ru = {
         badge: "Достижения",
         challenge: "Челленджи",
         pass_ending: "Абонемент заканчивается",
+        debt: "Занятие ушло в долг",
         client_pass_ending: "Абонемент клиента заканчивается",
       },
     },
@@ -4344,6 +4345,10 @@ export const ru = {
     writeToTrainer: "Написать тренеру",
     writeToClient: "Написать клиенту",
     openPass: "Открыть абонемент",
+    /** К11: payload { coaching_id, charge_id, starts_at, amount_minor, currency, debt_sessions, debt_amounts, username, payment_url?, first_name, last_name } from private.notify_debt. */
+    debt: "Тренер {name}: занятие {when} прошло без абонемента и ушло в долг. Всего в долге: {debt}.",
+    debtWithAmount: "Тренер {name}: занятие {when} прошло без абонемента и ушло в долг. Всего в долге: {debt}, это {amount}.",
+    openPasses: "Открыть абонементы",
     /** Т8: the first intake of a client, to the trainers it is shown to. */
     intakeSubmitted: "Новая анкета: {name}.",
     intakeSubmittedFlagged: "Новая анкета: {name}. В PAR-Q есть ответ «да», посмотри анкету до тренировки.",
