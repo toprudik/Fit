@@ -1,4 +1,4 @@
--- Trainer analytics of migration 20261017024900_trainer_analytics.sql (PRD wave-2 §7, 7.1-7.6): plan gates,
+-- Trainer analytics of migration 20261017025700_trainer_analytics.sql (PRD wave-2 §7, 7.1-7.6): plan gates,
 -- attendance and cancellations, earned and received per currency, ending passes, clients at risk of leaving
 -- and hiding them, price hints, and earned without double-counting a settled debt (admin analytics too).
 begin;
