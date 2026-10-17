@@ -9,6 +9,8 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getDictionary, getLocale } from "@/i18n/server";
+import { canMark, logDraftFromHomework } from "@/lib/homework/homework";
+import { loadClientOccurrence } from "@/lib/homework/load";
 import { localDay, todayIn } from "@/lib/passes/present";
 import { loadTrainerShares } from "@/lib/sharing/load";
 import { draftFromLog, type LogDraft } from "@/lib/workouts/log";
@@ -122,9 +124,39 @@ export async function LogDetailPage({ place, logId }: { place: LogPlace; logId: 
   );
 }
 
-async function NewLogForm({ t, place, booking }: { t: Dictionary; place: LogPlace; booking: Promise<string | undefined> }) {
-  const [client, timeZone, bookingId] = await Promise.all([placeClient(place), viewerTimeZone(), booking]);
+async function NewLogForm({
+  t,
+  place,
+  booking,
+  homework,
+}: {
+  t: Dictionary;
+  place: LogPlace;
+  booking: Promise<string | undefined>;
+  homework?: Promise<string | undefined>;
+}) {
+  const [client, timeZone, bookingId, homeworkOccurrenceId, locale] = await Promise.all([
+    placeClient(place),
+    viewerTimeZone(),
+    booking,
+    homework,
+    getLocale(),
+  ]);
   if (!client?.canWrite) return <NotFound t={t} />;
+  // "Записать подходы" from the client's homework (PRD wave-2 §10.2): its exercises, and the mark on save.
+  const fromHomework = place.side === "client" && homeworkOccurrenceId ? await loadClientOccurrence(homeworkOccurrenceId, locale) : null;
+  if (fromHomework) {
+    const today = todayIn(timeZone);
+    return (
+      <LogEditor
+        clientId={client.clientId}
+        timeZone={timeZone}
+        initial={logDraftFromHomework(fromHomework.homework, today)}
+        hrefBase={hrefBase(place)}
+        homeworkOccurrenceId={canMark(fromHomework.homework, fromHomework.occurrence, today) ? fromHomework.occurrence.id : undefined}
+      />
+    );
+  }
   const sessionStart = place.side === "trainer" && bookingId ? await loadBookingStart(bookingId, place.coachingId) : null;
   const initial: LogDraft = {
     title: "",
@@ -147,13 +179,24 @@ async function NewLogForm({ t, place, booking }: { t: Dictionary; place: LogPlac
   );
 }
 
-/** "Новая тренировка"; the trainer's "?booking=" ties it to a session of the pair (PRD 2.10-4). */
-export async function NewLogPage({ place, booking }: { place: LogPlace; booking: Promise<string | undefined> }) {
+/**
+ * "Новая тренировка"; the trainer's "?booking=" ties it to a session of the pair (PRD 2.10-4), the client's
+ * "?homework=" starts it from a homework deadline (PRD wave-2 §10.2).
+ */
+export async function NewLogPage({
+  place,
+  booking,
+  homework,
+}: {
+  place: LogPlace;
+  booking: Promise<string | undefined>;
+  homework?: Promise<string | undefined>;
+}) {
   const t = await getDictionary();
   return (
     <Screen header={<ScreenHeader title={t.workouts.editor.newTitle} back={{ fallbackHref: listHref(place) }} />}>
       <Suspense fallback={<Loading t={t} />}>
-        <NewLogForm t={t} place={place} booking={booking} />
+        <NewLogForm t={t} place={place} booking={booking} homework={homework} />
       </Suspense>
     </Screen>
   );

@@ -1,4 +1,4 @@
--- Trainers bring trainers, migration 20261017081730_trainer_referrals.sql (PRD wave-3 §3.2): the trainer's code,
+-- Trainers bring trainers, migration 20261017082917_trainer_referrals.sql (PRD wave-3 §3.2): the trainer's code,
 -- a person becoming a trainer by it with a pending bonus for the referrer, the admin's bonus size, and a rejected
 -- verification voiding the referral.
 begin;

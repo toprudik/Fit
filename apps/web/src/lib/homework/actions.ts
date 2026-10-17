@@ -6,9 +6,9 @@ import { HOMEWORK_COMMENT_MAX_LENGTH, isHomeworkId, type HomeworkPayload } from 
 
 export type SaveHomeworkResult =
   | { ok: true; id: string }
-  | { ok: false; reason: "pair_ended" | "card_client" | "due_in_past" | "no_dates" | "failed" };
+  | { ok: false; reason: "pair_ended" | "card_client" | "due_in_past" | "no_dates" | "bad_exercise" | "failed" };
 
-const SAVE_REASONS = ["pair_ended", "card_client", "due_in_past", "no_dates"] as const;
+const SAVE_REASONS = ["pair_ended", "card_client", "due_in_past", "no_dates", "bad_exercise"] as const;
 
 /** "Задать домашку" and "Сохранить" on the trainer's side: save_homework checks the pair and lays out the deadlines. */
 export async function saveHomework(payload: HomeworkPayload): Promise<SaveHomeworkResult> {
@@ -42,13 +42,21 @@ export async function archiveHomework(homeworkId: string): Promise<{ ok: boolean
 
 export type MarkResult = { ok: true } | { ok: false; reason: "not_yet" | "too_late" | "failed" };
 
-/** "Выполнено" by the client, with an optional comment; again on a done one changes the comment. */
-export async function markHomeworkDone(input: { occurrenceId: string; comment: string }): Promise<MarkResult> {
+/**
+ * "Выполнено" by the client, with an optional comment and, from "Записать подходы", their saved log of sets;
+ * again on a done one changes the comment.
+ */
+export async function markHomeworkDone(input: { occurrenceId: string; comment: string; logId?: string }): Promise<MarkResult> {
   if (!isHomeworkId(input.occurrenceId) || typeof input.comment !== "string") return { ok: false, reason: "failed" };
+  if (input.logId !== undefined && !isHomeworkId(input.logId)) return { ok: false, reason: "failed" };
   const comment = input.comment.trim();
   if (comment.length > HOMEWORK_COMMENT_MAX_LENGTH) return { ok: false, reason: "failed" };
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("mark_homework_done", { p_occurrence: input.occurrenceId, p_comment: comment || undefined });
+  const { error } = await supabase.rpc("mark_homework_done", {
+    p_occurrence: input.occurrenceId,
+    p_comment: comment || undefined,
+    p_log: input.logId,
+  });
   if (error) {
     if (error.message === "not_yet") return { ok: false, reason: "not_yet" };
     console.error("marking homework done failed", error.code);

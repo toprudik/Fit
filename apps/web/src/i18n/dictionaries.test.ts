@@ -133,6 +133,7 @@ describe("dictionaries follow docs/writing.md", () => {
       "DaFit", "Telegram", "QR", "Pro", "Premium", "English", "I", "OK", "JPG", "PNG", "PDF", "MB", "SBP", "ID", "NPS",
       "Free", "CSV", "USA", "Russia", "Supabase", "Vercel", "Start", "Google", "Apple", "Outlook", "Calendar", "Mac", "PAR-Q",
       "Russian", "CC-BY-SA", "CC", "EZ", "WebP", "GitHub", "JSON", "UTC", "Excel", "Sheets", "DELETE", "Mifflin-St", "Jeor",
+      "Open", "Food", "Facts", "ODbL", "P", "F", "C",
     ]);
     const titleCased = (value: string) =>
       value

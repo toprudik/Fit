@@ -1,19 +1,26 @@
 "use client";
 
-import { Archive } from "lucide-react";
+import { Archive, ClipboardList, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ChipCheckbox } from "@/components/ui/chip";
+import { IconButton } from "@/components/ui/icon-button";
 import { toast } from "@/components/ui/sonner";
 import { Switch } from "@/components/ui/switch";
 import { TextArea } from "@/components/ui/text-area";
 import { TextField } from "@/components/ui/text-field";
+import { ExercisePicker } from "@/components/workouts/log-editor";
+import { TemplatePicker } from "@/components/workouts/template-picker";
 import { useI18n } from "@/i18n/client";
+import { interpolate } from "@/i18n/format";
 import { archiveHomework, saveHomework } from "@/lib/homework/actions";
+import { prescriptionFromTemplate } from "@/lib/homework/format";
 import {
   addDays,
   HOMEWORK_DESCRIPTION_MAX_LENGTH,
+  HOMEWORK_MAX_EXERCISES,
+  HOMEWORK_PRESCRIPTION_MAX_LENGTH,
   HOMEWORK_REPEAT_MAX_DAYS,
   HOMEWORK_TITLE_MAX_LENGTH,
   homeworkPayload,
@@ -22,9 +29,13 @@ import {
   type HomeworkDraftError,
 } from "@/lib/homework/homework";
 
+let keySeed = 0;
+const newKey = () => `h${++keySeed}`;
+
 /**
- * "Задать домашку" and editing it (PRD wave-2 §10-1, 10-2): what to do, details, a video link, the deadline
- * and, optionally, weekdays up to a last day. `today` is the client's day; deadlines follow it.
+ * "Задать домашку" and editing it (PRD wave-2 §10-1, 10-2): what to do, details, exercises from the library or
+ * a template with a prescription each, a video link, the deadline and, optionally, weekdays up to a last day.
+ * `today` is the client's day; deadlines follow it.
  */
 export function HomeworkForm({
   target,
@@ -35,8 +46,10 @@ export function HomeworkForm({
   initial: HomeworkDraft;
   today: string;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const copy = t.homework.form;
+  const [picking, setPicking] = useState(false);
+  const [pickingTemplate, setPickingTemplate] = useState(false);
   const days = t.schedule.sessionForm.weekdaysShort;
   const router = useRouter();
   const [draft, setDraft] = useState(initial);
@@ -44,6 +57,9 @@ export function HomeworkForm({
   const [pending, startTransition] = useTransition();
   const editing = "id" in target;
   const error = (field: HomeworkDraftError) => (errors.includes(field) ? copy.errors[field] : undefined);
+
+  const setExercises = (change: (exercises: HomeworkDraft["exercises"]) => HomeworkDraft["exercises"]) =>
+    setDraft((d) => ({ ...d, exercises: change(d.exercises) }));
 
   function save(event: React.FormEvent) {
     event.preventDefault();
@@ -83,6 +99,41 @@ export function HomeworkForm({
         maxLength={HOMEWORK_DESCRIPTION_MAX_LENGTH}
         rows={3}
       />
+      <section className="flex flex-col gap-3" aria-labelledby="homework-exercises">
+        <h2 id="homework-exercises" className="px-1 text-headline">
+          {copy.exercises}
+        </h2>
+        {draft.exercises.map((exercise, index) => (
+          <div key={exercise.key} className="flex items-end gap-2 rounded-lg bg-surface-1 p-3">
+            <TextField
+              className="min-w-0 flex-1"
+              label={exercise.name}
+              placeholder={copy.prescriptionPlaceholder}
+              value={exercise.prescription}
+              onChange={(e) =>
+                setExercises((list) => list.map((x, i) => (i === index ? { ...x, prescription: e.target.value } : x)))
+              }
+              maxLength={HOMEWORK_PRESCRIPTION_MAX_LENGTH}
+              autoComplete="off"
+            />
+            <IconButton
+              icon={Trash2}
+              label={interpolate(copy.removeExercise, { name: exercise.name })}
+              onClick={() => setExercises((list) => list.filter((_, i) => i !== index))}
+            />
+          </div>
+        ))}
+        {draft.exercises.length < HOMEWORK_MAX_EXERCISES ? (
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="secondary" icon={Plus} onClick={() => setPicking(true)}>
+              {copy.addExercise}
+            </Button>
+            <Button type="button" variant="ghost" icon={ClipboardList} onClick={() => setPickingTemplate(true)}>
+              {t.workouts.templates.fromTemplate}
+            </Button>
+          </div>
+        ) : null}
+      </section>
       <TextField
         label={copy.videoUrl}
         hint={copy.videoHint}
@@ -148,6 +199,32 @@ export function HomeworkForm({
       <Button type="submit" loading={pending} block>
         {editing ? copy.save : copy.create}
       </Button>
+      <ExercisePicker
+        open={picking}
+        onOpenChange={setPicking}
+        onPick={(hit) => {
+          setExercises((list) => [...list, { key: newKey(), exerciseId: hit.id, name: hit.name, prescription: "" }]);
+          setPicking(false);
+        }}
+      />
+      <TemplatePicker
+        open={pickingTemplate}
+        onOpenChange={setPickingTemplate}
+        onPick={(template) => {
+          setDraft((d) => ({
+            ...d,
+            title: d.title.trim() ? d.title : template.title,
+            exercises: template.items.slice(0, HOMEWORK_MAX_EXERCISES).map((item) => ({
+              key: newKey(),
+              exerciseId: item.exerciseId,
+              name: item.name,
+              prescription: prescriptionFromTemplate(t, locale, item),
+            })),
+          }));
+          setPickingTemplate(false);
+          toast.success(interpolate(t.workouts.templates.applied, { title: template.title }));
+        }}
+      />
     </form>
   );
 }

@@ -13,6 +13,7 @@ import { TextArea } from "@/components/ui/text-area";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
+import { markHomeworkDone } from "@/lib/homework/actions";
 import { localDay } from "@/lib/passes/present";
 import { cn } from "@/lib/utils";
 import {
@@ -50,6 +51,8 @@ type LogEditorProps = {
   hrefBase: string;
   /** Offer "Из шаблона": the trainer fills a new log from a template (WORK-5). */
   templates?: boolean;
+  /** The client's homework deadline this log is for: saving it marks the deadline done (PRD wave-2 §10.2). */
+  homeworkOccurrenceId?: string;
 };
 
 let keySeed = 0;
@@ -69,6 +72,7 @@ export function LogEditor({
   initial,
   hrefBase,
   templates = false,
+  homeworkOccurrenceId,
 }: LogEditorProps) {
   const { t, locale } = useI18n();
   const copy = t.workouts.editor;
@@ -155,7 +159,11 @@ export function LogEditor({
     startTransition(async () => {
       const saved = await saveWorkoutLog(result.payload);
       if (saved.ok) {
-        toast.success(copy.saved);
+        const marked = homeworkOccurrenceId
+          ? await markHomeworkDone({ occurrenceId: homeworkOccurrenceId, comment: "", logId: saved.id })
+          : null;
+        if (marked && !marked.ok) toast.error(t.homework.logNotMarked);
+        else toast.success(marked ? t.homework.loggedAndMarked : copy.saved);
         router.push(`${hrefBase}/${saved.id}`);
       } else {
         toast.error(saved.reason === "forbidden" ? copy.forbidden : copy.failed);
