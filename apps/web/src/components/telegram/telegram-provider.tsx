@@ -123,18 +123,17 @@ function followTelegramScheme() {
 }
 
 /**
- * Takes the screen once the viewport is mounted: fullscreen on a phone when the client supports it
- * (Mini Apps 8.0+), otherwise the full height. Content keeps clear of Telegram's buttons through
- * --safe-* in globals.css, which add the content safe area to the device's.
+ * Takes the screen: fullscreen on a phone when the client supports it (Mini Apps 8.0+), otherwise
+ * the full height. Fullscreen does not wait for the viewport mount, which waits on Telegram's
+ * answers; a reload that finds the app in fullscreen already gets ALREADY_FULLSCREEN, which the SDK
+ * takes as success. Content keeps clear of Telegram's buttons through --safe-* in globals.css,
+ * which add the content safe area to the device's.
  */
-async function takeScreen() {
+function takeScreen() {
   safely(() => viewport.expand());
-  await safelyAsync(() => viewport.mount());
   const platform = safely(() => retrieveLaunchParams().tgWebAppPlatform);
-  if (displayModeFor(platform) !== "fullscreen") return;
-  // A reload finds the app in fullscreen already, and asking again would fail.
-  if (safely(() => viewport.requestFullscreen.isAvailable() && !viewport.isFullscreen())) {
-    await safelyAsync(() => viewport.requestFullscreen());
+  if (displayModeFor(platform) === "fullscreen" && safely(() => viewport.requestFullscreen.isAvailable())) {
+    void safelyAsync(() => viewport.requestFullscreen());
   }
 }
 
@@ -253,7 +252,8 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     // Safe-area insets become --tg-viewport-* variables, read by --safe-* in globals.css. They are
     // bound right away and fill in once the mount has asked Telegram for the insets.
     keep(safely(() => viewport.bindCssVars()));
-    void takeScreen();
+    void safelyAsync(() => viewport.mount());
+    takeScreen();
 
     markMiniAppReady();
     // The screen checks the parameter on the server and waits for the session itself (screens.md §1.7).

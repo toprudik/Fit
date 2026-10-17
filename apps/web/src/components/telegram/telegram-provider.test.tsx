@@ -53,7 +53,6 @@ const sdk = vi.hoisted(() => {
       mount: vi.fn(() => Promise.resolve()),
       expand: vi.fn(),
       bindCssVars: vi.fn(() => () => {}),
-      isFullscreen: vi.fn(() => false),
       requestFullscreen: Object.assign(vi.fn(() => Promise.resolve()), { isAvailable: vi.fn(() => true) }),
     },
     hapticFeedback: { impactOccurred: vi.fn(), selectionChanged: vi.fn() },
@@ -304,7 +303,7 @@ describe("inside Telegram", () => {
     expect(sdk.viewport.requestFullscreen).not.toHaveBeenCalled();
   });
 
-  it("leaves fullscreen alone when the client is too old for it or is in it already", async () => {
+  it("leaves fullscreen alone when the client is too old for it", async () => {
     launch();
     sdk.retrieveLaunchParams.mockReturnValue({ tgWebAppPlatform: "ios" });
     sdk.viewport.requestFullscreen.isAvailable.mockReturnValueOnce(false);
