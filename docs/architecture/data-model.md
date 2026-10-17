@@ -2037,6 +2037,8 @@ create index on public.delegation_clients (coaching_id);
 
 Как сделано (миграция `20261017090713_delegations.sql`): `delegate_trainer_id` пуст, пока приглашение не принято по одноразовой ссылке (`invite_hash`, sha256 токена); `scopes` никогда не содержат `passes` и `payments` (PRD волны 3 §1 правило 3), поэтому деньги видит только владелец, а чтение `ledger_entries` идёт по scope `passes`. Подмене выдаются `attendance` и `workouts` до конца занятия, анкета участников идёт через `can_view('intake')`. Помощник на всех клиентов (`all_clients`) проходит `acts_for_trainer` для строк тренера без пары (расписание). Выключатель клиента «доступ помощника к прогрессу» хранится в `assistant_progress_blocks (coaching_id)`. Действия делегата в `booking_events` помечаются `actor_role = 'delegate'` и `payload.on_behalf_of`.
 
+Расписание помощника (миграция `20261017113217_delegate_schedule.sql`): делегат читает `coachings`, `profiles` и `sessions` только тех пар, что ему переданы (`delegated_coaching_ids`, `delegated_client_ids`, `delegated_session_ids`), подменяющий тренер только участников своего занятия до его конца. Помощник со scope `schedule` создаёт и отменяет персональные занятия своих клиентов и записывает прошедшие (`create_session`, `record_past_session`, `own_future_session`). Помощник на всех клиентов ведёт всё расписание владельца: групповые занятия, закрытые дни, недельный шаблон и пересечения (`create_group_session`, `close_schedule_days`, `save_week_template`, `session_conflicts` с `p_trainer_id`, проверка `schedule_trainer`). Строки остаются владельца (`trainer_id`), делегат записан в `created_by`.
+
 Геймификация (серии и значки: миграция `20261017100917_streaks_badges.sql`, волна 3 §2.1–2.2; челленджи ниже ещё не сделаны):
 
 ```sql
