@@ -1,4 +1,4 @@
--- Referral offers, migrations 20261017040300_referral_offers.sql and 20261017152437_referral_bonus_active_pass.sql
+-- Referral offers, migrations 20261017040300_referral_offers.sql and 20261017174813_referral_bonus_active_pass.sql
 -- (PRD wave-3 §3.1): the trainer's offer, the client's link, a friend joining by it, the bonus sessions in the
 -- active pass after a payment that meets the offer, a bonus waiting for the next pass, taking it back when the
 -- payment is voided, declining, and a pair that ends.
