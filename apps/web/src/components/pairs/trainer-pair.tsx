@@ -18,12 +18,13 @@ import { currencySymbol } from "@/lib/money/format";
 import { loadPair, type PairDetail } from "@/lib/pairs/load";
 import { loadPairMoney } from "@/lib/passes/load";
 import { formatLocalDay, lastValidDay } from "@/lib/passes/present";
+import { TrainerProgress } from "@/components/progress/sections";
 import { LogListSection } from "@/components/workouts/log-screens";
 import { NoteComposer, NoteItem, NoteVisibility } from "./notes";
 import { PairTabs } from "./pair-tabs";
 import { ArchiveRow, DebtBookingSwitch, EndPairRow } from "./pair-controls";
 
-export type PairTab = "overview" | "workouts" | "notes" | "passes" | "payments" | "intake";
+export type PairTab = "overview" | "workouts" | "progress" | "notes" | "passes" | "payments" | "intake";
 
 /** "34 занятия вместе, с 3 марта" under the name. */
 export function pairSubtitle(t: Dictionary, locale: Locale, pair: PairDetail): string {
@@ -209,6 +210,7 @@ export async function TrainerPair({ coachingId, tab, action }: { coachingId: str
           tabs={[
             { href: base, label: t.pairs.tabs.overview, current: tab === "overview" },
             { href: `${base}/workouts`, label: t.pairs.tabs.workouts, current: tab === "workouts" },
+            { href: `${base}/progress`, label: t.progress.tab, current: tab === "progress" },
             { href: `${base}/passes`, label: t.pairs.tabs.passes, current: tab === "passes" },
             { href: `${base}/payments`, label: t.pairs.tabs.payments, current: tab === "payments" },
             { href: `${base}/notes`, label: t.pairs.tabs.notes, current: tab === "notes" },
@@ -220,6 +222,8 @@ export async function TrainerPair({ coachingId, tab, action }: { coachingId: str
           <Overview t={t} locale={locale} pair={pair} />
         ) : tab === "workouts" ? (
           <LogListSection place={{ side: "trainer", coachingId: pair.coachingId }} />
+        ) : tab === "progress" ? (
+          <TrainerProgress coachingId={pair.coachingId} />
         ) : tab === "notes" ? (
           <Notes t={t} locale={locale} pair={pair} />
         ) : tab === "intake" ? (
