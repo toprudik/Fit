@@ -1513,7 +1513,7 @@ export const ru = {
       kcal: "{value} ккал",
       macros: "Белки {protein} г, жиры {fat} г, углеводы {carbs} г",
       macrosNone: "БЖУ не заданы",
-      sources: { calculator: "Рассчитано по формуле", trainer: "От тренера {name}", trainerUnnamed: "От тренера", group: "Норма группы тренера {name}" },
+      sources: { calculator: "Рассчитано по формуле", trainer: "От тренера {name}", trainerUnnamed: "От тренера", group: "Норма группы тренера {name}", groupNamed: "Группа «{group}» тренера {name}" },
       none: "Нормы пока нет",
       noneText: "Заполни калькулятор ниже, и норма калорий и БЖУ появится здесь.",
       weightChanged: "С последнего расчёта вес изменился на {change}. Пересчитай норму, чтобы она учитывала новый вес.",

@@ -26,7 +26,9 @@ export async function ClientNutrition() {
   const { active, calculator, trainerTargets } = nutrition;
   const source =
     active?.source === "group"
-      ? interpolate(copy.target.sources.group, { name: active.trainerName })
+      ? active.groupName
+        ? interpolate(copy.target.sources.groupNamed, { group: active.groupName, name: active.trainerName })
+        : interpolate(copy.target.sources.group, { name: active.trainerName })
       : active?.source === "trainer"
         ? active.trainerName
           ? interpolate(copy.target.sources.trainer, { name: active.trainerName })

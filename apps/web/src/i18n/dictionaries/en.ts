@@ -1504,7 +1504,7 @@ export const en: Dictionary = {
       kcal: "{value} kcal",
       macros: "Protein {protein} g, fat {fat} g, carbs {carbs} g",
       macrosNone: "No macros set",
-      sources: { calculator: "Worked out by formula", trainer: "From your trainer {name}", trainerUnnamed: "From your trainer", group: "Group target from your trainer {name}" },
+      sources: { calculator: "Worked out by formula", trainer: "From your trainer {name}", trainerUnnamed: "From your trainer", group: "Group target from your trainer {name}", groupNamed: "Group “{group}” from your trainer {name}" },
       none: "No target yet",
       noneText: "Fill in the calculator below and your calorie and macro target shows up here.",
       weightChanged: "Your weight changed by {change} since the last calculation. Work the target out again so it uses the new weight.",
