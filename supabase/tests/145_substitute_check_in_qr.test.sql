@@ -1,4 +1,4 @@
--- session_check_in_qr of migration 20261017180611_substitute_check_in_qr.sql (PRD wave-3 §1 × §5): the substitute
+-- session_check_in_qr of migration 20261017202743_substitute_check_in_qr.sql (PRD wave-3 §1 × §5): the substitute
 -- shows the session's QR, a client checks in by it, and the QR goes away with the substitute's access (1.5).
 begin;
 \ir _helpers.psql
