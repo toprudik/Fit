@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
-import { FeedbackIssue, FeedbackStatusControl } from "@/components/admin/feedback-controls";
+import { FeedbackIssue, FeedbackReply, FeedbackStatusControl } from "@/components/admin/feedback-controls";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { ListGroup, ListRow } from "@/components/ui/list";
@@ -31,7 +31,7 @@ async function Message({ params }: { params: PageProps<"/[lang]/admin/feedback/[
   const { data: row, error } = await supabase
     .from("feedback")
     .select(
-      "id, user_id, kind, body, status, zone, route, platform, app_version, locale, theme, attachment_paths, github_issue_url, created_at, author:profiles(first_name, last_name, username)",
+      "id, user_id, kind, body, status, zone, route, platform, app_version, locale, theme, attachment_paths, github_issue_url, reply, replied_at, created_at, author:profiles!feedback_user_id_fkey(first_name, last_name, username)",
     )
     .eq("id", feedbackId.data)
     .maybeSingle();
@@ -91,6 +91,25 @@ async function Message({ params }: { params: PageProps<"/[lang]/admin/feedback/[
           </ul>
         </section>
       ) : null}
+
+      <section aria-labelledby="feedback-reply" className="flex flex-col gap-2">
+        <h2 id="feedback-reply" className="px-4 text-footnote text-ink-2">
+          {copy.reply}
+        </h2>
+        {row.reply ? (
+          <div className="flex flex-col gap-1 rounded-lg bg-surface-1 p-4">
+            <p className="text-body break-words whitespace-pre-wrap">{row.reply}</p>
+            {row.replied_at ? (
+              <span className="text-footnote text-ink-2">{interpolate(copy.repliedAt, { date: date.format(new Date(row.replied_at)) })}</span>
+            ) : null}
+          </div>
+        ) : null}
+        {row.user_id ? (
+          <FeedbackReply id={row.id} hasReply={row.reply !== null} />
+        ) : (
+          <p className="px-4 text-footnote text-ink-2">{copy.replyDeleted}</p>
+        )}
+      </section>
 
       <section aria-labelledby="feedback-issue" className="flex flex-col gap-2">
         <h2 id="feedback-issue" className="px-4 text-footnote text-ink-2">

@@ -9,6 +9,8 @@ import {
   HEIGHT_MIN_CM,
   KCAL_MAX,
   KCAL_MIN,
+  STEPS_MAX,
+  WATER_ML_MAX,
   WEIGHT_MAX_KG,
   WEIGHT_MIN_KG,
   isActivityLevel,
@@ -114,6 +116,9 @@ export type PairTargetInput = {
   proteinG: number | null;
   fatG: number | null;
   carbsG: number | null;
+  /** Water and steps goals a day; null keeps the defaults (30 ml per kg, 8000 steps). */
+  waterMl: number | null;
+  steps: number | null;
   /** The trainer confirmed the warning for a target under 1200/1500 kcal (§2.12). */
   confirmLow: boolean;
 };
@@ -126,7 +131,9 @@ export async function setPairTarget(input: PairTargetInput): Promise<NutritionAc
     !inRange(input.kcal, KCAL_MIN, KCAL_MAX) ||
     !grams(input.proteinG, 1000) ||
     !grams(input.fatG, 1000) ||
-    !grams(input.carbsG, 2000)
+    !grams(input.carbsG, 2000) ||
+    !grams(input.waterMl, WATER_ML_MAX) ||
+    !grams(input.steps, STEPS_MAX)
   ) {
     return { ok: false, reason: "invalid" };
   }
@@ -138,6 +145,8 @@ export async function setPairTarget(input: PairTargetInput): Promise<NutritionAc
     p_fat_g: input.fatG as number,
     p_carbs_g: input.carbsG as number,
     p_confirm_low: input.confirmLow === true,
+    p_water_ml: input.waterMl as number,
+    p_steps_target: input.steps as number,
   });
   if (error?.message === "low_kcal_unconfirmed") return { ok: false, reason: "low" };
   // 42501: the client closed nutrition to this trainer, or the pair has ended.

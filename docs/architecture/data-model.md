@@ -232,7 +232,7 @@ create type public.share_category as enum ('nutrition', 'measurements', 'photos'
 | R69 | Замороженный аккаунт | Проверяют приложение и proxy, не RLS | §1.6 |
 | R70 | Возврат в завершённую пару | RPC сбрасывает `data_shares` и поля завершения | PRD 2.3 |
 | R71 | Обратная связь без входа | В волне 1 нет | RLS рассчитан на вошедших |
-| R72 | Ответ на обратную связь | Значение `feedback_reply` зарезервировано | ADM-10 |
+| R72 | Ответ на обратную связь | Админ отвечает через `admin_reply_feedback`: последний ответ хранится в `feedback.reply`, автору уходит `feedback_reply` | ADM-10 |
 | R73 | Грант для цели | Целевой пользователь видит весь грант | |
 | R74 | Детали вех | `achieved_at` = начало занятия; пробные и вставка сразу как `attended` считаются | PRD 2.6.2-7 |
 | R75 | Дедупликация outbox | Глобальный уникальный ключ с моментом цели | перенос занятия ставит новые напоминания |
@@ -1485,6 +1485,9 @@ create table public.feedback (
   attachment_paths text[] not null default '{}' check (cardinality(attachment_paths) <= 3),   -- {user_id}/{id}/…
   status           public.feedback_status not null default 'new',
   github_issue_url text check (github_issue_url is null or github_issue_url like 'https://github.com/%'),
+  reply            text check (char_length(reply) between 1 and 2000),   -- последний ответ админа (ADM-10)
+  replied_at       timestamptz,
+  replied_by       uuid references profiles on delete set null,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now()
 );
@@ -2532,7 +2535,7 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `measurements` | share:measurements (`can_view`); BG | C; T share:measurements (`entered_by = uid`) | автор записи (R41b) | автор записи |
 | `progress_photos` (+ Storage) | share:photos (по умолчанию **выкл**); BG | **только C**, с лимитом Free (`can_add_progress_photo`); одно фото на дату и ракурс (R82) | C (`note`, `angle`); занятый ракурс той же даты меняется местами через `set_progress_photo_angle` (R82) | C; замена фото через `replace_progress_photo`: удаление и вставка одной транзакцией (R82) |
 | `milestones` | C; T | S (триггер) | никто | никто |
-| `feedback` | автор; A | автор | A (`status`, `github_issue_url`), с записью в `admin_audit_log` | никто |
+| `feedback` | автор; A | автор | A (`status`, `github_issue_url`), с записью в `admin_audit_log`; ответ только через `admin_reply_feedback` | никто |
 | `reports` | автор; A | никто в волне 1 (R55); позже RPC `create_report` | позже A через `admin_resolve_report` | никто |
 | `admin_audit_log` | A | S (внутри `admin_*` и триггеры аудита) | никто (триггер) | никто (триггер) |
 | `break_glass_grants` | A, выдавший грант; целевой пользователь видит весь грант (R73) | A через `admin_open_break_glass` | A, выдавший грант: `revoked_at`, один раз (с записью в журнал) | никто |
