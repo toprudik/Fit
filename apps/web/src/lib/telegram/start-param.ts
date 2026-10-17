@@ -1,4 +1,4 @@
-import { checkInPath, parseCheckInStartParam } from "@/lib/check-in/link";
+import { checkInPath, parseCheckInStartParam, parsePlaceCheckInStartParam } from "@/lib/check-in/link";
 import { CLIENT_LINK_START_PREFIX, clientLinkPath, isClientLinkToken } from "@/lib/client-links/link";
 import { CONTACT_START_PREFIX, contactRequestPath, isContactRequestId } from "@/lib/contact/request";
 import { isPairId } from "@/lib/pairs/clients";
@@ -45,6 +45,9 @@ export function startParamPath(param: string | null | undefined): string | null 
   // ck_<session id>_<code>: the trainer's check-in QR (PRD wave-3 §5).
   const checkIn = parseCheckInStartParam(param);
   if (checkIn) return checkInPath(checkIn.sessionId, checkIn.code);
+  // cl_<token>: the printed check-in QR of a location (§5 rule 2b).
+  const place = parsePlaceCheckInStartParam(param);
+  if (place) return place;
   if (param.startsWith(CLIENT_PASS_PREFIX)) {
     const id = param.slice(CLIENT_PASS_PREFIX.length);
     return isPairId(id) ? `/client/passes/${id}` : null;

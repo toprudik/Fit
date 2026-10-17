@@ -24,7 +24,7 @@ async function CheckIn({ params, searchParams }: Pick<Props, "params" | "searchP
   const code = typeof query.c === "string" ? query.c : "";
   const owner = await loadScheduleOwner();
   if (!owner) return <ScheduleSignIn title={t.checkIn.title} next={checkInPath(sessionId, code)} />;
-  return <CheckInRun sessionId={sessionId} code={code} timeZone={owner.timeZone} />;
+  return <CheckInRun target={{ sessionId, code }} timeZone={owner.timeZone} />;
 }
 
 /** "Отметка на занятии" (PRD wave-3 §5): where the trainer's check-in QR leads. */

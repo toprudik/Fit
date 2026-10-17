@@ -877,6 +877,38 @@ isOneToOne: false
       referencedColumns: ["user_id"]
     }
                   ]
+                },"location_check_in_tokens": {
+                  Row: {
+                    "issued_at": string,"location_id": string,"token": string,"trainer_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "issued_at"?: string,"location_id": string,"token": string,"trainer_id": string
+                  }
+                  Update: {
+                    "issued_at"?: string,"location_id"?: string,"token"?: string,"trainer_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "location_check_in_tokens_location_id_fkey"
+      columns: ["location_id"]
+isOneToOne: true
+      referencedRelation: "locations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "location_check_in_tokens_trainer_id_fkey"
+      columns: ["trainer_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "location_check_in_tokens_trainer_id_fkey"
+      columns: ["trainer_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"locations": {
                   Row: {
                     "address": string | null,"archived_at": string | null,"created_at": string,"id": string,"lat": number | null,"lng": number | null,"name": string,"notes": string | null,"trainer_id": string,"updated_at": string
@@ -2574,6 +2606,11 @@ isOneToOne: false
 "change_pass_expiry":
 { Args: { "p_last_day": string,"p_pass_id": string,"p_reason": string }; Returns: undefined
                            },
+"check_in_by_location":
+{ Args: { "p_token": string }; Returns: {
+              "booking_id": string,"opens_at": string,"outcome": string
+            }[]
+                           },
 "check_in_by_qr":
 { Args: { "p_code": string,"p_session_id": string }; Returns: {
               "booking_id": string,"opens_at": string,"outcome": string
@@ -2688,6 +2725,9 @@ isOneToOne: false
                            },
 "leave_waitlist":
 { Args: { "p_entry_id": string }; Returns: undefined
+                           },
+"location_check_in_token":
+{ Args: { "p_location_id": string,"p_renew"?: boolean }; Returns: string
                            },
 "mark_attendance":
 { Args: { "p_booking_id": string,"p_reason"?: string,"p_status": Database["public"]['Enums']["booking_status"] }; Returns: Database["public"]['Enums']["booking_status"]
