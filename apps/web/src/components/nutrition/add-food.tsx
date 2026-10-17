@@ -14,7 +14,18 @@ import { Spinner } from "@/components/ui/spinner";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
-import { ENTRY_GRAMS_MAX, ENTRY_KCAL_MAX, MEALS, SERVINGS_MAX, amountOf, parseAmount, type Meal } from "@/lib/nutrition/diary";
+import {
+  ENTRY_KCAL_MAX,
+  MEALS,
+  SERVINGS_MAX,
+  amountOf,
+  gramsOfPortion,
+  parseAmount,
+  portionOfGrams,
+  portionRange,
+  portionUnit,
+  type Meal,
+} from "@/lib/nutrition/diary";
 import { addEntry, findBarcode, findFoods, setFavorite } from "@/lib/nutrition/diary-actions";
 import type { Food } from "@/lib/nutrition/foods";
 import type { OffDraft } from "@/lib/nutrition/off-parse";
@@ -335,26 +346,30 @@ function AmountSheet({
 }) {
   const { t, locale } = useI18n();
   const copy = t.foodDiary.amount;
+  const weightUnit = portionUnit(locale);
+  const oz = weightUnit === "oz";
+  /** A weight in grams as the field shows it, in the portion unit. */
+  const weightText = (grams: number) => String(portionOfGrams(grams, weightUnit)).replace(".", locale === "ru" ? "," : ".");
   const [unit, setUnit] = useState<"grams" | "servings">(food.servingG ? "servings" : "grams");
-  const [text, setText] = useState(food.servingG ? "1" : "100");
+  const [text, setText] = useState(food.servingG ? "1" : weightText(100));
   const [error, setError] = useState<string | undefined>();
   const [favorite, setFavoriteState] = useState(initialFavorite);
   const [pending, startTransition] = useTransition();
 
-  const value = unit === "servings" ? parseAmount(text, 0.01, SERVINGS_MAX) : parseAmount(text, 1, ENTRY_GRAMS_MAX);
-  const grams = typeof value === "number" ? (unit === "servings" ? (food.servingG ?? 0) * value : value) : null;
+  const value = unit === "servings" ? parseAmount(text, 0.01, SERVINGS_MAX) : parseAmount(text, ...portionRange(weightUnit));
+  const grams = typeof value === "number" ? (unit === "servings" ? (food.servingG ?? 0) * value : gramsOfPortion(value, weightUnit)) : null;
   const totals = grams !== null ? amountOf(food, grams) : null;
   const n = (v: number) => formatValue(locale, v);
 
   function add() {
     if (typeof value !== "number") {
-      setError(unit === "servings" ? t.foodDiary.errors.servings : t.foodDiary.errors.grams);
+      setError(unit === "servings" ? t.foodDiary.errors.servings : oz ? t.foodDiary.errors.ounces : t.foodDiary.errors.grams);
       return;
     }
     setError(undefined);
     startTransition(async () => {
       const result = await addEntry(
-        unit === "servings" ? { day, meal, foodId: food.id, servings: value } : { day, meal, foodId: food.id, grams: value },
+        unit === "servings" ? { day, meal, foodId: food.id, servings: value } : { day, meal, foodId: food.id, grams: gramsOfPortion(value, weightUnit) },
       );
       if (result.ok) onAdded();
       else toast.error(t.foodDiary.failed);
@@ -392,18 +407,22 @@ function AmountSheet({
             value={unit}
             onValueChange={(next) => {
               setUnit(next);
-              setText(next === "servings" ? "1" : String(food.servingG ?? 100).replace(".", ","));
+              setText(next === "servings" ? "1" : weightText(food.servingG ?? 100));
             }}
             options={[
               { value: "servings", label: copy.byServings },
-              { value: "grams", label: copy.byGrams },
+              { value: "grams", label: oz ? copy.byOunces : copy.byGrams },
             ]}
           />
         ) : null}
         <TextField
-          label={unit === "servings" ? copy.servings : copy.grams}
-          hint={unit === "servings" && food.servingG ? interpolate(copy.servingSize, { value: n(food.servingG) }) : undefined}
-          suffix={unit === "grams" ? t.nutrition.trainer.units.g : undefined}
+          label={unit === "servings" ? copy.servings : oz ? copy.ounces : copy.grams}
+          hint={
+            unit === "servings" && food.servingG
+              ? interpolate(oz ? copy.servingSizeOz : copy.servingSize, { value: n(portionOfGrams(food.servingG, weightUnit)) })
+              : undefined
+          }
+          suffix={unit === "grams" ? t.nutrition.trainer.units[weightUnit] : undefined}
           inputMode="decimal"
           autoComplete="off"
           value={text}

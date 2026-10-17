@@ -14,17 +14,31 @@ import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
 import type { Dictionary } from "@/i18n/dictionaries";
 import type { Locale } from "@/i18n/config";
-import { ENTRY_GRAMS_MAX, ENTRY_KCAL_MAX, MEALS, SERVINGS_MAX, byMeal, parseAmount, totalsOf, type DiaryEntry, type Meal } from "@/lib/nutrition/diary";
+import {
+  ENTRY_KCAL_MAX,
+  MEALS,
+  SERVINGS_MAX,
+  byMeal,
+  gramsOfPortion,
+  parseAmount,
+  portionOfGrams,
+  portionRange,
+  portionUnit,
+  totalsOf,
+  type DiaryEntry,
+  type Meal,
+} from "@/lib/nutrition/diary";
 import { copyPreviousMeal, deleteEntry, updateEntry } from "@/lib/nutrition/diary-actions";
 import { formatValue } from "@/lib/progress/measurements";
 import { ADD_FOOD_PATH } from "./paths";
 
-/** "150 г" or "2 × порция", for a row under the entry's name. */
+/** "150 г" (ounces in English) or "2 × порция", for a row under the entry's name. */
 export function entryAmount(t: Dictionary, locale: Locale, entry: DiaryEntry): string | null {
   const copy = t.foodDiary;
   if (entry.servings !== null) return interpolate(copy.servings, { count: formatValue(locale, entry.servings), label: copy.servingDefault });
-  if (entry.grams !== null) return interpolate(copy.grams, { value: formatValue(locale, entry.grams) });
-  return null;
+  if (entry.grams === null) return null;
+  const unit = portionUnit(locale);
+  return interpolate(unit === "oz" ? copy.ounces : copy.grams, { value: formatValue(locale, portionOfGrams(entry.grams, unit)) });
 }
 
 /** The meals of a day; read-only for the trainer. */
@@ -108,7 +122,8 @@ export function MealList({ day, entries, previousMeals }: { day: string; entries
 
 /** "Запись": the meal and the amount, or the kcal of a quick entry; delete. */
 function EntrySheet({ entry, onClose }: { entry: DiaryEntry; onClose: () => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const unit = portionUnit(locale);
   const copy = t.foodDiary;
   const [meal, setMeal] = useState<Meal>(entry.meal);
   const [error, setError] = useState<string | undefined>();
@@ -122,9 +137,9 @@ function EntrySheet({ entry, onClose }: { entry: DiaryEntry; onClose: () => void
       ? parseAmount(text, 1, ENTRY_KCAL_MAX)
       : byServings
         ? parseAmount(text, 0.01, SERVINGS_MAX)
-        : parseAmount(text, 1, ENTRY_GRAMS_MAX);
+        : parseAmount(text, ...portionRange(unit));
     if (typeof value !== "number") {
-      setError(quick ? copy.errors.kcal : byServings ? copy.errors.servings : copy.errors.grams);
+      setError(quick ? copy.errors.kcal : byServings ? copy.errors.servings : unit === "oz" ? copy.errors.ounces : copy.errors.grams);
       return;
     }
     setError(undefined);
@@ -132,7 +147,7 @@ function EntrySheet({ entry, onClose }: { entry: DiaryEntry; onClose: () => void
       const result = await updateEntry({
         id: entry.id,
         meal,
-        ...(quick ? { kcal: value } : byServings ? { servings: value } : { grams: value }),
+        ...(quick ? { kcal: value } : byServings ? { servings: value } : { grams: gramsOfPortion(value, unit) }),
       });
       if (!result.ok) {
         toast.error(copy.failed);
@@ -155,7 +170,7 @@ function EntrySheet({ entry, onClose }: { entry: DiaryEntry; onClose: () => void
     });
   }
 
-  const current = quick ? entry.kcal : byServings ? entry.servings : entry.grams;
+  const current = quick ? entry.kcal : byServings ? entry.servings : entry.grams === null ? null : portionOfGrams(entry.grams, unit);
   return (
     <Sheet open onOpenChange={(next) => !next && !pending && onClose()} title={entry.title ?? copy.quickTitle}>
       <form
@@ -178,11 +193,11 @@ function EntrySheet({ entry, onClose }: { entry: DiaryEntry; onClose: () => void
         </fieldset>
         <TextField
           name="amount"
-          label={quick ? copy.editor.kcal : byServings ? copy.editor.servings : copy.editor.grams}
-          suffix={quick ? t.nutrition.trainer.units.kcal : byServings ? undefined : t.nutrition.trainer.units.g}
+          label={quick ? copy.editor.kcal : byServings ? copy.editor.servings : unit === "oz" ? copy.editor.ounces : copy.editor.grams}
+          suffix={quick ? t.nutrition.trainer.units.kcal : byServings ? undefined : t.nutrition.trainer.units[unit]}
           inputMode="decimal"
           autoComplete="off"
-          defaultValue={current === null ? undefined : String(current).replace(".", ",")}
+          defaultValue={current === null ? undefined : String(current).replace(".", locale === "ru" ? "," : ".")}
           error={error}
         />
         <Button type="submit" size="lg" block loading={pending}>

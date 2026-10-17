@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { amountOf, byMeal, formatDiaryDay, hourIn, mealAt, parseAmount, shareOf, shiftDay, totalsOf } from "./diary";
+import {
+  ENTRY_GRAMS_MAX,
+  amountOf,
+  byMeal,
+  formatDiaryDay,
+  gramsOfPortion,
+  hourIn,
+  mealAt,
+  parseAmount,
+  portionOfGrams,
+  portionRange,
+  portionUnit,
+  shareOf,
+  shiftDay,
+  totalsOf,
+} from "./diary";
 
 describe("totalsOf", () => {
   it("adds the entries of a day; quick kcal without macros counts 0 g", () => {
@@ -77,5 +92,21 @@ describe("mealAt and hourIn", () => {
     expect(mealAt(23)).toBe("snack");
     expect(hourIn("Europe/Moscow", new Date("2026-10-17T05:30:00Z"))).toBe(8);
     expect(hourIn("UTC", new Date("2026-10-17T00:10:00Z"))).toBe(0);
+  });
+});
+
+describe("portion weights", () => {
+  it("are ounces in English and grams in Russian, kept in grams", () => {
+    expect([portionUnit("en"), portionUnit("ru")]).toEqual(["oz", "g"]);
+    expect(portionOfGrams(100, "oz")).toBe(3.5);
+    expect(gramsOfPortion(4, "oz")).toBe(113.4);
+    expect([portionOfGrams(150, "g"), gramsOfPortion(150, "g")]).toEqual([150, 150]);
+  });
+
+  it("keep the largest portion in ounces under the database limit", () => {
+    const [min, max] = portionRange("oz");
+    expect(min).toBe(0.1);
+    expect(gramsOfPortion(max, "oz")).toBeLessThanOrEqual(ENTRY_GRAMS_MAX);
+    expect(portionRange("g")).toEqual([1, ENTRY_GRAMS_MAX]);
   });
 });

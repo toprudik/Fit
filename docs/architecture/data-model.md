@@ -2038,6 +2038,8 @@ create index on public.delegation_clients (coaching_id);
 
 Расписание помощника (миграция `20261017113217_delegate_schedule.sql`): делегат читает `coachings`, `profiles` и `sessions` только тех пар, что ему переданы (`delegated_coaching_ids`, `delegated_client_ids`, `delegated_session_ids`), подменяющий тренер только участников своего занятия до его конца. Помощник со scope `schedule` создаёт и отменяет персональные занятия своих клиентов и записывает прошедшие (`create_session`, `record_past_session`, `own_future_session`). Помощник на всех клиентов ведёт всё расписание владельца: групповые занятия, закрытые дни, недельный шаблон и пересечения (`create_group_session`, `close_schedule_days`, `save_week_template`, `session_conflicts` с `p_trainer_id`, проверка `schedule_trainer`). Строки остаются владельца (`trainer_id`), делегат записан в `created_by`.
 
+Журнал делегата (миграция `20261017142417_delegate_journal.sql`): `delegate_journal(p_coaching_id)` (без пары — все пары владельца, для «Команды») собирает отметки и отмены из `booking_events` с `actor_role = 'delegate'`, тренировки, заметки, домашние задания (`homework.created_by`, заполняется из `auth.uid()`) и персональные занятия, созданные или отменённые делегатом. Удаление аккаунта тренера (`account_deletions`) сразу отзывает его делегирования в обе стороны (`20261017120713_deletion_revokes_delegations.sql`).
+
 Геймификация (серии и значки: миграция `20261017100917_streaks_badges.sql`, волна 3 §2.1–2.2; челленджи и лидерборды: `20261017103914_group_challenges.sql`, §2.3–2.4, ниже):
 
 ```sql
