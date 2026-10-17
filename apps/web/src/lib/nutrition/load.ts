@@ -24,7 +24,7 @@ export type MyNutrition = {
   /** The latest weight measurement, kg. */
   latestWeightKg: number | null;
   /** The target in force today (wave-2 §2.10), null when there is none. */
-  active: { source: "calculator" | "trainer"; coachingId: string | null; trainerName: string; macros: Macros } | null;
+  active: { source: "calculator" | "trainer" | "group"; coachingId: string | null; trainerName: string; macros: Macros } | null;
   /** The calculator's target in force, with the weight it was computed for. */
   calculator: (Macros & { weightKg: number | null }) | null;
   trainerTargets: TrainerTarget[];
@@ -113,7 +113,7 @@ export async function loadMyNutrition(): Promise<MyNutrition | null> {
     },
     latestWeightKg: weight.data ? Number(weight.data.value) : null,
     active:
-      current && (current.source === "calculator" || current.source === "trainer")
+      current && (current.source === "calculator" || current.source === "trainer" || current.source === "group")
         ? { source: current.source, coachingId: current.coaching_id, trainerName: current.trainer_name ?? "", macros: macrosOf(current) }
         : null,
     calculator,
@@ -136,7 +136,7 @@ export type PairNutrition =
       /** This trainer's target in force. */
       mine: Macros | null;
       /** Whose target is active today, never another trainer's values (§2.8). */
-      active: "mine" | "other_trainer" | "calculator" | "none";
+      active: "mine" | "group" | "other_trainer" | "calculator" | "none";
       calculator: MyNutrition["calculator"];
       /** Sex from the client's last calculation, for the low-kcal warning; the database checks it anyway. */
       sex: CalcSex | null;
@@ -150,7 +150,7 @@ export async function loadPairNutrition(coachingId: string): Promise<PairNutriti
   if (!pair) return null;
   const { data: state, error: stateError } = await supabase.rpc("pair_nutrition_state", { p_coaching_id: coachingId });
   if (stateError) throw new Error(`loading the target state failed: ${stateError.code}`);
-  if (state !== "mine" && state !== "other_trainer" && state !== "calculator" && state !== "none") return { state: "closed" };
+  if (state !== "mine" && state !== "group" && state !== "other_trainer" && state !== "calculator" && state !== "none") return { state: "closed" };
 
   const [goal, mine, calculator, inputs] = await Promise.all([
     latestGoal(supabase, pair.client_id),

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ChartColumn, ClipboardList, Dumbbell, Gift, QrCode, Salad, ScanLine, Store } from "lucide-react";
+import { ChartColumn, ClipboardList, Dumbbell, Gift, QrCode, Salad, ScanLine, Store, Users } from "lucide-react";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { ListGroup, ListRow } from "@/components/ui/list";
@@ -21,6 +21,7 @@ export default async function TrainerMorePage() {
           <ListRow icon={Store} title={copy.showcase} subtitle={copy.showcaseText} href="/trainer/showcase" />
           <ListRow icon={Dumbbell} title={copy.exercises} subtitle={copy.exercisesText} href="/trainer/exercises" />
           <ListRow icon={ClipboardList} title={copy.templates} subtitle={copy.templatesText} href="/trainer/templates" />
+          <ListRow icon={Users} title={copy.groups} subtitle={copy.groupsText} href="/trainer/groups" />
           <ListRow icon={ChartColumn} title={copy.analytics} subtitle={copy.analyticsText} href="/trainer/analytics" />
           <ListRow icon={Salad} title={t.adherence.title} subtitle={t.adherence.moreText} href="/trainer/nutrition" />
           <ListRow icon={ScanLine} title={t.checkIn.placesTitle} subtitle={t.checkIn.placesRowText} href="/trainer/checkin-qr" />

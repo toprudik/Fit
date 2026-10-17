@@ -25,11 +25,13 @@ export async function ClientNutrition() {
   if (!nutrition) return <EmptyState icon={Utensils} title={t.progress.measurements.signedOut} />;
   const { active, calculator, trainerTargets } = nutrition;
   const source =
-    active?.source === "trainer"
-      ? active.trainerName
-        ? interpolate(copy.target.sources.trainer, { name: active.trainerName })
-        : copy.target.sources.trainerUnnamed
-      : copy.target.sources.calculator;
+    active?.source === "group"
+      ? interpolate(copy.target.sources.group, { name: active.trainerName })
+      : active?.source === "trainer"
+        ? active.trainerName
+          ? interpolate(copy.target.sources.trainer, { name: active.trainerName })
+          : copy.target.sources.trainerUnnamed
+        : copy.target.sources.calculator;
   const drift =
     active?.source === "calculator" &&
     calculator?.weightKg != null &&
@@ -52,7 +54,7 @@ export async function ClientNutrition() {
         initial={{ goal: nutrition.goal, ...nutrition.body }}
         latestWeightKg={nutrition.latestWeightKg}
         today={nutrition.today}
-        trainerName={active?.source === "trainer" ? active.trainerName : null}
+        trainerName={active && active.source !== "calculator" ? active.trainerName : null}
       />
     </div>
   );
