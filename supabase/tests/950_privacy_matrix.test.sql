@@ -167,6 +167,9 @@ begin
   insert into public.food_favorites (user_id, food_id) values (v_client, v_food);
   insert into public.food_diary_entries (client_id, local_date, meal, food_id, title, grams, kcal)
   values (v_client, current_date, 'breakfast', v_food, 'Pancake', 100, 220);
+  insert into public.activity_entries (client_id, local_date, metric, value)
+  values (v_client, current_date, 'steps', 8000), (v_client, current_date, 'water', 250);
+  insert into public.ingest_tokens (user_id, token_hash) values (v_client, extensions.digest(v_client::text, 'sha256'));
 end $$;
 select tests.fill_client('client_c');
 select tests.fill_client('client_e');
@@ -255,7 +258,7 @@ insert into tests.personal_tables values
   ('measurements'), ('progress_photos'), ('intakes'), ('coaching_notes'), ('workout_logs'),
   ('workout_log_exercises'), ('workout_sets'), ('personal_records'), ('data_exports'), ('calendar_feeds'),
   ('client_goals'), ('body_profiles'), ('nutrition_targets'), ('food_diary_entries'), ('food_day_comments'),
-  ('food_dish_items'), ('food_favorites');
+  ('food_dish_items'), ('food_favorites'), ('activity_entries'), ('ingest_tokens');
 
 -- What the admin may read without break-glass (data-model §4.2); every other public table and view must give
 -- the admin 0 rows. exercises and foods are listed for the catalogs; own exercises and foods are checked separately.

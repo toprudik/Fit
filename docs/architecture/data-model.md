@@ -1832,6 +1832,7 @@ create table public.ingest_tokens (              -- личный токен iOS 
   window_count  smallint not null default 0
 );
 create unique index on public.ingest_tokens (user_id) where revoked_at is null;
+-- Выдача и отзыв: S-RPC issue_ingest_token (старый отзывается сразу, токен возвращается один раз), revoke_ingest_token.
 ```
 
 Группы, рассылки:
@@ -2096,7 +2097,7 @@ create index on public.challenge_participants (user_id);
 
 Лидерборд не хранится в таблице: SECURITY DEFINER-функция `get_challenge_leaderboard(challenge_id)` возвращает имя (`display_name`), аватар и `score` только участников с `show_on_leaderboard`; вызвать могут участники и тренер челленджа. Счёт отдаётся агрегатом, сырых данных (шагов по дням, питания) функция не отдаёт.
 
-Рефералка (миграция `20261017040300_referral_offers.sql`, волна 3 §3.1; бонусы тренерам за тренеров, §3.2, в `20261017082917_trainer_referrals.sql`, ниже):
+Рефералка (миграция `20261017040300_referral_offers.sql`, волна 3 §3.1; бонусы тренерам за тренеров, §3.2, в `20261017084213_trainer_referrals.sql`, ниже):
 
 ```sql
 alter table public.passes add column is_bonus boolean not null default false;   -- бонусный абонемент, цена 0 (R60)
@@ -2161,7 +2162,7 @@ create table public.bonuses (
 
 «Только после факта оплаты» (Q50): триггер `payments_referral` (`after insert or update of status on payments`) на `confirmed`-платеже `direction = 'in'` в паре приглашённого вызывает `private.qualify_referral`: если платёж подходит под условие акции (пакет оплаченного абонемента или сумма в валюте акции), реферал становится `qualified`, каждой стороне создаётся бонусный абонемент (`is_bonus`, цена 0, `grant` в журнале, гасит долг) и уходит `referral_bonus`. Пригласившему не больше 10 бонусов на акцию. Если этот платёж переведён в `voided` в течение 14 дней после `qualified_at`, `private.revoke_referral` отменяет бонусные абонементы без списаний и погашений (`refund` остатка, `cancelled`), бонусы и реферал становятся `void`; использованный бонус остаётся (wave-3 §3.1-7). Завершение пары аннулирует её `pending`-рефералы с обеих сторон.
 
-Тренер приводит тренера (§3.2, `20261017082917_trainer_referrals.sql`):
+Тренер приводит тренера (§3.2, `20261017084213_trainer_referrals.sql`):
 
 ```sql
 alter type public.referral_void_reason add value 'verification_rejected';
@@ -2535,7 +2536,7 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `food_diary_entries` | share:nutrition; BG | **только C** | C | C |
 | `food_day_comments` | C (без `hidden_by_client_at`-скрытых в UI); автор; T/D[nutrition] share:nutrition | T/D[nutrition] share:nutrition | автор: `body`; C: `hidden_by_client_at` | автор |
 | `nutrition_daily_summaries` | share:nutrition | S (cron) | S | S |
-| `activity_entries` | `metric = 'water'` → share:nutrition; `steps`/`sleep` → share:steps; BG | C (manual); S (ios_shortcut через ingest) | C | C |
+| `activity_entries` | `metric = 'water'` → share:nutrition; `steps`/`sleep` → share:steps; BG | C через S-RPC `set_activity` (шаги, сон), `add_water`; S `ingest_steps` (ios_shortcut, только service_role по токену) | C: `set_activity` (ручное значение дня) | C: `set_activity(null)`, `undo_water` |
 | `ingest_tokens` | сам (без `token_hash`) | S-RPC `create_ingest_token` | S-RPC (отзыв), S (счётчики) | никто |
 | `groups` | T; D[schedule]; C: свои группы (только `name`, `goal` через вью `my_groups`) | T | T | никто (архив) |
 | `group_members` | T; C: свои строки | T (пара своя, `with check`) | никто | T |
