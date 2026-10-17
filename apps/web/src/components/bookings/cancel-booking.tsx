@@ -8,7 +8,8 @@ import { toast } from "@/components/ui/sonner";
 import { TextArea } from "@/components/ui/text-area";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
-import { cancelBooking } from "@/lib/bookings/changes";
+import { cancelBooking, previewCancel, type CancelCharge } from "@/lib/bookings/changes";
+import { formatMoney } from "@/lib/money/format";
 
 type CancelBookingProps = {
   bookingId: string;
@@ -23,7 +24,7 @@ type CancelBookingProps = {
  * If the deadline passes while the sheet is open, the server says so and the sheet switches to the late warning.
  */
 export function CancelBooking({ bookingId, late: lateAtRender, deadline }: CancelBookingProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const copy = t.schedule.booking;
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -31,6 +32,9 @@ export function CancelBooking({ bookingId, late: lateAtRender, deadline }: Cance
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [charge, setCharge] = useState<CancelCharge | null>(null);
+  const [, startPreview] = useTransition();
+  const loadCharge = () => startPreview(async () => setCharge(await previewCancel(bookingId)));
 
   const confirm = () =>
     startTransition(async () => {
@@ -44,27 +48,44 @@ export function CancelBooking({ bookingId, late: lateAtRender, deadline }: Cance
       if (result.error === "late_cancel") {
         setLate(true);
         setError(null);
+        loadCharge();
         return;
       }
       setError(copy.errors[result.error]);
     });
 
-  const lateText = deadline ? interpolate(copy.cancelLateText, { date: deadline }) : copy.cancelLateTextNoDate;
+  const deadlineText = deadline ? interpolate(copy.cancelLateText, { date: deadline }) : copy.cancelLateTextNoDate;
+  const chargeText =
+    charge?.kind === "pass"
+      ? interpolate(copy.chargePass, { pass: charge.passTitle, count: charge.sessionsLeft })
+      : charge?.kind === "debt"
+        ? interpolate(copy.chargeDebt, { amount: formatMoney(locale, charge.amountMinor, charge.currency) })
+        : null;
+  const free = charge?.kind === "free";
+  const lateText = free ? copy.chargeFree : [deadlineText, chargeText].filter(Boolean).join(" ");
 
   return (
     <>
-      <Button type="button" variant="secondary" block onClick={() => setOpen(true)}>
+      <Button
+        type="button"
+        variant="secondary"
+        block
+        onClick={() => {
+          setOpen(true);
+          if (late) loadCharge();
+        }}
+      >
         {lateAtRender ? copy.cancelLate : copy.cancel}
       </Button>
       <Sheet
         open={open}
         onOpenChange={setOpen}
-        title={late ? copy.cancelLateTitle : copy.cancelTitle}
+        title={late && !free ? copy.cancelLateTitle : copy.cancelTitle}
         description={late ? lateText : copy.cancelFreeText}
         actions={
           <>
             <Button type="button" variant="destructive" block loading={pending} onClick={confirm}>
-              {late ? copy.cancelLateConfirm : copy.cancelConfirm}
+              {late && !free ? copy.cancelLateConfirm : copy.cancelConfirm}
             </Button>
             <Button type="button" variant="secondary" block onClick={() => setOpen(false)}>
               {copy.keepBooking}
