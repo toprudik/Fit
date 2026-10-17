@@ -1987,6 +1987,38 @@ isOneToOne: false
       referencedColumns: ["user_id"]
     }
                   ]
+                },"trainer_churn_dismissals": {
+                  Row: {
+                    "coaching_id": string,"created_at": string,"hidden_until": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "coaching_id": string,"created_at"?: string,"hidden_until": string
+                  }
+                  Update: {
+                    "coaching_id"?: string,"created_at"?: string,"hidden_until"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "trainer_churn_dismissals_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: true
+      referencedRelation: "coaching_balances"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "trainer_churn_dismissals_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: true
+      referencedRelation: "coaching_stats"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "trainer_churn_dismissals_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: true
+      referencedRelation: "coachings"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"trainer_invites": {
                   Row: {
                     "code_hash": string,"code_hint": string,"created_at": string,"created_by": string | null,"expires_at": string | null,"id": string,"note": string | null,"redeemed_at": string | null,"redeemed_by": string | null,"revoked_at": string | null
@@ -3031,11 +3063,39 @@ isOneToOne: false
 "submit_trainer_verification":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
+"trainer_analytics":
+{ Args: { "p_from": string,"p_to": string }; Returns: {
+              "active_clients": number,"attended": number,"client_cancels": number,"debt": Json,"debt_clients": number,"ending_passes": number,"held_sessions": number,"late_cancels": number,"no_shows": number,"trainer_cancels": number
+            }[]
+                           },
+"trainer_churn_risk":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "client_alias": string,"client_id": string,"coaching_id": string,"days_absent": number,"display_name": string,"first_name": string,"last_name": string,"pass_ended_at": string,"reasons": (string)[],"username": string
+            }[]
+                           },
+"trainer_dismiss_churn":
+{ Args: { "p_coaching_id": string }; Returns: string
+                           },
+"trainer_ending_passes":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "client_alias": string,"client_id": string,"coaching_id": string,"display_name": string,"effective_expires_at": string,"first_name": string,"last_name": string,"remaining": number,"title": string,"username": string
+            }[]
+                           },
+"trainer_finance":
+{ Args: { "p_from": string,"p_to": string }; Returns: {
+              "charges": number,"currency": string,"earned_minor": number,"received_minor": number
+            }[]
+                           },
 "trainer_invite_status":
 { Args: { "p_code": string }; Returns: string
                            },
 "trainer_offer_waitlist":
 { Args: { "p_entry_id": string }; Returns: undefined
+                           },
+"trainer_price_hints":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "a": string,"b": string,"currency": string,"kind": string,"value": number
+            }[]
                            },
 "unmark_homework_done":
 { Args: { "p_occurrence": string }; Returns: undefined

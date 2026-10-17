@@ -1,4 +1,4 @@
--- Homework (migration 20261017034100_homework.sql, PRD wave-2 §10): save_homework lays out occurrences,
+-- Homework (migration 20261017035100_homework.sql, PRD wave-2 §10): save_homework lays out occurrences,
 -- the client marks and unmarks them, reminders at 10:00 in the client's time zone, the trainer's note when
 -- turned on, archiving on pair end, and the RLS of both tables (10.5).
 begin;
