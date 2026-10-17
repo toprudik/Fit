@@ -11,7 +11,7 @@ import type { Dictionary } from "@/i18n/dictionaries";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { formatHomeworkDay, homeworkSchedule } from "@/lib/homework/format";
 import { draftFromHomework, occurrenceState, type HomeworkDraft } from "@/lib/homework/homework";
-import { loadHomework, loadHomeworkPair, loadPairHomework } from "@/lib/homework/load";
+import { loadHomework, loadHomeworkPair, loadPairHomework, visibleLogIds } from "@/lib/homework/load";
 import { ArchiveHomework, HomeworkForm } from "./homework-form";
 import { STATE_TONE } from "./trainer-homework";
 
@@ -21,22 +21,22 @@ function NotFound({ t }: { t: Dictionary }) {
   return <EmptyState icon={ClipboardCheck} title={t.workouts.logs.notFoundTitle} description={t.workouts.logs.notFoundText} />;
 }
 
-async function NewForm({ t, coachingId }: { t: Dictionary; coachingId: Promise<string> }) {
+async function NewForm({ t, locale, coachingId }: { t: Dictionary; locale: Locale; coachingId: Promise<string> }) {
   const id = await coachingId;
   const pair = await loadHomeworkPair(id);
-  const today = pair?.canGive ? (await loadPairHomework(id))?.today : null;
+  const today = pair?.canGive ? (await loadPairHomework(id, locale))?.today : null;
   if (!pair?.canGive || !today) return <NotFound t={t} />;
-  const initial: HomeworkDraft = { title: "", description: "", videoUrl: "", dueDate: today, repeat: false, weekdays: [], repeatUntil: "" };
+  const initial: HomeworkDraft = { title: "", description: "", videoUrl: "", dueDate: today, repeat: false, weekdays: [], repeatUntil: "", exercises: [] };
   return <HomeworkForm target={{ coachingId: id }} initial={initial} today={today} />;
 }
 
 /** "Новое задание" in the pair's "Тренировки" tab (PRD wave-2 §10-1). */
 export async function NewHomeworkPage({ coachingId }: { coachingId: Promise<string> }) {
-  const t = await getDictionary();
+  const [t, locale] = await Promise.all([getDictionary(), getLocale()]);
   return (
     <Screen header={<ScreenHeader title={t.homework.newTitle} back={{ fallbackHref: "/trainer/clients" }} />}>
       <Suspense fallback={<SkeletonRows rows={4} label={t.common.loading} />}>
-        <NewForm t={t} coachingId={coachingId} />
+        <NewForm t={t} locale={locale} coachingId={coachingId} />
       </Suspense>
     </Screen>
   );
@@ -54,7 +54,7 @@ async function Detail({
   homeworkId: Promise<string>;
 }) {
   const [pairId, id] = await Promise.all([coachingId, homeworkId]);
-  const [pair, loaded] = await Promise.all([loadHomeworkPair(pairId), loadHomework(id)]);
+  const [pair, loaded] = await Promise.all([loadHomeworkPair(pairId), loadHomework(id, locale)]);
   if (!pair?.viewerIsTrainer || !loaded || loaded.homework.coachingId !== pairId) {
     return (
       <Screen header={<ScreenHeader title={t.homework.editTitle} back={{ fallbackHref: workoutsHref(pairId) }} />}>
@@ -64,6 +64,7 @@ async function Detail({
   }
   const { homework, today } = loaded;
   const copy = t.homework;
+  const logs = await visibleLogIds(homework.occurrences.map((o) => o.workoutLogId));
   const editable = pair.canGive && !homework.archived;
   return (
     <Screen
@@ -84,6 +85,11 @@ async function Detail({
                 key={occurrence.id}
                 title={formatHomeworkDay(locale, occurrence.dueOn)}
                 subtitle={occurrence.comment ?? undefined}
+                href={
+                  occurrence.workoutLogId && logs.has(occurrence.workoutLogId)
+                    ? `${workoutsHref(pairId)}/${occurrence.workoutLogId}`
+                    : undefined
+                }
                 trailing={<Badge tone={STATE_TONE[state]}>{copy.state[state]}</Badge>}
               />
             );
