@@ -36,7 +36,7 @@ export function PairMilestones({ t, locale, pair }: { t: Dictionary; locale: Loc
           newest={index === 0}
           side={pair.side}
           title={plural(locale, MILESTONE_SESSIONS[milestone.kind], t.pairs.together)}
-          date={formatDay(locale, milestone.achievedAt, pair.timeZone)}
+          subtitle={formatDay(locale, milestone.achievedAt, pair.timeZone)}
           badge={copy.newBadge}
         />
       ))}

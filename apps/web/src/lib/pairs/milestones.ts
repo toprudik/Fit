@@ -28,3 +28,36 @@ export function nextMilestone(attended: number, reached: Milestone[]): { session
   const previous = [0, ...thresholds].filter((sessions) => sessions < next).at(-1) ?? 0;
   return { sessions: next, left: next - attended, share: Math.max(0, (attended - previous) / (next - previous)) };
 }
+
+/** A pair as the trainer's "Сегодня" sees it for milestones. */
+export type TodayPair = { coachingId: string; name: string; live: boolean; archived: boolean; attended: number; milestones: Milestone[] };
+
+export type TodayMilestones = {
+  /** Milestones reached within NEW_MILESTONE_DAYS, newest first. */
+  reached: { coachingId: string; name: string; milestone: Milestone }[];
+  /** Live pairs whose next attended session reaches a milestone, by name. */
+  upcoming: { coachingId: string; name: string; sessions: number; share: number }[];
+};
+
+/**
+ * Milestones for the trainer's "Сегодня" (screens.md, Сегодня): the fresh ones to congratulate on and the ones the
+ * next session reaches, so the trainer can get ready. Archived and ended pairs stay out.
+ */
+export function todayMilestones(pairs: TodayPair[], now: Date): TodayMilestones {
+  const since = now.getTime() - NEW_MILESTONE_DAYS * 86_400_000;
+  const shown = pairs.filter((pair) => pair.live && !pair.archived);
+  const reached = shown
+    .flatMap((pair) =>
+      pair.milestones
+        .filter((milestone) => new Date(milestone.achievedAt).getTime() >= since)
+        .map((milestone) => ({ coachingId: pair.coachingId, name: pair.name, milestone })),
+    )
+    .sort((a, b) => b.milestone.achievedAt.localeCompare(a.milestone.achievedAt));
+  const upcoming = shown
+    .flatMap((pair) => {
+      const next = nextMilestone(pair.attended, pair.milestones);
+      return next?.left === 1 ? [{ coachingId: pair.coachingId, name: pair.name, sessions: next.sessions, share: next.share }] : [];
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return { reached, upcoming };
+}

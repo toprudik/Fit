@@ -2,8 +2,8 @@ import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PAID_PLAN, requestedPlans } from "@/lib/plans/plans";
 import type { Json } from "@/lib/supabase/database.types";
-import { displayName, isPairId, passIsEnding, type ClientItem, type CoachingStatus } from "./clients";
-import type { Milestone } from "./milestones";
+import { displayName, isLive, isPairId, passIsEnding, type ClientItem, type CoachingStatus } from "./clients";
+import { todayMilestones, type Milestone, type TodayMilestones } from "./milestones";
 
 const DEFAULT_TIME_ZONE = "Europe/Moscow";
 
@@ -95,6 +95,29 @@ export async function loadTrainerClients(): Promise<{ items: ClientItem[]; timeZ
     };
   });
   return { items, timeZone: me.timeZone };
+}
+
+/** Milestones for the trainer's "Сегодня": fresh ones and the ones the next session reaches. Null without a session. */
+export async function loadTodayMilestones(): Promise<TodayMilestones | null> {
+  const clients = await loadTrainerClients();
+  if (!clients) return null;
+  const ids = clients.items.map((item) => item.coachingId);
+  if (!ids.length) return { reached: [], upcoming: [] };
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.from("milestones").select("id, coaching_id, kind, achieved_at").in("coaching_id", ids).order("achieved_at");
+  if (error) fail("milestones", error);
+  const pairs = clients.items.map((item) => ({
+    coachingId: item.coachingId,
+    name: item.name,
+    live: isLive(item.status),
+    archived: item.archived,
+    attended: item.attended,
+    milestones: data
+      .filter((row) => row.coaching_id === item.coachingId)
+      .map((row) => ({ id: row.id, kind: row.kind, achievedAt: row.achieved_at })),
+  }));
+  return todayMilestones(pairs, new Date());
 }
 
 export type PairPass = {
