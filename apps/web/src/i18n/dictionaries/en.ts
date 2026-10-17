@@ -263,6 +263,15 @@ export const en: Dictionary = {
     issueFailed: "GitHub didn't take the issue. Try again later.",
     issueDisabled: "Automatic issues are off: the server has no GitHub token.",
     noIssue: "No issue yet",
+    reply: "Answer to the author",
+    replyLabel: "Answer",
+    replyHint: "The author gets the answer from the bot. A new answer replaces the old one.",
+    replySend: "Send to the bot",
+    replyResend: "Send a new answer",
+    replySent: "Answer sent",
+    replyFailed: "Couldn't send the answer. Try again.",
+    replyDeleted: "The author deleted their account, so there is no one to answer.",
+    repliedAt: "Sent {date}",
   },
   pairs: {
     list: {
@@ -4270,6 +4279,8 @@ export const en: Dictionary = {
     feedbackKinds: { bug: "bug", idea: "idea", other: "other" },
     feedbackZones: { trainer: "trainer zone", client: "client zone", none: "zone unknown" },
     openFeedback: "Open feedback",
+    feedbackReply: "The DaFit team answered your feedback:\n{reply}",
+    writeAgain: "Write again",
     /** П1–П3: plan granted, revoked and ending in three days (PRD §2.14-8, 9). */
     planGranted: "You now have {plan} with no end date. Thanks for being in the DaFit beta.",
     planGrantedUntil: "You now have {plan} until {date}. Thanks for being in the DaFit beta.",

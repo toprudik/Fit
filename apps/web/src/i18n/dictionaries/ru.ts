@@ -267,6 +267,15 @@ export const ru = {
     issueFailed: "GitHub не принял issue. Попробуй позже.",
     issueDisabled: "Автоматические issue выключены: на сервере нет токена GitHub.",
     noIssue: "Issue ещё нет",
+    reply: "Ответ автору",
+    replyLabel: "Текст ответа",
+    replyHint: "Ответ придёт автору в бот. Новый ответ заменит прежний.",
+    replySend: "Отправить в бот",
+    replyResend: "Отправить новый ответ",
+    replySent: "Ответ отправлен",
+    replyFailed: "Не получилось отправить ответ. Попробуй ещё раз.",
+    replyDeleted: "Автор удалил аккаунт, ответить уже нельзя.",
+    repliedAt: "Отправлено {date}",
   },
   pairs: {
     list: {
@@ -4333,6 +4342,8 @@ export const ru = {
     feedbackKinds: { bug: "ошибка", idea: "идея", other: "другое" },
     feedbackZones: { trainer: "зона тренера", client: "зона клиента", none: "зона не известна" },
     openFeedback: "Открыть обращение",
+    feedbackReply: "Команда DaFit ответила на твоё обращение:\n{reply}",
+    writeAgain: "Написать ещё",
     /** П1–П3: plan granted, revoked and ending in three days (PRD §2.14-8, 9). */
     planGranted: "Тебе выдан тариф {plan} без срока. Спасибо, что ты в бете DaFit.",
     planGrantedUntil: "Тебе выдан тариф {plan} до {date}. Спасибо, что ты в бете DaFit.",
