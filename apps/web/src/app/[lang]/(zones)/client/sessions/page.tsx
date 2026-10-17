@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BookingSegments } from "@/components/bookings/booking-segments";
+import { ClientHomeworkRow } from "@/components/homework/client-homework";
 import { ScheduleSignIn } from "@/components/schedule/sign-in-state";
 import { DetailPlaceholder, MasterDetail, Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
@@ -74,6 +75,7 @@ async function Bookings({ searchParams }: { searchParams: PageProps<"/[lang]/cli
 
   return (
     <div className="flex flex-col gap-4">
+      <ClientHomeworkRow />
       {upcoming.length + past.length + requests.length > 0 ? (
         <Button asChild variant="secondary" className="self-start">
           <Link href="/client/book">
