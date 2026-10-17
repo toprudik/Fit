@@ -110,6 +110,8 @@ begin
   with h as (
     insert into public.homework (coaching_id, title, due_date) values (v_pair, 'Plank', current_date + 1) returning id)
   insert into public.homework_occurrences (homework_id, due_on) select h.id, current_date + 1 from h;
+  insert into public.homework_exercises (homework_id, position, exercise_id)
+  select h.id, 1, '00000000-0000-4000-8000-000000000950' from public.homework h where h.coaching_id = v_pair;
   insert into public.nutrition_targets (source, client_id, coaching_id, kcal, effective_from, set_by)
   values ('trainer', v_client, v_pair, 1800, current_date, v_trainer);
   insert into public.food_day_comments (client_id, coaching_id, author_id, local_date, body)
@@ -212,6 +214,7 @@ insert into tests.pair_tables values
   ('milestones',            't.id::text',          't.coaching_id = %L'),
   ('homework',              't.id::text',          't.coaching_id = %L'),
   ('homework_occurrences',  't.id::text',          't.homework_id in (select h.id from public.homework h where h.coaching_id = %L)'),
+  ('homework_exercises',    't.homework_id::text', 't.homework_id in (select h.id from public.homework h where h.coaching_id = %L)'),
   ('workout_logs',          't.id::text',          't.coaching_id = %L'),
   ('nutrition_targets',     't.id::text',          't.coaching_id = %L'),
   ('food_day_comments',     't.id::text',          't.coaching_id = %L');

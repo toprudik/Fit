@@ -1083,16 +1083,42 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"homework_occurrences": {
+                },"homework_exercises": {
                   Row: {
-                    "comment": string | null,"done_at": string | null,"due_on": string,"homework_id": string,"id": string
+                    "exercise_id": string,"homework_id": string,"position": number,"prescription": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "comment"?: string | null,"done_at"?: string | null,"due_on": string,"homework_id": string,"id"?: string
+                    "exercise_id": string,"homework_id": string,"position": number,"prescription"?: string | null
                   }
                   Update: {
-                    "comment"?: string | null,"done_at"?: string | null,"due_on"?: string,"homework_id"?: string,"id"?: string
+                    "exercise_id"?: string,"homework_id"?: string,"position"?: number,"prescription"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "homework_exercises_exercise_id_fkey"
+      columns: ["exercise_id"]
+isOneToOne: false
+      referencedRelation: "exercises"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "homework_exercises_homework_id_fkey"
+      columns: ["homework_id"]
+isOneToOne: false
+      referencedRelation: "homework"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"homework_occurrences": {
+                  Row: {
+                    "comment": string | null,"done_at": string | null,"due_on": string,"homework_id": string,"id": string,"workout_log_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "comment"?: string | null,"done_at"?: string | null,"due_on": string,"homework_id": string,"id"?: string,"workout_log_id"?: string | null
+                  }
+                  Update: {
+                    "comment"?: string | null,"done_at"?: string | null,"due_on"?: string,"homework_id"?: string,"id"?: string,"workout_log_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -1100,6 +1126,12 @@ isOneToOne: false
       columns: ["homework_id"]
 isOneToOne: false
       referencedRelation: "homework"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "homework_occurrences_workout_log_id_fkey"
+      columns: ["workout_log_id"]
+isOneToOne: false
+      referencedRelation: "workout_logs"
       referencedColumns: ["id"]
     }
                   ]
@@ -3407,7 +3439,7 @@ isOneToOne: false
 { Args: { "p_booking_id": string,"p_reason"?: string,"p_status": Database["public"]['Enums']["booking_status"] }; Returns: Database["public"]['Enums']["booking_status"]
                            },
 "mark_homework_done":
-{ Args: { "p_comment"?: string,"p_occurrence": string }; Returns: string
+{ Args: { "p_comment"?: string,"p_log"?: string,"p_occurrence": string }; Returns: string
                            },
 "my_client_invite":
 { Args: Record<PropertyKey, never>; Returns: {

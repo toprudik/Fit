@@ -3,6 +3,8 @@
  * client's days as "YYYY-MM-DD"; "overdue" is derived, never stored (an occurrence past its day without a mark).
  */
 
+import { emptySet, MAX_EXERCISES, TITLE_MAX_LENGTH, type LogDraft } from "@/lib/workouts/log";
+
 export const HOMEWORK_TITLE_MAX_LENGTH = 200;
 export const HOMEWORK_DESCRIPTION_MAX_LENGTH = 2000;
 export const HOMEWORK_COMMENT_MAX_LENGTH = 1000;
@@ -15,7 +17,21 @@ export const COMPLETION_DAYS = 30;
 /** ISO weekdays, Monday first. */
 export const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
-export type HomeworkOccurrence = { id: string; dueOn: string; doneAt: string | null; comment: string | null };
+/** At most this many exercises in a homework (homework_exercises_position_check). */
+export const HOMEWORK_MAX_EXERCISES = 30;
+export const HOMEWORK_PRESCRIPTION_MAX_LENGTH = 200;
+
+export type HomeworkOccurrence = {
+  id: string;
+  dueOn: string;
+  doneAt: string | null;
+  comment: string | null;
+  /** The client's own log of the sets done for this deadline (PRD 10.2). */
+  workoutLogId: string | null;
+};
+
+/** An exercise of the homework with the trainer's prescription ("3 × 12"). */
+export type HomeworkExercise = { exerciseId: string; name: string; prescription: string | null };
 
 export type Homework = {
   id: string;
@@ -27,6 +43,8 @@ export type Homework = {
   repeatWeekdays: number[] | null;
   repeatUntil: string | null;
   archived: boolean;
+  /** In the trainer's order. */
+  exercises: HomeworkExercise[];
   /** Oldest first. */
   occurrences: HomeworkOccurrence[];
 };
@@ -94,7 +112,10 @@ export type HomeworkDraft = {
   repeat: boolean;
   weekdays: number[];
   repeatUntil: string;
+  exercises: HomeworkExerciseDraft[];
 };
+
+export type HomeworkExerciseDraft = { key: string; exerciseId: string; name: string; prescription: string };
 
 export type HomeworkPayload = {
   id?: string;
@@ -105,6 +126,7 @@ export type HomeworkPayload = {
   due_date: string;
   repeat_weekdays: number[] | null;
   repeat_until: string | null;
+  exercises: { exercise_id: string; prescription: string | null }[];
 };
 
 export type HomeworkDraftError = "title" | "videoUrl" | "dueDate" | "weekdays" | "repeatUntil";
@@ -151,6 +173,10 @@ export function homeworkPayload(
       due_date: draft.dueDate,
       repeat_weekdays: draft.repeat ? weekdays : null,
       repeat_until: draft.repeat ? draft.repeatUntil : null,
+      exercises: draft.exercises.slice(0, HOMEWORK_MAX_EXERCISES).map((exercise) => ({
+        exercise_id: exercise.exerciseId,
+        prescription: exercise.prescription.trim().slice(0, HOMEWORK_PRESCRIPTION_MAX_LENGTH) || null,
+      })),
     },
   };
 }
@@ -165,5 +191,31 @@ export function draftFromHomework(homework: Homework): HomeworkDraft {
     repeat: homework.repeatWeekdays !== null,
     weekdays: homework.repeatWeekdays ?? [],
     repeatUntil: homework.repeatUntil ?? "",
+    exercises: homework.exercises.map((exercise, index) => ({
+      key: `saved-${index}`,
+      exerciseId: exercise.exerciseId,
+      name: exercise.name,
+      prescription: exercise.prescription ?? "",
+    })),
+  };
+}
+
+/**
+ * "Записать подходы" (PRD 10-3): a new self log for the deadline, titled as the homework and holding its
+ * exercises, each with the prescription as its note and one empty set to fill.
+ */
+export function logDraftFromHomework(homework: Homework, day: string): LogDraft {
+  return {
+    title: homework.title.slice(0, TITLE_MAX_LENGTH),
+    date: day,
+    durationMin: "",
+    notes: "",
+    exercises: homework.exercises.slice(0, MAX_EXERCISES).map((exercise, index) => ({
+      key: `homework-${index}-${exercise.exerciseId}`,
+      exerciseId: exercise.exerciseId,
+      name: exercise.name,
+      notes: exercise.prescription ?? "",
+      sets: [emptySet()],
+    })),
   };
 }
