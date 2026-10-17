@@ -8,6 +8,7 @@ import { formatSessionTime } from "@/lib/pairs/format";
 import { DEFAULT_TIME_ZONE, formatPlanDate, isPlanCode } from "@/lib/plans/plans";
 import { isButtonUrl } from "@/lib/groups/rules";
 import { isBadgeCode } from "@/lib/gamification/gamification";
+import { bookingDecisionData } from "@/lib/bot-actions/callback-data";
 import { isChallengeMetric } from "@/lib/challenges/challenges";
 import { formatOffset } from "@/lib/reminders/offsets";
 import type { Database, Json } from "@/lib/supabase/database.types";
@@ -25,9 +26,10 @@ type TemplateContext = {
 
 /**
  * A button opens an app route (path), which the dispatcher turns into a Mini App or a link button, or an outside
- * https address (href) the trainer put in a broadcast.
+ * https address (href) the trainer put in a broadcast, or acts right in the bot (action, the callback_data of
+ * lib/bot-actions; private chats only).
  */
-type TemplateButton = { text: string; path: string } | { text: string; href: string };
+type TemplateButton = { text: string; path: string } | { text: string; href: string } | { text: string; action: string };
 type Template = (context: TemplateContext) => { text: string; buttons: TemplateButton[] };
 
 /**
@@ -544,11 +546,24 @@ const templates: Partial<Record<NotificationType, Template>> = {
     };
   },
   // К-referral: payload { pass_id, sessions, side, friend, trainer } from private.grant_referral_bonus (PRD wave-3 §3.1-6);
-  // side is referrer (the client who shared the link) or referee (the friend), friend and trainer are names.
+  // side is referrer (the client who shared the link) or referee (the friend), friend and trainer are names. The
+  // sessions go into the active pass; waiting = no active pass, they go into the next one; applied = the next
+  // pass has just taken them (trigger ledger_entries_referral_bonus).
   referral_bonus: ({ t, locale, payload }) => {
     const passId = typeof payload.pass_id === "string" && isPairId(payload.pass_id) ? payload.pass_id : null;
+    const referee = payload.side === "referee";
+    const template =
+      payload.applied === true
+        ? t.referralBonusApplied
+        : payload.waiting === true
+          ? referee
+            ? t.referralBonusRefereeWaiting
+            : t.referralBonusReferrerWaiting
+          : referee
+            ? t.referralBonusReferee
+            : t.referralBonusReferrer;
     return {
-      text: interpolateEscaped(payload.side === "referee" ? t.referralBonusReferee : t.referralBonusReferrer, {
+      text: interpolateEscaped(template, {
         friend: personName(nested(payload.friend)) || t.unnamedClient,
         trainer: personName(nested(payload.trainer)) || t.unnamedTrainer,
         sessions: plural(locale, Number(payload.sessions ?? 0), t.referralSessions),
@@ -566,7 +581,8 @@ const templates: Partial<Record<NotificationType, Template>> = {
     }),
     buttons: [{ text: t.openSession, path: idPath("/trainer/sessions", payload.session_id, "/trainer/schedule") }],
   }),
-  // Т2: the same payload for a request, with trial = a trial request; the button opens it to confirm or decline (PRD 2.6.4, 2.3-5).
+  // Т2: the same payload for a request, with trial = a trial request; "Подтвердить" and "Отклонить" answer it right in
+  // the bot (SCHED-4), the third button opens it (PRD 2.6.4, 2.3-5).
   // A move that became a request carries rescheduled_from, the old start (PRD 2.6.5); on_site = asked at a QR
   // check-in without a booking (PRD wave-3 §5 rule 6).
   booking_requested: ({ t, locale, timeZone, payload }) => ({
@@ -585,7 +601,15 @@ const templates: Partial<Record<NotificationType, Template>> = {
         place: place(t, payload),
       },
     ),
-    buttons: [{ text: t.answerRequest, path: idPath("/trainer/requests", payload.booking_id, "/trainer/requests") }],
+    buttons: [
+      ...(isPairId(payload.booking_id)
+        ? [
+            { text: t.confirmRequest, action: bookingDecisionData(payload.booking_id, true) },
+            { text: t.declineRequest, action: bookingDecisionData(payload.booking_id, false) },
+          ]
+        : []),
+      { text: t.answerRequest, path: idPath("/trainer/requests", payload.booking_id, "/trainer/requests") },
+    ],
   }),
   // Т3: payload { booking_id, session_id, starts_at, request, late, reason, first_name, last_name }; request = a
   // request taken back, late = cancelled after the deadline with a charge (PRD 2.6.5).
@@ -896,7 +920,9 @@ export function renderMessage(
   const buttons = new URL(options.appUrl).protocol === "https:" ? rendered.buttons : [];
   return {
     text: rendered.text,
-    buttons: buttons.map((button) => {
+    // A tap in a group would act for whoever tapped, so action buttons go to private chats only.
+    buttons: buttons.filter((button) => !(options.group && "action" in button)).map((button) => {
+      if ("action" in button) return { text: button.text, callback_data: button.action };
       if ("href" in button) return { text: button.text, url: button.href };
       const url = new URL(button.path, options.appUrl);
       url.searchParams.set("source", row.kind);
