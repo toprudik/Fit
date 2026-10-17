@@ -835,6 +835,178 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"food_day_comments": {
+                  Row: {
+                    "author_id": string | null,"body": string,"client_id": string,"coaching_id": string,"created_at": string,"hidden_by_client_at": string | null,"id": string,"local_date": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "author_id"?: string | null,"body": string,"client_id": string,"coaching_id": string,"created_at"?: string,"hidden_by_client_at"?: string | null,"id"?: string,"local_date": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "author_id"?: string | null,"body"?: string,"client_id"?: string,"coaching_id"?: string,"created_at"?: string,"hidden_by_client_at"?: string | null,"id"?: string,"local_date"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "food_day_comments_author_id_fkey"
+      columns: ["author_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "food_day_comments_author_id_fkey"
+      columns: ["author_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "food_day_comments_client_id_fkey"
+      columns: ["client_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "food_day_comments_client_id_fkey"
+      columns: ["client_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "food_day_comments_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_balances"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "food_day_comments_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_stats"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "food_day_comments_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coachings"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"food_diary_entries": {
+                  Row: {
+                    "carbs_g": number | null,"client_id": string,"fat_g": number | null,"food_id": string | null,"grams": number | null,"id": string,"kcal": number,"local_date": string,"logged_at": string,"meal": Database["public"]['Enums']["meal_type"],"protein_g": number | null,"servings": number | null,"title": string | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "carbs_g"?: number | null,"client_id": string,"fat_g"?: number | null,"food_id"?: string | null,"grams"?: number | null,"id"?: string,"kcal": number,"local_date": string,"logged_at"?: string,"meal": Database["public"]['Enums']["meal_type"],"protein_g"?: number | null,"servings"?: number | null,"title"?: string | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "carbs_g"?: number | null,"client_id"?: string,"fat_g"?: number | null,"food_id"?: string | null,"grams"?: number | null,"id"?: string,"kcal"?: number,"local_date"?: string,"logged_at"?: string,"meal"?: Database["public"]['Enums']["meal_type"],"protein_g"?: number | null,"servings"?: number | null,"title"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "food_diary_entries_client_id_fkey"
+      columns: ["client_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "food_diary_entries_client_id_fkey"
+      columns: ["client_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "food_diary_entries_food_id_fkey"
+      columns: ["food_id"]
+isOneToOne: false
+      referencedRelation: "foods"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"food_dish_items": {
+                  Row: {
+                    "dish_id": string,"food_id": string,"grams": number,"position": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "dish_id": string,"food_id": string,"grams": number,"position": number
+                  }
+                  Update: {
+                    "dish_id"?: string,"food_id"?: string,"grams"?: number,"position"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "food_dish_items_dish_id_fkey"
+      columns: ["dish_id"]
+isOneToOne: false
+      referencedRelation: "foods"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "food_dish_items_food_id_fkey"
+      columns: ["food_id"]
+isOneToOne: false
+      referencedRelation: "foods"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"food_favorites": {
+                  Row: {
+                    "created_at": string,"food_id": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"food_id": string,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"food_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "food_favorites_food_id_fkey"
+      columns: ["food_id"]
+isOneToOne: false
+      referencedRelation: "foods"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "food_favorites_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "food_favorites_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"foods": {
+                  Row: {
+                    "archived_at": string | null,"barcode": string | null,"brand": string | null,"carbs_100g": number | null,"created_at": string,"fat_100g": number | null,"id": string,"kcal_100g": number,"kind": Database["public"]['Enums']["food_kind"],"lang": string | null,"name": string,"off_code": string | null,"off_fetched_at": string | null,"owner_id": string | null,"protein_100g": number | null,"serving_g": number | null,"serving_label": string | null,"source": Database["public"]['Enums']["food_source"],"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archived_at"?: string | null,"barcode"?: string | null,"brand"?: string | null,"carbs_100g"?: number | null,"created_at"?: string,"fat_100g"?: number | null,"id"?: string,"kcal_100g": number,"kind"?: Database["public"]['Enums']["food_kind"],"lang"?: string | null,"name": string,"off_code"?: string | null,"off_fetched_at"?: string | null,"owner_id"?: string | null,"protein_100g"?: number | null,"serving_g"?: number | null,"serving_label"?: string | null,"source": Database["public"]['Enums']["food_source"],"updated_at"?: string
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"barcode"?: string | null,"brand"?: string | null,"carbs_100g"?: number | null,"created_at"?: string,"fat_100g"?: number | null,"id"?: string,"kcal_100g"?: number,"kind"?: Database["public"]['Enums']["food_kind"],"lang"?: string | null,"name"?: string,"off_code"?: string | null,"off_fetched_at"?: string | null,"owner_id"?: string | null,"protein_100g"?: number | null,"serving_g"?: number | null,"serving_label"?: string | null,"source"?: Database["public"]['Enums']["food_source"],"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "foods_owner_id_fkey"
+      columns: ["owner_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "foods_owner_id_fkey"
+      columns: ["owner_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"intakes": {
                   Row: {
                     "answers": NonNullable<Json>,"form_version": string,"id": string,"parq_answers": NonNullable<Json>,"parq_flagged": boolean,"submitted_at": string,"user_id": string
@@ -2577,6 +2749,12 @@ isOneToOne: false
               "booking_id": string,"status": Database["public"]['Enums']["booking_status"]
             }[]
                            },
+"add_food_comment":
+{ Args: { "p_body": string,"p_coaching_id": string,"p_day": string }; Returns: string
+                           },
+"add_food_entry":
+{ Args: { "p_carbs"?: number,"p_day": string,"p_fat"?: number,"p_food_id"?: string,"p_grams"?: number,"p_kcal"?: number,"p_meal": Database["public"]['Enums']["meal_type"],"p_protein"?: number,"p_servings"?: number,"p_title"?: string }; Returns: string
+                           },
 "add_group_participant":
 { Args: { "p_coaching_id": string,"p_session_id": string }; Returns: string
                            },
@@ -2649,6 +2827,9 @@ isOneToOne: false
               "blocked_at": string,"blocked_reason": string,"bookings_made": number,"client_active_pairs": number,"client_pairs": number,"created_at": string,"first_name": string,"is_admin": boolean,"is_trainer": boolean,"language_code": string,"last_name": string,"last_seen_at": string,"photo_url": string,"sessions_led": number,"telegram_id": number,"trainer_active_pairs": number,"trainer_pairs": number,"user_id": string,"username": string,"verification_status": Database["public"]['Enums']["verification_status"]
             }[]
                            },
+"archive_food":
+{ Args: { "p_id": string }; Returns: boolean
+                           },
 "book_group_session":
 { Args: { "p_session_id": string }; Returns: {
               "booking_id": string,"status": Database["public"]['Enums']["booking_status"]
@@ -2676,6 +2857,11 @@ isOneToOne: false
                            },
 "bot_messages_blocked":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"cache_off_foods":
+{ Args: { "p_items": Json }; Returns: {
+              "id": string,"off_code": string
+            }[]
                            },
 "calculate_nutrition_target":
 { Args: { "p_weight_kg": number }; Returns: Json
@@ -2732,6 +2918,9 @@ isOneToOne: false
 "complete_data_export":
 { Args: { "p_id": string,"p_storage_path": string }; Returns: undefined
                            },
+"copy_food_meal":
+{ Args: { "p_from": string,"p_meal": Database["public"]['Enums']["meal_type"],"p_to": string,"p_to_meal"?: Database["public"]['Enums']["meal_type"] }; Returns: number
+                           },
 "create_calendar_feed":
 { Args: { "p_zone": Database["public"]['Enums']["app_zone"] }; Returns: string
                            },
@@ -2759,6 +2948,12 @@ isOneToOne: false
 "decline_contact_request":
 { Args: { "p_request_id": string }; Returns: Database["public"]['Enums']["contact_request_status"]
                            },
+"delete_food_comment":
+{ Args: { "p_id": string }; Returns: boolean
+                           },
+"edit_food_comment":
+{ Args: { "p_body": string,"p_id": string }; Returns: boolean
+                           },
 "effective_plan":
 { Args: { "p_side": Database["public"]['Enums']["plan_side"],"p_user": string }; Returns: string
                            },
@@ -2768,6 +2963,34 @@ isOneToOne: false
 "fail_data_export":
 { Args: { "p_id": string }; Returns: undefined
                            },
+"food_by_barcode":
+{ Args: { "p_barcode": string }; Returns: {
+              "archived_at": string | null,
+"barcode": string | null,
+"brand": string | null,
+"carbs_100g": number | null,
+"created_at": string,
+"fat_100g": number | null,
+"id": string,
+"kcal_100g": number,
+"kind": Database["public"]['Enums']["food_kind"],
+"lang": string | null,
+"name": string,
+"off_code": string | null,
+"off_fetched_at": string | null,
+"owner_id": string | null,
+"protein_100g": number | null,
+"serving_g": number | null,
+"serving_label": string | null,
+"source": Database["public"]['Enums']["food_source"],
+"updated_at": string
+            }[]
+                          SetofOptions: {
+        from: "*"
+        to: "foods"
+        isOneToOne: false
+        isSetofReturn: true
+      } },
 "get_managed_client_claim":
 { Args: { "p_claim_id": string }; Returns: Json
                            },
@@ -2798,6 +3021,9 @@ isOneToOne: false
                            },
 "has_entitlement":
 { Args: { "p_feature": string,"p_pair"?: string,"p_user": string }; Returns: boolean
+                           },
+"hide_food_comment":
+{ Args: { "p_hidden"?: boolean,"p_id": string }; Returns: boolean
                            },
 "join_by_code":
 { Args: { "p_code": string }; Returns: string
@@ -2920,6 +3146,12 @@ isOneToOne: false
 "save_calculator_target":
 { Args: { "p_weight_kg": number }; Returns: string
                            },
+"save_dish":
+{ Args: { "p_id": string,"p_items": Json,"p_name": string,"p_total_g"?: number }; Returns: string
+                           },
+"save_food":
+{ Args: { "p_barcode"?: string,"p_brand"?: string,"p_carbs"?: number,"p_fat"?: number,"p_id": string,"p_kcal": number,"p_name": string,"p_protein"?: number,"p_serving_g"?: number,"p_serving_label"?: string }; Returns: string
+                           },
 "save_week_template":
 { Args: { "p_buffer_min"?: number,"p_horizon_weeks"?: number,"p_items": Json }; Returns: number
                            },
@@ -2934,6 +3166,34 @@ isOneToOne: false
               "category": string,"equipment": (string)[],"id": string,"name": string,"own": boolean,"source": Database["public"]['Enums']["exercise_source"]
             }[]
                            },
+"search_foods":
+{ Args: { "p_limit"?: number,"p_query": string }; Returns: {
+              "archived_at": string | null,
+"barcode": string | null,
+"brand": string | null,
+"carbs_100g": number | null,
+"created_at": string,
+"fat_100g": number | null,
+"id": string,
+"kcal_100g": number,
+"kind": Database["public"]['Enums']["food_kind"],
+"lang": string | null,
+"name": string,
+"off_code": string | null,
+"off_fetched_at": string | null,
+"owner_id": string | null,
+"protein_100g": number | null,
+"serving_g": number | null,
+"serving_label": string | null,
+"source": Database["public"]['Enums']["food_source"],
+"updated_at": string
+            }[]
+                          SetofOptions: {
+        from: "*"
+        to: "foods"
+        isOneToOne: false
+        isSetofReturn: true
+      } },
 "session_check_in_qr":
 { Args: { "p_session_id": string }; Returns: {
               "checked_in": Json,"code": string,"opens_at": string,"refresh_at": string
@@ -2958,6 +3218,9 @@ isOneToOne: false
 "set_client_goal":
 { Args: { "p_goal": Database["public"]['Enums']["goal_type"] }; Returns: boolean
                            },
+"set_food_favorite":
+{ Args: { "p_favorite": boolean,"p_food_id": string }; Returns: boolean
+                           },
 "set_nutrition_target":
 { Args: { "p_carbs_g"?: number,"p_coaching_id": string,"p_confirm_low"?: boolean,"p_fat_g"?: number,"p_kcal": number,"p_protein_g"?: number }; Returns: string
                            },
@@ -2972,6 +3235,9 @@ isOneToOne: false
                            },
 "trainer_offer_waitlist":
 { Args: { "p_entry_id": string }; Returns: undefined
+                           },
+"update_food_entry":
+{ Args: { "p_grams"?: number,"p_id": string,"p_kcal"?: number,"p_meal": Database["public"]['Enums']["meal_type"],"p_servings"?: number }; Returns: boolean
                            },
 "update_session":
 { Args: { "p_duration_min": number,"p_following"?: boolean,"p_location_id"?: string,"p_meeting_url"?: string,"p_mode": Database["public"]['Enums']["session_mode"],"p_session_id": string,"p_starts_at": string,"p_title"?: string }; Returns: number
@@ -2989,7 +3255,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "access_request_status": "open"|"granted"|"declined","activity_level": "minimal"|"low"|"moderate"|"high"|"very_high","actor_role": "client"|"trainer"|"delegate"|"system"|"admin","app_locale": "ru"|"en","app_role": "admin","app_theme": "system"|"light"|"dark","app_zone": "trainer"|"client","booking_source": "trainer"|"client_slot"|"client_session"|"waitlist"|"recurrence"|"trial","booking_status": "requested"|"confirmed"|"declined"|"expired"|"cancelled"|"late_cancelled"|"rescheduled"|"attended"|"no_show","calc_sex": "male"|"female","charge_reason": "attended"|"late_cancel"|"no_show"|"manual","check_in_method": "qr"|"trainer","coaching_source": "client_invite"|"trainer_code"|"trial_link"|"referral"|"manual","coaching_status": "trial"|"active"|"ended","consent_kind": "beta_terms"|"privacy_policy"|"contact_share","contact_request_status": "pending"|"accepted"|"declined"|"expired","delegation_scope": "schedule"|"attendance"|"workouts"|"homework"|"notes"|"progress"|"nutrition"|"passes"|"payments","exercise_source": "wger"|"custom","export_status": "queued"|"processing"|"ready"|"failed"|"expired","feedback_kind": "bug"|"idea"|"other","feedback_status": "new"|"in_progress"|"closed","goal_type": "lose"|"gain"|"maintain","ledger_entry_type": "grant"|"charge"|"waiver"|"settlement"|"settlement_reversal"|"refund"|"adjustment","managed_client_claim_status": "pending"|"merged"|"rejected","measurement_kind": "weight"|"neck"|"chest"|"waist"|"abdomen"|"hips"|"thigh"|"upper_arm"|"calf","milestone_kind": "sessions_10"|"sessions_25"|"sessions_50"|"sessions_100","money_event_action": "pass_created"|"pass_changed"|"pass_cancelled"|"pass_deleted"|"freeze_added"|"freeze_changed"|"freeze_removed"|"payment_created"|"payment_changed"|"payment_confirmed"|"payment_voided","notification_type": "booking_assigned"|"booking_created"|"booking_requested"|"booking_confirmed"|"booking_declined"|"booking_expired"|"booking_cancelled_by_trainer"|"booking_cancelled_by_client"|"booking_rescheduled"|"session_reminder"|"session_changed"|"charge_posted"|"charge_waived"|"pass_ending"|"client_pass_ending"|"pass_expired"|"debt"|"payment_reported"|"daily_digest"|"coaching_created"|"coaching_ended"|"managed_client_claim"|"intake_submitted"|"intake_reminder"|"contact_request"|"contact_response"|"verification_result"|"export_ready"|"account_deletion"|"counterpart_deleting"|"plan_granted"|"plan_revoked"|"plan_expiring"|"feedback_reply"|"break_glass"|"report_resolution"|"bot_test"|"verification_submitted"|"feedback_received"|"trainer_comment"|"trainer_broadcast"|"homework_reminder"|"homework_done"|"waitlist_offer"|"waitlist_closed"|"review_prompt"|"review_reply"|"goal_changed"|"delegation"|"challenge"|"badge"|"referral_bonus","outbox_status": "pending"|"processing"|"sent"|"failed"|"skipped"|"cancelled","package_applies_to": "any"|"personal"|"group","pass_status": "active"|"cancelled","payment_direction": "in"|"refund","payment_link_kind": "sbp"|"self_employed"|"bank"|"other","payment_method": "cash"|"bank_transfer"|"sbp"|"card"|"payment_link"|"other","payment_status": "reported"|"confirmed"|"voided","photo_angle": "front"|"side"|"back","plan_grant_source": "admin"|"purchase"|"referral_bonus","plan_side": "trainer"|"client","pr_type": "max_weight"|"max_reps"|"max_duration","report_status": "open"|"kept"|"hidden"|"dismissed","report_target": "review"|"user"|"trainer_profile"|"club"|"post"|"buddy_profile","session_kind": "personal"|"group"|"trial","session_mode": "offline"|"online","session_status": "scheduled"|"completed"|"cancelled","share_category": "nutrition"|"measurements"|"photos"|"steps"|"intake"|"workouts","slot_status": "open"|"booked"|"closed","target_source": "trainer"|"group"|"calculator","unit_system": "metric"|"imperial","verification_status": "not_submitted"|"pending"|"verified"|"rejected","waitlist_status": "waiting"|"offered"|"accepted"|"declined"|"expired"|"left"|"closed"
+            "access_request_status": "open"|"granted"|"declined","activity_level": "minimal"|"low"|"moderate"|"high"|"very_high","actor_role": "client"|"trainer"|"delegate"|"system"|"admin","app_locale": "ru"|"en","app_role": "admin","app_theme": "system"|"light"|"dark","app_zone": "trainer"|"client","booking_source": "trainer"|"client_slot"|"client_session"|"waitlist"|"recurrence"|"trial","booking_status": "requested"|"confirmed"|"declined"|"expired"|"cancelled"|"late_cancelled"|"rescheduled"|"attended"|"no_show","calc_sex": "male"|"female","charge_reason": "attended"|"late_cancel"|"no_show"|"manual","check_in_method": "qr"|"trainer","coaching_source": "client_invite"|"trainer_code"|"trial_link"|"referral"|"manual","coaching_status": "trial"|"active"|"ended","consent_kind": "beta_terms"|"privacy_policy"|"contact_share","contact_request_status": "pending"|"accepted"|"declined"|"expired","delegation_scope": "schedule"|"attendance"|"workouts"|"homework"|"notes"|"progress"|"nutrition"|"passes"|"payments","exercise_source": "wger"|"custom","export_status": "queued"|"processing"|"ready"|"failed"|"expired","feedback_kind": "bug"|"idea"|"other","feedback_status": "new"|"in_progress"|"closed","food_kind": "product"|"dish","food_source": "off"|"custom","goal_type": "lose"|"gain"|"maintain","ledger_entry_type": "grant"|"charge"|"waiver"|"settlement"|"settlement_reversal"|"refund"|"adjustment","managed_client_claim_status": "pending"|"merged"|"rejected","meal_type": "breakfast"|"lunch"|"dinner"|"snack","measurement_kind": "weight"|"neck"|"chest"|"waist"|"abdomen"|"hips"|"thigh"|"upper_arm"|"calf","milestone_kind": "sessions_10"|"sessions_25"|"sessions_50"|"sessions_100","money_event_action": "pass_created"|"pass_changed"|"pass_cancelled"|"pass_deleted"|"freeze_added"|"freeze_changed"|"freeze_removed"|"payment_created"|"payment_changed"|"payment_confirmed"|"payment_voided","notification_type": "booking_assigned"|"booking_created"|"booking_requested"|"booking_confirmed"|"booking_declined"|"booking_expired"|"booking_cancelled_by_trainer"|"booking_cancelled_by_client"|"booking_rescheduled"|"session_reminder"|"session_changed"|"charge_posted"|"charge_waived"|"pass_ending"|"client_pass_ending"|"pass_expired"|"debt"|"payment_reported"|"daily_digest"|"coaching_created"|"coaching_ended"|"managed_client_claim"|"intake_submitted"|"intake_reminder"|"contact_request"|"contact_response"|"verification_result"|"export_ready"|"account_deletion"|"counterpart_deleting"|"plan_granted"|"plan_revoked"|"plan_expiring"|"feedback_reply"|"break_glass"|"report_resolution"|"bot_test"|"verification_submitted"|"feedback_received"|"trainer_comment"|"trainer_broadcast"|"homework_reminder"|"homework_done"|"waitlist_offer"|"waitlist_closed"|"review_prompt"|"review_reply"|"goal_changed"|"delegation"|"challenge"|"badge"|"referral_bonus","outbox_status": "pending"|"processing"|"sent"|"failed"|"skipped"|"cancelled","package_applies_to": "any"|"personal"|"group","pass_status": "active"|"cancelled","payment_direction": "in"|"refund","payment_link_kind": "sbp"|"self_employed"|"bank"|"other","payment_method": "cash"|"bank_transfer"|"sbp"|"card"|"payment_link"|"other","payment_status": "reported"|"confirmed"|"voided","photo_angle": "front"|"side"|"back","plan_grant_source": "admin"|"purchase"|"referral_bonus","plan_side": "trainer"|"client","pr_type": "max_weight"|"max_reps"|"max_duration","report_status": "open"|"kept"|"hidden"|"dismissed","report_target": "review"|"user"|"trainer_profile"|"club"|"post"|"buddy_profile","session_kind": "personal"|"group"|"trial","session_mode": "offline"|"online","session_status": "scheduled"|"completed"|"cancelled","share_category": "nutrition"|"measurements"|"photos"|"steps"|"intake"|"workouts","slot_status": "open"|"booked"|"closed","target_source": "trainer"|"group"|"calculator","unit_system": "metric"|"imperial","verification_status": "not_submitted"|"pending"|"verified"|"rejected","waitlist_status": "waiting"|"offered"|"accepted"|"declined"|"expired"|"left"|"closed"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -3109,7 +3375,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "access_request_status": ["open", "granted", "declined"],"activity_level": ["minimal", "low", "moderate", "high", "very_high"],"actor_role": ["client", "trainer", "delegate", "system", "admin"],"app_locale": ["ru", "en"],"app_role": ["admin"],"app_theme": ["system", "light", "dark"],"app_zone": ["trainer", "client"],"booking_source": ["trainer", "client_slot", "client_session", "waitlist", "recurrence", "trial"],"booking_status": ["requested", "confirmed", "declined", "expired", "cancelled", "late_cancelled", "rescheduled", "attended", "no_show"],"calc_sex": ["male", "female"],"charge_reason": ["attended", "late_cancel", "no_show", "manual"],"check_in_method": ["qr", "trainer"],"coaching_source": ["client_invite", "trainer_code", "trial_link", "referral", "manual"],"coaching_status": ["trial", "active", "ended"],"consent_kind": ["beta_terms", "privacy_policy", "contact_share"],"contact_request_status": ["pending", "accepted", "declined", "expired"],"delegation_scope": ["schedule", "attendance", "workouts", "homework", "notes", "progress", "nutrition", "passes", "payments"],"exercise_source": ["wger", "custom"],"export_status": ["queued", "processing", "ready", "failed", "expired"],"feedback_kind": ["bug", "idea", "other"],"feedback_status": ["new", "in_progress", "closed"],"goal_type": ["lose", "gain", "maintain"],"ledger_entry_type": ["grant", "charge", "waiver", "settlement", "settlement_reversal", "refund", "adjustment"],"managed_client_claim_status": ["pending", "merged", "rejected"],"measurement_kind": ["weight", "neck", "chest", "waist", "abdomen", "hips", "thigh", "upper_arm", "calf"],"milestone_kind": ["sessions_10", "sessions_25", "sessions_50", "sessions_100"],"money_event_action": ["pass_created", "pass_changed", "pass_cancelled", "pass_deleted", "freeze_added", "freeze_changed", "freeze_removed", "payment_created", "payment_changed", "payment_confirmed", "payment_voided"],"notification_type": ["booking_assigned", "booking_created", "booking_requested", "booking_confirmed", "booking_declined", "booking_expired", "booking_cancelled_by_trainer", "booking_cancelled_by_client", "booking_rescheduled", "session_reminder", "session_changed", "charge_posted", "charge_waived", "pass_ending", "client_pass_ending", "pass_expired", "debt", "payment_reported", "daily_digest", "coaching_created", "coaching_ended", "managed_client_claim", "intake_submitted", "intake_reminder", "contact_request", "contact_response", "verification_result", "export_ready", "account_deletion", "counterpart_deleting", "plan_granted", "plan_revoked", "plan_expiring", "feedback_reply", "break_glass", "report_resolution", "bot_test", "verification_submitted", "feedback_received", "trainer_comment", "trainer_broadcast", "homework_reminder", "homework_done", "waitlist_offer", "waitlist_closed", "review_prompt", "review_reply", "goal_changed", "delegation", "challenge", "badge", "referral_bonus"],"outbox_status": ["pending", "processing", "sent", "failed", "skipped", "cancelled"],"package_applies_to": ["any", "personal", "group"],"pass_status": ["active", "cancelled"],"payment_direction": ["in", "refund"],"payment_link_kind": ["sbp", "self_employed", "bank", "other"],"payment_method": ["cash", "bank_transfer", "sbp", "card", "payment_link", "other"],"payment_status": ["reported", "confirmed", "voided"],"photo_angle": ["front", "side", "back"],"plan_grant_source": ["admin", "purchase", "referral_bonus"],"plan_side": ["trainer", "client"],"pr_type": ["max_weight", "max_reps", "max_duration"],"report_status": ["open", "kept", "hidden", "dismissed"],"report_target": ["review", "user", "trainer_profile", "club", "post", "buddy_profile"],"session_kind": ["personal", "group", "trial"],"session_mode": ["offline", "online"],"session_status": ["scheduled", "completed", "cancelled"],"share_category": ["nutrition", "measurements", "photos", "steps", "intake", "workouts"],"slot_status": ["open", "booked", "closed"],"target_source": ["trainer", "group", "calculator"],"unit_system": ["metric", "imperial"],"verification_status": ["not_submitted", "pending", "verified", "rejected"],"waitlist_status": ["waiting", "offered", "accepted", "declined", "expired", "left", "closed"]
+            "access_request_status": ["open", "granted", "declined"],"activity_level": ["minimal", "low", "moderate", "high", "very_high"],"actor_role": ["client", "trainer", "delegate", "system", "admin"],"app_locale": ["ru", "en"],"app_role": ["admin"],"app_theme": ["system", "light", "dark"],"app_zone": ["trainer", "client"],"booking_source": ["trainer", "client_slot", "client_session", "waitlist", "recurrence", "trial"],"booking_status": ["requested", "confirmed", "declined", "expired", "cancelled", "late_cancelled", "rescheduled", "attended", "no_show"],"calc_sex": ["male", "female"],"charge_reason": ["attended", "late_cancel", "no_show", "manual"],"check_in_method": ["qr", "trainer"],"coaching_source": ["client_invite", "trainer_code", "trial_link", "referral", "manual"],"coaching_status": ["trial", "active", "ended"],"consent_kind": ["beta_terms", "privacy_policy", "contact_share"],"contact_request_status": ["pending", "accepted", "declined", "expired"],"delegation_scope": ["schedule", "attendance", "workouts", "homework", "notes", "progress", "nutrition", "passes", "payments"],"exercise_source": ["wger", "custom"],"export_status": ["queued", "processing", "ready", "failed", "expired"],"feedback_kind": ["bug", "idea", "other"],"feedback_status": ["new", "in_progress", "closed"],"food_kind": ["product", "dish"],"food_source": ["off", "custom"],"goal_type": ["lose", "gain", "maintain"],"ledger_entry_type": ["grant", "charge", "waiver", "settlement", "settlement_reversal", "refund", "adjustment"],"managed_client_claim_status": ["pending", "merged", "rejected"],"meal_type": ["breakfast", "lunch", "dinner", "snack"],"measurement_kind": ["weight", "neck", "chest", "waist", "abdomen", "hips", "thigh", "upper_arm", "calf"],"milestone_kind": ["sessions_10", "sessions_25", "sessions_50", "sessions_100"],"money_event_action": ["pass_created", "pass_changed", "pass_cancelled", "pass_deleted", "freeze_added", "freeze_changed", "freeze_removed", "payment_created", "payment_changed", "payment_confirmed", "payment_voided"],"notification_type": ["booking_assigned", "booking_created", "booking_requested", "booking_confirmed", "booking_declined", "booking_expired", "booking_cancelled_by_trainer", "booking_cancelled_by_client", "booking_rescheduled", "session_reminder", "session_changed", "charge_posted", "charge_waived", "pass_ending", "client_pass_ending", "pass_expired", "debt", "payment_reported", "daily_digest", "coaching_created", "coaching_ended", "managed_client_claim", "intake_submitted", "intake_reminder", "contact_request", "contact_response", "verification_result", "export_ready", "account_deletion", "counterpart_deleting", "plan_granted", "plan_revoked", "plan_expiring", "feedback_reply", "break_glass", "report_resolution", "bot_test", "verification_submitted", "feedback_received", "trainer_comment", "trainer_broadcast", "homework_reminder", "homework_done", "waitlist_offer", "waitlist_closed", "review_prompt", "review_reply", "goal_changed", "delegation", "challenge", "badge", "referral_bonus"],"outbox_status": ["pending", "processing", "sent", "failed", "skipped", "cancelled"],"package_applies_to": ["any", "personal", "group"],"pass_status": ["active", "cancelled"],"payment_direction": ["in", "refund"],"payment_link_kind": ["sbp", "self_employed", "bank", "other"],"payment_method": ["cash", "bank_transfer", "sbp", "card", "payment_link", "other"],"payment_status": ["reported", "confirmed", "voided"],"photo_angle": ["front", "side", "back"],"plan_grant_source": ["admin", "purchase", "referral_bonus"],"plan_side": ["trainer", "client"],"pr_type": ["max_weight", "max_reps", "max_duration"],"report_status": ["open", "kept", "hidden", "dismissed"],"report_target": ["review", "user", "trainer_profile", "club", "post", "buddy_profile"],"session_kind": ["personal", "group", "trial"],"session_mode": ["offline", "online"],"session_status": ["scheduled", "completed", "cancelled"],"share_category": ["nutrition", "measurements", "photos", "steps", "intake", "workouts"],"slot_status": ["open", "booked", "closed"],"target_source": ["trainer", "group", "calculator"],"unit_system": ["metric", "imperial"],"verification_status": ["not_submitted", "pending", "verified", "rejected"],"waitlist_status": ["waiting", "offered", "accepted", "declined", "expired", "left", "closed"]
           }
         }
 } as const
