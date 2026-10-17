@@ -42,6 +42,9 @@ declare
   v_workout  uuid;
 begin
   insert into public.locations (trainer_id, name) values (v_trainer, 'Gym of ' || p_trainer);
+  insert into public.location_check_in_tokens (location_id, trainer_id, token)
+  select l.id, v_trainer, pg_catalog.rpad(pg_catalog.left(pg_catalog.md5(p_trainer), 20), 22, '_')
+  from public.locations l where l.trainer_id = v_trainer;
   insert into public.week_templates (trainer_id, name, time_zone) values (v_trainer, 'Week', 'Europe/Moscow')
   returning id into v_template;
   insert into public.week_template_items (template_id, iso_weekday, start_time, end_time, duration_min)
