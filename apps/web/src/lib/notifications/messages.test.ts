@@ -22,6 +22,21 @@ describe("renderMessage", () => {
     ]);
   });
 
+  it("sends a trainer's broadcast as typed, escaped, under the trainer's name (wave-2 §6.9)", () => {
+    const base = { ...row, kind: "trainer_broadcast" as const };
+    const payload = { trainer_name: "Иван", body: "Завтра в <10>", button_kind: "deep_link" };
+    expect(renderMessage({ ...base, payload }, { appUrl: "https://fit.example", group: false })).toEqual({
+      text: "<b>Сообщение от тренера Иван</b>\nЗавтра в &lt;10&gt;",
+      buttons: [{ text: "Открыть DaFit", web_app: { url: "https://fit.example/client?source=trainer_broadcast" } }],
+    });
+    const link = { ...payload, button_kind: "url", button_url: "https://example.com/plan" };
+    expect(renderMessage({ ...base, payload: link }, { appUrl: "https://fit.example", group: false })?.buttons).toEqual([
+      { text: "Открыть ссылку", url: "https://example.com/plan" },
+    ]);
+    const unsafe = { ...payload, button_kind: "url", button_url: "javascript:alert(1)" };
+    expect(renderMessage({ ...base, payload: unsafe }, { appUrl: "https://fit.example", group: false })?.buttons).toEqual([]);
+  });
+
   it("drops buttons for a local http app URL, which Telegram would refuse", () => {
     expect(renderMessage(row, { appUrl: "http://localhost:3000", group: false })?.buttons).toEqual([]);
   });
