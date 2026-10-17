@@ -1,12 +1,12 @@
 import { INTL_LOCALE, type Locale } from "@/i18n/config";
 
-/** Weight unit by interface language (PRD 2.10-9, WORK-6): pounds in English (en-US), kilograms in Russian. */
+/** Weight unit (PRD 2.10-9, WORK-6, Q67): kilograms in both languages. Pounds stay convertible for a later manual choice. */
 export type WeightUnit = "kg" | "lb";
 
 export const KG_PER_LB = 0.45359237;
 
-export function weightUnit(locale: Locale): WeightUnit {
-  return locale === "en" ? "lb" : "kg";
+export function weightUnit(_locale: Locale): WeightUnit {
+  return "kg";
 }
 
 /** A stored weight (kg) in the user's unit, to one decimal place in pounds and two in kilograms. */

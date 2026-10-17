@@ -17,6 +17,7 @@ import {
   useMiniAppSignIn,
   useMiniAppSignInNow,
   useTelegramBackButton,
+  useTelegramBackFallback,
   useTelegramVerticalSwipeLock,
 } from "./mini-app";
 
@@ -139,6 +140,27 @@ describe("inside Telegram", () => {
     expect(sdk.backButton.hide).not.toHaveBeenCalled();
 
     pushed.unmount();
+    expect(sdk.backButton.hide).toHaveBeenCalledOnce();
+  });
+
+  it("falls back to the shell's handler when no screen holds the BackButton, and hides it on a root", () => {
+    goLive();
+    const fallback = vi.fn();
+    const screen = vi.fn();
+    const shell = renderHook(({ root }) => useTelegramBackFallback(root ? null : fallback), { initialProps: { root: false } });
+
+    expect(sdk.backButton.show).toHaveBeenCalled();
+    sdk.backButton.press();
+    expect(fallback).toHaveBeenCalledOnce();
+
+    const pushed = renderHook(() => useTelegramBackButton(screen));
+    sdk.backButton.press();
+    expect(screen).toHaveBeenCalledOnce();
+    expect(fallback).toHaveBeenCalledOnce();
+
+    pushed.unmount();
+    expect(sdk.backButton.hide).not.toHaveBeenCalled();
+    shell.rerender({ root: true });
     expect(sdk.backButton.hide).toHaveBeenCalledOnce();
   });
 

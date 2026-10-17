@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { INTL_LOCALE, type Locale } from "@/i18n/config";
 import { MEASUREMENT_KINDS } from "@/lib/progress/measurements";
+import { isShowcaseSlug } from "@/lib/showcase/link";
 
 /**
  * Monthly report (PRD wave-3 §4): the client's finished month as public.my_monthly_report() builds it. Every
@@ -118,6 +119,8 @@ const cardSchema = z.object({
     type: z.enum(["max_weight", "max_reps", "max_duration"]).optional(),
     value: number.optional(),
     change: number.optional(),
+    /** The trainer's showcase address for the QR (§4-7): only while the trainer allows it and the showcase is open. */
+    slug: z.string().refine(isShowcaseSlug).optional(),
   }),
 });
 
