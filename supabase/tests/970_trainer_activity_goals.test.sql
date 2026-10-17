@@ -1,4 +1,4 @@
--- Water and steps goals the trainer sets with the client's target (migration 20261017144532_trainer_activity_goals.sql,
+-- Water and steps goals the trainer sets with the client's target (migration 20261017163054_trainer_activity_goals.sql,
 -- wave-2 §4 rules 5 and 7): stored on the trainer target, read by the client, bounded, null back to the defaults.
 begin;
 \ir _helpers.psql
