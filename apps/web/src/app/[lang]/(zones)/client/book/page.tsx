@@ -16,6 +16,7 @@ import { BOOKING_DAYS, loadBookingPage, loadBookingTrainers } from "@/lib/bookin
 import { dayRange } from "@/lib/bookings/book";
 import { formatMoney } from "@/lib/money/format";
 import { loadScheduleOwner } from "@/lib/schedule/load";
+import { loadTrainerZones } from "@/lib/schedule/trainer-zone";
 import { today } from "@/lib/schedule/time";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -55,7 +56,7 @@ async function Booking({ searchParams }: { searchParams: PageProps<"/[lang]/clie
   }
 
   const at = now();
-  const page = await loadBookingPage(owner, trainer, at);
+  const [page, zones] = await Promise.all([loadBookingPage(owner, trainer, at), loadTrainerZones(owner.supabase, [trainer.trainerId])]);
   const switcher =
     trainers.length > 1 ? (
       <ChipRow label={copy.chooseTrainer}>
@@ -94,6 +95,7 @@ async function Booking({ searchParams }: { searchParams: PageProps<"/[lang]/clie
       {switcher}
       <BookPicker
         timeZone={owner.timeZone}
+        trainerTimeZone={zones.get(trainer.trainerId)}
         days={dayRange(today(owner.timeZone), BOOKING_DAYS)}
         slots={page.slots}
         groups={page.groups}
