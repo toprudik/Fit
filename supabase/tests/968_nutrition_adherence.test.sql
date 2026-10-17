@@ -1,4 +1,4 @@
--- Nutrition adherence of migration 20261017085611_nutrition_adherence.sql (wave-2 §5): days within ±10%,
+-- Nutrition adherence of migration 20261017091027_nutrition_adherence.sql (wave-2 §5): days within ±10%,
 -- logged days, today left out, the target of each day, and who sees the numbers.
 begin;
 \ir _helpers.psql

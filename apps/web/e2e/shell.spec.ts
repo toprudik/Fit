@@ -50,6 +50,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "trainer-new-exercise", path: "/trainer/exercises/new", title: "Своё упражнение" },
   { slug: "trainer-templates", path: "/trainer/templates", title: "Шаблоны тренировок" },
   { slug: "trainer-referrals", path: "/trainer/referrals", title: "Приведи друга" },
+  { slug: "trainer-invite-trainers", path: "/trainer/invite-trainers", title: "Пригласить тренера" },
   { slug: "trainer-new-template", path: "/trainer/templates/new", title: "Новый шаблон" },
   { slug: "trainer-packages", path: "/trainer/money/packages", title: "Пакеты и цены" },
   { slug: "trainer-nutrition", path: "/trainer/nutrition", title: "Питание клиентов" },

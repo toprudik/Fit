@@ -22,7 +22,14 @@ type InviteStatus = keyof Dictionary["trainerInvite"]["status"];
 
 function toStatus(value: string | null): InviteStatus | null {
   if (value === "already_trainer") return "alreadyTrainer";
-  return value === "valid" || value === "invalid" || value === "redeemed" || value === "expired" || value === "revoked" ? value : null;
+  return value === "valid" ||
+    value === "referral" ||
+    value === "invalid" ||
+    value === "redeemed" ||
+    value === "expired" ||
+    value === "revoked"
+    ? value
+    : null;
 }
 
 /** A plain GET form back to this screen: it works before hydration and in any browser. */
@@ -106,7 +113,8 @@ async function InviteStep({ searchParams }: { searchParams: PageProps<"/[lang]/o
       </div>
     );
   }
-  if (status === "valid") {
+  // "referral" is another trainer's referral code (PRD wave-3 §3.2-9): it always works and opens the zone the same way.
+  if (status === "valid" || status === "referral") {
     return (
       <div className="flex flex-col gap-6">
         <StatusText t={t} status={status} />
