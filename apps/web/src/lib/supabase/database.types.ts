@@ -4164,7 +4164,7 @@ isOneToOne: false
                            },
 "my_nutrition_target":
 { Args: Record<PropertyKey, never>; Returns: {
-              "calc_inputs": Json,"carbs_g": number,"coaching_id": string,"effective_from": string,"fat_g": number,"id": string,"kcal": number,"protein_g": number,"source": Database["public"]['Enums']["target_source"],"trainer_name": string
+              "calc_inputs": Json,"carbs_g": number,"coaching_id": string,"effective_from": string,"fat_g": number,"group_name": string,"id": string,"kcal": number,"protein_g": number,"source": Database["public"]['Enums']["target_source"],"trainer_name": string
             }[]
                            },
 "my_pair_delegates":

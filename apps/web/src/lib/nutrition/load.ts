@@ -24,7 +24,14 @@ export type MyNutrition = {
   /** The latest weight measurement, kg. */
   latestWeightKg: number | null;
   /** The target in force today (wave-2 §2.10), null when there is none. */
-  active: { source: "calculator" | "trainer" | "group"; coachingId: string | null; trainerName: string; macros: Macros } | null;
+  active: {
+    source: "calculator" | "trainer" | "group";
+    coachingId: string | null;
+    trainerName: string;
+    /** For a group template, the group it comes from (wave-2 §2.15). */
+    groupName: string | null;
+    macros: Macros;
+  } | null;
   /** The calculator's target in force, with the weight it was computed for. */
   calculator: (Macros & { weightKg: number | null }) | null;
   trainerTargets: TrainerTarget[];
@@ -114,7 +121,13 @@ export async function loadMyNutrition(): Promise<MyNutrition | null> {
     latestWeightKg: weight.data ? Number(weight.data.value) : null,
     active:
       current && (current.source === "calculator" || current.source === "trainer" || current.source === "group")
-        ? { source: current.source, coachingId: current.coaching_id, trainerName: current.trainer_name ?? "", macros: macrosOf(current) }
+        ? {
+            source: current.source,
+            coachingId: current.coaching_id,
+            trainerName: current.trainer_name ?? "",
+            groupName: current.group_name,
+            macros: macrosOf(current),
+          }
         : null,
     calculator,
     trainerTargets: live.map((row) => ({
