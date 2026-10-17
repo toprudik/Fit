@@ -76,7 +76,16 @@ function YesNo({ question, label, defaultValue, error, onAnswer }: {
  * so "Отправить тренеру" sends every answer; hidden steps keep what was typed. Any "да" in PAR-Q shows the
  * doctor recommendation at once (INTK-3).
  */
-export function IntakeForm({ coachingId, initial }: { coachingId: string; initial: IntakeValues | null }) {
+export function IntakeForm({
+  coachingId,
+  initial,
+  goalHref = null,
+}: {
+  coachingId: string;
+  initial: IntakeValues | null;
+  /** The goal step that follows a sent intake while the client has no goal (wave-2 §1 rule 4). */
+  goalHref?: string | null;
+}) {
   const { t } = useI18n();
   const copy = t.intake.form;
   const [state, action, pending] = useActionState(submitIntake, IDLE);
@@ -117,7 +126,7 @@ export function IntakeForm({ coachingId, initial }: { coachingId: string; initia
         <p className="max-w-[300px] text-subhead text-ink-2">{copy.sentText}</p>
         {state.flagged ? <p className="max-w-[320px] rounded-lg bg-danger-soft p-4 text-subhead">{copy.doctor}</p> : null}
         <Button asChild size="lg" block className="max-w-sm">
-          <Link href={clientPairPath(coachingId)}>{copy.backToTrainer}</Link>
+          {goalHref ? <Link href={goalHref}>{copy.next}</Link> : <Link href={clientPairPath(coachingId)}>{copy.backToTrainer}</Link>}
         </Button>
       </div>
     );

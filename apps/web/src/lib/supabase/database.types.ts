@@ -4540,6 +4540,11 @@ isOneToOne: false
               "a": string,"b": string,"currency": string,"kind": string,"value": number
             }[]
                            },
+"trainer_progress":
+{ Args: { "p_from": string,"p_to": string }; Returns: {
+              "coaching_id": string,"first_value": number,"kind": Database["public"]['Enums']["measurement_kind"],"last_value": number,"measurements": number
+            }[]
+                           },
 "trainer_referral_offer":
 { Args: Record<PropertyKey, never>; Returns: {
               "active_to": string,"created_at": string,"currency": string,"id": string,"live": boolean,"min_amount_minor": number,"package_id": string,"package_title": string,"referee_sessions": number,"referrer_sessions": number

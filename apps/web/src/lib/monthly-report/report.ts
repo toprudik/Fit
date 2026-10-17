@@ -34,6 +34,10 @@ const reportSchema = z.object({
   steps: z.object({ average: number, days: number }).optional(),
   sleep: z.object({ average_min: number, days: number }).optional(),
   homework: z.object({ done: number, total: number }).optional(),
+  /** Streaks as of the month's last day, each only while it runs: weeks of workouts, days of diary and steps. */
+  streaks: z.object({ workouts: number.optional(), diary: number.optional(), steps: number.optional() }).optional(),
+  /** Codes of the badges earned that month, oldest first. */
+  badges: z.array(z.string()).optional(),
 });
 
 export type MonthlyReport = z.infer<typeof reportSchema>;
