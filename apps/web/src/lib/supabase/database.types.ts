@@ -4039,7 +4039,7 @@ isOneToOne: false
                            },
 "group_analytics":
 { Args: { "p_group_id": string }; Returns: {
-              "attendance": number,"attendance_clients": number,"members": number,"weight_change_kg": number,"weight_clients": number
+              "adherence": number,"adherence_clients": number,"attendance": number,"attendance_clients": number,"members": number,"weight_change_kg": number,"weight_clients": number
             }[]
                            },
 "group_booking_preview":

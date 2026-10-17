@@ -1880,6 +1880,8 @@ create index on public.broadcasts (trainer_id, created_at);
 alter table public.notification_outbox add column broadcast_id uuid references public.broadcasts(id) on delete set null;   -- R60
 ```
 
+Аналитика группы (`group_analytics`, миграция `20261017184417_group_adherence.sql`): кроме посещаемости и веса отдаёт среднее попадание в норму за 30 полных дней (`adherence`, `adherence_clients`). Считаются участники, которые делятся питанием и у которых был хотя бы один день с нормой; меньше трёх таких клиентов, и среднее не показывается.
+
 Статистика рассылки считается агрегатом `notification_outbox` по `broadcast_id` и `status`. Лимит 5 в сутки проверяет RPC `send_broadcast`.
 
 Лист ожидания, домашние задания, отзывы, флаги оттока, события продукта:
