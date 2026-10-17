@@ -4,7 +4,7 @@ import type { Locale } from "@/i18n/config";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { OFF_FIELDS, parseOffDraft, parseOffProduct, type OffCacheItem, type OffDraft } from "./off-parse";
+import { localNamesFirst, OFF_FIELDS, parseOffDraft, parseOffProduct, type OffCacheItem, type OffDraft } from "./off-parse";
 
 type FoodRow = Database["public"]["Tables"]["foods"]["Row"];
 
@@ -88,7 +88,10 @@ export async function searchFoods(query: string, locale: Locale): Promise<FoodSe
   try {
     const params = new URLSearchParams({ q, langs: locale, page_size: "20", fields: OFF_FIELDS(locale) });
     const body = (await offJson(`${SEARCH_URL}?${params}`)) as { hits?: unknown[] } | null;
-    const items = (body?.hits ?? []).map((hit) => parseOffProduct(hit, locale)).filter((item) => item !== null);
+    const items = localNamesFirst(
+      (body?.hits ?? []).map((hit) => parseOffProduct(hit, locale)).filter((item) => item !== null),
+      locale,
+    );
     drafts = (body?.hits ?? [])
       .map((hit) => parseOffDraft(hit, locale))
       .filter((draft) => draft !== null)
