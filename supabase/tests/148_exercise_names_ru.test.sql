@@ -1,4 +1,4 @@
--- Russian names for the whole wger catalog (migration 20261017150000_exercise_names_ru.sql, PRD 2.10-3): every wger
+-- Russian names for the whole wger catalog (migration 20261017155000_exercise_names_ru.sql, PRD 2.10-3): every wger
 -- exercise has a Russian name, so a Russian-speaking user never sees an English one in the library, and search finds it.
 begin;
 \ir _helpers.psql
