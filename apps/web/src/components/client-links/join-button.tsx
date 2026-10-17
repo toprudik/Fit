@@ -13,7 +13,7 @@ import { hapticSuccess } from "@/lib/telegram/mini-app";
 const IDLE: JoinState = { status: "idle" };
 
 /**
- * "Стать клиентом" for a link token, a typed code, a showcase or a trial link the server found valid. After the
+ * "Стать клиентом" for a link token, a typed code, a showcase, a trial link or a referral link the server found valid. After the
  * join a toast and a success haptic, then the intake consent step of the new pair (screens.md §4.2, flow 4a).
  */
 export function JoinButton({
@@ -21,6 +21,7 @@ export function JoinButton({
   code,
   slug,
   trial,
+  referral,
   trainerName,
 }: {
   token?: string;
@@ -28,6 +29,8 @@ export function JoinButton({
   slug?: string;
   /** A trial link token. */
   trial?: string;
+  /** A referral code. */
+  referral?: string;
   trainerName: string;
 }) {
   const { t } = useI18n();
@@ -50,6 +53,7 @@ export function JoinButton({
       {code ? <input type="hidden" name="code" value={code} /> : null}
       {slug ? <input type="hidden" name="slug" value={slug} /> : null}
       {trial ? <input type="hidden" name="trial" value={trial} /> : null}
+      {referral ? <input type="hidden" name="referral" value={referral} /> : null}
       {state.status === "error" ? (
         <p role="alert" className="text-subhead text-danger">
           {t.clientLinks.errors[state.reason]}
