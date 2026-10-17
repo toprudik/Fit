@@ -765,6 +765,58 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"homework": {
+                  Row: {
+                    "archived_at": string | null,"coaching_id": string,"created_at": string,"description": string | null,"due_date": string,"id": string,"repeat_until": string | null,"repeat_weekdays": (number)[] | null,"title": string,"updated_at": string,"video_url": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archived_at"?: string | null,"coaching_id": string,"created_at"?: string,"description"?: string | null,"due_date": string,"id"?: string,"repeat_until"?: string | null,"repeat_weekdays"?: (number)[] | null,"title": string,"updated_at"?: string,"video_url"?: string | null
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"coaching_id"?: string,"created_at"?: string,"description"?: string | null,"due_date"?: string,"id"?: string,"repeat_until"?: string | null,"repeat_weekdays"?: (number)[] | null,"title"?: string,"updated_at"?: string,"video_url"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "homework_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_balances"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "homework_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_stats"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "homework_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coachings"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"homework_occurrences": {
+                  Row: {
+                    "comment": string | null,"done_at": string | null,"due_on": string,"homework_id": string,"id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "comment"?: string | null,"done_at"?: string | null,"due_on": string,"homework_id": string,"id"?: string
+                  }
+                  Update: {
+                    "comment"?: string | null,"done_at"?: string | null,"due_on"?: string,"homework_id"?: string,"id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "homework_occurrences_homework_id_fkey"
+      columns: ["homework_id"]
+isOneToOne: false
+      referencedRelation: "homework"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"intakes": {
                   Row: {
                     "answers": NonNullable<Json>,"form_version": string,"id": string,"parq_answers": NonNullable<Json>,"parq_flagged": boolean,"submitted_at": string,"user_id": string
@@ -2523,6 +2575,9 @@ isOneToOne: false
               "blocked_at": string,"blocked_reason": string,"bookings_made": number,"client_active_pairs": number,"client_pairs": number,"created_at": string,"first_name": string,"is_admin": boolean,"is_trainer": boolean,"language_code": string,"last_name": string,"last_seen_at": string,"photo_url": string,"sessions_led": number,"telegram_id": number,"trainer_active_pairs": number,"trainer_pairs": number,"user_id": string,"username": string,"verification_status": Database["public"]['Enums']["verification_status"]
             }[]
                            },
+"archive_homework":
+{ Args: { "p_homework": string }; Returns: undefined
+                           },
 "book_group_session":
 { Args: { "p_session_id": string }; Returns: {
               "booking_id": string,"status": Database["public"]['Enums']["booking_status"]
@@ -2664,6 +2719,9 @@ isOneToOne: false
 "has_entitlement":
 { Args: { "p_feature": string,"p_pair"?: string,"p_user": string }; Returns: boolean
                            },
+"homework_today":
+{ Args: { "p_coaching": string }; Returns: string
+                           },
 "join_by_code":
 { Args: { "p_code": string }; Returns: string
                            },
@@ -2691,6 +2749,9 @@ isOneToOne: false
                            },
 "mark_attendance":
 { Args: { "p_booking_id": string,"p_reason"?: string,"p_status": Database["public"]['Enums']["booking_status"] }; Returns: Database["public"]['Enums']["booking_status"]
+                           },
+"mark_homework_done":
+{ Args: { "p_comment"?: string,"p_occurrence": string }; Returns: string
                            },
 "my_client_invite":
 { Args: Record<PropertyKey, never>; Returns: {
@@ -2774,6 +2835,9 @@ isOneToOne: false
 "revoke_calendar_feed":
 { Args: { "p_zone": Database["public"]['Enums']["app_zone"] }; Returns: boolean
                            },
+"save_homework":
+{ Args: { "p_homework": Json }; Returns: string
+                           },
 "save_week_template":
 { Args: { "p_buffer_min"?: number,"p_horizon_weeks"?: number,"p_items": Json }; Returns: number
                            },
@@ -2820,6 +2884,9 @@ isOneToOne: false
                            },
 "trainer_offer_waitlist":
 { Args: { "p_entry_id": string }; Returns: undefined
+                           },
+"unmark_homework_done":
+{ Args: { "p_occurrence": string }; Returns: undefined
                            },
 "update_session":
 { Args: { "p_duration_min": number,"p_following"?: boolean,"p_location_id"?: string,"p_meeting_url"?: string,"p_mode": Database["public"]['Enums']["session_mode"],"p_session_id": string,"p_starts_at": string,"p_title"?: string }; Returns: number

@@ -103,6 +103,34 @@ const templates: Partial<Record<NotificationType, Template>> = {
       typeof id === "number" && Number.isSafeInteger(id) ? `<a href="tg://user?id=${id}">${escapeHtml(name)}</a>` : escapeHtml(name);
     return { text: interpolate(escapeHtml(t.contactShared), { name: link, phone: escapeHtml(phone) }), buttons: [button] };
   },
+  // Д1: payload { coaching_id, homework_id, title, first_name, last_name } from queue_homework_reminders, the
+  // trainer's name.
+  homework_reminder: ({ t, payload }) => ({
+    text: interpolateEscaped(t.homeworkReminder, {
+      title: String(payload.title ?? ""),
+      name: personName(payload) || t.unnamedTrainer,
+    }),
+    buttons: [{ text: t.openHomework, path: "/client/sessions/homework" }],
+  }),
+  // Д2: payload { coaching_id, homework_id, title, name, comment? } from mark_homework_done, name being the
+  // client as the trainer calls them.
+  homework_done: ({ t, payload }) => {
+    const text = interpolateEscaped(t.homeworkDone, {
+      name: String(payload.name ?? "") || t.unnamedClient,
+      title: String(payload.title ?? ""),
+    });
+    const comment = typeof payload.comment === "string" && payload.comment ? payload.comment : null;
+    const pair = pairPath("/trainer/clients", payload);
+    return {
+      text: comment ? `${text}\n${interpolateEscaped(t.homeworkComment, { comment })}` : text,
+      buttons: [
+        {
+          text: t.openHomework,
+          path: pair === "/trainer/clients" ? pair : idPath(`${pair}/workouts/homework`, payload.homework_id, `${pair}/workouts`),
+        },
+      ],
+    };
+  },
   // Т9 and its mirror: payload { coaching_id, ended_by, cancelled, first_name, last_name, reason? } from
   // end_coaching, naming the side that ended the pair. The other side gets it, so the button opens their own
   // zone. A Free trainer's "new client" past the limit ends it with reason plan_limit_reached: К12 (Q65).

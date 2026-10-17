@@ -103,6 +103,9 @@ begin
   values (v_client, 'waist', 80, now(), current_date, v_trainer);
   insert into public.contact_requests (coaching_id, requester_id, recipient_id) values (v_pair, v_trainer, v_client);
   insert into public.managed_client_claims (trainer_id, claimant_id, new_coaching_id) values (v_trainer, v_client, v_pair);
+  with h as (
+    insert into public.homework (coaching_id, title, due_date) values (v_pair, 'Plank', current_date + 1) returning id)
+  insert into public.homework_occurrences (homework_id, due_on) select h.id, current_date + 1 from h;
 end $$;
 select tests.fill_pair('trainer_a', 'client_c');
 select tests.fill_pair('trainer_b', 'client_c');
@@ -174,6 +177,8 @@ insert into tests.pair_tables values
   ('payments',              't.id::text',          't.coaching_id = %L'),
   ('money_events',          't.id::text',          't.coaching_id = %L'),
   ('milestones',            't.id::text',          't.coaching_id = %L'),
+  ('homework',              't.id::text',          't.coaching_id = %L'),
+  ('homework_occurrences',  't.id::text',          't.homework_id in (select h.id from public.homework h where h.coaching_id = %L)'),
   ('workout_logs',          't.id::text',          't.coaching_id = %L');
 
 -- The keys of every pair row, collected as postgres (no RLS).
