@@ -53,6 +53,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "client-sessions", path: "/client/sessions", title: "Занятия" },
   { slug: "client-book", path: "/client/book", title: "Запись на занятие" },
   { slug: "client-booking", path: "/client/bookings/0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f", title: "Запись" },
+  { slug: "client-booking-move", path: "/client/bookings/0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f/reschedule", title: "Перенос записи" },
   { slug: "client-diary", path: "/client/diary", title: "Дневник" },
   { slug: "client-new-workout", path: "/client/diary/workouts/new", title: "Новая тренировка" },
   { slug: "client-progress", path: "/client/progress", title: "Прогресс" },
