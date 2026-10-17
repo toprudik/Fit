@@ -2514,8 +2514,8 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `group_members` | T; C: свои строки | T (пара своя, `with check`) | никто | T |
 | `broadcasts` | T; C: получатель (через outbox payload, не таблицу) | S-RPC `send_broadcast` (T) | T: `deleted_at` | никто |
 | `waitlist_entries` | C (свои + позиция через RPC); T; D[schedule] | S-RPC `join_waitlist` | S-RPC (`leave`, `accept`, `decline`, офферы cron) | никто |
-| `homework`, `homework_exercises` | C; T; D[homework] | T; D[homework] | T; D[homework] | никто (архив) |
-| `homework_occurrences` | C; T; D[homework] | S (развёртка повтора) | C: `done_at`, `comment`, `workout_log_id` (снятие ≤ 24 ч через RPC) | никто |
+| `homework`, `homework_exercises` | C; T; D[homework] | T через S-RPC `save_homework` (живая пара, не карточка); D[homework] (В3) | T: S-RPC `save_homework`, `archive_homework`; триггер архивирует при завершении пары | никто (архив) |
+| `homework_occurrences` | C; T; D[homework] | S (развёртка повтора в `save_homework`) | C: S-RPC `mark_homework_done` (`done_at`, `comment`), `unmark_homework_done` (≤ 24 ч) | S (`save_homework` раскладывает открытые сроки заново) |
 | `reviews` | автор; тренер; A (W4: публично только `published` и `publish_consent = true`, Q53) | C при `attended_count ≥ 3` (`with check`) | C: `rating`, `body`, `deleted_at`, `publish_consent`; T: `trainer_reply*`; A: `status`, `hidden_reason` через RPC | никто (soft) |
 | `review_revisions` | A | S (триггер) | никто | никто |
 | `churn_flags` | T | S (cron) | S | S |
