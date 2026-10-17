@@ -17,6 +17,7 @@ import { interpolate } from "@/i18n/format";
 import { ENTRY_GRAMS_MAX, ENTRY_KCAL_MAX, MEALS, SERVINGS_MAX, amountOf, parseAmount, type Meal } from "@/lib/nutrition/diary";
 import { addEntry, findBarcode, findFoods, setFavorite } from "@/lib/nutrition/diary-actions";
 import type { Food } from "@/lib/nutrition/foods";
+import type { OffDraft } from "@/lib/nutrition/off-parse";
 import type { FoodShelf } from "@/lib/nutrition/diary-load";
 import { formatValue } from "@/lib/progress/measurements";
 import { BarcodeScanner } from "./barcode-scanner";
@@ -31,6 +32,12 @@ function FoodRows({ foods, onPick }: { foods: Food[]; onPick: (food: Food) => vo
   return foods.map((food) => (
     <ListRow key={food.id} title={food.name} subtitle={foodSubtitle(t, locale, food)} onClick={() => onPick(food)} chevron />
   ));
+}
+
+/** An own product prefilled from a catalog product that has no kcal there, back to the same day and meal (§3.8). */
+function draftHref(draft: OffDraft, day: string, meal: Meal) {
+  const params = new URLSearchParams({ barcode: draft.code, name: draft.name, ...(draft.brand ? { brand: draft.brand } : {}), day, meal });
+  return `${OWN_FOODS_PATH}/new?${params}`;
 }
 
 /**
@@ -69,7 +76,7 @@ export function AddFood({ day, initialMeal, shelf }: { day: string; initialMeal:
         onValueChange={setTab}
         options={(["search", "barcode", "quick", "mine"] as const).map((value) => ({ value, label: copy.addScreen.tabs[value] }))}
       />
-      {tab === "search" ? <SearchTab shelf={shelf} onPick={setPicked} /> : null}
+      {tab === "search" ? <SearchTab day={day} meal={meal} shelf={shelf} onPick={setPicked} /> : null}
       {tab === "barcode" ? <BarcodeTab day={day} meal={meal} onPick={setPicked} /> : null}
       {tab === "quick" ? <QuickTab day={day} meal={meal} onAdded={added} /> : null}
       {tab === "mine" ? <MineTab shelf={shelf} onPick={setPicked} /> : null}
@@ -87,11 +94,11 @@ export function AddFood({ day, initialMeal, shelf }: { day: string; initialMeal:
   );
 }
 
-function SearchTab({ shelf, onPick }: { shelf: FoodShelf; onPick: (food: Food) => void }) {
+function SearchTab({ day, meal, shelf, onPick }: { day: string; meal: Meal; shelf: FoodShelf; onPick: (food: Food) => void }) {
   const { t } = useI18n();
   const copy = t.foodDiary.addScreen;
   const [query, setQuery] = useState("");
-  const [result, setResult] = useState<{ query: string; foods: Food[]; catalogDown: boolean } | null>(null);
+  const [result, setResult] = useState<{ query: string; foods: Food[]; drafts: OffDraft[]; catalogDown: boolean } | null>(null);
   const [pending, startTransition] = useTransition();
   const latest = useRef("");
 
@@ -105,7 +112,7 @@ function SearchTab({ shelf, onPick }: { shelf: FoodShelf; onPick: (food: Food) =
           const found = await findFoods(q);
           if (latest.current === q) setResult({ query: q, ...found });
         } catch {
-          if (latest.current === q) setResult({ query: q, foods: [], catalogDown: true });
+          if (latest.current === q) setResult({ query: q, foods: [], drafts: [], catalogDown: true });
         }
       });
     }, SEARCH_DELAY_MS);
@@ -133,10 +140,26 @@ function SearchTab({ shelf, onPick }: { shelf: FoodShelf; onPick: (food: Food) =
       ) : null}
       {shown?.catalogDown ? <p className="rounded-md bg-surface-1 p-3 text-footnote text-ink-2">{copy.catalogDown}</p> : null}
       {shown ? (
-        shown.foods.length ? (
-          <ListGroup>
-            <FoodRows foods={shown.foods} onPick={onPick} />
-          </ListGroup>
+        shown.foods.length || shown.drafts.length ? (
+          <>
+            {shown.foods.length ? (
+              <ListGroup>
+                <FoodRows foods={shown.foods} onPick={onPick} />
+              </ListGroup>
+            ) : null}
+            {shown.drafts.length ? (
+              <ListGroup header={copy.noFacts.header} footer={copy.noFacts.footer}>
+                {shown.drafts.map((draft) => (
+                  <ListRow
+                    key={draft.code}
+                    title={draft.name}
+                    subtitle={draft.brand ? interpolate(copy.noFacts.brandRow, { brand: draft.brand }) : copy.noFacts.row}
+                    href={draftHref(draft, day, meal)}
+                  />
+                ))}
+              </ListGroup>
+            ) : null}
+          </>
         ) : !pending ? (
           <p className="px-1 text-callout text-ink-2">{copy.nothingFound}</p>
         ) : null
@@ -163,7 +186,7 @@ function BarcodeTab({ day, meal, onPick }: { day: string; meal: Meal; onPick: (f
   const { t } = useI18n();
   const copy = t.foodDiary.barcode;
   const [error, setError] = useState<string | undefined>();
-  const [missing, setMissing] = useState<{ barcode: string; catalogDown: boolean } | null>(null);
+  const [missing, setMissing] = useState<{ barcode: string; catalogDown: boolean; draft: OffDraft | null } | null>(null);
   const [pending, startTransition] = useTransition();
 
   function look(value: string) {
@@ -180,7 +203,7 @@ function BarcodeTab({ day, meal, onPick }: { day: string; meal: Meal; onPick: (f
       }
       setError(undefined);
       if (found.food) onPick(found.food);
-      else setMissing({ barcode: found.barcode, catalogDown: found.catalogDown });
+      else setMissing({ barcode: found.barcode, catalogDown: found.catalogDown, draft: found.draft });
     });
   }
 
@@ -200,7 +223,14 @@ function BarcodeTab({ day, meal, onPick }: { day: string; meal: Meal; onPick: (f
           {copy.find}
         </Button>
       </form>
-      {missing ? (
+      {missing?.draft ? (
+        <div className="flex flex-col items-start gap-3 rounded-lg bg-surface-1 p-4">
+          <p className="text-callout">{interpolate(copy.noFacts, { name: missing.draft.name })}</p>
+          <Button asChild icon={Plus}>
+            <Link href={draftHref(missing.draft, day, meal)}>{copy.typeKcal}</Link>
+          </Button>
+        </div>
+      ) : missing ? (
         <div className="flex flex-col items-start gap-3 rounded-lg bg-surface-1 p-4">
           <p className="text-callout">{missing.catalogDown ? copy.catalogDown : copy.notFound}</p>
           <Button asChild icon={Plus}>

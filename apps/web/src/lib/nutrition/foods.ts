@@ -4,7 +4,7 @@ import type { Locale } from "@/i18n/config";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { OFF_FIELDS, parseOffProduct, type OffCacheItem } from "./off-parse";
+import { OFF_FIELDS, parseOffDraft, parseOffProduct, type OffCacheItem, type OffDraft } from "./off-parse";
 
 type FoodRow = Database["public"]["Tables"]["foods"]["Row"];
 
@@ -67,23 +67,32 @@ async function cache(items: OffCacheItem[]): Promise<Map<string, string>> {
   return new Map((data ?? []).map((row) => [row.off_code, row.id]));
 }
 
-export type FoodSearch = { foods: Food[]; catalogDown: boolean };
+/** Catalog products without kcal shown under the search results at most. */
+const DRAFTS_SHOWN = 5;
+
+export type FoodSearch = { foods: Food[]; catalogDown: boolean; drafts: OffDraft[] };
 
 /**
  * "Поиск" (§3.2): own foods first, then Open Food Facts in the interface language. When OFF does not answer, the
- * cached catalog and own foods still come up and the screen says the catalog is unavailable (§3.8).
+ * cached catalog and own foods still come up and the screen says the catalog is unavailable (§3.8). Catalog
+ * products without kcal come back apart as drafts: they are added only after the client types the kcal.
  */
 export async function searchFoods(query: string, locale: Locale): Promise<FoodSearch> {
   const q = query.trim().slice(0, 100);
-  if (q.length < 2) return { foods: [], catalogDown: false };
+  if (q.length < 2) return { foods: [], catalogDown: false, drafts: [] };
   const supabase = await createSupabaseServerClient();
 
   let offIds: string[] = [];
+  let drafts: OffDraft[] = [];
   let catalogDown = false;
   try {
     const params = new URLSearchParams({ q, langs: locale, page_size: "20", fields: OFF_FIELDS(locale) });
     const body = (await offJson(`${SEARCH_URL}?${params}`)) as { hits?: unknown[] } | null;
     const items = (body?.hits ?? []).map((hit) => parseOffProduct(hit, locale)).filter((item) => item !== null);
+    drafts = (body?.hits ?? [])
+      .map((hit) => parseOffDraft(hit, locale))
+      .filter((draft) => draft !== null)
+      .slice(0, DRAFTS_SHOWN);
     const ids = await cache(items);
     offIds = items.map((item) => ids.get(item.code)).filter((id): id is string => Boolean(id));
   } catch (error) {
@@ -105,29 +114,34 @@ export async function searchFoods(query: string, locale: Locale): Promise<FoodSe
   } else {
     catalog = [];
   }
-  return { foods: [...own, ...catalog].map(toFood), catalogDown };
+  const ownCodes = new Set(own.map((row) => row.barcode));
+  return { foods: [...own, ...catalog].map(toFood), catalogDown, drafts: drafts.filter((draft) => !ownCodes.has(draft.code)) };
 }
 
-export type BarcodeLookup = { food: Food | null; catalogDown: boolean };
+export type BarcodeLookup = { food: Food | null; catalogDown: boolean; draft: OffDraft | null };
 
-/** A scanned or typed barcode (§3.2–3.3): own product, then the cache, then Open Food Facts. */
+/**
+ * A scanned or typed barcode (§3.2–3.3): own product, then the cache, then Open Food Facts. A catalog product
+ * without kcal comes back as a draft to finish as an own product.
+ */
 export async function foodByBarcode(barcode: string, locale: Locale): Promise<BarcodeLookup> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("food_by_barcode", { p_barcode: barcode }).maybeSingle();
   if (error) throw new Error(`looking up the barcode failed: ${error.code}`);
   const fresh =
     data && (data.source === "custom" || (data.off_fetched_at && Date.now() - Date.parse(data.off_fetched_at) < CACHE_DAYS * 86_400_000));
-  if (data && fresh) return { food: toFood(data), catalogDown: false };
+  if (data && fresh) return { food: toFood(data), catalogDown: false, draft: null };
 
   try {
     const body = (await offJson(`${PRODUCT_URL}/${barcode}.json?fields=${OFF_FIELDS(locale)}`)) as { status?: number; product?: unknown } | null;
-    const item = body?.status === 1 ? parseOffProduct({ code: barcode, ...(body.product as object) }, locale) : null;
-    if (!item) return { food: data ? toFood(data) : null, catalogDown: false };
+    const product = body?.status === 1 ? { code: barcode, ...(body.product as object) } : null;
+    const item = product ? parseOffProduct(product, locale) : null;
+    if (!item) return { food: data ? toFood(data) : null, catalogDown: false, draft: data ? null : parseOffDraft(product, locale) };
     const id = (await cache([item])).get(item.code);
     const { data: row } = id ? await supabase.from("foods").select("*").eq("id", id).maybeSingle() : { data: null };
-    return { food: row ? toFood(row) : data ? toFood(data) : null, catalogDown: false };
+    return { food: row ? toFood(row) : data ? toFood(data) : null, catalogDown: false, draft: null };
   } catch (error) {
     console.error("Open Food Facts product lookup failed", error instanceof Error ? error.message : "unknown");
-    return { food: data ? toFood(data) : null, catalogDown: true };
+    return { food: data ? toFood(data) : null, catalogDown: true, draft: null };
   }
 }

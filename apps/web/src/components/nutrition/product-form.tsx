@@ -19,9 +19,20 @@ const text = (value: number | null | undefined) => (value === null || value === 
 
 /**
  * An own product with values per 100 g (wave-2 §3.2, §3.10). `doneHref` is where it returns after saving:
- * back to "+ Еда" when the product was created from a barcode that the catalog did not know.
+ * back to "+ Еда" when the product was created from a barcode that the catalog did not know. `draft` prefills a
+ * catalog product that has no kcal there: it is added only once the client types them (wave-2 §3.8).
  */
-export function ProductForm({ food, barcode, doneHref }: { food: Food | null; barcode: string; doneHref: string }) {
+export function ProductForm({
+  food,
+  barcode,
+  doneHref,
+  draft = null,
+}: {
+  food: Food | null;
+  barcode: string;
+  doneHref: string;
+  draft?: { name: string; brand: string } | null;
+}) {
   const { t } = useI18n();
   const copy = t.foodDiary.product;
   const units = t.nutrition.trainer.units;
@@ -84,9 +95,16 @@ export function ProductForm({ food, barcode, doneHref }: { food: Food | null; ba
         submit(new FormData(event.currentTarget));
       }}
     >
-      <p className="px-1 text-callout text-ink-2">{copy.text}</p>
-      <TextField name="name" label={copy.name} defaultValue={food?.name ?? ""} autoComplete="off" maxLength={200} error={errors.name} />
-      <TextField name="brand" label={copy.brand} hint={copy.optional} defaultValue={food?.brand ?? ""} autoComplete="off" maxLength={200} />
+      <p className="px-1 text-callout text-ink-2">{draft ? copy.draftText : copy.text}</p>
+      <TextField name="name" label={copy.name} defaultValue={food?.name ?? draft?.name ?? ""} autoComplete="off" maxLength={200} error={errors.name} />
+      <TextField
+        name="brand"
+        label={copy.brand}
+        hint={copy.optional}
+        defaultValue={food?.brand ?? draft?.brand ?? ""}
+        autoComplete="off"
+        maxLength={200}
+      />
       <TextField
         name="kcal"
         label={copy.kcal}

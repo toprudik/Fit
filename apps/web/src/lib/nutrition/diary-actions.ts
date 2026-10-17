@@ -25,14 +25,14 @@ function failed(what: string, error: { code: string }): { ok: false; reason: "in
 
 /** "Поиск" in "+ Еда" (§3.2, §3.8). */
 export async function findFoods(query: string): Promise<FoodSearch> {
-  if (typeof query !== "string") return { foods: [], catalogDown: false };
+  if (typeof query !== "string") return { foods: [], catalogDown: false, drafts: [] };
   return searchFoods(query, await getLocale());
 }
 
 /** A scanned or typed barcode (§3.2–3.4); invalid digits give no food. */
 export async function findBarcode(value: string): Promise<BarcodeLookup & { barcode: string | null }> {
   const barcode = typeof value === "string" ? normalizeBarcode(value) : null;
-  if (!barcode) return { food: null, catalogDown: false, barcode: null };
+  if (!barcode) return { food: null, catalogDown: false, draft: null, barcode: null };
   return { ...(await foodByBarcode(barcode, await getLocale())), barcode };
 }
 

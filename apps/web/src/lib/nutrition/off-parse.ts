@@ -1,7 +1,8 @@
 /**
  * Open Food Facts products as DaFit caches them (wave-2 §3.5, ADR 0012): the name in the interface language when
- * OFF has it, kcal and macros per 100 g, the serving when OFF gives one in grams. Products without kcal are
- * dropped: the diary cannot count them.
+ * OFF has it, kcal and macros per 100 g, the serving when OFF gives one in grams. Products without kcal are not
+ * cached: the diary cannot count them. They come up as drafts with a "no nutrition facts" note instead, and the
+ * client adds one by typing kcal from the package into an own product (wave-2 §3.8).
  */
 
 /** What public.cache_off_foods takes for one product. */
@@ -17,6 +18,9 @@ export type OffCacheItem = {
   serving_label: string | null;
   lang: string | null;
 };
+
+/** A catalog product OFF knows without kcal: what prefills an own product. */
+export type OffDraft = { code: string; name: string; brand: string | null };
 
 /** The fields asked from Open Food Facts, for both the search and the product lookup. */
 export const OFF_FIELDS = (lang: string) =>
@@ -36,18 +40,32 @@ function text(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function nameAndCode(product: Record<string, unknown>, lang: string) {
+  const code = text(product.code);
+  const localName = text(product[`product_name_${lang}`]);
+  const name = localName ?? text(product.product_name);
+  return code && code.length <= 40 && name ? { code, localName, name } : null;
+}
+
+const brandOf = (product: Record<string, unknown>) => text(product.brands)?.split(",")[0]?.trim().slice(0, 200) ?? null;
+
+/** The kcal per 100 g OFF gives, from kcal or kJ; null when it gives neither. */
+function kcalOf(product: Record<string, unknown>): number | null {
+  const nutriments = (product.nutriments ?? {}) as Record<string, unknown>;
+  const kj = number(nutriments["energy-kj_100g"]);
+  return number(nutriments["energy-kcal_100g"]) ?? (kj === null ? null : kj / KJ_PER_KCAL);
+}
+
 /** One OFF product, from the search or from /api/v2/product, in the language asked; null when it cannot be logged. */
 export function parseOffProduct(raw: unknown, lang: string): OffCacheItem | null {
   if (!raw || typeof raw !== "object") return null;
   const product = raw as Record<string, unknown>;
-  const code = text(product.code);
-  const localName = text(product[`product_name_${lang}`]);
-  const name = localName ?? text(product.product_name);
-  if (!code || code.length > 40 || !name) return null;
+  const named = nameAndCode(product, lang);
+  if (!named) return null;
+  const { code, localName, name } = named;
 
   const nutriments = (product.nutriments ?? {}) as Record<string, unknown>;
-  const kj = number(nutriments["energy-kj_100g"]);
-  const kcalRaw = number(nutriments["energy-kcal_100g"]) ?? (kj === null ? null : kj / KJ_PER_KCAL);
+  const kcalRaw = kcalOf(product);
   if (kcalRaw === null || kcalRaw < 0 || kcalRaw > 900) return null;
   const macro = (key: string) => {
     const value = number(nutriments[key]);
@@ -63,7 +81,7 @@ export function parseOffProduct(raw: unknown, lang: string): OffCacheItem | null
   return {
     code,
     name: name.slice(0, 200),
-    brand: text(product.brands)?.split(",")[0]?.trim().slice(0, 200) ?? null,
+    brand: brandOf(product),
     kcal: tenth(kcalRaw),
     protein,
     fat,
@@ -72,6 +90,15 @@ export function parseOffProduct(raw: unknown, lang: string): OffCacheItem | null
     serving_label: serving === null ? null : (text(product.serving_size)?.slice(0, 80) ?? null),
     lang: localName ? lang : (text(product.lang)?.slice(0, 8) ?? null),
   };
+}
+
+/** An OFF product with a name but no kcal at all; null for anything else, including products parseOffProduct takes. */
+export function parseOffDraft(raw: unknown, lang: string): OffDraft | null {
+  if (!raw || typeof raw !== "object") return null;
+  const product = raw as Record<string, unknown>;
+  const named = nameAndCode(product, lang);
+  if (!named || kcalOf(product) !== null) return null;
+  return { code: named.code, name: named.name.slice(0, 200), brand: brandOf(product) };
 }
 
 /** EAN-13, EAN-8, UPC-A (12) or the 14-digit GTIN: digits only (§3.2). */
