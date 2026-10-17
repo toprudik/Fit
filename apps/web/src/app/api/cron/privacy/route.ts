@@ -1,0 +1,33 @@
+import { createHash, timingSafeEqual } from "node:crypto";
+import { NextResponse } from "next/server";
+import { serverEnv } from "@/env/server";
+import { runPrivacyJob } from "@/lib/account/job";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+
+/** Vercel stops the function after this many seconds; a run stops taking new work well before (BUDGET_MS). */
+export const maxDuration = 60;
+const BUDGET_MS = 35_000;
+
+/** Constant-time check of "Authorization: Bearer <CRON_SECRET>". Hashing first makes the lengths equal. */
+function isAuthorized(header: string | null, secret: string): boolean {
+  const digest = (value: string) => createHash("sha256").update(value).digest();
+  return timingSafeEqual(digest(header ?? ""), digest(`Bearer ${secret}`));
+}
+
+/**
+ * Privacy work (PRIV-6, PRIV-7): pg_cron calls it through pg_net when an export waits, an archive expired or a
+ * deletion is due, with the dispatcher's secret from Supabase Vault. The answer is counts only.
+ */
+export async function POST(request: Request) {
+  const env = serverEnv();
+  if (!env.CRON_SECRET) return NextResponse.json({ error: "not_configured" }, { status: 503 });
+  if (!isAuthorized(request.headers.get("authorization"), env.CRON_SECRET)) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  try {
+    return NextResponse.json(await runPrivacyJob(createSupabaseAdminClient(), BUDGET_MS));
+  } catch (error) {
+    console.error("privacy job failed", error instanceof Error ? error.message : "unknown");
+    return NextResponse.json({ error: "privacy_failed" }, { status: 500 });
+  }
+}

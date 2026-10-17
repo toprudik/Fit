@@ -208,6 +208,9 @@ export async function TrainerPair({ coachingId, tab, action }: { coachingId: str
         ) : pair.archived ? (
           <PairNotice>{t.pairs.archivedText}</PairNotice>
         ) : null}
+        {pair.partnerDeletingOn && pair.status !== "ended" ? (
+          <PairNotice>{interpolate(t.pairs.deletingClient, { date: formatDay(locale, pair.partnerDeletingOn, pair.timeZone) })}</PairNotice>
+        ) : null}
         {pair.partner.isCard ? (
           <PairNotice>
             {t.pairs.cardText}{" "}

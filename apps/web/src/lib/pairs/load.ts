@@ -35,7 +35,7 @@ export async function loadTrainerClients(): Promise<{ items: ClientItem[]; timeZ
   if (!pairs.length) return { items: [], timeZone: me.timeZone };
 
   const ids = pairs.map((pair) => pair.id);
-  const [meta, people, balances, stats, passes, intakes] = await Promise.all([
+  const [meta, people, balances, stats, passes, intakes, deletions] = await Promise.all([
     supabase.from("coaching_trainer_meta").select("coaching_id, client_alias, archived_at").in("coaching_id", ids),
     supabase
       .from("profiles")
@@ -60,8 +60,16 @@ export async function loadTrainerClients(): Promise<{ items: ClientItem[]; timeZ
         pairs.map((pair) => pair.client_id),
       )
       .order("submitted_at", { ascending: false }),
+    supabase
+      .from("account_deletions")
+      .select("user_id")
+      .in(
+        "user_id",
+        pairs.map((pair) => pair.client_id),
+      )
+      .is("cancelled_at", null),
   ]);
-  for (const [what, result] of Object.entries({ meta, people, balances, stats, passes, intakes })) {
+  for (const [what, result] of Object.entries({ meta, people, balances, stats, passes, intakes, deletions })) {
     if (result.error) fail(what, result.error);
   }
 
@@ -73,6 +81,7 @@ export async function loadTrainerClients(): Promise<{ items: ClientItem[]; timeZ
   const personById = new Map((people.data ?? []).map((person) => [person.id, person]));
   const latestIntake = new Map<string, boolean>();
   for (const row of intakes.data ?? []) if (!latestIntake.has(row.user_id)) latestIntake.set(row.user_id, row.parq_flagged);
+  const deleting = new Set((deletions.data ?? []).map((row) => row.user_id));
 
   const items = pairs.map((pair): ClientItem => {
     const person = personById.get(pair.client_id);
@@ -92,6 +101,7 @@ export async function loadTrainerClients(): Promise<{ items: ClientItem[]; timeZ
       hasPass: pairPasses.length > 0,
       passEnding: passIsEnding(pairPasses, now),
       parqFlagged: pair.status !== "ended" && (latestIntake.get(pair.client_id) ?? false),
+      deleting: pair.status !== "ended" && deleting.has(pair.client_id),
     };
   });
   return { items, timeZone: me.timeZone };
@@ -153,6 +163,8 @@ export type PairDetail = {
   partner: { name: string; photoUrl: string | null; username: string | null; isCard: boolean };
   /** When the viewer last asked the partner to get in touch ("Попросить связаться"), or null. */
   contactRequestedAt: string | null;
+  /** When the partner's pending account deletion takes effect (R10), or null. */
+  partnerDeletingOn: string | null;
   attended: number;
   milestones: Milestone[];
   nextSessionAt: string | null;
@@ -186,7 +198,7 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
   if (!pair) return null;
 
   const partnerId = side === "trainer" ? pair.client_id : pair.trainer_id;
-  const [person, meta, balance, stats, passes, notes, milestones, contact] = await Promise.all([
+  const [person, meta, balance, stats, passes, notes, milestones, contact, deletion] = await Promise.all([
     supabase.from("profiles").select(PERSON_COLUMNS).eq("id", partnerId).maybeSingle(),
     side === "trainer"
       ? supabase.from("coaching_trainer_meta").select("client_alias, archived_at").eq("coaching_id", pair.id).maybeSingle()
@@ -212,8 +224,10 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    // Partners read a pending deletion for the "удаляет аккаунт" label (R10); the row holds only dates.
+    supabase.from("account_deletions").select("scheduled_for").eq("user_id", partnerId).is("cancelled_at", null).maybeSingle(),
   ]);
-  for (const [what, result] of Object.entries({ person, meta, balance, stats, passes, notes, milestones, contact })) {
+  for (const [what, result] of Object.entries({ person, meta, balance, stats, passes, notes, milestones, contact, deletion })) {
     if (result.error) fail(what, result.error);
   }
 
@@ -233,6 +247,7 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
       isCard: Boolean(person.data?.managed_by_trainer_id),
     },
     contactRequestedAt: contact.data?.created_at ?? null,
+    partnerDeletingOn: deletion.data?.scheduled_for ?? null,
     attended: stats.data?.attended_count ?? 0,
     milestones: (milestones.data ?? []).map((row) => ({ id: row.id, kind: row.kind, achievedAt: row.achieved_at })),
     nextSessionAt: stats.data?.next_session_at ?? null,
