@@ -40,8 +40,8 @@ describe("AddFood: a catalog product without kcal", () => {
   });
 });
 
-describe("AddFood: weight in ounces in English", () => {
-  it("asks for ounces and saves grams", async () => {
+describe("AddFood: weight in grams in English too", () => {
+  it("asks for grams and saves them", async () => {
     const food = {
       id: "00000000-0000-4000-8000-000000000020",
       source: "custom" as const,
@@ -60,10 +60,10 @@ describe("AddFood: weight in ounces in English", () => {
     renderWithProviders(<AddFood day="2026-10-17" initialMeal="lunch" shelf={{ ...shelf, own: [food] }} />, { locale: "en" });
     fireEvent.click(screen.getByRole("radio", { name: "Mine" }));
     fireEvent.click(screen.getByRole("button", { name: /Oats/ }));
-    const amount = (await screen.findByLabelText("How many ounces")) as HTMLInputElement;
-    expect(amount.value).toBe("3.5");
-    fireEvent.change(amount, { target: { value: "2" } });
+    const amount = (await screen.findByLabelText("How many grams")) as HTMLInputElement;
+    expect(amount.value).toBe("100");
+    fireEvent.change(amount, { target: { value: "57" } });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
-    await vi.waitFor(() => expect(addEntry).toHaveBeenCalledWith({ day: "2026-10-17", meal: "lunch", foodId: food.id, grams: 56.7 }));
+    await vi.waitFor(() => expect(addEntry).toHaveBeenCalledWith({ day: "2026-10-17", meal: "lunch", foodId: food.id, grams: 57 }));
   });
 });

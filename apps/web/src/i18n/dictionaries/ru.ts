@@ -1304,6 +1304,12 @@ export const ru = {
     },
   },
   /** The asked side of "Попросить связаться", /contact/<id> (PRIV-2). */
+  goalStep: {
+    title: "Твоя цель",
+    text: "Остался последний шаг. Выбери цель, и под неё посчитается норма питания. Можно пропустить и выбрать позже в разделе «Цель и норма».",
+    done: "Готово",
+    skip: "Пропустить",
+  },
   contactRequest: {
     title: "Просьба связаться",
     askedByTrainer: "Тренер {name} просит связаться",
@@ -1475,6 +1481,8 @@ export const ru = {
       count: { one: "{count} тренировка", few: "{count} тренировки", many: "{count} тренировок", other: "{count} тренировки" } as PluralForms,
     },
     records: "Новые рекорды",
+    streaks: { header: "Серии", footer: "Какими они были в последний день месяца." },
+    badges: "Новые значки",
     measurements: { header: "Замеры", range: "С {from} до {to}" },
     nutrition: {
       header: "Питание",
@@ -2681,7 +2689,7 @@ export const ru = {
       noShows: "Неявки",
       earned: "Заработано",
       received: "Поступило",
-      endingPasses: "Абонементы, которые закончатся за 14 дней",
+      endingPasses: "Заканчиваются абонементы: 2 занятия или 7 дней",
       lastActive: "Последняя активность",
       opens: "Открытия приложения",
       features: "Чем пользуется",
@@ -4523,6 +4531,13 @@ export const ru = {
     requestClosed: "Этот запрос уже не ждёт ответа.",
     requestClosedLine: "Запрос уже закрыт.",
     noAccount: "Войди в DaFit, чтобы отвечать на запросы.",
+    claimMerged: "Готово, история карточки теперь у этого клиента.",
+    claimMergedLine: "Это {name}. Карточка объединена с клиентом.",
+    claimNewClient: "Готово, это новый клиент.",
+    claimNewClientLine: "Новый клиент. Карточки остались как были.",
+    claimNoCards: "У тебя нет карточек без аккаунта. Нажми «Новый клиент».",
+    claimSeveralCards: "Карточек без аккаунта несколько. Выбери нужную в приложении.",
+    claimLimitFull: "На тарифе Free новая пара закроется. Ответь в приложении.",
     failed: "Не получилось. Ответь на запрос в приложении.",
   },
   botMessages: {
@@ -4553,6 +4568,8 @@ export const ru = {
     coachingEndedPlanLimit:
         "Тренер {name} сейчас не может добавить новых клиентов на бесплатном тарифе, поэтому занятия не начались. Когда место освободится, открой ссылку тренера ещё раз.",
     answerClaim: "Ответить",
+    claimIsCard: "Это он(а)",
+    claimIsNew: "Новый клиент",
     unnamedTrainer: "без имени",
     openTrainer: "Открыть тренера",
     /** Д1: the 10:00 reminder on the day a homework is due (PRD 10-5). */
