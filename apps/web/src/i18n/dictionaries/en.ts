@@ -692,6 +692,9 @@ export const en: Dictionary = {
       show: "Turn the showcase on",
       hide: "Turn the showcase off",
       hideHint: "Nobody sees a showcase that's off. Your clients and links stay.",
+      storyCards: "Name and QR on clients' cards",
+      storyCardsHint: "Clients share their month in stories. Their sessions-with-a-trainer card will show your name and showcase QR.",
+      storyCardsFailed: "Couldn't save, try again",
       toggleFailed: "That didn't work. Try again.",
       checklist: {
         title: "Missing from your showcase",
@@ -1482,6 +1485,7 @@ export const en: Dictionary = {
       trainer: { one: "session with my trainer", few: "sessions with my trainer", many: "sessions with my trainer", other: "sessions with my trainer" },
       records: { one: "new record", few: "new records", many: "new records", other: "new records" },
       weight: "weight this month",
+      showcase: "Trainer showcase",
     },
   },
   nutrition: {
