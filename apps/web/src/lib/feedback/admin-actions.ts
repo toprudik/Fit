@@ -2,9 +2,8 @@
 
 import { refresh } from "next/cache";
 import { z } from "zod";
-import { serverEnv } from "@/env/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { fileFeedbackIssue, type FileIssueResult } from "./github";
+import { feedbackIssueTarget, fileFeedbackIssue, type FileIssueResult } from "./github";
 
 const statusInput = z.object({ id: z.uuid(), status: z.enum(["new", "in_progress", "closed"]) });
 
@@ -35,7 +34,7 @@ export async function fileFeedbackIssueNow(raw: { id: string }): Promise<{ statu
   if (!userId) return { status: "forbidden" };
   const { data: admin } = await supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
   if (!admin) return { status: "forbidden" };
-  if (!serverEnv().GITHUB_FEEDBACK_TOKEN) return { status: "disabled" };
+  if (!feedbackIssueTarget()) return { status: "disabled" };
   const result = await fileFeedbackIssue(id.data);
   refresh();
   return { status: result };
