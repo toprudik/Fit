@@ -544,3 +544,39 @@ describe("waitlist messages", () => {
     );
   });
 });
+
+describe("charge_posted and charge_waived", () => {
+  const STARTS = "2026-10-20T15:00:00Z";
+
+  it("tells the client a no-show took a session from the pass, with a button to it", () => {
+    const message = renderMessage(
+      {
+        ...row,
+        kind: "charge_posted",
+        payload: { reason: "no_show", starts_at: STARTS, pass_id: PAIR, pass_title: "10 занятий", remaining: 7, first_name: "Олег" },
+      },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toContain("отмечено как неявка. Списано 1 занятие из «10 занятий», осталось 7.");
+    expect(message?.buttons).toEqual([
+      { text: "Открыть абонемент", web_app: { url: `https://fit.example/client/passes/${PAIR}?source=charge_posted` } },
+    ]);
+  });
+
+  it("names the debt when a late cancellation found no pass", () => {
+    const message = renderMessage(
+      { ...row, kind: "charge_posted", payload: { reason: "late_cancel", starts_at: STARTS, debt_sessions: 2 } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toContain("Абонемента не было, занятие ушло в долг: 2 занятия.");
+    expect(message?.buttons[0]).toEqual({ text: "Открыть абонемент", web_app: { url: "https://fit.example/client/passes?source=charge_posted" } });
+  });
+
+  it("says a forgiven debt is gone", () => {
+    const message = renderMessage(
+      { ...row, kind: "charge_waived", locale: "en", payload: { reason: "attended", starts_at: STARTS, debt_sessions: 0, first_name: "Oleg" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toMatch(/^Oleg forgave the session on .+\. You owe nothing now\.$/);
+  });
+});

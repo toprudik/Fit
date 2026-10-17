@@ -2369,6 +2369,9 @@ isOneToOne: false
 "add_group_participant":
 { Args: { "p_coaching_id": string,"p_session_id": string }; Returns: string
                            },
+"adjust_pass":
+{ Args: { "p_delta": number,"p_note": string,"p_pass_id": string }; Returns: string
+                           },
 "admin_block_user":
 { Args: { "p_reason": string,"p_user_id": string }; Returns: undefined
                            },
@@ -2546,6 +2549,9 @@ isOneToOne: false
 "leave_waitlist":
 { Args: { "p_entry_id": string }; Returns: undefined
                            },
+"mark_attendance":
+{ Args: { "p_booking_id": string,"p_reason"?: string,"p_status": Database["public"]['Enums']["booking_status"] }; Returns: Database["public"]['Enums']["booking_status"]
+                           },
 "my_client_invite":
 { Args: Record<PropertyKey, never>; Returns: {
               "code": string,"created_at": string,"invite_id": string,"token": string,"uses_count": number
@@ -2563,6 +2569,11 @@ isOneToOne: false
                            },
 "record_outbox_result":
 { Args: { "p_error"?: string,"p_id": number,"p_outcome": string,"p_retry_after_s"?: number,"p_telegram_message_id"?: number }; Returns: Database["public"]['Enums']["outbox_status"]
+                           },
+"record_past_session":
+{ Args: { "p_coaching_id": string,"p_duration_min": number,"p_location_id"?: string,"p_mode": Database["public"]['Enums']["session_mode"],"p_starts_at": string,"p_status"?: Database["public"]['Enums']["booking_status"],"p_title"?: string }; Returns: {
+              "booking_id": string,"session_id": string
+            }[]
                            },
 "recurrence_meeting_url":
 { Args: { "p_recurrence_id": string }; Returns: string
@@ -2644,6 +2655,9 @@ isOneToOne: false
 { Args: { "p_entry_id": string }; Returns: {
               "booking_id": string,"confirmed": boolean,"ends_at": string,"entry_id": string,"inside_deadline": boolean,"location": string,"mode": Database["public"]['Enums']["session_mode"],"offer_expires_at": string,"pass_title": string,"place": number,"session_id": string,"sessions_left": number,"starts_at": string,"status": Database["public"]['Enums']["waitlist_status"],"title": string,"trainer_id": string
             }[]
+                           },
+"waive_charge":
+{ Args: { "p_charge_id": string,"p_reason"?: string }; Returns: string
                            },
 "withdraw_booking_request":
 { Args: { "p_booking_id": string }; Returns: undefined

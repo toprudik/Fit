@@ -91,6 +91,28 @@ export type ReportInput = z.input<typeof reportInput>;
 export const voidInput = z.object({ paymentId: uuid, reason });
 export type VoidInput = z.input<typeof voidInput>;
 
+/** "Простить": one charge, with an optional reason (PRD 2.6.6-4). */
+export const waiveInput = z.object({ chargeId: uuid, reason: optionalText });
+export type WaiveInput = z.input<typeof waiveInput>;
+
+/** "Корректировка": plus or minus some sessions on a pass, with a note (R84). */
+export const adjustInput = z.object({
+  passId: uuid,
+  delta: z.number().int().min(-200).max(200).refine((value) => value !== 0),
+  note: reason,
+});
+export type AdjustInput = z.input<typeof adjustInput>;
+
+/** "Дозаписать занятие": a personal session that already took place, at a local day and time (PRD 2.6.2-7). */
+export const pastSessionInput = z.object({
+  coachingId: uuid,
+  day,
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  durationMin: z.number().int().min(15).max(480),
+  status: z.enum(["attended", "no_show"]),
+});
+export type PastSessionInput = z.input<typeof pastSessionInput>;
+
 /** Field names of a failed parse, for the form to mark. */
 export function invalidFields(error: z.ZodError): string[] {
   return [...new Set(error.issues.map((issue) => issue.path.map(String).join(".")))];
