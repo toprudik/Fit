@@ -2017,6 +2017,7 @@ create table public.delegations (
   starts_at           timestamptz not null default now(),
   ends_at             timestamptz,
   status              public.delegation_status not null default 'pending',
+  invited_trainer_id  uuid references public.trainer_profiles(user_id) on delete set null,  -- кому отправлено поиском (W3 §1.1, 20261017175137)
   accepted_at         timestamptz,
   revoked_at          timestamptz,
   created_at          timestamptz not null default now(),

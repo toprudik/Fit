@@ -23,8 +23,10 @@ function failed(what: string, error: { code: string; message?: string }): { ok: 
     case "own_delegation":
       return { ok: false, reason: "own" };
     case "invite_expired":
+    case "not_pending":
       return { ok: false, reason: "expired" };
     case "invite_not_found":
+    case "trainer_not_found":
     case "session_not_found":
     case "pair_not_found":
       return { ok: false, reason: "not_found" };
@@ -36,14 +38,17 @@ function failed(what: string, error: { code: string; message?: string }): { ok: 
 
 const inviteLink = (token: string) => new URL(invitePath(token), clientEnv.NEXT_PUBLIC_APP_URL).toString();
 
-/** «Передать на подмену» on a future session: returns the one-time invite link. */
-export async function createSubstitute(sessionId: string): Promise<DelegationActionResult<string>> {
+/** A new delegation's invite: the link to share, and the id to send it to a trainer found by search instead. */
+export type DelegationInvite = { id: string; link: string };
+
+/** «Передать на подмену» on a future session: returns the one-time invite. */
+export async function createSubstitute(sessionId: string): Promise<DelegationActionResult<DelegationInvite>> {
   if (!isId(sessionId)) return { ok: false, reason: "invalid" };
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("create_delegation", { p_kind: "substitute", p_session_id: sessionId }).single();
   if (error) return failed("create substitute", error);
   refresh();
-  return { ok: true, value: inviteLink(data.token) };
+  return { ok: true, value: { id: data.delegation_id, link: inviteLink(data.token) } };
 }
 
 export type AssistantInput = {
@@ -53,8 +58,8 @@ export type AssistantInput = {
   endsOn: string | null;
 };
 
-/** «Добавить помощника»: what the assistant may do, for which clients, until when. Returns the invite link. */
-export async function createAssistant(input: AssistantInput): Promise<DelegationActionResult<string>> {
+/** «Добавить помощника»: what the assistant may do, for which clients, until when. Returns the invite. */
+export async function createAssistant(input: AssistantInput): Promise<DelegationActionResult<DelegationInvite>> {
   const scopes = Array.isArray(input.scopes) ? [...new Set(input.scopes.filter(isAssistantScope))] : [];
   const coachingIds = Array.isArray(input.coachingIds) ? [...new Set(input.coachingIds.filter(isId))] : [];
   const allClients = input.allClients === true;
@@ -73,7 +78,7 @@ export async function createAssistant(input: AssistantInput): Promise<Delegation
     .single();
   if (error) return error.code === "22023" ? { ok: false, reason: "invalid" } : failed("create assistant", error);
   refresh();
-  return { ok: true, value: inviteLink(data.token) };
+  return { ok: true, value: { id: data.delegation_id, link: inviteLink(data.token) } };
 }
 
 /** «Отозвать»: the delegate loses access at once (rule 7). */
@@ -86,6 +91,26 @@ export async function revokeDelegation(delegationId: string): Promise<Delegation
   if (error) return failed("revoke delegation", error);
   if (!data) return { ok: false, reason: "not_found" };
   refresh();
+  return { ok: true };
+}
+
+export type DelegateCandidate = { trainerId: string; name: string | null; username: string | null };
+
+/** Trainers the owner may invite, by name or @username (rule 1): verified, with an open showcase or worked with before. */
+export async function searchDelegates(query: string): Promise<DelegationActionResult<DelegateCandidate[]>> {
+  if (typeof query !== "string" || query.length > 64) return { ok: false, reason: "invalid" };
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("search_delegate_trainers", { p_query: query });
+  if (error) return failed("search delegates", error);
+  return { ok: true, value: data.map((row) => ({ trainerId: row.trainer_id, name: row.name, username: row.username })) };
+}
+
+/** «Пригласить»: sends the pending delegation to a trainer found by search; the earlier link stops working. */
+export async function inviteDelegate(delegationId: string, trainerId: string): Promise<DelegationActionResult> {
+  if (!isId(delegationId) || !isId(trainerId)) return { ok: false, reason: "invalid" };
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("invite_delegate", { p_delegation_id: delegationId, p_trainer_id: trainerId });
+  if (error) return failed("invite delegate", error);
   return { ok: true };
 }
 

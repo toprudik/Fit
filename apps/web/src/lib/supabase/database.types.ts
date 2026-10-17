@@ -1039,19 +1039,25 @@ isOneToOne: false
                   ]
                 },"delegations": {
                   Row: {
-                    "accepted_at": string | null,"all_clients": boolean,"created_at": string,"delegate_trainer_id": string | null,"ends_at": string | null,"id": string,"invite_hash": string | null,"kind": Database["public"]['Enums']["delegation_kind"],"owner_trainer_id": string,"reminded_at": string | null,"revoked_at": string | null,"scopes": (Database["public"]['Enums']["delegation_scope"])[],"session_id": string | null,"starts_at": string,"status": Database["public"]['Enums']["delegation_status"]
+                    "accepted_at": string | null,"all_clients": boolean,"created_at": string,"delegate_trainer_id": string | null,"ends_at": string | null,"id": string,"invite_hash": string | null,"invited_trainer_id": string | null,"kind": Database["public"]['Enums']["delegation_kind"],"owner_trainer_id": string,"reminded_at": string | null,"revoked_at": string | null,"scopes": (Database["public"]['Enums']["delegation_scope"])[],"session_id": string | null,"starts_at": string,"status": Database["public"]['Enums']["delegation_status"]
                   }
                   ComputedFields: never
                   Insert: {
-                    "accepted_at"?: string | null,"all_clients"?: boolean,"created_at"?: string,"delegate_trainer_id"?: string | null,"ends_at"?: string | null,"id"?: string,"invite_hash"?: string | null,"kind": Database["public"]['Enums']["delegation_kind"],"owner_trainer_id": string,"reminded_at"?: string | null,"revoked_at"?: string | null,"scopes": (Database["public"]['Enums']["delegation_scope"])[],"session_id"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["delegation_status"]
+                    "accepted_at"?: string | null,"all_clients"?: boolean,"created_at"?: string,"delegate_trainer_id"?: string | null,"ends_at"?: string | null,"id"?: string,"invite_hash"?: string | null,"invited_trainer_id"?: string | null,"kind": Database["public"]['Enums']["delegation_kind"],"owner_trainer_id": string,"reminded_at"?: string | null,"revoked_at"?: string | null,"scopes": (Database["public"]['Enums']["delegation_scope"])[],"session_id"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["delegation_status"]
                   }
                   Update: {
-                    "accepted_at"?: string | null,"all_clients"?: boolean,"created_at"?: string,"delegate_trainer_id"?: string | null,"ends_at"?: string | null,"id"?: string,"invite_hash"?: string | null,"kind"?: Database["public"]['Enums']["delegation_kind"],"owner_trainer_id"?: string,"reminded_at"?: string | null,"revoked_at"?: string | null,"scopes"?: (Database["public"]['Enums']["delegation_scope"])[],"session_id"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["delegation_status"]
+                    "accepted_at"?: string | null,"all_clients"?: boolean,"created_at"?: string,"delegate_trainer_id"?: string | null,"ends_at"?: string | null,"id"?: string,"invite_hash"?: string | null,"invited_trainer_id"?: string | null,"kind"?: Database["public"]['Enums']["delegation_kind"],"owner_trainer_id"?: string,"reminded_at"?: string | null,"revoked_at"?: string | null,"scopes"?: (Database["public"]['Enums']["delegation_scope"])[],"session_id"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["delegation_status"]
                   }
                   Relationships: [
                     {
       foreignKeyName: "delegations_delegate_trainer_id_fkey"
       columns: ["delegate_trainer_id"]
+isOneToOne: false
+      referencedRelation: "trainer_profiles"
+      referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "delegations_invited_trainer_id_fkey"
+      columns: ["invited_trainer_id"]
 isOneToOne: false
       referencedRelation: "trainer_profiles"
       referencedColumns: ["user_id"]
@@ -4044,6 +4050,9 @@ isOneToOne: false
 "ingest_steps":
 { Args: { "p_day"?: string,"p_steps": number,"p_token": string }; Returns: string
                            },
+"invite_delegate":
+{ Args: { "p_delegation_id": string,"p_trainer_id": string }; Returns: undefined
+                           },
 "issue_ingest_token":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
@@ -4265,6 +4274,11 @@ isOneToOne: false
                            },
 "save_workout_template":
 { Args: { "p_template": Json }; Returns: string
+                           },
+"search_delegate_trainers":
+{ Args: { "p_query": string }; Returns: {
+              "name": string,"trainer_id": string,"username": string
+            }[]
                            },
 "search_exercises":
 { Args: { "p_category"?: string,"p_limit"?: number,"p_locale"?: Database["public"]['Enums']["app_locale"],"p_offset"?: number,"p_own_only"?: boolean,"p_query"?: string }; Returns: {
