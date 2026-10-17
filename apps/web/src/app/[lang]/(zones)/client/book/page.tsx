@@ -13,6 +13,7 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { BOOKING_DAYS, loadBookingPage, loadBookingTrainers } from "@/lib/bookings/load";
+import { loadQueueSlots } from "@/lib/bookings/slot-waitlist";
 import { dayRange } from "@/lib/bookings/book";
 import { formatMoney } from "@/lib/money/format";
 import { loadScheduleOwner } from "@/lib/schedule/load";
@@ -55,7 +56,10 @@ async function Booking({ searchParams }: { searchParams: PageProps<"/[lang]/clie
   }
 
   const at = now();
-  const page = await loadBookingPage(owner, trainer, at);
+  const [page, queueSlots] = await Promise.all([
+    loadBookingPage(owner, trainer, at),
+    loadQueueSlots(owner, trainer.trainerId, at, new Date(at.getTime() + BOOKING_DAYS * 86_400_000)),
+  ]);
   const switcher =
     trainers.length > 1 ? (
       <ChipRow label={copy.chooseTrainer}>
@@ -67,7 +71,7 @@ async function Booking({ searchParams }: { searchParams: PageProps<"/[lang]/clie
       </ChipRow>
     ) : null;
 
-  if (page.slots.length === 0 && page.groups.length === 0) {
+  if (page.slots.length === 0 && page.groups.length === 0 && queueSlots.length === 0) {
     return (
       <div className="flex flex-col gap-4">
         {switcher}
@@ -97,6 +101,7 @@ async function Booking({ searchParams }: { searchParams: PageProps<"/[lang]/clie
         days={dayRange(today(owner.timeZone), BOOKING_DAYS)}
         slots={page.slots}
         groups={page.groups}
+        queueSlots={queueSlots}
         busy={page.busy}
         dropInText={
           page.dropIn ? interpolate(copy.dropInPrice, { price: formatMoney(locale, page.dropIn.priceMinor, page.dropIn.currency) }) : null

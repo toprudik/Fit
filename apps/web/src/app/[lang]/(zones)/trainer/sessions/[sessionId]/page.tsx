@@ -20,6 +20,7 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
+import { loadSlotWaitlist } from "@/lib/bookings/slot-waitlist";
 import { loadSessionDelegation } from "@/lib/delegations/load";
 import { isPairId } from "@/lib/pairs/clients";
 import { loadBookingCharges } from "@/lib/passes/session-charges";
@@ -95,7 +96,8 @@ async function SessionDetails({
             ),
         )
       : [];
-  const waitlist = group && editable ? await loadSessionWaitlist(owner, session.id) : [];
+  // A personal session shows the queue for its slot (PRD wave-2 §9); it goes out on its own once the slot frees.
+  const waitlist = editable ? await (group ? loadSessionWaitlist(owner, session.id) : loadSlotWaitlist(owner, session.id)) : [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -182,7 +184,7 @@ async function SessionDetails({
             ...entry,
             offeredUntil: entry.offerExpiresAt ? time.format(new Date(entry.offerExpiresAt)) : null,
           }))}
-          canOffer={participants.length + waitlist.filter((entry) => entry.status === "offered").length < session.capacity}
+          canOffer={group && participants.length + waitlist.filter((entry) => entry.status === "offered").length < session.capacity}
         />
       ) : null}
 

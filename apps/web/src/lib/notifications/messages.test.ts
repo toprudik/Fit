@@ -788,6 +788,19 @@ describe("waitlist messages", () => {
       /отменено/,
     );
   });
+
+  it("speaks of the trainer's time for a booked personal slot", () => {
+    const slot = { ...payload, title: null, slot_id: PAIR };
+    expect(renderMessage({ ...row, kind: "waitlist_offer", payload: slot }, options)?.text).toBe(
+      "Освободилось время у тренера Анна Смирнова: пн, 26 октября в 18:00, Студия. Оно ждёт тебя до 12:30.",
+    );
+    expect(renderMessage({ ...row, kind: "waitlist_closed", payload: { ...slot, reason: "started" } }, options)?.text).toBe(
+      "Время у тренера Анна Смирнова (пн, 26 октября в 18:00) так и не освободилось. Очередь закрыта.",
+    );
+    expect(renderMessage({ ...row, kind: "waitlist_closed", payload: { ...slot, reason: "cancelled" } }, options)?.text).toMatch(
+      /убрал время/,
+    );
+  });
 });
 
 describe("charge_posted and charge_waived", () => {

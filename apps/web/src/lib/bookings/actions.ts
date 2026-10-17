@@ -142,6 +142,16 @@ export async function joinWaitlist(sessionId: string): Promise<JoinWaitlistResul
   return { status: "done", entryId: data[0].entry_id, place: data[0].place };
 }
 
+/** "В лист ожидания" on a slot someone else booked (PRD wave-2 §9): the caller's place in line. */
+export async function joinSlotWaitlist(slotId: string): Promise<JoinWaitlistResult> {
+  if (!id.safeParse(slotId).success) return { status: "error", error: "failed" };
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("join_slot_waitlist", { p_slot_id: slotId });
+  if (error) return { status: "error", error: known(error, "joining a slot waitlist") };
+  refresh();
+  return { status: "done", entryId: data[0].entry_id, place: data[0].place };
+}
+
 /** "Выйти из очереди", or "Отказаться" from an offered seat, which then goes to the next in line. */
 export async function leaveWaitlist(entryId: string): Promise<BookingActionResult> {
   if (!id.safeParse(entryId).success) return { status: "error", error: "failed" };
