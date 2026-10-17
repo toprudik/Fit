@@ -2,10 +2,13 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { NextResponse } from "next/server";
+import QRCode from "qrcode";
+import { clientEnv } from "@/env/client";
 import { isLocale } from "@/i18n/config";
 import { dictionaries } from "@/i18n/dictionaries";
 import { cardText } from "@/lib/monthly-report/card-text";
 import { isCardId, storyCardFrom } from "@/lib/monthly-report/report";
+import { showcaseUrl } from "@/lib/showcase/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /** Colors of docs/design/tokens.json for the two themes (bg, surface-1, ink, ink-2, accent, accent-ink). */
@@ -44,6 +47,11 @@ export async function GET(request: Request, context: RouteContext<"/api/story/[i
   const t = dictionaries[locale];
   const text = cardText(t, locale, card);
   const [onest500, onest700, tektur700] = await fonts;
+  // The trainer's showcase (§4-7): dark modules on white in both themes, which scanners read best.
+  const showcase = card.data.slug ? showcaseUrl(card.data.slug, clientEnv.NEXT_PUBLIC_APP_URL) : null;
+  const qr = showcase
+    ? await QRCode.toDataURL(showcase, { margin: 2, width: 280, errorCorrectionLevel: "M", color: { dark: "#000000", light: "#ffffff" } })
+    : null;
 
   return new ImageResponse(
     (
@@ -80,7 +88,20 @@ export async function GET(request: Request, context: RouteContext<"/api/story/[i
           <div style={{ fontSize: 72, fontWeight: 700, lineHeight: 1.15 }}>{text.label}</div>
           {text.detail ? <div style={{ fontSize: 48, fontWeight: 500, color: colors.ink2, lineHeight: 1.25 }}>{text.detail}</div> : null}
         </div>
-        <div style={{ fontSize: 40, fontWeight: 500, color: colors.ink2 }}>{t.monthlyReport.stories.storyText}</div>
+        {showcase && qr ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 48 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- the image renderer draws plain <img> only. */}
+            <img src={qr} width={280} height={280} alt="" style={{ borderRadius: 24 }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1 }}>
+              <div style={{ fontSize: 44, fontWeight: 700 }}>{t.monthlyReport.card.showcase}</div>
+              <div style={{ fontSize: 36, fontWeight: 500, color: colors.ink2, wordBreak: "break-all" }}>
+                {showcase.replace(/^https?:\/\//, "")}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ fontSize: 40, fontWeight: 500, color: colors.ink2 }}>{t.monthlyReport.stories.storyText}</div>
+        )}
       </div>
     ),
     {
