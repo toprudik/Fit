@@ -23,7 +23,7 @@ create table public.story_cards (
 
 comment on table public.story_cards is
   'A story card of a monthly report (wave-3 §4-4): the numbers it shows, frozen at creation; read by id through public.story_card().';
-comment on column public.story_cards.data is 'Only what the card prints, e.g. {"count": 12} or a trainer''s name with the count.';
+comment on column public.story_cards.data is 'Only what the card prints, e.g. {"count": 12}, or the trainer''s name with the count.';
 
 create index story_cards_user_id_idx on public.story_cards (user_id);
 
@@ -81,16 +81,17 @@ begin
 
   -- Attended sessions, and with whom.
   select pg_catalog.jsonb_build_object('total', sum(t.n), 'trainers', pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
-           'coaching_id', t.coaching_id, 'first_name', t.first_name, 'last_name', t.last_name, 'count', t.n)
-           order by t.n desc, t.first_name))
+           'coaching_id', t.coaching_id, 'name', t.name, 'count', t.n) order by t.n desc, t.name))
   into v_sessions
   from (
-    select b.coaching_id, p.first_name, p.last_name, count(*)::integer as n
+    select b.coaching_id,
+           coalesce(nullif(pg_catalog.btrim(p.display_name), ''), nullif(pg_catalog.concat_ws(' ', p.first_name, p.last_name), '')) as name,
+           count(*)::integer as n
     from public.bookings b
     join public.sessions s on s.id = b.session_id
     join public.profiles p on p.id = b.trainer_id
     where b.client_id = p_user and b.status = 'attended' and s.starts_at >= v_from and s.starts_at < v_to
-    group by b.coaching_id, p.first_name, p.last_name
+    group by b.coaching_id, p.display_name, p.first_name, p.last_name
   ) t
   having count(*) > 0;
 
@@ -252,7 +253,7 @@ begin
   if p_kind = 'sessions' and v_report ? 'sessions' then
     v_data := pg_catalog.jsonb_build_object('count', (v_report #>> '{sessions,total}')::integer);
   elsif p_kind = 'trainer' and p_coaching is not null then
-    select pg_catalog.jsonb_build_object('count', t->'count', 'first_name', t->'first_name', 'last_name', t->'last_name')
+    select pg_catalog.jsonb_build_object('count', t->'count', 'name', t->'name')
     into v_data
     from pg_catalog.jsonb_array_elements(v_report #> '{sessions,trainers}') as x(t)
     where t->>'coaching_id' = p_coaching::text;

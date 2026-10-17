@@ -79,7 +79,7 @@ select tests.authenticate_as('client_c');
 select is(public.my_monthly_report(date_trunc('month', now())::date), null, 'report: the current month has none yet');
 select is(public.my_monthly_report('2026-09-02'), null, 'report: a month is given by its 1st day');
 select is(public.my_monthly_report('2026-09-01') #> '{sessions,total}', '2', 'sessions: attended ones, in the client''s time zone');
-select is(public.my_monthly_report('2026-09-01') #>> '{sessions,trainers,0,first_name}', 'Ира', 'sessions: with whom');
+select is(public.my_monthly_report('2026-09-01') #>> '{sessions,trainers,0,name}', 'Ира Тренер', 'sessions: with whom');
 select is(public.my_monthly_report('2026-09-01')->'workouts', '1', 'workouts: the logged ones');
 select is(public.my_monthly_report('2026-09-01') #>> '{records,0,name}', 'Squat', 'records: the new record with its exercise');
 select is(public.my_monthly_report('2026-09-01')->'measurements', '[{"kind": "weight", "from": 80.00, "to": 78.50}]'::jsonb,
@@ -108,7 +108,7 @@ select tests.clear_authentication();
 select tests.authenticate_as_anon();
 select is(public.story_card(tests.card('sessions')), '{"kind": "sessions", "month": "2026-09-01", "data": {"count": 2}}'::jsonb,
           'cards: the image route reads a card by its id without an account');
-select is(public.story_card(tests.card('trainer'))->'data', '{"count": 2, "first_name": "Ира", "last_name": "Тренер"}'::jsonb,
+select is(public.story_card(tests.card('trainer'))->'data', '{"count": 2, "name": "Ира Тренер"}'::jsonb,
           'cards: sessions with the trainer');
 select is(public.story_card(tests.card('weight'))->'data', '{"change": -1.5}'::jsonb, 'cards: the confirmed weight change');
 select throws_ok($$ select * from public.story_cards $$, '42501', null, 'cards: anon cannot read the table');

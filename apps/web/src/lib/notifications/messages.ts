@@ -2,6 +2,7 @@ import { INTL_LOCALE, type Locale } from "@/i18n/config";
 import { dictionaries, type Dictionary } from "@/i18n/dictionaries";
 import { interpolate, plural, type PluralForms } from "@/i18n/format";
 import { formatMoney } from "@/lib/money/format";
+import { formatMonth, monthParam } from "@/lib/monthly-report/report";
 import { isPairId } from "@/lib/pairs/clients";
 import { formatSessionTime } from "@/lib/pairs/format";
 import { DEFAULT_TIME_ZONE, formatPlanDate, isPlanCode } from "@/lib/plans/plans";
@@ -117,6 +118,14 @@ const templates: Partial<Record<NotificationType, Template>> = {
     }),
     buttons: [{ text: t.openHomework, path: "/client/sessions/homework" }],
   }),
+  // Итоги месяца (wave-3 §4-1): payload { month } (its 1st day) from queue_monthly_reports.
+  monthly_report: ({ t, locale, payload }) => {
+    const month = typeof payload.month === "string" && /^\d{4}-\d{2}-01$/.test(payload.month) ? payload.month : null;
+    return {
+      text: interpolateEscaped(t.monthlyReport, { month: month ? formatMonth(locale, month) : "" }),
+      buttons: [{ text: t.openMonthlyReport, path: month ? `/client/progress/reports/${monthParam(month)}` : "/client/progress" }],
+    };
+  },
   // Д2: payload { coaching_id, homework_id, title, name, comment? } from mark_homework_done, name being the
   // client as the trainer calls them.
   homework_done: ({ t, payload }) => {
