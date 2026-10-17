@@ -31,6 +31,7 @@ import {
 import { THEME_BG } from "@/lib/theme/colors";
 import { applyThemePreference, setTelegramScheme } from "@/lib/theme/store";
 import { isColorDark, isThemePreference } from "@/lib/theme/theme";
+import { TelegramBackFallback } from "./back-fallback";
 
 const SETTINGS_HREF = "/settings";
 const LOGIN_HREF = "/login";
@@ -252,5 +253,10 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  return children;
+  return (
+    <>
+      {children}
+      <TelegramBackFallback />
+    </>
+  );
 }

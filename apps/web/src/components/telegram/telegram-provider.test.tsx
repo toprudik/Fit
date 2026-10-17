@@ -55,7 +55,7 @@ const sdk = vi.hoisted(() => {
 vi.mock("@tma.js/sdk-react", () => sdk);
 
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => window.location.pathname }));
 
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 vi.mock("@/components/ui/sonner", () => ({ toast }));
@@ -266,6 +266,19 @@ describe("inside Telegram", () => {
     window.history.replaceState(null, "", "/settings");
     sdk.settingsButton.press();
     expect(router.push).toHaveBeenCalledOnce();
+  });
+
+  it("shows Telegram's BackButton on a screen that did not ask for it, and not on a tab root", () => {
+    launch();
+    window.history.replaceState(null, "", "/client/diary/food");
+    const nested = renderApp();
+    expect(sdk.backButton.show).toHaveBeenCalled();
+    nested.unmount();
+
+    vi.clearAllMocks();
+    window.history.replaceState(null, "", "/client/diary");
+    renderApp();
+    expect(sdk.backButton.show).not.toHaveBeenCalled();
   });
 
   it("keeps working when the client lacks a feature", () => {
