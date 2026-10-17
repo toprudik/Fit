@@ -569,6 +569,19 @@ describe("payment_reported", () => {
   });
 });
 
+describe("goal_changed", () => {
+  it("tells the trainer the new goal and opens the client's nutrition tab (wave-2 §1.3)", () => {
+    const message = renderMessage(
+      { ...row, kind: "goal_changed", payload: { coaching_id: PAIR, goal: "gain", previous_goal: "lose", first_name: "Анна" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe("У клиента Анна новая цель: «набрать массу». Твоя норма осталась прежней, проверь, подходит ли она.");
+    expect(message?.buttons).toEqual([
+      { text: "Открыть питание", web_app: { url: `https://fit.example/trainer/clients/${PAIR}/nutrition?source=goal_changed` } },
+    ]);
+  });
+});
+
 describe("account messages", () => {
   const app = { appUrl: "https://fit.example", group: false };
 
