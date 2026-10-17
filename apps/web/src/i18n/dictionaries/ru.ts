@@ -3554,6 +3554,8 @@ export const ru = {
       chargeFree: "Это бесплатное пробное, при отмене ничего не спишется.",
       cancelReason: "Причина, если хочешь",
       cancelReasonHint: "Тренер увидит её в сообщении.",
+      cancelReasons: ["Болею", "Работа", "Не успеваю", "Планы изменились"],
+      cancelReasonOwn: "Или своими словами",
       cancelConfirm: "Отменить",
       cancelLateConfirm: "Отменить и списать",
       keepBooking: "Оставить запись",
