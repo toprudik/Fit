@@ -1,4 +1,4 @@
--- Group adherence of migration 20261017144853_group_adherence.sql (PRD wave-2 §6 rule 8): the average adherence
+-- Group adherence of migration 20261017162317_group_adherence.sql (PRD wave-2 §6 rule 8): the average adherence
 -- of the members who share nutrition and were judged against a target, shown from three such clients.
 begin;
 \ir _helpers.psql
