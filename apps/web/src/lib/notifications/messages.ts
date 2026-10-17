@@ -640,9 +640,10 @@ const templates: Partial<Record<NotificationType, Template>> = {
     buttons: withTrainerChat(t, payload, [{ text: t.bookAgain, path: "/client/book" }]),
   }),
   // К-лист: payload { entry_id, session_id, title, starts_at, mode, location, expires_at, first_name, last_name } from
-  // private.waitlist_offer_next or trainer_offer_waitlist; sent in quiet hours too, since it lasts minutes.
+  // private.waitlist_offer_next or trainer_offer_waitlist; sent in quiet hours too, since it lasts minutes. A booked
+  // personal slot sends slot_id and no title (private.slot_offer_to).
   waitlist_offer: ({ t, locale, timeZone, payload }) => ({
-    text: interpolateEscaped(t.waitlistOffer, {
+    text: interpolateEscaped(payload.slot_id ? t.waitlistSlotOffer : t.waitlistOffer, {
       title: typeof payload.title === "string" ? payload.title : "",
       name: personName(payload) || t.sessionTrainer,
       when: sessionTime(locale, payload.starts_at, timeZone),
@@ -652,15 +653,25 @@ const templates: Partial<Record<NotificationType, Template>> = {
     buttons: [{ text: t.answerOffer, path: idPath("/client/waitlist", payload.entry_id, "/client/book") }],
   }),
   // payload { entry_id, session_id, reason: started | cancelled, title, starts_at, first_name, last_name } from
-  // private.waitlist_close (PRD wave-2 §9 rule 8).
-  waitlist_closed: ({ t, locale, timeZone, payload }) => ({
-    text: interpolateEscaped(payload.reason === "cancelled" ? t.waitlistCancelled : t.waitlistClosed, {
-      title: typeof payload.title === "string" ? payload.title : "",
-      name: personName(payload) || t.sessionTrainer,
-      when: sessionTime(locale, payload.starts_at, timeZone),
-    }),
-    buttons: [{ text: t.bookAgain, path: "/client/book" }],
-  }),
+  // private.waitlist_close (PRD wave-2 §9 rule 8); slot_id and no title from private.slot_waitlist_close.
+  waitlist_closed: ({ t, locale, timeZone, payload }) => {
+    const cancelled = payload.reason === "cancelled";
+    const template = payload.slot_id
+      ? cancelled
+        ? t.waitlistSlotCancelled
+        : t.waitlistSlotClosed
+      : cancelled
+        ? t.waitlistCancelled
+        : t.waitlistClosed;
+    return {
+      text: interpolateEscaped(template, {
+        title: typeof payload.title === "string" ? payload.title : "",
+        name: personName(payload) || t.sessionTrainer,
+        when: sessionTime(locale, payload.starts_at, timeZone),
+      }),
+      buttons: [{ text: t.bookAgain, path: "/client/book" }],
+    };
+  },
 };
 
 /** "18:30" in the recipient's zone. */

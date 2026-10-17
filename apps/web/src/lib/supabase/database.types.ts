@@ -3189,14 +3189,14 @@ isOneToOne: true
                   ]
                 },"waitlist_entries": {
                   Row: {
-                    "booking_id": string | null,"client_id": string,"coaching_id": string,"id": string,"joined_at": string,"offer_expires_at": string | null,"offered_at": string | null,"resolved_at": string | null,"session_id": string,"status": Database["public"]['Enums']["waitlist_status"],"trainer_id": string
+                    "booking_id": string | null,"client_id": string,"coaching_id": string,"id": string,"joined_at": string,"offer_expires_at": string | null,"offered_at": string | null,"resolved_at": string | null,"session_id": string | null,"slot_id": string | null,"status": Database["public"]['Enums']["waitlist_status"],"trainer_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "booking_id"?: string | null,"client_id": string,"coaching_id": string,"id"?: string,"joined_at"?: string,"offer_expires_at"?: string | null,"offered_at"?: string | null,"resolved_at"?: string | null,"session_id": string,"status"?: Database["public"]['Enums']["waitlist_status"],"trainer_id": string
+                    "booking_id"?: string | null,"client_id": string,"coaching_id": string,"id"?: string,"joined_at"?: string,"offer_expires_at"?: string | null,"offered_at"?: string | null,"resolved_at"?: string | null,"session_id"?: string | null,"slot_id"?: string | null,"status"?: Database["public"]['Enums']["waitlist_status"],"trainer_id": string
                   }
                   Update: {
-                    "booking_id"?: string | null,"client_id"?: string,"coaching_id"?: string,"id"?: string,"joined_at"?: string,"offer_expires_at"?: string | null,"offered_at"?: string | null,"resolved_at"?: string | null,"session_id"?: string,"status"?: Database["public"]['Enums']["waitlist_status"],"trainer_id"?: string
+                    "booking_id"?: string | null,"client_id"?: string,"coaching_id"?: string,"id"?: string,"joined_at"?: string,"offer_expires_at"?: string | null,"offered_at"?: string | null,"resolved_at"?: string | null,"session_id"?: string | null,"slot_id"?: string | null,"status"?: Database["public"]['Enums']["waitlist_status"],"trainer_id"?: string
                   }
                   Relationships: [
                     {
@@ -3240,6 +3240,12 @@ isOneToOne: false
       columns: ["session_id"]
 isOneToOne: false
       referencedRelation: "sessions"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "waitlist_entries_slot_id_fkey"
+      columns: ["slot_id"]
+isOneToOne: false
+      referencedRelation: "slots"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "waitlist_entries_trainer_id_fkey"
@@ -4083,6 +4089,11 @@ isOneToOne: false
 "join_challenge":
 { Args: { "p_alias"?: string,"p_challenge_id": string,"p_show_on_leaderboard"?: boolean }; Returns: undefined
                            },
+"join_slot_waitlist":
+{ Args: { "p_slot_id": string }; Returns: {
+              "entry_id": string,"place": number
+            }[]
+                           },
 "join_waitlist":
 { Args: { "p_session_id": string }; Returns: {
               "entry_id": string,"place": number
@@ -4452,6 +4463,11 @@ isOneToOne: false
 "waitlist_entry_view":
 { Args: { "p_entry_id": string }; Returns: {
               "booking_id": string,"confirmed": boolean,"ends_at": string,"entry_id": string,"inside_deadline": boolean,"location": string,"mode": Database["public"]['Enums']["session_mode"],"offer_expires_at": string,"pass_title": string,"place": number,"session_id": string,"sessions_left": number,"starts_at": string,"status": Database["public"]['Enums']["waitlist_status"],"title": string,"trainer_id": string
+            }[]
+                           },
+"waitlist_slots":
+{ Args: { "p_from": string,"p_trainer_id": string,"p_until": string }; Returns: {
+              "ends_at": string,"location_id": string,"mode": Database["public"]['Enums']["session_mode"],"my_entry_id": string,"slot_id": string,"starts_at": string,"waiting": number
             }[]
                            },
 "waive_charge":
