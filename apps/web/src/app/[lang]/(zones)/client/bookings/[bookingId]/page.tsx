@@ -20,6 +20,8 @@ import { bookingTone } from "@/lib/bookings/book";
 import { loadClientBooking } from "@/lib/bookings/load";
 import { isPairId } from "@/lib/pairs/clients";
 import { loadScheduleOwner } from "@/lib/schedule/load";
+import { trainerClock } from "@/lib/schedule/trainer-clock";
+import { loadTrainerZones } from "@/lib/schedule/trainer-zone";
 
 // A booking id is known only at request time, so the page renders on request.
 export const instant = false;
@@ -72,6 +74,8 @@ async function BookingDetails({
     minute: "2-digit",
     timeZone: owner.timeZone,
   });
+  const trainerZone = (await loadTrainerZones(owner.supabase, [booking.trainerId])).get(booking.trainerId);
+  const trainerTime = trainerClock(booking, owner.timeZone, trainerZone, intl);
   const at = now();
   const ahead = booking.startsAt > at;
   const live = booking.status === "confirmed" && ahead;
@@ -103,7 +107,12 @@ async function BookingDetails({
           icon={Clock}
           title={day.format(new Date(booking.startsAt))}
           subtitle={
-            <span className="tabular-nums">{`${time.format(new Date(booking.startsAt))}–${time.format(new Date(booking.endsAt))}`}</span>
+            <>
+              <span className="tabular-nums">{`${time.format(new Date(booking.startsAt))}–${time.format(new Date(booking.endsAt))}`}</span>
+              {trainerTime ? (
+                <span className="block tabular-nums">{interpolate(t.schedule.trainerTime, { time: trainerTime })}</span>
+              ) : null}
+            </>
           }
         />
         {booking.mode === "online" ? (
