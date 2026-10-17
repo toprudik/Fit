@@ -1,4 +1,4 @@
--- Joining refuses accounts that are being deleted (migration 20261017003700_join_refuses_deleting.sql):
+-- Joining refuses accounts that are being deleted (migration 20261017015200_join_refuses_deleting.sql):
 -- private.join_pair, behind join_by_invite, join_by_code and join_by_trial_link, says trainer_unavailable for a
 -- trainer and account_deleting for a caller with a pending deletion; a cancelled one no longer counts and a
 -- live pair still comes back as it is.
