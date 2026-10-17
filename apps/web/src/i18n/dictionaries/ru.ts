@@ -4360,6 +4360,15 @@ export const ru = {
     openFeedback: "Открыть обращение",
     feedbackReply: "Команда DaFit ответила на твоё обращение:\n{reply}",
     writeAgain: "Написать ещё",
+    breakGlass: "Администратор DaFit открыл себе доступ к твоим разделам: {categories}. Доступ закроется {until}.\nПричина: {reason}",
+    breakGlassCategories: {
+      nutrition: "питание",
+      measurements: "замеры",
+      photos: "фото прогресса",
+      steps: "шаги",
+      intake: "анкета",
+      workouts: "свои тренировки",
+    },
     /** П1–П3: plan granted, revoked and ending in three days (PRD §2.14-8, 9). */
     planGranted: "Тебе выдан тариф {plan} без срока. Спасибо, что ты в бете DaFit.",
     planGrantedUntil: "Тебе выдан тариф {plan} до {date}. Спасибо, что ты в бете DaFit.",

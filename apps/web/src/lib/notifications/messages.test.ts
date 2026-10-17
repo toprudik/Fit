@@ -217,6 +217,28 @@ describe("feedback reply (ADM-10)", () => {
   });
 });
 
+describe("break-glass access (ADM-14)", () => {
+  it("tells the user which sections an admin opened, until when and why", () => {
+    const message = renderMessage(
+      {
+        ...row,
+        kind: "break_glass",
+        payload: {
+          grant_id: "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b",
+          categories: ["measurements", "photos", "unknown"],
+          reason: "Support ticket <about> a lost weigh-in",
+          expires_at: "2026-11-20T15:30:00Z",
+        },
+      },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe(
+      "Администратор DaFit открыл себе доступ к твоим разделам: замеры, фото прогресса. Доступ закроется пт, 20 нояб., 18:30.\nПричина: Support ticket &lt;about&gt; a lost weigh-in",
+    );
+    expect(message?.buttons).toEqual([{ text: "Открыть DaFit", web_app: { url: "https://fit.example/?source=break_glass" } }]);
+  });
+});
+
 describe("intake messages", () => {
   const PAIR = "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b";
   const options = { appUrl: "https://fit.example", group: false };
