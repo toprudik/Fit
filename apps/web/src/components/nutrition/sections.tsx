@@ -9,6 +9,7 @@ import { NutritionCalculator } from "./calculator";
 import { TargetCard } from "./target-card";
 import { TargetChoice } from "./target-choice";
 import { TARGET_PATH } from "./paths";
+import { PairAdherence } from "./adherence";
 import { TrainerFoodDay } from "./trainer-food-day";
 import { ClearTargetButton, TrainerTargetForm } from "./trainer-target";
 
@@ -105,6 +106,7 @@ export async function TrainerNutrition({ coachingId, day }: { coachingId: string
       {nutrition.calculator ? (
         <TargetCard t={t} locale={locale} macros={nutrition.calculator} heading={copy.calculator} />
       ) : null}
+      <PairAdherence coachingId={coachingId} />
       <TrainerFoodDay coachingId={coachingId} day={day} />
     </div>
   );

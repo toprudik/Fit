@@ -1495,6 +1495,24 @@ export const en: Dictionary = {
       errors: { kcal: "A whole number from 500 to 10,000", grams: "A whole number of grams" },
     },
   },
+  /** Nutrition adherence (wave-2 §5): the trainer's «Питание» list and the card on the pair's tab. */
+  adherence: {
+    title: "Client nutrition",
+    moreText: "Who stays on target and who doesn't",
+    periodsLabel: "Period",
+    periods: { "7": "7 days", "30": "30 days", "90": "90 days" },
+    share: "{value}%",
+    noTarget: "No target",
+    noDays: "No entries",
+    filled: "Days logged: {logged} of {days}",
+    last: "last entry {date}",
+    never: "no diary yet",
+    trend: { up: "Better than the period before", down: "Worse than the period before", flat: "Same as the period before" },
+    rule: "A day is on target when calories are within 10% of the target. Today counts from tomorrow.",
+    emptyTitle: "Nobody to show yet",
+    emptyText: "Clients who share nutrition with you will show up here.",
+    card: { title: "On target", week: "Last 7 days", month: "Last 30 days" },
+  },
   /** Food diary (wave-2 §3; screens.md /client/diary/food, its add and own-foods screens, the trainer's «Питание» tab). */
   foodDiary: {
     title: "Food",
