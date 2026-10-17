@@ -1,4 +1,4 @@
--- Ending passes in the admin analytics of migration 20261017202024_admin_ending_passes.sql (plan §8.3): the
+-- Ending passes in the admin analytics of migration 20261017222540_admin_ending_passes.sql (plan §8.3): the
 -- trainers slice counts passes by the §7 rule, 2 sessions or fewer or 7 days or fewer, only for live pairs.
 begin;
 \ir _helpers.psql
