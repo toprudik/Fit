@@ -96,6 +96,8 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
     either("food_day_comments", "client_id", "author_id"),
   ]);
   const dishItems = await byIds(db, "food_dish_items", "dish_id", ids(ownFoods.filter((food) => food.kind === "dish")));
+  // Steps, water and sleep (wave-2 §4); the Shortcuts token is a secret and stays out.
+  const activity = await mine("activity_entries", "client_id");
 
   const [pairs, bookings, trainerSessions, passes, payments, ledger, moneyEvents] = await Promise.all([
     either("coachings", "client_id", "trainer_id"),
@@ -190,6 +192,7 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
     food_favorites: foodFavorites,
     food_diary: foodEntries,
     food_day_comments: foodComments,
+    activity,
     personal_records: records,
     workout_logs: logs,
     workout_log_exercises: logExercises,
