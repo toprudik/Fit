@@ -19,6 +19,8 @@ import {
   type PaymentStatus,
 } from "./present";
 import type { Debt } from "./debt";
+import { loadMoneyChanges } from "./money-changes";
+import type { MoneyChange } from "./money-changes-present";
 
 export type { Debt };
 
@@ -58,6 +60,8 @@ export type PassView = {
   deletable: boolean;
   freezes: Freeze[];
   history: HistoryEntry[];
+  /** Who changed the pass, its freezes and payments, and why (PRD wave-1 SCHED-22). */
+  changes: MoneyChange[];
 };
 
 export type PaymentView = {
@@ -162,6 +166,7 @@ async function passViews(
     ? await supabase.from("pass_freezes").select("id, pass_id, period, reason").in("pass_id", ids).order("period")
     : { data: [], error: null };
   if (freezes.error) fail("freezes", freezes.error);
+  const changes = await loadMoneyChanges(supabase, ids, timeZone);
 
   const balanceById = new Map((balances.data ?? []).map((row) => [row.pass_id, row]));
   const paymentViews = (payments.data ?? []).map(paymentView);
@@ -207,6 +212,7 @@ async function passViews(
           at: row.occurred_at,
           note: row.note,
         })),
+      changes: changes.filter((change) => change.passId === pass.id),
     };
   });
   return { passes: views, payments: paymentViews };
