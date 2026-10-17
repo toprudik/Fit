@@ -1,4 +1,4 @@
--- The trainer's name and showcase QR on a story card (migration 20261017164434_story_card_showcase.sql, PRD
+-- The trainer's name and showcase QR on a story card (migration 20261017191056_story_card_showcase.sql, PRD
 -- wave-3 §4 rule 7): on by default, the address only while the showcase is open, nothing with the switch off.
 begin;
 \ir _helpers.psql
