@@ -9,14 +9,17 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useI18n } from "@/i18n/client";
 import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
-import { checkIn, type CheckInResult } from "@/lib/check-in/actions";
+import { checkIn, checkInByPlace, type CheckInResult } from "@/lib/check-in/actions";
 import { hapticError, hapticSuccess } from "@/lib/telegram/mini-app";
 
 /**
- * /client/checkin/[sessionId] (PRD wave-3 §5): checks the client in by the code of the scanned QR as soon as the
- * screen opens. A check-in closes the Da-ring with the Da-moment; a stale code asks to scan again.
+ * /client/checkin/[sessionId] and /client/checkin?place= (PRD wave-3 §5): checks the client in by the scanned QR, a
+ * session's code or a location's printed token, as soon as the screen opens. A check-in closes the Da-ring with the
+ * Da-moment; a stale code asks to scan again.
  */
-export function CheckInRun({ sessionId, code, timeZone }: { sessionId: string; code: string; timeZone: string }) {
+export type CheckInTarget = { sessionId: string; code: string } | { place: string };
+
+export function CheckInRun({ target, timeZone }: { target: CheckInTarget; timeZone: string }) {
   const { t, locale } = useI18n();
   const copy = t.checkIn;
   const [result, setResult] = useState<CheckInResult | null>(null);
@@ -26,13 +29,13 @@ export function CheckInRun({ sessionId, code, timeZone }: { sessionId: string; c
   const run = useCallback(
     () =>
       startTransition(async () => {
-        const next = await checkIn(sessionId, code);
+        const next = "place" in target ? await checkInByPlace(target.place) : await checkIn(target.sessionId, target.code);
         setResult(next);
         // A check-in vibrates with the Da-ring; a request is a success too, everything else an error.
         if (next.status === "done" && next.outcome === "requested") hapticSuccess();
         else if (next.status === "error" || !["checked_in", "already"].includes(next.outcome)) hapticError();
       }),
-    [sessionId, code],
+    [target],
   );
 
   useEffect(() => {
@@ -73,7 +76,12 @@ export function CheckInRun({ sessionId, code, timeZone }: { sessionId: string; c
     return <EmptyState icon={Clock} title={copy.title} description={interpolate(copy.outcomes.too_early, { time })} action={back} />;
   }
 
-  const text = result.status === "done" ? copy.outcomes[result.outcome === "too_early" ? "closed" : result.outcome] : copy.outcomes.failed;
+  const text =
+    result.status === "error"
+      ? copy.outcomes.failed
+      : result.outcome === "no_booking" && "place" in target
+        ? copy.noBookingPlace
+        : copy.outcomes[result.outcome === "too_early" ? "closed" : result.outcome];
   return (
     <EmptyState
       icon={CircleAlert}
