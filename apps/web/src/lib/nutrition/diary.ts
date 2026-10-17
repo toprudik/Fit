@@ -64,6 +64,19 @@ export function amountOf(
   return { kcal: tenth((food.kcal100 * grams) / 100), proteinG: part(food.protein100), fatG: part(food.fat100), carbsG: part(food.carbs100) };
 }
 
+/** The meal "+ Еда" starts with when the diary did not name one: by the hour of the day. */
+export function mealAt(hour: number): Meal {
+  if (hour >= 5 && hour < 11) return "breakfast";
+  if (hour >= 11 && hour < 16) return "lunch";
+  if (hour >= 17 && hour < 22) return "dinner";
+  return "snack";
+}
+
+/** The hour (0–23) now in a time zone. */
+export function hourIn(timeZone: string, now: Date = new Date()): number {
+  return Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone }).format(now));
+}
+
 /** The day before or after a YYYY-MM-DD day. */
 export function shiftDay(day: string, by: number): string {
   const date = new Date(`${day}T00:00:00Z`);

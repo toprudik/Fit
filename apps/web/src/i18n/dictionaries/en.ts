@@ -1603,6 +1603,9 @@ export const en: Dictionary = {
       editProduct: "Food",
       archive: "Delete",
       archived: "Deleted. Past diary entries stay.",
+      notFound: "This food is not here",
+      notFoundText: "It may have been deleted. Check your list of foods.",
+      back: "My foods",
     },
     product: {
       text: "Calories and macros per 100 g, as on the label.",
@@ -3087,6 +3090,11 @@ export const en: Dictionary = {
         "The exercise library comes from the open wger.de database. Most exercises are licensed under CC-BY-SA 4.0, some under CC-BY-SA 3.0 and CC0. Each exercise card names its authors. We added the Russian names wger lacks, on the same terms.",
       wgerLink: "wger.de",
       licenseLink: "CC-BY-SA 4.0 license text",
+      offTitle: "Open Food Facts foods",
+      offText:
+        "Calories and macros of foods in the food diary come from the open Open Food Facts database. The database is available under the ODbL and photos under CC-BY-SA. We keep a copy of the foods people find so search runs faster.",
+      offLink: "Open Food Facts website",
+      odblLink: "ODbL license text",
     },
   },
   languages: {

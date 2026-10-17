@@ -1,7 +1,7 @@
 import "server-only";
 import { isDay, todayIn } from "@/lib/passes/present";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { MEALS, type DiaryEntry, type Meal } from "./diary";
+import { MEALS, hourIn, mealAt, type DiaryEntry, type Meal } from "./diary";
 import { toFood, type Food } from "./foods";
 import type { Macros, TargetSource } from "./target";
 
@@ -150,7 +150,7 @@ export async function loadPairFoodDay(coachingId: string, requestedDay?: string 
   return { state: "open", today, day, entries, target, comments, me };
 }
 
-export type FoodShelf = { recent: Food[]; favorites: Food[]; own: Food[]; favoriteIds: string[] };
+export type FoodShelf = { today: string; meal: Meal; recent: Food[]; favorites: Food[]; own: Food[]; favoriteIds: string[] };
 
 /** What "+ Еда" offers before a search (§3.7): recent foods, favorites and own products and dishes. */
 export async function loadFoodShelf(): Promise<FoodShelf | null> {
@@ -158,7 +158,8 @@ export async function loadFoodShelf(): Promise<FoodShelf | null> {
   const { data: session } = await supabase.auth.getClaims();
   const me = session?.claims.sub;
   if (!me) return null;
-  const [recentRows, favoriteRows, ownRows] = await Promise.all([
+  const [settings, recentRows, favoriteRows, ownRows] = await Promise.all([
+    supabase.from("user_settings").select("time_zone").eq("user_id", me).maybeSingle(),
     supabase
       .from("food_diary_entries")
       .select("food_id, logged_at")
@@ -182,7 +183,15 @@ export async function loadFoodShelf(): Promise<FoodShelf | null> {
     for (const row of data ?? []) foods.set(row.id, toFood(row));
   }
   const pick = (ids: string[]) => ids.map((id) => foods.get(id)).filter((food): food is Food => Boolean(food));
-  return { recent: pick(recentIds), favorites: pick(favoriteIds), own: (ownRows.data ?? []).map(toFood), favoriteIds };
+  const timeZone = settings.data?.time_zone ?? "Europe/Moscow";
+  return {
+    today: todayIn(timeZone),
+    meal: mealAt(hourIn(timeZone)),
+    recent: pick(recentIds),
+    favorites: pick(favoriteIds),
+    own: (ownRows.data ?? []).map(toFood),
+    favoriteIds,
+  };
 }
 
 /** One own food for editing; null when it is not the client's. */

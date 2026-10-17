@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { amountOf, byMeal, formatDiaryDay, parseAmount, shareOf, shiftDay, totalsOf } from "./diary";
+import { amountOf, byMeal, formatDiaryDay, hourIn, mealAt, parseAmount, shareOf, shiftDay, totalsOf } from "./diary";
 
 describe("totalsOf", () => {
   it("adds the entries of a day; quick kcal without macros counts 0 g", () => {
@@ -65,5 +65,17 @@ describe("formatDiaryDay", () => {
   it("drops the year inside the current one", () => {
     expect(formatDiaryDay("ru-RU", "2026-10-17", "2026-10-18")).toBe("17 октября");
     expect(formatDiaryDay("en-US", "2025-12-31", "2026-01-01")).toBe("December 31, 2025");
+  });
+});
+
+describe("mealAt and hourIn", () => {
+  it("picks the meal by the local hour", () => {
+    expect(mealAt(8)).toBe("breakfast");
+    expect(mealAt(13)).toBe("lunch");
+    expect(mealAt(16)).toBe("snack");
+    expect(mealAt(19)).toBe("dinner");
+    expect(mealAt(23)).toBe("snack");
+    expect(hourIn("Europe/Moscow", new Date("2026-10-17T05:30:00Z"))).toBe(8);
+    expect(hourIn("UTC", new Date("2026-10-17T00:10:00Z"))).toBe(0);
   });
 });
