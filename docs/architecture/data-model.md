@@ -1890,7 +1890,8 @@ alter table public.notification_outbox add column broadcast_id uuid references p
 create type public.waitlist_status as enum ('waiting', 'offered', 'accepted', 'declined', 'expired', 'left', 'closed');
 create table public.waitlist_entries (
   id               uuid primary key default gen_random_uuid(),
-  session_id       uuid not null references public.sessions(id) on delete cascade,
+  session_id       uuid references public.sessions(id) on delete cascade,   -- группа
+  slot_id          uuid references public.slots(id) on delete cascade,      -- или занятый персональный слот (20261017203517)
   coaching_id      uuid not null references public.coachings(id) on delete cascade,
   client_id        uuid not null references public.profiles(id) on delete cascade,
   status           public.waitlist_status not null default 'waiting',
@@ -1903,6 +1904,8 @@ create table public.waitlist_entries (
 create unique index on public.waitlist_entries (session_id, client_id) where status in ('waiting', 'offered');
 create index on public.waitlist_entries (session_id, joined_at) where status = 'waiting';
 create index on public.waitlist_entries (offer_expires_at) where status = 'offered';
+-- check (num_nonnulls(session_id, slot_id) = 1). Очередь слота: join_slot_waitlist, waitlist_slots; слот, снова
+-- ставший open, уходит первому в очереди, и предложение держит его (bookable_slot отказывает остальным).
 
 create table public.homework (
   id                  uuid primary key default gen_random_uuid(),
