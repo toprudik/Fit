@@ -180,7 +180,7 @@ function Notes({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: PairD
  * Client card of the trainer (screens.md "Карточка пары"): header with the name, "вместе с …" and
  * "Написать", the sections as tabs, then the open section. Not the trainer's pair → 404.
  */
-export async function TrainerPair({ coachingId, tab, action }: { coachingId: string; tab: PairTab; action?: string }) {
+export async function TrainerPair({ coachingId, tab, action, day }: { coachingId: string; tab: PairTab; action?: string; day?: string }) {
   const [t, locale, pair, money] = await Promise.all([
     getDictionary(),
     getLocale(),
@@ -242,7 +242,7 @@ export async function TrainerPair({ coachingId, tab, action }: { coachingId: str
         ) : tab === "progress" ? (
           <TrainerProgress coachingId={pair.coachingId} />
         ) : tab === "nutrition" ? (
-          <TrainerNutrition coachingId={pair.coachingId} />
+          <TrainerNutrition coachingId={pair.coachingId} day={day} />
         ) : tab === "notes" ? (
           <Notes t={t} locale={locale} pair={pair} />
         ) : tab === "intake" ? (

@@ -798,3 +798,39 @@ end $$;
 comment on function public.hide_food_comment(uuid, boolean) is 'The client hides (or shows again) a comment on their side (wave-2 §3.14).';
 revoke all on function public.hide_food_comment(uuid, boolean) from public, anon;
 grant execute on function public.hide_food_comment(uuid, boolean) to authenticated;
+
+-- =========================================================================================================
+-- The target of a diary day (§3.9)
+
+-- The target in force on a day of the client's diary. A trainer gets their own target or the calculator's, never
+-- another trainer's values (§2.8): then the row says only that another trainer's target is active.
+create function public.nutrition_target_on(p_client_id uuid, p_day date)
+returns table (source public.target_source, kcal integer, protein_g integer, fat_g integer, carbs_g integer, other_trainer boolean)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_user uuid := auth.uid();
+  v_target public.nutrition_targets;
+begin
+  if v_user is null or p_client_id is null or p_day is null or not private.can_view(p_client_id, 'nutrition') then
+    return;
+  end if;
+  select * into v_target from public.nutrition_targets t where t.id = private.active_nutrition_target(p_client_id, p_day);
+  if v_target.id is null then
+    return;
+  end if;
+  if v_user <> p_client_id and v_target.source = 'trainer'
+     and not exists (select 1 from public.coachings c where c.id = v_target.coaching_id and c.trainer_id = v_user) then
+    return query select v_target.source, null::integer, null::integer, null::integer, null::integer, true;
+    return;
+  end if;
+  return query select v_target.source, v_target.kcal::integer, v_target.protein_g::integer, v_target.fat_g::integer,
+                      v_target.carbs_g::integer, false;
+end $$;
+comment on function public.nutrition_target_on(uuid, date) is
+  'The target of a diary day for the client or a nutrition-sharing trainer; another trainer''s values stay hidden (wave-2 §2.8, §3.9).';
+revoke all on function public.nutrition_target_on(uuid, date) from public, anon;
+grant execute on function public.nutrition_target_on(uuid, date) to authenticated;

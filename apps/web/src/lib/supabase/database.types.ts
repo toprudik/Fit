@@ -3073,6 +3073,11 @@ isOneToOne: false
               "active_clients": number,"client_limit": number,"expires_at": string,"plan_code": string,"side": Database["public"]['Enums']["plan_side"]
             }[]
                            },
+"nutrition_target_on":
+{ Args: { "p_client_id": string,"p_day": string }; Returns: {
+              "carbs_g": number,"fat_g": number,"kcal": number,"other_trainer": boolean,"protein_g": number,"source": Database["public"]['Enums']["target_source"]
+            }[]
+                           },
 "pair_nutrition_state":
 { Args: { "p_coaching_id": string }; Returns: string
                            },

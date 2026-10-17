@@ -3,7 +3,7 @@
 -- trainer's comments on a day.
 begin;
 \ir _helpers.psql
-select plan(63);
+select plan(67);
 
 -- C trains with A; D trains with B; E is nobody's client.
 select tests.create_trainer('trainer_a');
@@ -183,6 +183,20 @@ select throws_ok(
   $$ select public.add_food_comment(tests.id('a_c'), current_date, 'Отлично') $$, '42501', null, 'nor comments');
 select tests.clear_authentication();
 select tests.set_share('trainer_a', 'client_c', 'nutrition', true);
+
+-- The target of a day (§3.9).
+insert into public.nutrition_targets (source, client_id, kcal, effective_from, set_by)
+values ('calculator', tests.user_id('client_c'), 2000, current_date - 3, tests.user_id('client_c'));
+select tests.authenticate_as('client_c');
+select is((select kcal from public.nutrition_target_on(auth.uid(), current_date)), 2000, 'the client gets the target of the day');
+select is((select count(*)::int from public.nutrition_target_on(auth.uid(), current_date - 10)), 0, 'and none before it');
+select tests.clear_authentication();
+select tests.authenticate_as('trainer_a');
+select is((select kcal from public.nutrition_target_on(tests.user_id('client_c'), current_date)), 2000, 'so does the trainer');
+select tests.clear_authentication();
+select tests.authenticate_as('trainer_b');
+select is((select count(*)::int from public.nutrition_target_on(tests.user_id('client_c'), current_date)), 0, 'another trainer gets nothing');
+select tests.clear_authentication();
 
 -- =========================================================================================================
 -- The trainer's comments (§3.11–3.14)
