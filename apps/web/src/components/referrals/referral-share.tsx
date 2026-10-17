@@ -7,8 +7,11 @@ import { toast } from "@/components/ui/sonner";
 import { useI18n } from "@/i18n/client";
 import { safely, useInTelegram } from "@/lib/telegram/mini-app";
 
-/** The client's referral link with "Поделиться" (Telegram's share sheet inside the Mini App) and "Скопировать". */
-export function ReferralShare({ link }: { link: string }) {
+/**
+ * A referral link with "Поделиться" (Telegram's share sheet inside the Mini App) and "Скопировать": the client's
+ * one by default, or a trainer's invitation for trainers with its own share text.
+ */
+export function ReferralShare({ link, shareText }: { link: string; shareText?: string }) {
   const { t } = useI18n();
   const copy = t.referrals.client;
   const inTelegram = useInTelegram();
@@ -24,9 +27,9 @@ export function ReferralShare({ link }: { link: string }) {
 
   function share() {
     if (inTelegram && safely(() => shareURL.isAvailable())) {
-      safely(() => shareURL(link, copy.shareText));
+      safely(() => shareURL(link, shareText ?? copy.shareText));
     } else if (typeof navigator.share === "function") {
-      navigator.share({ url: link, text: copy.shareText }).catch(() => undefined);
+      navigator.share({ url: link, text: shareText ?? copy.shareText }).catch(() => undefined);
     } else {
       void copyLink();
     }

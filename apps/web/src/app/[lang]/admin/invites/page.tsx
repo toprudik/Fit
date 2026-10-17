@@ -6,6 +6,7 @@ import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { CreateInviteForm } from "@/components/trainer-invites/create-invite-form";
 import { RevokeInviteButton } from "@/components/trainer-invites/revoke-invite-button";
+import { TrainerReferralBonusForm } from "@/components/trainer-referrals/bonus-form";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ListGroup } from "@/components/ui/list";
@@ -15,6 +16,7 @@ import type { Dictionary } from "@/i18n/dictionaries";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { loadTrainerReferralBonus } from "@/lib/trainer-referrals/load";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
@@ -118,6 +120,12 @@ async function InviteList() {
   );
 }
 
+/** The bonus a trainer gets for an invited trainer (PRD wave-3 §3.2-12); only admins reach this page. */
+async function ReferralBonus() {
+  const bonus = await loadTrainerReferralBonus();
+  return <TrainerReferralBonusForm bonus={bonus} />;
+}
+
 /**
  * Trainer invites for admins (screens.md §3.5, PRD wave-1 §4 ADM-1..3): create one with a note and a
  * validity, see its link, code and QR once, follow every invite's status, revoke an unused one.
@@ -139,6 +147,16 @@ export default async function AdminInvitesPage() {
         <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
           <InviteList />
         </Suspense>
+        <section aria-labelledby="trainer-referral-bonus" className="flex flex-col gap-3">
+          <h2 id="trainer-referral-bonus" className="px-4 text-footnote text-ink-2">
+            {t.trainerReferrals.admin.header}
+          </h2>
+          <div className="rounded-lg bg-surface-1 p-4">
+            <Suspense fallback={<SkeletonRows rows={2} label={t.common.loading} />}>
+              <ReferralBonus />
+            </Suspense>
+          </div>
+        </section>
       </div>
     </Screen>
   );
