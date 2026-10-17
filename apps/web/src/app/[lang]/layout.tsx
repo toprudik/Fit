@@ -8,8 +8,8 @@ import { TelegramProvider } from "@/components/telegram/telegram-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { onest, tekturNarrow } from "@/fonts";
-import { I18nProvider } from "@/i18n/client";
 import { isLocale, LOCALES } from "@/i18n/config";
+import { LocaleI18nProvider } from "@/i18n/providers";
 import { getDictionary } from "@/i18n/server";
 import { themeInitScript } from "@/lib/theme/init-script";
 import { ThemeSync } from "@/lib/theme/theme-sync";
@@ -53,7 +53,7 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
-        <I18nProvider locale={locale}>
+        <LocaleI18nProvider locale={locale}>
           <TelegramProvider>
             <TooltipProvider>{children}</TooltipProvider>
           </TelegramProvider>
@@ -65,7 +65,7 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
           <Suspense fallback={null}>
             <AccountLoader />
           </Suspense>
-        </I18nProvider>
+        </LocaleI18nProvider>
       </body>
     </html>
   );

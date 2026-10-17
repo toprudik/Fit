@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { CookingPot, Plus } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
-import { foodSubtitle } from "@/components/nutrition/add-food";
+import { foodSubtitle } from "@/components/nutrition/food-subtitle";
 import { ADD_FOOD_PATH, OWN_FOODS_PATH } from "@/components/nutrition/paths";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
