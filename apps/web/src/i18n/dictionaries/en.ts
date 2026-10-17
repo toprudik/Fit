@@ -1760,7 +1760,7 @@ export const en: Dictionary = {
       steps: "Steps",
       units: { kcal: "kcal", g: "g", ml: "ml", steps: "steps" },
       value: "{kcal} kcal",
-      macros: "P {protein}, F {fat}, C {carbs}",
+      macros: "Protein {protein} g, fat {fat} g, carbs {carbs} g",
       waterSteps: "Water {water} ml, steps {steps}",
       impact: "From today the target changes for this many clients: {count}",
       impactNone: "Right now the target changes nobody's daily target",

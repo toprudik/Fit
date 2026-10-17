@@ -74,7 +74,7 @@ function Template({ copy, locale, details }: { copy: Copy["template"]; locale: L
       <ListGroup header={copy.header} footer={copy.footer} headingLevel={2}>
         {template ? (
           <>
-            <ListRow title={interpolate(copy.value, { kcal: formatValue(locale, template.kcal) })} subtitle={interpolate(copy.macros, { protein: number(template.proteinG), fat: number(template.fatG), carbs: number(template.carbsG) })} />
+            <ListRow title={interpolate(copy.value, { kcal: formatValue(locale, template.kcal) })} subtitle={template.proteinG === null && template.fatG === null && template.carbsG === null ? undefined : interpolate(copy.macros, { protein: number(template.proteinG), fat: number(template.fatG), carbs: number(template.carbsG) })} />
             {template.waterMl !== null || template.steps !== null ? (
               <ListRow title={interpolate(copy.waterSteps, { water: number(template.waterMl), steps: number(template.steps) })} />
             ) : null}

@@ -1770,7 +1770,7 @@ export const ru = {
       steps: "Шаги",
       units: { kcal: "ккал", g: "г", ml: "мл", steps: "шагов" },
       value: "{kcal} ккал",
-      macros: "Б {protein}, Ж {fat}, У {carbs}",
+      macros: "Белки {protein} г, жиры {fat} г, углеводы {carbs} г",
       waterSteps: "Вода {water} мл, шаги {steps}",
       impact: "С сегодняшнего дня норма сменится у клиентов: {count}",
       impactNone: "Сейчас шаблон не меняет норму ни одному клиенту",
