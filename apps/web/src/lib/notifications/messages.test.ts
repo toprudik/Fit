@@ -861,3 +861,21 @@ describe("homework messages (Д1, Д2)", () => {
     });
   });
 });
+
+describe("badge messages (wave-3 §2.2-7)", () => {
+  const app = { appUrl: "https://fit.example", group: false };
+
+  it("names the new badge in the client's language and opens the badges", () => {
+    expect(renderMessage({ ...row, kind: "badge", payload: { badge: "sessions_10" } }, app)).toEqual({
+      text: "Новый значок: «10 занятий». 10 занятий с тренером.",
+      buttons: [{ text: "Открыть значки", web_app: { url: "https://fit.example/client/progress/badges?source=badge" } }],
+    });
+    expect(renderMessage({ ...row, locale: "en", kind: "badge", payload: { badge: "records_1" } }, app)?.text).toBe(
+      "New badge: “First record”. Your first personal record in an exercise.",
+    );
+  });
+
+  it("still congratulates on a badge it doesn't know", () => {
+    expect(renderMessage({ ...row, kind: "badge", payload: { badge: "unknown" } }, app)?.text).toBe("У тебя новый значок.");
+  });
+});

@@ -70,6 +70,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "client-photos", path: "/client/progress/photos", title: "Фото прогресса" },
   { slug: "client-photo-new", path: "/client/progress/photos/new", title: "Новое фото" },
   { slug: "client-compare", path: "/client/progress/compare", title: "До и после" },
+  { slug: "client-badges", path: "/client/progress/badges", title: "Серии и значки" },
   { slug: "client-nutrition-target", path: "/client/diary/food/target", title: "Цель и норма" },
   { slug: "client-food-diary", path: "/client/diary/food", title: "Питание" },
   { slug: "client-food-add", path: "/client/diary/food/add", title: "Добавить еду" },

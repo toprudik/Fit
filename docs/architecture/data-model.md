@@ -2035,36 +2035,35 @@ create index on public.delegation_clients (coaching_id);
 
 Подмена покрывает пары всех записей своего занятия; при принятии `sessions.conducted_by` = делегат.
 
-Геймификация:
+Геймификация (серии и значки: миграция `20261017093317_streaks_badges.sql`, волна 3 §2.1–2.2; челленджи ниже ещё не сделаны):
 
 ```sql
-create table public.badges (                      -- справочник (сидится миграцией)
-  code        text primary key,                  -- 'streak_4w', 'sessions_50', 'diary_30d'
-  title       jsonb not null,                    -- {'ru':…, 'en':…}
-  description jsonb not null,
-  icon        text not null,
-  criteria    jsonb not null                     -- описание правила для кода, не исполняется в БД
+create table public.badges (                      -- каталог, сидится миграцией; названия в словарях приложения
+  code      text primary key,                    -- 'sessions_10', 'workout_streak_4', 'diary_30', 'records_1', 'homework_10'
+  family    text not null,                       -- sessions | workout_streak | diary | records | homework | challenge
+  threshold integer not null,                    -- сколько нужно в своей семье
+  position  smallint not null unique
 );
 
-create table public.user_badges (
-  user_id     uuid references public.profiles(id) on delete cascade,
-  badge_code  text references public.badges(code),
-  coaching_id uuid references public.coachings(id) on delete set null,
-  awarded_at  timestamptz not null default now(),
+create table public.user_badges (                 -- пишет только private.award_badges
+  user_id    uuid references public.profiles(id) on delete cascade,
+  badge_code text references public.badges(code),
+  awarded_at timestamptz not null default now(),
+  seen_at    timestamptz,                         -- клиент увидел Да-момент
   primary key (user_id, badge_code)
 );
 
-create type public.streak_kind as enum ('weekly_sessions', 'food_diary', 'steps_goal', 'homework');
-create table public.streaks (                     -- поддерживает сервер/триггеры
-  user_id           uuid references public.profiles(id) on delete cascade,
-  kind              public.streak_kind,
-  current_count     integer not null default 0,
-  best_count        integer not null default 0,
-  last_period_start date,                         -- день или понедельник недели в поясе пользователя
-  updated_at        timestamptz not null default now(),
-  primary key (user_id, kind)
+create table public.workout_week_goals (           -- цель серии «Тренировки»; нет строки = 2 в неделю
+  client_id  uuid primary key references public.profiles(id) on delete cascade,
+  per_week   smallint not null check (per_week between 1 and 14),
+  set_by     uuid references public.profiles(id) on delete set null,
+  updated_at timestamptz not null default now()
 );
+```
 
+Серии не хранятся: `public.my_streaks()` и `public.pair_streaks(coaching)` (тренер живой пары; дневник только при доступе «питание», шаги при доступе «шаги») считают их на чтении из занятий, логов, дневника и шагов. «Тренировки»: недели пн–вс по дню клиента, неделя засчитана при `per_week` тренировок (отмеченные занятия + логи без занятия), неделя с отменой тренером или заморозкой абонемента пропускается, первый пропуск в календарном месяце прощает заморозка. «Дневник» и «Шаги» так же по дням (шаги: ручное значение дня, иначе iOS, против `steps_target` нормы дня, иначе 8000). Текущая неделя или день серию не обрывают, пока не закончились. Значки выдают триггеры на `bookings`, `workout_logs`, `food_diary_entries`, `personal_records`, `homework_occurrences` через `private.award_badges`, вместе с сообщением бота `badge`; значки занятий снимаются, когда отмеченных занятий стало меньше порога. «Дней дневника» считаются всего, не подряд (допущение).
+
+```sql
 create type public.challenge_metric as enum ('sessions', 'steps', 'food_diary_days', 'homework_done', 'nutrition_adherence');
 create type public.challenge_status as enum ('draft', 'active', 'finished', 'cancelled');
 create table public.challenges (
@@ -2551,7 +2550,7 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | **W3** `delegations` | owner; delegate; клиенты покрытых пар: факт и имя делегата | owner | owner (`revoked_at`, `scopes`); delegate: принять/отклонить через RPC | никто |
 | `delegation_clients` | owner; delegate | owner | никто | owner |
 | `badges` | все authenticated | никто (миграции) | никто | никто |
-| `user_badges`, `streaks` | сам; T/D активных пар | S | S | S |
+| `user_badges`, `workout_week_goals` | сам; T активных пар | S (`award_badges`); цель: `set_workout_week_goal` (сам или T пары) | S; `mark_badges_seen` (сам) | S |
 | `challenges` | T; участники | T | T | никто |
 | `challenge_participants` | T; сам; лидерборд: **pub-для-участников** `get_challenge_leaderboard` | C (вступить в челлендж своей группы); T | C: `show_on_leaderboard`; S: `score` | C (выйти); T |
 | `referral_codes` | через `client_referral` (сам) | S | никто | никто |
@@ -2614,7 +2613,7 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 |---|---|---|
 | `nutrition_daily_summaries` | каждые 15 мин закрывает дни клиентов, у которых в их поясе наступила полночь; + очередь пересчёта при правках | «норма того дня» должна фиксироваться; попадание за 7/30/90 дней = быстрый агрегат по готовым дням |
 | `churn_flags` | ночью (03:00 UTC) | правила с окнами 8 недель и «2 из 4 последних» дороги на каждом открытии; скрытие на 30 дней хранится в `coaching_trainer_meta.churn_hidden_until` (R9) |
-| `personal_records`, `streaks`, `challenge_participants.score`, `milestones` | триггеры / каждый час | кеши для лент и бейджей |
+| `personal_records`, `user_badges`, `challenge_participants.score`, `milestones` | триггеры / каждый час | кеши для лент и бейджей |
 
 Это обычные таблицы с RLS. Материализованные представления здесь не подходят: MV в Supabase не поддерживают RLS и в схеме `public` были бы доступны через API без ограничений.
 

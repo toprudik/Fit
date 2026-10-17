@@ -98,6 +98,8 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
   const dishItems = await byIds(db, "food_dish_items", "dish_id", ids(ownFoods.filter((food) => food.kind === "dish")));
   // Steps, water and sleep (wave-2 §4); the Shortcuts token is a secret and stays out.
   const activity = await mine("activity_entries", "client_id");
+  // Badges and the weekly workouts goal (wave-3 §2); streaks are worked out on read, so there is nothing to export.
+  const [badges, weekGoal] = await Promise.all([mine("user_badges", "user_id"), mine("workout_week_goals", "client_id")]);
 
   const [pairs, bookings, trainerSessions, passes, payments, ledger, moneyEvents] = await Promise.all([
     either("coachings", "client_id", "trainer_id"),
@@ -193,6 +195,8 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
     food_diary: foodEntries,
     food_day_comments: foodComments,
     activity,
+    badges,
+    workout_week_goal: weekGoal,
     personal_records: records,
     workout_logs: logs,
     workout_log_exercises: logExercises,
