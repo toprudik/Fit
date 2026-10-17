@@ -1,0 +1,32 @@
+name: Migration order
+
+# Each migration a PR adds must be newer than the latest one on main *now*, not on the PR's possibly stale base,
+# and timestamps must be unique: `supabase db push` in Database deploy skips older ones without an error.
+
+on:
+  pull_request:
+    paths: ["supabase/migrations/**"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migration-order-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migration-order:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Fetch the current base branch
+        env:
+          BASE: ${{ github.base_ref }}
+        run: git fetch --no-tags --depth=1 origin "+refs/heads/$BASE:refs/remotes/origin/$BASE"
+      - name: New migrations are later than every migration on the base branch
+        env:
+          BASE: ${{ github.base_ref }}
+        run: scripts/check-migration-order.sh "origin/$BASE"
