@@ -47,6 +47,8 @@ const SCREENS: readonly Screen[] = [
   { slug: "trainer-more", path: "/trainer/more", title: "Ещё" },
   { slug: "trainer-exercises", path: "/trainer/exercises", title: "Упражнения" },
   { slug: "trainer-new-exercise", path: "/trainer/exercises/new", title: "Своё упражнение" },
+  { slug: "trainer-templates", path: "/trainer/templates", title: "Шаблоны тренировок" },
+  { slug: "trainer-new-template", path: "/trainer/templates/new", title: "Новый шаблон" },
   { slug: "trainer-packages", path: "/trainer/money/packages", title: "Пакеты и цены" },
   { slug: "client-passes", path: "/client/passes", title: "Абонементы" },
   { slug: "client-home", path: "/client", title: "Главная" },
