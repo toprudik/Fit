@@ -14,6 +14,13 @@ describe("startParamPath", () => {
     expect(startParamPath("ci_Ab3_-Ab3_-Ab3_-Ab3_-Ab")).toBe("/i/Ab3_-Ab3_-Ab3_-Ab3_-Ab");
   });
 
+  it("opens the check-in for ck_<session>_<code>", () => {
+    expect(startParamPath("ck_0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f_aB3_-xY9zQ")).toBe(
+      "/client/checkin/0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f?c=aB3_-xY9zQ",
+    );
+    expect(startParamPath("ck_0b7c2f4e")).toBeNull();
+  });
+
   it("ignores a client link with a malformed token", () => {
     expect(startParamPath("ci_")).toBeNull();
     expect(startParamPath("ci_short")).toBeNull();

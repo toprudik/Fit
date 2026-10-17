@@ -82,6 +82,8 @@ begin
   v_booking := tests.create_booking(v_session, p_trainer, p_client);
   insert into public.booking_events (booking_id, from_status, to_status, actor_id, actor_role, reason)
   values (v_booking, null, 'confirmed', v_trainer, 'trainer', 'test');
+  insert into public.check_ins (booking_id, client_id, trainer_id, method, recorded_by)
+  values (v_booking, v_client, v_trainer, 'qr', v_client);
   insert into public.waitlist_entries (session_id, coaching_id, client_id, trainer_id)
   values (v_session, v_pair, v_client, v_trainer);
   insert into public.app_opens (user_id, source) values (v_client, 'session_reminder');
@@ -165,6 +167,7 @@ insert into tests.pair_tables values
   ('recurrences',           't.id::text',          't.coaching_id = %L'),
   ('bookings',              't.id::text',          't.coaching_id = %L'),
   ('booking_events',        't.id::text',          't.booking_id in (select b.id from public.bookings b where b.coaching_id = %L)'),
+  ('check_ins',             't.booking_id::text',  't.booking_id in (select b.id from public.bookings b where b.coaching_id = %L)'),
   ('passes',                't.id::text',          't.coaching_id = %L'),
   ('pass_freezes',          't.id::text',          't.pass_id in (select p.id from public.passes p where p.coaching_id = %L)'),
   ('ledger_entries',        't.id::text',          't.coaching_id = %L'),
@@ -194,7 +197,7 @@ grant select on tests.pair_tables, tests.pair_rows to authenticated;
 -- Accounting of an ended pair stays with both sides (§4.3); personal data of the client closes.
 create table tests.ended_accounting (tbl text primary key);
 insert into tests.ended_accounting values
-  ('bookings'), ('booking_events'), ('passes'), ('pass_freezes'), ('ledger_entries'), ('payments'), ('money_events'),
+  ('bookings'), ('booking_events'), ('check_ins'), ('passes'), ('pass_freezes'), ('ledger_entries'), ('payments'), ('money_events'),
   ('milestones');
 create table tests.personal_of_client (tbl text primary key, client_col text not null);
 insert into tests.personal_of_client values

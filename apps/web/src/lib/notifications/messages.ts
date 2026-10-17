@@ -379,10 +379,17 @@ const templates: Partial<Record<NotificationType, Template>> = {
     buttons: [{ text: t.openSession, path: idPath("/trainer/sessions", payload.session_id, "/trainer/schedule") }],
   }),
   // Т2: the same payload for a request, with trial = a trial request; the button opens it to confirm or decline (PRD 2.6.4, 2.3-5).
-  // A move that became a request carries rescheduled_from, the old start (PRD 2.6.5).
+  // A move that became a request carries rescheduled_from, the old start (PRD 2.6.5); on_site = asked at a QR
+  // check-in without a booking (PRD wave-3 §5 rule 6).
   booking_requested: ({ t, locale, timeZone, payload }) => ({
     text: interpolateEscaped(
-      payload.trial === true ? t.trialRequested : typeof payload.rescheduled_from === "string" ? t.rescheduleRequested : t.bookingRequested,
+      payload.trial === true
+        ? t.trialRequested
+        : typeof payload.rescheduled_from === "string"
+          ? t.rescheduleRequested
+          : payload.on_site === true
+            ? t.bookingRequestedOnSite
+            : t.bookingRequested,
       {
         name: personName(payload) || t.unnamedClient,
         when: sessionTime(locale, payload.starts_at, timeZone),
