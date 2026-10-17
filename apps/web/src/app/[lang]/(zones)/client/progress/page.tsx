@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { SkeletonRows } from "@/components/ui/skeleton";
+import { ClientGamificationEntry } from "@/components/gamification/sections";
 import { ClientNutritionEntry } from "@/components/nutrition/sections";
 import { ClientPhotos } from "@/components/progress/photo-sections";
 import { ClientMeasurements, ClientMilestones } from "@/components/progress/sections";
@@ -14,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.tabs.client.progress };
 }
 
-/** "Прогресс": measurements, the goal and nutrition target, the latest photos, milestones and the records from the workout logs. */
+/** "Прогресс": measurements, the goal and nutrition target, the latest photos, streaks and badges, milestones and the records from the workout logs. */
 export default async function ClientProgressPage() {
   const t = await getDictionary();
   return (
@@ -28,6 +29,9 @@ export default async function ClientProgressPage() {
         </Suspense>
         <Suspense fallback={<SkeletonRows rows={2} label={t.common.loading} />}>
           <ClientPhotos />
+        </Suspense>
+        <Suspense fallback={<SkeletonRows rows={2} label={t.common.loading} />}>
+          <ClientGamificationEntry />
         </Suspense>
         <Suspense fallback={null}>
           <ClientMilestones />

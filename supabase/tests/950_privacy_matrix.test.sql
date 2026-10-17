@@ -178,6 +178,7 @@ begin
   insert into public.activity_entries (client_id, local_date, metric, value)
   values (v_client, current_date, 'steps', 8000), (v_client, current_date, 'water', 250);
   insert into public.ingest_tokens (user_id, token_hash) values (v_client, extensions.digest(v_client::text, 'sha256'));
+  insert into public.workout_week_goals (client_id, per_week) values (v_client, 3);
 end $$;
 select tests.fill_client('client_c');
 select tests.fill_client('client_e');
@@ -267,7 +268,8 @@ insert into tests.personal_tables values
   ('measurements'), ('progress_photos'), ('intakes'), ('coaching_notes'), ('workout_logs'),
   ('workout_log_exercises'), ('workout_sets'), ('personal_records'), ('data_exports'), ('calendar_feeds'),
   ('client_goals'), ('body_profiles'), ('nutrition_targets'), ('food_diary_entries'), ('food_day_comments'),
-  ('food_dish_items'), ('food_favorites'), ('activity_entries'), ('ingest_tokens');
+  ('food_dish_items'), ('food_favorites'), ('activity_entries'), ('ingest_tokens'),
+  ('user_badges'), ('workout_week_goals');
 
 -- What the admin may read without break-glass (data-model §4.2); every other public table and view must give
 -- the admin 0 rows. exercises and foods are listed for the catalogs; own exercises and foods are checked separately.
@@ -275,7 +277,8 @@ create table tests.admin_readable (tbl text primary key);
 insert into tests.admin_readable values
   ('profiles'), ('public_profiles'), ('user_roles'), ('consents'), ('account_deletions'), ('trainer_profiles'),
   ('trainer_certificates'), ('trainer_verifications'), ('trainer_invites'), ('feedback'), ('reports'),
-  ('admin_audit_log'), ('break_glass_grants'), ('plan_grants'), ('access_requests'), ('plans'), ('exercises'), ('foods');
+  ('admin_audit_log'), ('break_glass_grants'), ('plan_grants'), ('access_requests'), ('plans'), ('exercises'), ('foods'),
+  ('badges');
 create table tests.admin_checked as
 select c.relname::text as tbl
 from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
