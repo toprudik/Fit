@@ -5,7 +5,7 @@ import { getDictionary, getLocale } from "@/i18n/server";
 import { interpolate } from "@/i18n/format";
 import { loadMyNutrition, loadPairNutrition } from "@/lib/nutrition/load";
 import { formatChange, formatValue } from "@/lib/progress/measurements";
-import { NutritionCalculator } from "./calculator";
+import { NutritionPlanner } from "./calculator";
 import { TargetCard } from "./target-card";
 import { TargetChoice } from "./target-choice";
 import { TARGET_PATH } from "./paths";
@@ -50,8 +50,10 @@ export async function ClientNutrition() {
         <EmptyState icon={Utensils} title={copy.target.none} description={copy.target.noneText} />
       )}
       {trainerTargets.length > 1 ? <TargetChoice targets={trainerTargets} /> : null}
-      <NutritionCalculator
-        initial={{ goal: nutrition.goal, ...nutrition.body }}
+      <NutritionPlanner
+        initialGoal={nutrition.goal}
+        activeSource={active?.source ?? null}
+        initial={nutrition.body}
         latestWeightKg={nutrition.latestWeightKg}
         today={nutrition.today}
         trainerName={active && active.source !== "calculator" ? active.trainerName : null}

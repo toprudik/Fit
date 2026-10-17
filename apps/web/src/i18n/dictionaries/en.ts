@@ -1474,6 +1474,13 @@ export const en: Dictionary = {
     goalLabel: "Goal",
     goals: { lose: "Lose weight", maintain: "Keep weight", gain: "Gain mass" },
     goalNone: "No goal yet",
+    goalPicker: {
+      text: "Your target is worked out for it. You can change it any time.",
+      saved: "Goal saved",
+      failed: "Couldn't save the goal. Please try again.",
+      recalculate: "Your goal changed. Work out the target again below, and the new one applies once you save it.",
+      trainerKeeps: "Your trainer {name} set the target, so it stays. They'll hear about the new goal.",
+    },
     target: {
       title: "Daily target",
       kcal: "{value} kcal",
@@ -1516,7 +1523,7 @@ export const en: Dictionary = {
       tooLow: "The formula gives less than {min} kcal a day. Eating that little without supervision is not a good idea, talk it over with your trainer or a doctor.",
       failed: "That didn't work, try again",
       errors: {
-        goal: "Pick a goal",
+        goal: "Pick a goal above first",
         sex: "Pick the sex for the formula",
         birthDate: "Enter your date of birth",
         height: "Enter your height as a number, for example 170",
