@@ -1,7 +1,7 @@
 import "server-only";
 import { displayName } from "@/lib/pairs/clients";
 import { PAID_PLAN, requestedPlans } from "@/lib/plans/plans";
-import { loadScheduleOwner } from "@/lib/schedule/load";
+import { clientNames, loadScheduleOwner } from "@/lib/schedule/load";
 import { today } from "@/lib/schedule/time";
 import { periodRange, previousPeriod, simulatorBase, type Period, type PeriodKind } from "./period";
 
@@ -60,6 +60,24 @@ async function churn(owner: Owner) {
   return data.map((row) => ({ ...row, name: displayName(row, row.client_alias) }));
 }
 
+/** «Прогресс» (§7): per client, how each measured kind moved over the period, weight first. */
+async function progress(owner: Owner, period: Period) {
+  const { data, error } = await owner.supabase.rpc("trainer_progress", { p_from: period.from, p_to: period.to });
+  if (error) fail("progress", error);
+  const names = await clientNames(owner.supabase, data.map((row) => row.coaching_id));
+  const byPair = new Map<string, { coachingId: string; name: string; changes: { kind: (typeof data)[number]["kind"]; first: number; last: number }[] }>();
+  for (const row of data) {
+    const entry = byPair.get(row.coaching_id) ?? { coachingId: row.coaching_id, name: names.get(row.coaching_id) ?? "", changes: [] };
+    entry.changes.push({ kind: row.kind, first: Number(row.first_value), last: Number(row.last_value) });
+    byPair.set(row.coaching_id, entry);
+  }
+  return [...byPair.values()]
+    .map((entry) => ({ ...entry, changes: entry.changes.sort((a, b) => Number(b.kind === "weight") - Number(a.kind === "weight")) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export type ClientProgress = Awaited<ReturnType<typeof progress>>[number];
+
 async function hints(owner: Owner) {
   const { data, error } = await owner.supabase.rpc("trainer_price_hints");
   if (error) fail("price hints", error);
@@ -79,11 +97,12 @@ export async function loadTrainerAnalytics(kind: PeriodKind, offset: number) {
   const base = { timeZone: owner.timeZone, access, period, previous, isCurrent: offset === 0 };
   if (!access.analytics) return { ...base, data: null };
 
-  const [current, before, endingPasses, atRisk, money] = await Promise.all([
+  const [current, before, endingPasses, atRisk, clientsProgress, money] = await Promise.all([
     summary(owner, period),
     summary(owner, previous),
     ending(owner),
     churn(owner),
+    progress(owner, period),
     access.finance
       ? Promise.all([finance(owner, period), finance(owner, previous), finance(owner, simulatorBase(day)), hints(owner)])
       : null,
@@ -95,6 +114,7 @@ export async function loadTrainerAnalytics(kind: PeriodKind, offset: number) {
       before,
       ending: endingPasses,
       churn: atRisk,
+      progress: clientsProgress,
       finance: money ? { current: money[0], before: money[1], base: money[2], hints: money[3] } : null,
     },
   };

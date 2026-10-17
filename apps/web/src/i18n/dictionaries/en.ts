@@ -2371,6 +2371,12 @@ export const en: Dictionary = {
       until: "until {date}",
       footer: "Passes with 2 sessions or fewer left, or a week or less until they expire.",
     },
+    progress: {
+      header: "Progress",
+      empty: "No repeat measurements this period from clients who share them",
+      change: "{kind} {value}",
+      footer: "The change from the first to the last measurement of the period. Only clients who share measurements.",
+    },
     nutrition: {
       header: "Nutrition",
       empty: "No client shares nutrition yet",

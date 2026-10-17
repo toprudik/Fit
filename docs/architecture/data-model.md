@@ -2621,6 +2621,8 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 
 Объём беты мал (цель wave-2: ≤ 1,5 с при 50 клиентах и 1000 записей), поэтому финансы и посещаемость считаются по запросу из журнала и записей с индексами `(trainer_id, occurred_at)` / `(trainer_id, paid_at)`. Функции выполняются с правами вызывающего, RLS ограничивает их своими парами.
 
+«Прогресс» в аналитике тренера (`trainer_progress(p_from, p_to)`, миграция `20261017232917_trainer_progress.sql`): по каждой живой паре, где клиент делится замерами, первый и последний замер каждого вида за период по локальным датам; вид с одним замером не отдаётся. Pro, как и остальная аналитика.
+
 - `trainer_attendance(p_from, p_to, p_bucket)`: проведено, неявки, отмены (бесплатные/со списанием/тренером), явка % = attended / (attended + no_show); корзины `date_trunc(p_bucket, starts_at at time zone tz)`.
 - `trainer_revenue(p_bucket 'week'|'month'|'quarter'|'year', p_from, p_to)` считает по каждой `currency`: **заработано** = Σ `amount_minor` строк `charge` (по покрытому берётся сумма `settlement`, см. 3.4) минус `waiver`, по `occurred_at` (дата занятия); **поступления** = Σ `payments` `confirmed` по `paid_at` (`refund` с минусом); **средняя цена занятия** = заработано / число непрощённых списаний; сравнение с предыдущим периодом.
 - `trainer_debts()`, `trainer_expiring_passes()` работают поверх `coaching_balances`/`pass_balances`.
