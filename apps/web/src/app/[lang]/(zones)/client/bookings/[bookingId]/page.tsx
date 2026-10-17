@@ -34,8 +34,14 @@ function now(): string {
   return new Date().toISOString();
 }
 
-async function BookingDetails({ params }: { params: PageProps<"/[lang]/client/bookings/[bookingId]">["params"] }) {
-  const [t, locale, { bookingId }] = await Promise.all([getDictionary(), getLocale(), params]);
+async function BookingDetails({
+  params,
+  searchParams,
+}: {
+  params: PageProps<"/[lang]/client/bookings/[bookingId]">["params"];
+  searchParams: PageProps<"/[lang]/client/bookings/[bookingId]">["searchParams"];
+}) {
+  const [t, locale, { bookingId }, query] = await Promise.all([getDictionary(), getLocale(), params, searchParams]);
   const copy = t.schedule.booking;
   const owner = await loadScheduleOwner();
   if (!owner) return <ScheduleSignIn title={copy.title} next={`/client/bookings/${bookingId}`} />;
@@ -143,7 +149,10 @@ async function BookingDetails({ params }: { params: PageProps<"/[lang]/client/bo
             </Link>
           </Button>
         ) : null}
-        {live ? <CancelBooking bookingId={booking.id} late={!free} deadline={deadlineText} /> : null}
+        {live ? (
+          // The bot's «Отменить» links here with ?action=cancel and opens the sheet at once.
+          <CancelBooking bookingId={booking.id} late={!free} deadline={deadlineText} defaultOpen={query.action === "cancel"} />
+        ) : null}
         {booking.trainerUsername ? (
           <Button asChild variant="secondary" block>
             <a href={`https://t.me/${booking.trainerUsername}`} target="_blank" rel="noreferrer">
@@ -167,7 +176,7 @@ export default async function BookingPage(props: PageProps<"/[lang]/client/booki
     <Screen header={<ScreenHeader title={t.schedule.booking.title} back={{ fallbackHref: "/client/sessions" }} />}>
       <div className="flex w-full max-w-2xl flex-col pt-4 md:pt-0">
         <Suspense fallback={<SkeletonRows rows={4} label={t.common.loading} />}>
-          <BookingDetails params={props.params} />
+          <BookingDetails params={props.params} searchParams={props.searchParams} />
         </Suspense>
       </div>
     </Screen>
