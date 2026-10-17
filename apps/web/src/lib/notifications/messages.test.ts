@@ -489,6 +489,8 @@ describe("plan messages", () => {
       });
       const trial = renderMessage({ ...row, kind: "booking_requested", payload: { ...client, ...base, trial: true } }, options);
       expect(trial?.text).toMatch(/^Запрос на пробное: Анна Смирнова, .*, Зал\. Подтверди или отклони его до начала занятия\.$/);
+      const onSite = renderMessage({ ...row, kind: "booking_requested", payload: { ...client, ...base, on_site: true } }, options);
+      expect(onSite?.text).toMatch(/^Запрос на место: Анна Смирнова на занятии .*, Зал, но без записи\. Подтверди или отклони его\.$/);
     });
 
     it("tells the trainer a request was withdrawn", () => {

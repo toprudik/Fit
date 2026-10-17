@@ -162,6 +162,11 @@ export function hapticSuccess() {
   if (ready) safely(() => hapticFeedback.notificationOccurred("success"));
 }
 
+/** Error feedback after an action that did not go through: a stale check-in code (PRD wave-3 §5 rule 8). */
+export function hapticError() {
+  if (ready) safely(() => hapticFeedback.notificationOccurred("error"));
+}
+
 /**
  * Opens an outside page, such as the trainer's payment link, in the browser instead of the Mini App (PRD 2.8-15).
  * Returns false outside Telegram or when the call fails, and the caller lets the link open by itself.

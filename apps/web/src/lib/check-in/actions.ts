@@ -1,0 +1,75 @@
+"use server";
+
+import { refresh } from "next/cache";
+import QRCode from "qrcode";
+import { serverEnv } from "@/env/server";
+import { personName } from "@/lib/client-links/link";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { checkInTelegram, isCheckInCode, isSessionId } from "./link";
+
+export type CheckInOutcome = "checked_in" | "already" | "requested" | "too_early" | "closed" | "expired" | "no_booking";
+
+export type CheckInResult =
+  | { status: "done"; outcome: CheckInOutcome; bookingId: string | null; opensAt: string | null }
+  | { status: "error" };
+
+const OUTCOMES: CheckInOutcome[] = ["checked_in", "already", "requested", "too_early", "closed", "expired", "no_booking"];
+
+/**
+ * The client's check-in by the trainer's QR (PRD wave-3 §5). The database checks the code, the window and the
+ * booking, marks the booking attended and charges it; a second scan changes nothing.
+ */
+export async function checkIn(sessionId: string, code: string): Promise<CheckInResult> {
+  if (!isSessionId(sessionId) || !isCheckInCode(code)) {
+    return { status: "done", outcome: "expired", bookingId: null, opensAt: null };
+  }
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("check_in_by_qr", { p_session_id: sessionId, p_code: code });
+  const row = data?.[0];
+  const outcome = OUTCOMES.find((known) => known === row?.outcome);
+  if (error || !row || !outcome) {
+    if (error) console.error("checking in failed", error.code);
+    return { status: "error" };
+  }
+  if (outcome === "checked_in" || outcome === "requested") refresh();
+  return { status: "done", outcome, bookingId: row.booking_id, opensAt: row.opens_at };
+}
+
+export type CheckInQr =
+  | {
+      status: "open";
+      /** Null until check-in opens, 30 minutes before the start. */
+      qrSvg: string | null;
+      refreshAt: string;
+      opensAt: string;
+      checkedIn: { bookingId: string; name: string }[];
+    }
+  | { status: "closed" }
+  | { status: "error" };
+
+/** The trainer's QR of a session (§5 rule 2a): the current code as an SVG and who has checked in. */
+export async function loadCheckInQr(sessionId: string): Promise<CheckInQr> {
+  if (!isSessionId(sessionId)) return { status: "error" };
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("session_check_in_qr", { p_session_id: sessionId });
+  if (error?.message === "check_in_closed") return { status: "closed" };
+  const row = data?.[0];
+  if (error || !row) {
+    if (error) console.error("loading the check-in QR failed", error.code);
+    return { status: "error" };
+  }
+  const link = row.code ? checkInTelegram(sessionId, row.code, serverEnv().TELEGRAM_BOT_USERNAME) : null;
+  // Dark modules on white whatever the theme: that is what scanners read best.
+  const qrSvg = link
+    ? await QRCode.toString(link, { type: "svg", margin: 2, errorCorrectionLevel: "M", color: { dark: "#000000", light: "#ffffff" } })
+    : null;
+  const checkedIn = Array.isArray(row.checked_in)
+    ? row.checked_in.flatMap((entry) => {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry) || typeof entry.booking_id !== "string") return [];
+        const first = typeof entry.first_name === "string" ? entry.first_name : null;
+        const last = typeof entry.last_name === "string" ? entry.last_name : null;
+        return [{ bookingId: entry.booking_id, name: personName(first, last) }];
+      })
+    : [];
+  return { status: "open", qrSvg, refreshAt: row.refresh_at, opensAt: row.opens_at, checkedIn };
+}
