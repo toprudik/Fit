@@ -5,7 +5,8 @@ import { z } from "zod";
 import { serverEnv } from "@/env/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { fileFeedbackIssue } from "./github";
-import { feedbackInput, MAX_SCREENSHOTS, screenshotPath, screenshotProblem, type FeedbackInput, type ScreenshotType } from "./input";
+import { MAX_SCREENSHOTS, screenshotPath, screenshotProblem, type FeedbackInput, type ScreenshotType } from "./input";
+import { feedbackInput } from "./schema";
 
 const prepareInput = z.array(z.object({ type: z.string(), size: z.number().int() })).max(MAX_SCREENSHOTS);
 
