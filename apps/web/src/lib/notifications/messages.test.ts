@@ -858,6 +858,23 @@ describe("referral bonus message", () => {
   });
 });
 
+describe("monthly report message (wave-3 §4)", () => {
+  const app = { appUrl: "https://fit.example", group: false };
+
+  it("names the month and opens its review", () => {
+    const message = renderMessage({ ...row, kind: "monthly_report", payload: { month: "2026-09-01" } }, app);
+    expect(message).toEqual({
+      text: "Готовы итоги за сентябрь 2026: занятия, рекорды и замеры. Там же можно сделать карточку для сторис.",
+      buttons: [{ text: "Открыть итоги", web_app: { url: "https://fit.example/client/progress/reports/2026-09?source=monthly_report" } }],
+    });
+  });
+
+  it("opens Progress when the month is broken", () => {
+    const message = renderMessage({ ...row, kind: "monthly_report", payload: { month: "2026-09-02" } }, app);
+    expect(message?.buttons).toEqual([{ text: "Открыть итоги", web_app: { url: "https://fit.example/client/progress?source=monthly_report" } }]);
+  });
+});
+
 describe("homework messages (Д1, Д2)", () => {
   const HOMEWORK = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
   const app = { appUrl: "https://fit.example", group: false };

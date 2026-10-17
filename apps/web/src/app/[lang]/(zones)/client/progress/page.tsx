@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { MonthlyReportEntry } from "@/components/monthly-report/entry";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { SkeletonRows } from "@/components/ui/skeleton";
@@ -15,12 +16,15 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.tabs.client.progress };
 }
 
-/** "Прогресс": measurements, the goal and nutrition target, the latest photos, streaks and badges, milestones and the records from the workout logs. */
+/** "Прогресс": last month's report, measurements, the goal and nutrition target, the latest photos, streaks and badges, milestones and the records from the workout logs. */
 export default async function ClientProgressPage() {
   const t = await getDictionary();
   return (
     <Screen header={<ScreenHeader title={t.tabs.client.progress} />}>
       <div className="flex w-full max-w-2xl flex-col gap-6 pt-4 md:pt-0">
+        <Suspense fallback={null}>
+          <MonthlyReportEntry />
+        </Suspense>
         <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
           <ClientMeasurements />
         </Suspense>

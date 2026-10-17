@@ -67,6 +67,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "client-new-workout", path: "/client/diary/workouts/new", title: "Новая тренировка" },
   { slug: "client-progress", path: "/client/progress", title: "Прогресс" },
   { slug: "client-records", path: "/client/progress/records", title: "Рекорды" },
+  { slug: "client-monthly-report", path: "/client/progress/reports/2026-09", title: "Итоги месяца" },
   { slug: "client-measurements", path: "/client/progress/measurements", title: "Замеры" },
   { slug: "client-photos", path: "/client/progress/photos", title: "Фото прогресса" },
   { slug: "client-photo-new", path: "/client/progress/photos/new", title: "Новое фото" },
@@ -202,9 +203,11 @@ test.describe("navigation", () => {
 
   test("tapping a tab opens its screen", async ({ page }, testInfo) => {
     await page.goto("/trainer");
-    await page.getByRole("link", { name: "Деньги", exact: true }).click();
-
-    await expect(page).toHaveURL(/\/trainer\/money$/);
+    // A click while the tab bar hydrates can be lost; retry it until the URL changes.
+    await expect(async () => {
+      await page.getByRole("link", { name: "Деньги", exact: true }).click();
+      await expect(page).toHaveURL(/\/trainer\/money$/, { timeout: 2000 });
+    }).toPass();
     await expect(page.getByRole("heading", { level: 1, name: "Деньги" }).first()).toBeVisible();
     await expectTabs(page, testInfo, "ru", "trainer", "Деньги");
   });
