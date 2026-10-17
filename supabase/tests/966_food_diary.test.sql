@@ -1,4 +1,4 @@
--- Food diary of migration 20261017040500_food_diary.sql (wave-2 §3, data-model §2.2): the catalog cache, own
+-- Food diary of migration 20261017081733_food_diary.sql (wave-2 §3, data-model §2.2): the catalog cache, own
 -- products, barcodes and dishes, entries with computed values, edits and copies, who reads the diary, and the
 -- trainer's comments on a day.
 begin;
