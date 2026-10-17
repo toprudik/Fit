@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Gem, KeyRound, LogOut, Settings, ShieldCheck, User } from "lucide-react";
+import { BadgeCheck, Gem, KeyRound, LogOut, MessageSquareText, Settings, ShieldCheck, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLayoutEffect, useRef, useState } from "react";
@@ -58,6 +58,17 @@ function AccountBlock({ onNavigate }: { onNavigate?: () => void }) {
       <p className="min-w-0 flex-1 text-title-3 break-words">{account.name}</p>
     </div>
   );
+}
+
+/**
+ * "Обратная связь" (PRD wave-1 §2.13-1) with the screen it was opened over. Rendered only once the account is
+ * known, which never happens on the server, so reading the browser's path is safe here.
+ */
+function FeedbackRow({ onNavigate }: { onNavigate?: () => void }) {
+  const { t } = useI18n();
+  const pathname = usePathname();
+  const href = pathname === "/feedback" ? "/feedback" : `/feedback?from=${encodeURIComponent(pathname)}`;
+  return <ListRow icon={MessageSquareText} title={t.profile.feedback} href={href} onClick={onNavigate} />;
 }
 
 type ProfilePanelProps = {
@@ -126,6 +137,7 @@ export function ProfilePanel({ onNavigate, groupSurface = "default" }: ProfilePa
         {account.status === "signed-in" && account.isTrainer ? (
           <ListRow icon={BadgeCheck} title={t.profile.verification} href="/trainer/verification" onClick={onNavigate} />
         ) : null}
+        {account.status === "signed-in" ? <FeedbackRow onNavigate={onNavigate} /> : null}
         {/* Only people without a trainer profile: nobody else sees a way to become a trainer (TINV-1). */}
         {account.status === "signed-in" && !account.isTrainer ? (
           <ListRow icon={KeyRound} title={t.profile.trainerInvite} href="/onboarding/trainer" onClick={onNavigate} />
