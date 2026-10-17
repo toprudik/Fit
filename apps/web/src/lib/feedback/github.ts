@@ -5,15 +5,21 @@ import { feedbackIssue } from "./issue";
 
 export type FileIssueResult = "filed" | "exists" | "disabled" | "failed";
 
+/** Where feedback issues go: only when both the token and the repository are set, never a default repository. */
+export function feedbackIssueTarget(): { token: string; repo: string } | null {
+  const { GITHUB_FEEDBACK_TOKEN: token, GITHUB_FEEDBACK_REPO: repo } = serverEnv();
+  return token && repo ? { token, repo } : null;
+}
+
 /**
  * Files the GitHub issue of one feedback message and stores its link (PRD FDBK-1, R49). Server code without a
  * user: it reads the row and writes github_issue_url with the secret key, since the author may not change that
- * column and the issue must exist even when nobody from the team is online. Does nothing without
- * GITHUB_FEEDBACK_TOKEN or when the message already has an issue.
+ * column and the issue must exist even when nobody from the team is online. Does nothing unless both
+ * GITHUB_FEEDBACK_TOKEN and GITHUB_FEEDBACK_REPO are set, or when the message already has an issue.
  */
 export async function fileFeedbackIssue(feedbackId: string): Promise<FileIssueResult> {
-  const env = serverEnv();
-  if (!env.GITHUB_FEEDBACK_TOKEN) return "disabled";
+  const target = feedbackIssueTarget();
+  if (!target) return "disabled";
   const admin = createSupabaseAdminClient();
   const { data: row, error } = await admin
     .from("feedback")
@@ -26,11 +32,11 @@ export async function fileFeedbackIssue(feedbackId: string): Promise<FileIssueRe
   }
   if (row.github_issue_url) return "exists";
 
-  const response = await fetch(`https://api.github.com/repos/${env.GITHUB_FEEDBACK_REPO}/issues`, {
+  const response = await fetch(`https://api.github.com/repos/${target.repo}/issues`, {
     method: "POST",
     headers: {
       Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${env.GITHUB_FEEDBACK_TOKEN}`,
+      Authorization: `Bearer ${target.token}`,
       "X-GitHub-Api-Version": "2022-11-28",
       "Content-Type": "application/json",
     },
