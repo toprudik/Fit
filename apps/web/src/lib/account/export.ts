@@ -116,6 +116,16 @@ export function checkInRows(rows: Row[], userId: string): Row[] {
   return rows.map(({ recorded_by, ...row }) => ({ ...row, recorded_by_me: recorded_by === userId }));
 }
 
+/** The reviews the user wrote (wave-2 §11) without the people's ids; the pair says whose trainer it was. */
+export function reviewRows(rows: Row[]): Row[] {
+  return rows.map((row) => {
+    const copy = { ...row };
+    delete copy.client_id;
+    delete copy.trainer_id;
+    return copy;
+  });
+}
+
 /** The user's tables, by file name. Secrets (calendar feed tokens) and delivery logs stay out. */
 export async function collectExport(admin: Admin, userId: string): Promise<Record<string, Row[]>> {
   const db = admin as unknown as Db;
@@ -257,6 +267,9 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
     mine("exercises", "owner_id"),
   ]);
 
+  // Reviews the user wrote as a client (wave-2 §11), with the trainer's reply; never the ones about them.
+  const reviews = reviewRows(await mine("reviews", "client_id"));
+
   const [sets, weekItems, templateItems, homeworkOccurrences, homeworkExercises] = await Promise.all([
     byIds(db, "workout_sets", "log_exercise_id", ids(logExercises)),
     byIds(db, "week_template_items", "template_id", ids(weekTemplates)),
@@ -306,6 +319,7 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
     workout_log_exercises: logExercises,
     workout_sets: sets,
     feedback,
+    reviews,
     contact_requests: contacts,
     pairs,
     people,
