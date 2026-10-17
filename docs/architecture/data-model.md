@@ -2037,7 +2037,7 @@ create index on public.delegation_clients (coaching_id);
 
 Как сделано (миграция `20261017090713_delegations.sql`): `delegate_trainer_id` пуст, пока приглашение не принято по одноразовой ссылке (`invite_hash`, sha256 токена); `scopes` никогда не содержат `passes` и `payments` (PRD волны 3 §1 правило 3), поэтому деньги видит только владелец, а чтение `ledger_entries` идёт по scope `passes`. Подмене выдаются `attendance` и `workouts` до конца занятия, анкета участников идёт через `can_view('intake')`. Помощник на всех клиентов (`all_clients`) проходит `acts_for_trainer` для строк тренера без пары (расписание). Выключатель клиента «доступ помощника к прогрессу» хранится в `assistant_progress_blocks (coaching_id)`. Действия делегата в `booking_events` помечаются `actor_role = 'delegate'` и `payload.on_behalf_of`.
 
-Геймификация (серии и значки: миграция `20261017093317_streaks_badges.sql`, волна 3 §2.1–2.2; челленджи ниже ещё не сделаны):
+Геймификация (серии и значки: миграция `20261017100917_streaks_badges.sql`, волна 3 §2.1–2.2; челленджи ниже ещё не сделаны):
 
 ```sql
 create table public.badges (                      -- каталог, сидится миграцией; названия в словарях приложения

@@ -1,6 +1,6 @@
 /**
  * Streaks and badges (PRD wave-3 §2.1–2.2). The database works the streaks out and awards the badges
- * (migration 20261017093317_streaks_badges.sql); this module only shapes them for the screens.
+ * (migration 20261017100917_streaks_badges.sql); this module only shapes them for the screens.
  */
 
 /** The badge catalogue in display order, as seeded in public.badges. */

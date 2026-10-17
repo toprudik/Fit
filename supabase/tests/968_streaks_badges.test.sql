@@ -1,4 +1,4 @@
--- Streaks and badges (migration 20261017093317_streaks_badges.sql, PRD wave-3 §2.1–2.2): the weekly workouts
+-- Streaks and badges (migration 20261017100917_streaks_badges.sql, PRD wave-3 §2.1–2.2): the weekly workouts
 -- streak with its excused weeks and monthly freeze, the daily diary and steps streaks, who sees them, and
 -- badges awarded once, announced by the bot and taken back when an attended session is unmarked (2.1–2.3, 2.7).
 begin;
