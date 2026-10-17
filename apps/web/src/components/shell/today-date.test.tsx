@@ -4,6 +4,7 @@ import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "@/i18n/client";
+import { dictionaries } from "@/i18n/dictionaries";
 import type { Locale } from "@/i18n/config";
 import { formatLongDate } from "@/i18n/format";
 import { renderWithProviders } from "@/test/render";
@@ -22,7 +23,7 @@ afterEach(() => {
 });
 
 const ui = (locale: Locale) => (
-  <I18nProvider locale={locale}>
+  <I18nProvider locale={locale} t={dictionaries[locale]}>
     <p>
       <TodayDate />
     </p>

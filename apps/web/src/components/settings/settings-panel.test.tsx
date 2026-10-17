@@ -4,6 +4,7 @@ import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "@/i18n/client";
+import { dictionaries } from "@/i18n/dictionaries";
 import { LOCALE_COOKIE } from "@/i18n/config";
 import { readCookie } from "@/lib/preferences";
 import { resetThemeStoreForTests } from "@/lib/theme/store";
@@ -125,7 +126,7 @@ describe("theme", () => {
   it("hydrates over the server's default without a mismatch, then shows the saved choice", async () => {
     mockSystem(false);
     const ui = (
-      <I18nProvider locale="ru">
+      <I18nProvider locale="ru" t={dictionaries.ru}>
         <SettingsPanel />
       </I18nProvider>
     );
