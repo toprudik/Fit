@@ -108,6 +108,11 @@ const templates: Partial<Record<NotificationType, Template>> = {
       ],
     };
   },
+  // К8: payload { coaching_id, charge_id, reason, starts_at, pass_id?, pass_title?, remaining, debt_sessions,
+  // first_name, last_name } from private.notify_charge, for a no-show or a late cancellation.
+  charge_posted: (context) => chargeMessage(context, "posted"),
+  // К9: the same payload for the waiver, with the reason and start of the forgiven charge.
+  charge_waived: (context) => chargeMessage(context, "waived"),
   // К7: payload { booking_id, starts_at, kind, title, mode, location_name, location_address, first_name, last_name,
   // offset_min } from private.sync_booking_reminders. The meeting link stays in DaFit (SCHED-21).
   session_reminder: ({ t, locale, timeZone, payload }) => {
@@ -408,6 +413,38 @@ function interpolateEscaped(template: string, values: Record<string, string | nu
     escapeHtml(template),
     Object.fromEntries(Object.entries(values).map(([key, value]) => [key, escapeHtml(String(value))])),
   );
+}
+
+/** К8 and К9: what happened to which session, and what is left on the pass or owed. */
+function chargeMessage({ t, locale, timeZone, payload }: TemplateContext, kind: "posted" | "waived") {
+  const passId = typeof payload.pass_id === "string" && isPairId(payload.pass_id) ? payload.pass_id : null;
+  const debtCount = Number(payload.debt_sessions ?? 0);
+  const values = {
+    name: personName(payload) || t.unnamedTrainer,
+    when: typeof payload.starts_at === "string" ? formatSessionTime(locale, payload.starts_at, timeZone ?? DEFAULT_TIME_ZONE) : "",
+    pass: typeof payload.pass_title === "string" ? payload.pass_title : "",
+    remaining: Number(payload.remaining ?? 0),
+    debt: plural(locale, debtCount, dictionaries[locale].pairs.debtSessions),
+  };
+  const late = payload.reason === "late_cancel";
+  const template =
+    kind === "waived"
+      ? passId
+        ? t.chargeWaived
+        : debtCount > 0
+          ? t.chargeWaivedDebt
+          : t.chargeWaivedNoDebt
+      : passId
+        ? late
+          ? t.chargeLateCancel
+          : t.chargeNoShow
+        : late
+          ? t.chargeLateCancelDebt
+          : t.chargeNoShowDebt;
+  return {
+    text: interpolateEscaped(template, values),
+    buttons: [{ text: t.openPass, path: passId ? `/client/passes/${passId}` : "/client/passes" }],
+  };
 }
 
 /** The person's name from the payload the RPC queued; empty when there is none. */

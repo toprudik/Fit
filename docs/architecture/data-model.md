@@ -2358,6 +2358,8 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
 
 Частичных списаний нет (Q21): `sessions_delta` у charge всегда −1.
 
+Сделано (миграция `20261017001300_charges`): все списания по записям идут через `private.post_charge(booking_id, reason)` (абонемент записи, правило выбора §3.4 или долг по цене разового; бесплатное пробное без строки), прощение через `private.waive_entry` (waiver и, если долг был погашен, `settlement_reversal`). Задача pg_cron `sessions-complete` каждые 5 минут завершает закончившиеся занятия, их подтверждённые записи становятся `attended` и списываются. Тренер: `mark_attendance(booking_id, status, reason)` (проведено, неявка, «Не состоялось» с причиной), `waive_charge(charge_id, reason)`, `record_past_session(...)` (дозапись проведённого), `adjust_pass(pass_id, delta, note)`. Клиенту уходят К8 (`charge_posted`, неявка и поздняя отмена) и К9 (`charge_waived`).
+
 ### 3.4. Выбор абонемента и погашение долга
 
 При `charge` функция `private.post_charge(booking_id, reason)` выбирает абонемент:
