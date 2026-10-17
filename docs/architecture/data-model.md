@@ -2564,7 +2564,8 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `waitlist_entries` | C (свои + позиция через RPC); T; D[schedule] | S-RPC `join_waitlist` | S-RPC (`leave`, `accept`, `decline`, офферы cron) | никто |
 | `homework`, `homework_exercises` | C; T; D[homework] | T через S-RPC `save_homework` (живая пара, не карточка); D[homework] (В3) | T: S-RPC `save_homework`, `archive_homework`; триггер архивирует при завершении пары | никто (архив) |
 | `homework_occurrences` | C; T; D[homework] | S (развёртка повтора в `save_homework`) | C: S-RPC `mark_homework_done` (`done_at`, `comment`, `workout_log_id` — только свой самостоятельный лог), `unmark_homework_done` (≤ 24 ч, лог остаётся) | S (`save_homework` раскладывает открытые сроки заново) |
-| `reviews` | автор; тренер; A (W4: публично только `published` и `publish_consent = true`, Q53) | C при `attended_count ≥ 3` (`with check`) | C: `rating`, `body`, `deleted_at`, `publish_consent`; T: `trainer_reply*`; A: `status`, `hidden_reason` через RPC | никто (soft) |
+| `reviews` | автор (кроме удалённого); тренер (кроме скрытого и удалённого); A (W4: публично только `published` и `publish_consent = true`, Q53) | S-RPC `save_review` для C при ≥ 3 проведённых занятиях в паре | S-RPC: C `save_review` (прежняя версия уходит в `review_revisions`), `delete_review` (soft); T `reply_to_review`, `dispute_review` (в `reports`); A `admin_decide_review_dispute` с аудитом | никто (soft) |
+| `review_revisions` | A | S (`save_review`) | никто | каскадом с отзывом |
 | `review_revisions` | A | S (триггер) | никто | никто |
 | `churn_flags` | T | S (cron) | S | S |
 | `product_events` | никто (только агрегаты A) | S | никто | S (retention) |
