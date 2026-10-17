@@ -3738,6 +3738,9 @@ isOneToOne: false
 "admin_grant_plan":
 { Args: { "p_expires_at"?: string,"p_plan_code": string,"p_reason": string,"p_user_id": string }; Returns: string
                            },
+"admin_open_break_glass":
+{ Args: { "p_categories": (Database["public"]['Enums']["share_category"])[],"p_minutes"?: number,"p_reason": string,"p_target_user": string }; Returns: string
+                           },
 "admin_overview":
 { Args: Record<PropertyKey, never>; Returns: {
               "active_invites": number,"active_pairs": number,"blocked_users": number,"trainers": number,"trainers_pending": number,"trainers_verified": number,"users": number

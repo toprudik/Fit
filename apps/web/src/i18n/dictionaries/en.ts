@@ -4448,6 +4448,15 @@ export const en: Dictionary = {
     openFeedback: "Open feedback",
     feedbackReply: "The DaFit team answered your feedback:\n{reply}",
     writeAgain: "Write again",
+    breakGlass: "A DaFit admin opened access to your {categories}. Access ends {until}.\nReason: {reason}",
+    breakGlassCategories: {
+      nutrition: "nutrition",
+      measurements: "measurements",
+      photos: "progress photos",
+      steps: "steps",
+      intake: "intake form",
+      workouts: "your own workouts",
+    },
     /** П1–П3: plan granted, revoked and ending in three days (PRD §2.14-8, 9). */
     planGranted: "You now have {plan} with no end date. Thanks for being in the DaFit beta.",
     planGrantedUntil: "You now have {plan} until {date}. Thanks for being in the DaFit beta.",

@@ -1547,7 +1547,7 @@ create index on public.break_glass_grants (target_user_id);
 -- Доступ открывается снова только новым грантом.
 ```
 
-Грант создаётся только через `admin_open_break_glass(target_user, categories, reason)`. Функция проверяет `is_admin()`, пишет `admin_audit_log` и ставит пользователю уведомление о факте доступа (новый тип `break_glass` в `notification_type`, см. Допущения, п. 26). Пока грант действует, `private.can_view()` возвращает `true` для этого админа и этих категорий.
+Грант создаётся только через `admin_open_break_glass(target_user, categories, reason, minutes = 60)` (миграция `20261017194837_break_glass_open.sql`): срок от 1 до 60 минут, причина не короче 20 символов после обрезки пробелов, не на свой аккаунт. Функция проверяет `is_admin()`, пишет `admin_audit_log` и ставит пользователю уведомление о факте доступа (новый тип `break_glass` в `notification_type`, см. Допущения, п. 26). Пока грант действует, `private.can_view()` возвращает `true` для этого админа и этих категорий.
 
 ---
 

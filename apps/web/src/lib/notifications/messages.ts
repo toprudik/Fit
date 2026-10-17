@@ -72,6 +72,21 @@ const templates: Partial<Record<NotificationType, Template>> = {
     text: interpolateEscaped(t.feedbackReply, { reply: String(payload.reply ?? "") }),
     buttons: [{ text: t.writeAgain, path: "/feedback" }],
   }),
+  // ADM-14 to the user: payload { grant_id, categories, reason, expires_at } from admin_open_break_glass.
+  break_glass: ({ t, locale, timeZone, payload }) => {
+    const names = t.breakGlassCategories;
+    const categories = (Array.isArray(payload.categories) ? payload.categories : [])
+      .map((category) => names[category as keyof typeof names])
+      .filter(Boolean);
+    return {
+      text: interpolateEscaped(t.breakGlass, {
+        categories: categories.join(", "),
+        until: typeof payload.expires_at === "string" ? formatSessionTime(locale, payload.expires_at, timeZone ?? DEFAULT_TIME_ZONE) : "",
+        reason: String(payload.reason ?? ""),
+      }),
+      buttons: [{ text: t.open, path: "/" }],
+    };
+  },
   // Т7 and Т7a: payload { coaching_id, claim_id?, first_name, last_name } from the join RPCs.
   coaching_created: ({ t, payload }) => ({
     text: interpolateEscaped(t.newClient, { name: personName(payload) || t.unnamedClient }),
