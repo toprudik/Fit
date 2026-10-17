@@ -34,6 +34,28 @@ export async function cancelBooking(raw: { bookingId: string; reason: string; la
   return { status: "done", late: data === "late_cancelled" };
 }
 
+/** What a late cancellation would take: a session of a pass, debt at the drop-in price, or nothing (a free trial). */
+export type CancelCharge =
+  | { kind: "pass"; passTitle: string; sessionsLeft: number }
+  | { kind: "debt"; amountMinor: number; currency: string }
+  | { kind: "free" };
+
+/** The late-cancel sheet names the charge before the client agrees (screens.md §4.3); null when unknown. */
+export async function previewCancel(bookingId: string): Promise<CancelCharge | null> {
+  if (!id.safeParse(bookingId).success) return null;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("cancel_preview", { p_booking_id: bookingId });
+  const row = data?.[0];
+  if (error || !row) {
+    if (error) console.error("previewing a cancellation failed", error.code);
+    return null;
+  }
+  if (!row.charged) return { kind: "free" };
+  if (row.pass_title) return { kind: "pass", passTitle: row.pass_title, sessionsLeft: Math.max(row.sessions_left ?? 0, 0) };
+  if (row.debt_minor && row.currency) return { kind: "debt", amountMinor: row.debt_minor, currency: row.currency };
+  return null;
+}
+
 /** Errors of a move, in the words of the booking picker: a closed deadline reads as "too late". */
 function moveError(error: { message: string; code: string }, what: string) {
   if (error.message === "slot_unavailable") return "slot_unavailable" as const;

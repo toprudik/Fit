@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { DaRing } from "@/components/brand/da-ring";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { ListGroup } from "@/components/ui/list";
@@ -17,13 +18,15 @@ const MARKS: AttendanceMark[] = ["attended", "no_show", "cancelled"];
 
 /**
  * "Отметить посещение" on /trainer/sessions/[sessionId] after the start (PRD 2.6.6): one row per booked client with
- * Был / Не пришёл / Не состоялось. The last one asks for a reason the client will see.
+ * Был / Не пришёл / Не состоялось. The last one asks for a reason the client will see. «Был» closes the Da-ring, and
+ * the trainer's own tap plays the Da-moment (docs/design/brand.md).
  */
 export function AttendanceMarks({ clients }: { clients: Client[] }) {
   const { t } = useI18n();
   const copy = t.attendance;
   const [marks, setMarks] = useState(() => new Map(clients.map((client) => [client.bookingId, client.status])));
   const [busy, setBusy] = useState<string | null>(null);
+  const [justAttended, setJustAttended] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<Client | null>(null);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +39,7 @@ export function AttendanceMarks({ clients }: { clients: Client[] }) {
       setBusy(null);
       if (result.status === "done") {
         setMarks((current) => new Map(current).set(client.bookingId, mark));
+        setJustAttended(mark === "attended" ? client.bookingId : null);
         setCancelling(null);
         setReason("");
         setError(null);
@@ -66,7 +70,17 @@ export function AttendanceMarks({ clients }: { clients: Client[] }) {
       <ListGroup header={copy.title} footer={copy.hint}>
         {clients.map((client) => (
           <div key={client.bookingId} className="flex flex-col gap-2 px-4 py-3">
-            <span className="text-body">{client.name}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-body">{client.name}</span>
+              {marks.get(client.bookingId) === "attended" ? (
+                <DaRing
+                  key={justAttended === client.bookingId ? "new" : "seen"}
+                  state="done"
+                  size={24}
+                  animate={justAttended === client.bookingId}
+                />
+              ) : null}
+            </div>
             <div role="group" aria-label={interpolate(copy.group, { name: client.name })} className="flex flex-wrap gap-2">
               {MARKS.map((mark) => (
                 <Chip

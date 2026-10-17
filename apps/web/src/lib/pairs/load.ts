@@ -2,7 +2,7 @@ import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PAID_PLAN, requestedPlans } from "@/lib/plans/plans";
 import type { Json } from "@/lib/supabase/database.types";
-import { displayName, isLive, isPairId, passIsEnding, type ClientItem, type CoachingStatus } from "./clients";
+import { DELETED_CLIENT_ID, displayName, isLive, isPairId, passIsEnding, type ClientItem, type CoachingStatus } from "./clients";
 import { todayMilestones, type Milestone, type TodayMilestones } from "./milestones";
 
 const DEFAULT_TIME_ZONE = "Europe/Moscow";
@@ -102,6 +102,7 @@ export async function loadTrainerClients(): Promise<{ items: ClientItem[]; timeZ
       passEnding: passIsEnding(pairPasses, now),
       parqFlagged: pair.status !== "ended" && (latestIntake.get(pair.client_id) ?? false),
       deleting: pair.status !== "ended" && deleting.has(pair.client_id),
+      deleted: pair.client_id === DELETED_CLIENT_ID,
     };
   });
   return { items, timeZone: me.timeZone };
@@ -160,7 +161,8 @@ export type PairDetail = {
   /** Set when the pair ended for the plan limit (К12, Q65), not for a reason someone typed. */
   endedForLimit: boolean;
   timeZone: string;
-  partner: { name: string; photoUrl: string | null; username: string | null; isCard: boolean };
+  /** `deleted`: the client's account is gone and the pair points to the «Удалённый клиент» stub. */
+  partner: { name: string; photoUrl: string | null; username: string | null; isCard: boolean; deleted: boolean };
   /** When the viewer last asked the partner to get in touch ("Попросить связаться"), or null. */
   contactRequestedAt: string | null;
   /** When the partner's pending account deletion takes effect (R10), or null. */
@@ -245,6 +247,7 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
       photoUrl: person.data?.photo_url ?? null,
       username: person.data?.username ?? null,
       isCard: Boolean(person.data?.managed_by_trainer_id),
+      deleted: partnerId === DELETED_CLIENT_ID,
     },
     contactRequestedAt: contact.data?.created_at ?? null,
     partnerDeletingOn: deletion.data?.scheduled_for ?? null,

@@ -2636,6 +2636,11 @@ isOneToOne: false
 "cancel_pass":
 { Args: { "p_pass_id": string,"p_reason": string }; Returns: undefined
                            },
+"cancel_preview":
+{ Args: { "p_booking_id": string }; Returns: {
+              "charged": boolean,"currency": string,"debt_minor": number,"late": boolean,"pass_title": string,"sessions_left": number
+            }[]
+                           },
 "cancel_session":
 { Args: { "p_following"?: boolean,"p_reason": string,"p_session_id": string }; Returns: number
                            },

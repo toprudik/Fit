@@ -28,6 +28,12 @@ export const CARD_CONTACT_MAX_LENGTH = 200;
 export const PASS_ENDING_SESSIONS = 1;
 export const PASS_ENDING_DAYS = 7;
 
+/**
+ * The stub profile that a deleted client's pairs point to after anonymization (private.deleted_client_id(),
+ * data-model §1.6). It has no name; the trainer sees it as «Удалённый клиент».
+ */
+export const DELETED_CLIENT_ID = "00000000-0000-0000-0000-00000000dead";
+
 /** One row of the client list, built from the pair, its trainer-only meta, balances, stats and passes. */
 export type ClientItem = {
   coachingId: string;
@@ -48,6 +54,8 @@ export type ClientItem = {
   parqFlagged: boolean;
   /** The client asked to delete their account and can still cancel (R10). */
   deleting: boolean;
+  /** The client's account is gone and the pair points to the «Удалённый клиент» stub. */
+  deleted: boolean;
 };
 
 /** A live pair: trial or active. An ended one keeps its history and sits in the archive filter. */

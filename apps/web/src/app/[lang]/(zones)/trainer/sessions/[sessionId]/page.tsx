@@ -3,6 +3,7 @@ import { CalendarX, Clock, Link2, MapPin, Repeat, User, Users } from "lucide-rea
 import Link from "next/link";
 import { Suspense } from "react";
 import { AttendanceMarks } from "@/components/passes/attendance-marks";
+import { SessionWaivers } from "@/components/passes/session-waivers";
 import { CancelSession } from "@/components/schedule/cancel-session";
 import { GroupControls } from "@/components/schedule/group-controls";
 import { ScheduleSignIn } from "@/components/schedule/sign-in-state";
@@ -18,6 +19,7 @@ import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { isPairId } from "@/lib/pairs/clients";
+import { loadBookingCharges } from "@/lib/passes/session-charges";
 import { loadScheduleOwner, loadSession, loadSessionFormData, loadSessionWaitlist } from "@/lib/schedule/load";
 
 // A session id is known only at request time, so the page renders on request.
@@ -36,8 +38,14 @@ function now(): string {
   return new Date().toISOString();
 }
 
-async function SessionDetails({ params }: { params: PageProps<"/[lang]/trainer/sessions/[sessionId]">["params"] }) {
-  const [t, locale, { sessionId }] = await Promise.all([getDictionary(), getLocale(), params]);
+async function SessionDetails({
+  params,
+  searchParams,
+}: {
+  params: PageProps<"/[lang]/trainer/sessions/[sessionId]">["params"];
+  searchParams: PageProps<"/[lang]/trainer/sessions/[sessionId]">["searchParams"];
+}) {
+  const [t, locale, { sessionId }, query] = await Promise.all([getDictionary(), getLocale(), params, searchParams]);
   const copy = t.schedule.sessionPage;
   const owner = await loadScheduleOwner();
   if (!owner) return <ScheduleSignIn title={copy.title} next={`/trainer/sessions/${sessionId}`} />;
@@ -58,6 +66,12 @@ async function SessionDetails({ params }: { params: PageProps<"/[lang]/trainer/s
     );
   }
 
+  const charged = ["attended", "no_show", "late_cancelled"];
+  const charges = await loadBookingCharges(
+    owner,
+    session.clients.filter((client) => charged.includes(client.status)).map((client) => client.bookingId),
+  );
+  const waiveBooking = query.action === "waive" && typeof query.booking === "string" ? query.booking : null;
   const intl = INTL_LOCALE[locale];
   const day = new Intl.DateTimeFormat(intl, { weekday: "long", day: "numeric", month: "long", timeZone: owner.timeZone });
   const time = new Intl.DateTimeFormat(intl, { hour: "2-digit", minute: "2-digit", timeZone: owner.timeZone });
@@ -173,6 +187,14 @@ async function SessionDetails({ params }: { params: PageProps<"/[lang]/trainer/s
         <AttendanceMarks clients={session.clients.filter((client) => ["confirmed", "attended", "no_show"].includes(client.status))} />
       ) : null}
 
+      <SessionWaivers
+        openBookingId={waiveBooking}
+        clients={charges.flatMap((charge) => {
+          const client = session.clients.find((candidate) => candidate.bookingId === charge.bookingId);
+          return client ? [{ ...charge, name: client.name, status: client.status }] : [];
+        })}
+      />
+
       {session.status === "cancelled" && session.cancelReason ? (
         <ListGroup header={copy.cancelReason}>
           <ListRow title={session.cancelReason} />
@@ -208,7 +230,7 @@ export default async function SessionPage(props: PageProps<"/[lang]/trainer/sess
     <Screen header={<ScreenHeader title={t.schedule.sessionPage.title} back={{ fallbackHref: "/trainer/schedule" }} />}>
       <div className="flex w-full max-w-2xl flex-col pt-4 md:pt-0">
         <Suspense fallback={<SkeletonRows rows={4} label={t.common.loading} />}>
-          <SessionDetails params={props.params} />
+          <SessionDetails params={props.params} searchParams={props.searchParams} />
         </Suspense>
       </div>
     </Screen>

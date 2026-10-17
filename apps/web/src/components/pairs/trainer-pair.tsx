@@ -118,7 +118,8 @@ function Overview({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: Pa
 
       <PairMilestones t={t} locale={locale} pair={pair} />
 
-      {pair.partner.isCard ? null : <TrainerIntakeRow coachingId={pair.coachingId} />}
+      {/* A card has no account to fill in an intake, and a deleted client's intake is gone. */}
+      {pair.partner.isCard || pair.partner.deleted ? null : <TrainerIntakeRow coachingId={pair.coachingId} />}
 
       {latest ? (
         <section aria-labelledby="latest-note" className="flex flex-col gap-1.5">
@@ -188,7 +189,7 @@ export async function TrainerPair({ coachingId, tab, action }: { coachingId: str
   ]);
   if (!pair) notFound();
   const base = `/trainer/clients/${pair.coachingId}`;
-  const name = pair.partner.name || t.botMessages.unnamedClient;
+  const name = pair.partner.deleted ? t.pairs.deletedClient : pair.partner.name || t.botMessages.unnamedClient;
 
   return (
     <Screen
@@ -230,8 +231,8 @@ export async function TrainerPair({ coachingId, tab, action }: { coachingId: str
             { href: `${base}/passes`, label: t.pairs.tabs.passes, current: tab === "passes" },
             { href: `${base}/payments`, label: t.pairs.tabs.payments, current: tab === "payments" },
             { href: `${base}/notes`, label: t.pairs.tabs.notes, current: tab === "notes" },
-            // A card has no account to fill in an intake.
-            ...(pair.partner.isCard ? [] : [{ href: `${base}/intake`, label: t.intake.trainer.title, current: tab === "intake" }]),
+            // A card has no account to fill in an intake, and a deleted client's intake is gone.
+            ...(pair.partner.isCard || pair.partner.deleted ? [] : [{ href: `${base}/intake`, label: t.intake.trainer.title, current: tab === "intake" }]),
           ]}
         />
         {tab === "overview" ? (
