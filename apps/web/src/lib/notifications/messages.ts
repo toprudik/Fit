@@ -5,6 +5,7 @@ import { formatMoney } from "@/lib/money/format";
 import { isPairId } from "@/lib/pairs/clients";
 import { formatSessionTime } from "@/lib/pairs/format";
 import { DEFAULT_TIME_ZONE, formatPlanDate, isPlanCode } from "@/lib/plans/plans";
+import { isButtonUrl } from "@/lib/groups/rules";
 import { formatOffset } from "@/lib/reminders/offsets";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import type { InlineButton } from "./telegram";
@@ -19,8 +20,12 @@ type TemplateContext = {
   payload: Record<string, Json | undefined>;
 };
 
-/** A button opens an app route; the dispatcher turns it into a Mini App or a link button. */
-type Template = (context: TemplateContext) => { text: string; buttons: { text: string; path: string }[] };
+/**
+ * A button opens an app route (path), which the dispatcher turns into a Mini App or a link button, or an outside
+ * https address (href) the trainer put in a broadcast.
+ */
+type TemplateButton = { text: string; path: string } | { text: string; href: string };
+type Template = (context: TemplateContext) => { text: string; buttons: TemplateButton[] };
 
 /**
  * One template per notification type (PRD §3). A type gets its template together with the feature that queues
@@ -353,6 +358,20 @@ const templates: Partial<Record<NotificationType, Template>> = {
       buttons: [{ text: t.openNutrition, path: pair === "/trainer/clients" ? pair : `${pair}/nutrition` }],
     };
   },
+  // Wave-2 §6.9: payload { broadcast_id, coaching_id, trainer_name, body, button_kind, button_url } from
+  // send_broadcast. The trainer's text goes out as typed, escaped; a link button takes https only.
+  trainer_broadcast: ({ t, payload }) => {
+    const name = String(payload.trainer_name ?? "").trim();
+    const heading = `<b>${interpolateEscaped(t.broadcastFrom, { name: name || t.unnamedTrainer })}</b>`;
+    const url = typeof payload.button_url === "string" && isButtonUrl(payload.button_url) ? payload.button_url : null;
+    const buttons: TemplateButton[] =
+      payload.button_kind === "deep_link"
+        ? [{ text: t.open, path: "/client" }]
+        : payload.button_kind === "url" && url
+          ? [{ text: t.broadcastLink, href: url }]
+          : [];
+    return { text: `${heading}\n${escapeHtml(String(payload.body ?? ""))}`, buttons };
+  },
   // Wave-2 §3.12: payload { comment_id, day, body, first_name, last_name, display_name } from add_food_comment;
   // the button opens that day of the client's food diary (§3.7 acceptance).
   trainer_comment: ({ t, locale, payload }) => {
@@ -684,10 +703,11 @@ export function renderMessage(
   const buttons = new URL(options.appUrl).protocol === "https:" ? rendered.buttons : [];
   return {
     text: rendered.text,
-    buttons: buttons.map(({ text, path }) => {
-      const url = new URL(path, options.appUrl);
+    buttons: buttons.map((button) => {
+      if ("href" in button) return { text: button.text, url: button.href };
+      const url = new URL(button.path, options.appUrl);
       url.searchParams.set("source", row.kind);
-      return options.group ? { text, url: url.toString() } : { text, web_app: { url: url.toString() } };
+      return options.group ? { text: button.text, url: url.toString() } : { text: button.text, web_app: { url: url.toString() } };
     }),
   };
 }
