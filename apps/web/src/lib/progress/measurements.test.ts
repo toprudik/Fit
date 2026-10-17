@@ -4,10 +4,12 @@ import { dailySeries, formatChange, formatMeasurement, fromMetric, isValidMetric
 const UNITS = { kg: "кг", lb: "lb", cm: "см", in: "in" };
 
 describe("units", () => {
-  it("uses pounds and inches in English and kilograms and centimetres in Russian", () => {
-    expect(unitSystem("en")).toBe("imperial");
-    expect(unitOf("weight", unitSystem("en"))).toBe("lb");
-    expect(unitOf("waist", unitSystem("en"))).toBe("in");
+  it("uses kilograms and centimetres in both languages, as across the CIS", () => {
+    expect(unitSystem("en")).toBe("metric");
+    expect(unitOf("weight", unitSystem("en"))).toBe("kg");
+    expect(unitOf("waist", unitSystem("en"))).toBe("cm");
+    expect(unitOf("weight", "imperial")).toBe("lb");
+    expect(unitOf("waist", "imperial")).toBe("in");
     expect(unitOf("weight", unitSystem("ru"))).toBe("kg");
     expect(unitOf("waist", unitSystem("ru"))).toBe("cm");
   });
@@ -67,7 +69,7 @@ describe("dailySeries", () => {
 describe("formatChange", () => {
   it("shows the sign in the user's unit", () => {
     expect(formatChange("ru", "weight", 82, 80.5, UNITS)).toMatch(/^[-−]1,5\u00a0кг$/);
-    expect(formatChange("en", "waist", 81.28, 82.3, UNITS)).toBe("+0.4\u00a0in");
+    expect(formatChange("en", "waist", 81.28, 82.3, UNITS)).toBe("+1\u00a0см");
     expect(formatChange("ru", "waist", 80, 80, UNITS)).toBe("0\u00a0см");
   });
 });
