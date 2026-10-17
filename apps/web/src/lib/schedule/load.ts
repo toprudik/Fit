@@ -145,3 +145,40 @@ export async function loadSession(owner: ScheduleOwner, sessionId: string): Prom
     })),
   };
 }
+
+export type SessionWaitlistEntry = {
+  id: string;
+  coachingId: string;
+  name: string;
+  status: "waiting" | "offered";
+  /** Place among those still waiting; null for an offered entry. */
+  place: number | null;
+  offerExpiresAt: string | null;
+};
+
+/** The live queue of a group session for its trainer (PRD wave-2 §9.6): offers first, then the waiting in order. */
+export async function loadSessionWaitlist(owner: ScheduleOwner, sessionId: string): Promise<SessionWaitlistEntry[]> {
+  const { supabase } = owner;
+  const { data, error } = await supabase
+    .from("waitlist_entries")
+    .select("id, coaching_id, status, offer_expires_at, joined_at")
+    .eq("session_id", sessionId)
+    .in("status", ["waiting", "offered"])
+    .order("joined_at")
+    .order("id");
+  if (error) throw new Error(`loading the waitlist failed: ${error.code}`);
+  const names = await clientNames(
+    supabase,
+    data.map((row) => row.coaching_id),
+  );
+  let place = 0;
+  const entries = data.map((row) => ({
+    id: row.id,
+    coachingId: row.coaching_id,
+    name: names.get(row.coaching_id) ?? "",
+    status: row.status as "waiting" | "offered",
+    place: row.status === "waiting" ? ++place : null,
+    offerExpiresAt: row.offer_expires_at,
+  }));
+  return [...entries.filter((entry) => entry.status === "offered"), ...entries.filter((entry) => entry.status === "waiting")];
+}

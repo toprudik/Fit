@@ -539,6 +539,37 @@ describe("payment_reported", () => {
   });
 });
 
+describe("waitlist messages", () => {
+  const options = { appUrl: "https://fit.example", group: false };
+  const payload = {
+    entry_id: PAIR,
+    title: "Йога",
+    starts_at: "2026-10-26T15:00:00Z",
+    mode: "offline",
+    location: "Студия",
+    expires_at: "2026-10-20T09:30:00Z",
+    first_name: "Анна",
+    last_name: "Смирнова",
+  };
+
+  it("offers the freed seat with its deadline in the client's zone and opens the offer", () => {
+    const message = renderMessage({ ...row, kind: "waitlist_offer", payload }, options);
+    expect(message?.text).toBe("Освободилось место на «Йога» у тренера Анна Смирнова: пн, 26 октября в 18:00, Студия. Место ждёт тебя до 12:30.");
+    expect(message?.buttons).toEqual([
+      { text: "Ответить", web_app: { url: `https://fit.example/client/waitlist/${PAIR}?source=waitlist_offer` } },
+    ]);
+  });
+
+  it("tells the queue the seat never freed, or that the session was cancelled", () => {
+    expect(renderMessage({ ...row, kind: "waitlist_closed", payload: { ...payload, reason: "started" } }, options)?.text).toMatch(
+      /так и не освободилось/,
+    );
+    expect(renderMessage({ ...row, kind: "waitlist_closed", payload: { ...payload, reason: "cancelled" } }, options)?.text).toMatch(
+      /отменено/,
+    );
+  });
+});
+
 describe("charge_posted and charge_waived", () => {
   const STARTS = "2026-10-20T15:00:00Z";
 

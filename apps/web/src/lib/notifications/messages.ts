@@ -363,7 +363,42 @@ const templates: Partial<Record<NotificationType, Template>> = {
     }),
     buttons: [{ text: t.bookAgain, path: "/client/book" }],
   }),
+  // К-лист: payload { entry_id, session_id, title, starts_at, mode, location, expires_at, first_name, last_name } from
+  // private.waitlist_offer_next or trainer_offer_waitlist; sent in quiet hours too, since it lasts minutes.
+  waitlist_offer: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(t.waitlistOffer, {
+      title: typeof payload.title === "string" ? payload.title : "",
+      name: personName(payload) || t.sessionTrainer,
+      when: sessionTime(locale, payload.starts_at, timeZone),
+      place: place(t, payload),
+      until: clockTime(locale, payload.expires_at, timeZone),
+    }),
+    buttons: [{ text: t.answerOffer, path: idPath("/client/waitlist", payload.entry_id, "/client/book") }],
+  }),
+  // payload { entry_id, session_id, reason: started | cancelled, title, starts_at, first_name, last_name } from
+  // private.waitlist_close (PRD wave-2 §9 rule 8).
+  waitlist_closed: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(payload.reason === "cancelled" ? t.waitlistCancelled : t.waitlistClosed, {
+      title: typeof payload.title === "string" ? payload.title : "",
+      name: personName(payload) || t.sessionTrainer,
+      when: sessionTime(locale, payload.starts_at, timeZone),
+    }),
+    buttons: [{ text: t.bookAgain, path: "/client/book" }],
+  }),
 };
+
+/** "18:30" in the recipient's zone. */
+function clockTime(locale: Locale, value: Json | undefined, timeZone: string | null): string {
+  if (typeof value !== "string") return "";
+  const date = new Date(value);
+  const format = (zone: string) =>
+    new Intl.DateTimeFormat(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit", timeZone: zone }).format(date);
+  try {
+    return format(timeZone ?? DEFAULT_TIME_ZONE);
+  } catch {
+    return format(DEFAULT_TIME_ZONE);
+  }
+}
 
 /** A cancelled repeat lists this many dates, then "and N more". */
 const MAX_DATES = 5;

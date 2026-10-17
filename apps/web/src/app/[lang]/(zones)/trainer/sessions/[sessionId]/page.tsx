@@ -6,6 +6,7 @@ import { AttendanceMarks } from "@/components/passes/attendance-marks";
 import { CancelSession } from "@/components/schedule/cancel-session";
 import { GroupControls } from "@/components/schedule/group-controls";
 import { ScheduleSignIn } from "@/components/schedule/sign-in-state";
+import { WaitlistQueue } from "@/components/schedule/waitlist-queue";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,7 @@ import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { isPairId } from "@/lib/pairs/clients";
-import { loadScheduleOwner, loadSession, loadSessionFormData } from "@/lib/schedule/load";
+import { loadScheduleOwner, loadSession, loadSessionFormData, loadSessionWaitlist } from "@/lib/schedule/load";
 
 // A session id is known only at request time, so the page renders on request.
 export const instant = false;
@@ -77,6 +78,7 @@ async function SessionDetails({ params }: { params: PageProps<"/[lang]/trainer/s
             ),
         )
       : [];
+  const waitlist = group && editable ? await loadSessionWaitlist(owner, session.id) : [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -155,6 +157,16 @@ async function SessionDetails({ params }: { params: PageProps<"/[lang]/trainer/s
             />
           ))}
         </ListGroup>
+      ) : null}
+
+      {waitlist.length > 0 ? (
+        <WaitlistQueue
+          entries={waitlist.map((entry) => ({
+            ...entry,
+            offeredUntil: entry.offerExpiresAt ? time.format(new Date(entry.offerExpiresAt)) : null,
+          }))}
+          canOffer={participants.length + waitlist.filter((entry) => entry.status === "offered").length < session.capacity}
+        />
       ) : null}
 
       {session.status !== "cancelled" && session.startsAt <= now() ? (

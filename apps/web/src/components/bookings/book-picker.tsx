@@ -12,7 +12,15 @@ import { Spinner } from "@/components/ui/spinner";
 import { INTL_LOCALE } from "@/i18n/config";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
-import { bookGroupSession, bookSlot, previewBooking, previewGroupBooking, type PreviewResult } from "@/lib/bookings/actions";
+import {
+  bookGroupSession,
+  bookSlot,
+  joinWaitlist,
+  previewBooking,
+  previewGroupBooking,
+  type BookingError,
+  type PreviewResult,
+} from "@/lib/bookings/actions";
 import { findOverlap, groupByDay } from "@/lib/bookings/book";
 import { previewReschedule, rescheduleBooking } from "@/lib/bookings/changes";
 import type { BookableGroup, BookableSlot, BusyTime } from "@/lib/bookings/load";
@@ -55,6 +63,9 @@ export function BookPicker({ timeZone, days, slots, groups, busy, dropInText, pa
   const [day, setDay] = useState(() => days.find((candidate) => byDay.has(candidate)) ?? days[0]);
   const [slot, setSlot] = useState<Item | null>(null);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
+  const [queueFor, setQueueFor] = useState<BookableGroup | null>(null);
+  const [queueError, setQueueError] = useState<BookingError | null>(null);
+  const waitCopy = t.schedule.waitlist;
   const [pending, startTransition] = useTransition();
 
   const intl = INTL_LOCALE[locale];
@@ -99,6 +110,41 @@ export function BookPicker({ timeZone, days, slots, groups, busy, dropInText, pa
     });
   };
 
+  const joinQueue = () => {
+    if (!queueFor) return;
+    startTransition(async () => {
+      const result = await joinWaitlist(queueFor.id);
+      if (result.status === "done") {
+        setQueueFor(null);
+        toast.success(interpolate(waitCopy.joined, { place: result.place }));
+        router.push(`/client/waitlist/${result.entryId}`);
+        return;
+      }
+      setQueueError(result.error);
+    });
+  };
+
+  const groupState = (item: Extract<Item, { type: "group" }>) => {
+    if (item.myBookingId) return { text: groupCopy.youAreIn, href: `/client/bookings/${item.myBookingId}` };
+    if (item.waitlist?.status === "offered") return { text: waitCopy.offeredRow, href: `/client/waitlist/${item.waitlist.id}` };
+    if (item.waitlist) {
+      return { text: interpolate(waitCopy.placeRow, { place: item.waitlist.place ?? 1 }), href: `/client/waitlist/${item.waitlist.id}` };
+    }
+    if (item.taken >= item.capacity) {
+      return {
+        text: waitCopy.fullRow,
+        onClick: () => {
+          setQueueError(null);
+          setQueueFor(item);
+        },
+      };
+    }
+    return {
+      text: interpolate(groupCopy.seatsLeft, { count: item.capacity - item.taken, capacity: item.capacity }),
+      onClick: () => open(item),
+    };
+  };
+
   const daySlots = byDay.get(day) ?? [];
   const overlap = slot ? findOverlap(slot, busy) : null;
   const ready = preview?.status === "done";
@@ -115,8 +161,20 @@ export function BookPicker({ timeZone, days, slots, groups, busy, dropInText, pa
 
       {daySlots.length > 0 ? (
         <ListGroup header={dayFormat.format(localToUtc(day, 12 * 60, timeZone))}>
-          {daySlots.map((item) =>
-            item.type === "group" ? (
+          {daySlots.map((item) => {
+            if (item.type === "slot") {
+              return (
+                <ListRow
+                  key={item.id}
+                  icon={Clock}
+                  title={<span className="tabular-nums">{range(item)}</span>}
+                  subtitle={where(item)}
+                  onClick={() => open(item)}
+                />
+              );
+            }
+            const state = groupState(item);
+            return (
               <ListRow
                 key={item.id}
                 icon={Users}
@@ -125,26 +183,12 @@ export function BookPicker({ timeZone, days, slots, groups, busy, dropInText, pa
                     <span className="tabular-nums">{range(item)}</span>, {item.title}
                   </>
                 }
-                subtitle={`${where(item)}, ${
-                  item.myBookingId
-                    ? groupCopy.youAreIn
-                    : item.taken >= item.capacity
-                      ? groupCopy.noSeats
-                      : interpolate(groupCopy.seatsLeft, { count: item.capacity - item.taken, capacity: item.capacity })
-                }`}
-                href={item.myBookingId ? `/client/bookings/${item.myBookingId}` : undefined}
-                onClick={item.myBookingId || item.taken >= item.capacity ? undefined : () => open(item)}
+                subtitle={`${where(item)}, ${state.text}`}
+                href={state.href}
+                onClick={state.onClick}
               />
-            ) : (
-              <ListRow
-                key={item.id}
-                icon={Clock}
-                title={<span className="tabular-nums">{range(item)}</span>}
-                subtitle={where(item)}
-                onClick={() => open(item)}
-              />
-            ),
-          )}
+            );
+          })}
         </ListGroup>
       ) : (
         <div className="flex items-center gap-3 px-1 py-6 text-body text-ink-2">
@@ -202,6 +246,32 @@ export function BookPicker({ timeZone, days, slots, groups, busy, dropInText, pa
           )}
           {overlap ? (
             <p className="rounded-sm bg-warning-soft p-3 text-subhead text-ink">{interpolate(copy.overlap, { name: overlap.trainer })}</p>
+          ) : null}
+        </div>
+      </Sheet>
+
+      <Sheet
+        open={queueFor !== null}
+        onOpenChange={(next) => (next ? null : setQueueFor(null))}
+        title={queueFor ? interpolate(waitCopy.joinTitle, { title: queueFor.title }) : waitCopy.joinTitle}
+        description={queueFor ? `${dayFormat.format(new Date(queueFor.startsAt))}, ${range(queueFor)}, ${where(queueFor)}` : undefined}
+        actions={
+          <>
+            <Button type="button" block loading={pending} onClick={joinQueue}>
+              {waitCopy.join}
+            </Button>
+            <Button type="button" variant="secondary" block onClick={() => setQueueFor(null)}>
+              {waitCopy.notNow}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-3 text-body">
+          <p>{waitCopy.joinText}</p>
+          {queueError ? (
+            <p role="alert" className="text-subhead text-danger">
+              {queueError in waitCopy.errors ? waitCopy.errors[queueError as keyof typeof waitCopy.errors] : waitCopy.errors.failed}
+            </p>
           ) : null}
         </div>
       </Sheet>

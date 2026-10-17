@@ -53,7 +53,15 @@ export async function loadBookingTrainers(owner: ScheduleOwner): Promise<Booking
 export type BookableSlot = { id: string; startsAt: string; endsAt: string; mode: "offline" | "online"; place: string | null };
 
 /** An open group session of the trainer (PRD 2.6.4-1): seats taken, and the client's own booking on it. */
-export type BookableGroup = BookableSlot & { title: string; capacity: number; taken: number; myBookingId: string | null };
+export type BookableGroup = BookableSlot & {
+  title: string;
+  capacity: number;
+  /** Seats held by bookings and open waitlist offers. */
+  taken: number;
+  myBookingId: string | null;
+  /** The caller's place in the queue of a full group (PRD wave-2 §9): waiting with a place, or offered a seat. */
+  waitlist: { id: string; status: "waiting" | "offered"; place: number | null } | null;
+};
 
 /** A live booking of the client: the overlap warning names its trainer (PRD 2.6.4-8). */
 export type BusyTime = { startsAt: string; endsAt: string; trainer: string };
@@ -132,6 +140,10 @@ export async function loadBookingPage(owner: ScheduleOwner, trainer: BookingTrai
       capacity: row.capacity,
       taken: row.taken,
       myBookingId: row.my_booking_id,
+      waitlist:
+        row.my_waitlist_id && (row.my_waitlist_status === "waiting" || row.my_waitlist_status === "offered")
+          ? { id: row.my_waitlist_id, status: row.my_waitlist_status, place: row.my_waitlist_place }
+          : null,
     })),
     busy,
     dropIn: dropIn.data?.[0] ? { priceMinor: dropIn.data[0].price_minor, currency: dropIn.data[0].currency } : null,
@@ -347,4 +359,52 @@ export async function loadTrainerRequest(owner: ScheduleOwner, bookingId: string
 /** How many open requests the trainer has, for the button on the schedule. */
 export async function countTrainerRequests(owner: ScheduleOwner, now: Date): Promise<number> {
   return (await loadTrainerRequests(owner, now)).length;
+}
+
+export type WaitlistStatus = Database["public"]["Enums"]["waitlist_status"];
+
+export type WaitlistEntryView = {
+  id: string;
+  status: WaitlistStatus;
+  place: number | null;
+  offerExpiresAt: string | null;
+  bookingId: string | null;
+  session: { id: string; title: string; startsAt: string; endsAt: string; mode: "offline" | "online"; place: string | null };
+  trainer: string;
+  /** For an offer: whether a pass or allowed debt confirms the booking, and the pass it would use. */
+  confirmed: boolean | null;
+  passTitle: string | null;
+  sessionsLeft: number | null;
+  /** A cancel would already be charged: the offer comes inside the cancellation deadline (PRD wave-2 §9 rule 6). */
+  insideDeadline: boolean;
+};
+
+/** One of the client's waitlist entries for /client/waitlist/[entryId], or null when it is not theirs. */
+export async function loadWaitlistEntry(owner: ScheduleOwner, entryId: string): Promise<WaitlistEntryView | null> {
+  const { supabase } = owner;
+  const { data, error } = await supabase.rpc("waitlist_entry_view", { p_entry_id: entryId });
+  if (error) fail("waitlist entry", error);
+  const row = data[0];
+  if (!row) return null;
+  const people = await trainerPeople(supabase, [row.trainer_id]);
+  return {
+    id: row.entry_id,
+    status: row.status,
+    place: row.place,
+    offerExpiresAt: row.offer_expires_at,
+    bookingId: row.booking_id,
+    session: {
+      id: row.session_id,
+      title: row.title ?? "",
+      startsAt: row.starts_at,
+      endsAt: row.ends_at,
+      mode: row.mode,
+      place: row.location,
+    },
+    trainer: people.get(row.trainer_id)?.name ?? "",
+    confirmed: row.confirmed,
+    passTitle: row.pass_title,
+    sessionsLeft: row.sessions_left,
+    insideDeadline: Boolean(row.inside_deadline),
+  };
 }
