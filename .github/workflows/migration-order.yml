@@ -3,12 +3,11 @@ name: Migration order
 # Each migration a PR adds must be newer than the latest one on main *now*, not on the PR's possibly stale base,
 # and timestamps must be unique: `supabase db push` in Database deploy skips older ones without an error.
 
+# Runs on every PR, not only ones touching migrations: it is a required check on main, and a required check
+# that a path filter skips never reports, which would leave such PRs unmergeable. Without new migrations it
+# finishes in seconds.
 on:
   pull_request:
-    paths:
-      - "supabase/migrations/**"
-      - "scripts/check-migration-order.sh"
-      - ".github/workflows/migration-order.yml"
 
 permissions:
   contents: read
