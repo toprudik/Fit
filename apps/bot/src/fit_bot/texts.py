@@ -34,7 +34,7 @@ _RU: Final = Texts(
         "Сюда же будут приходить напоминания о занятиях."
     ),
     help=(
-        "Открой DaFit кнопкой ниже или кнопкой «Открыть DaFit» слева от поля ввода. "
+        "Открой DaFit кнопкой ниже или кнопкой «DaFit» слева от поля ввода. "
         "Сюда бот присылает напоминания о занятиях и другие уведомления. "
         "Сообщения в этом чате никто не читает."
     ),
@@ -42,7 +42,7 @@ _RU: Final = Texts(
         "Сообщения в этом чате никто не читает. Открой DaFit кнопкой ниже: там твои занятия, абонементы и настройки."
     ),
     open_app_button="Открыть DaFit",
-    menu_button="Открыть DaFit",
+    menu_button="DaFit",
     command_start="Открыть DaFit",
     command_help="Что умеет бот",
     description=(
@@ -61,7 +61,7 @@ _EN: Final = Texts(
         "You'll also get session reminders in this chat."
     ),
     help=(
-        "Open DaFit with the button below or with the Open DaFit button to the left of the message field. "
+        "Open DaFit with the button below or with the DaFit button to the left of the message field. "
         "The bot sends session reminders and other notifications to this chat. "
         "Nobody reads messages you send here."
     ),
@@ -70,7 +70,7 @@ _EN: Final = Texts(
         "and settings."
     ),
     open_app_button="Open DaFit",
-    menu_button="Open DaFit",
+    menu_button="DaFit",
     command_start="Open DaFit",
     command_help="What this bot does",
     description=(
