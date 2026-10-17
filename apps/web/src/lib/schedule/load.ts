@@ -79,6 +79,9 @@ export type SessionDetail = {
   cancelReason: string | null;
   /** The repeat's weekdays, 1 = Monday, when the session is one of a weekly repeat. */
   repeat: { weekdays: number[]; ended: boolean } | null;
+  /** Seats of a group session (1 for a personal one) and whether clients book it themselves. */
+  capacity: number;
+  openForBooking: boolean;
   clients: { bookingId: string; coachingId: string; name: string; status: string }[];
 };
 
@@ -89,7 +92,7 @@ export async function loadSession(owner: ScheduleOwner, sessionId: string): Prom
   const { supabase, userId } = owner;
   const { data: session, error } = await supabase
     .from("sessions")
-    .select("id, kind, status, title, starts_at, ends_at, mode, location_id, recurrence_id, cancel_reason")
+    .select("id, kind, status, title, starts_at, ends_at, mode, location_id, recurrence_id, cancel_reason, capacity, open_for_booking")
     .eq("id", sessionId)
     .eq("trainer_id", userId)
     .maybeSingle();
@@ -132,6 +135,8 @@ export async function loadSession(owner: ScheduleOwner, sessionId: string): Prom
           ended: Boolean(recurrence.data.ended_at),
         }
       : null,
+    capacity: session.capacity,
+    openForBooking: session.open_for_booking,
     clients: (bookings.data ?? []).map((booking) => ({
       bookingId: booking.id,
       coachingId: booking.coaching_id,

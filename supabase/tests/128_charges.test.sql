@@ -1,4 +1,4 @@
--- Charges and waivers of migration 20261016235100_charges.sql (PRD wave-1 §2.6.2 rules 7 and 9, §2.6.6,
+-- Charges and waivers of migration 20261017001300_charges.sql (PRD wave-1 §2.6.2 rules 7 and 9, §2.6.6,
 -- SCHED-11..14; data-model §3.3, §3.4): session end, attendance marks, "Не состоялось", waive_charge with the
 -- settlement reversal, record_past_session and adjust_pass.
 begin;

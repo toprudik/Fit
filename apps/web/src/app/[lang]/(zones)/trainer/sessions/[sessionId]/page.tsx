@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { CalendarX, Clock, Link2, MapPin, Repeat, User } from "lucide-react";
+import { CalendarX, Clock, Link2, MapPin, Repeat, User, Users } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { CancelSession } from "@/components/schedule/cancel-session";
+import { GroupControls } from "@/components/schedule/group-controls";
 import { ScheduleSignIn } from "@/components/schedule/sign-in-state";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
@@ -15,7 +16,7 @@ import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { isPairId } from "@/lib/pairs/clients";
-import { loadScheduleOwner, loadSession } from "@/lib/schedule/load";
+import { loadScheduleOwner, loadSession, loadSessionFormData } from "@/lib/schedule/load";
 
 // A session id is known only at request time, so the page renders on request.
 export const instant = false;
@@ -24,6 +25,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
   return { title: t.schedule.sessionPage.title };
 }
+
+/** Bookings that hold a seat on a group session; the rest are history. */
+const SEAT_STATUSES = new Set(["requested", "confirmed", "attended", "no_show"]);
 
 /** Request time, outside the component so rendering stays pure. */
 function now(): string {
@@ -58,6 +62,20 @@ async function SessionDetails({ params }: { params: PageProps<"/[lang]/trainer/s
   const editable = session.status === "scheduled" && session.startsAt > now();
   const inRepeat = Boolean(session.repeat && !session.repeat.ended);
   const title = session.title ?? session.clients[0]?.name ?? t.schedule.session;
+  const group = session.kind === "group";
+  const groupCopy = t.schedule.groupSession;
+  // A group lists the people holding a seat; a personal session keeps its one client whatever happened.
+  const participants = group ? session.clients.filter((client) => SEAT_STATUSES.has(client.status)) : session.clients;
+  const candidates =
+    group && editable
+      ? (await loadSessionFormData(owner)).clients.filter(
+          (client) =>
+            !session.clients.some(
+              (booking) =>
+                booking.coachingId === client.coachingId && (SEAT_STATUSES.has(booking.status) || booking.status === "late_cancelled"),
+            ),
+        )
+      : [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -97,6 +115,13 @@ async function SessionDetails({ params }: { params: PageProps<"/[lang]/trainer/s
             subtitle={session.location ? [session.location.name, session.location.address].filter(Boolean).join(", ") : copy.noPlace}
           />
         )}
+        {group ? (
+          <ListRow
+            icon={Users}
+            title={interpolate(groupCopy.taken, { taken: participants.length, capacity: session.capacity })}
+            subtitle={session.openForBooking ? groupCopy.selfBookingOn : groupCopy.selfBookingOff}
+          />
+        ) : null}
         {session.repeat ? (
           <ListRow
             icon={Repeat}
@@ -112,9 +137,14 @@ async function SessionDetails({ params }: { params: PageProps<"/[lang]/trainer/s
         ) : null}
       </ListGroup>
 
-      {session.clients.length > 0 ? (
-        <ListGroup header={session.clients.length > 1 ? copy.clients : copy.client}>
-          {session.clients.map((client) => (
+      {group && participants.length === 0 ? (
+        <ListGroup header={groupCopy.participants}>
+          <ListRow title={groupCopy.noParticipants} />
+        </ListGroup>
+      ) : null}
+      {participants.length > 0 ? (
+        <ListGroup header={group ? groupCopy.participants : participants.length > 1 ? copy.clients : copy.client}>
+          {participants.map((client) => (
             <ListRow
               key={client.coachingId}
               icon={User}
@@ -132,7 +162,17 @@ async function SessionDetails({ params }: { params: PageProps<"/[lang]/trainer/s
         </ListGroup>
       ) : null}
 
-      {editable && session.kind === "personal" ? (
+      {editable && group ? (
+        <GroupControls
+          sessionId={session.id}
+          capacity={session.capacity}
+          taken={participants.length}
+          openForBooking={session.openForBooking}
+          candidates={candidates}
+        />
+      ) : null}
+
+      {editable && session.kind !== "trial" ? (
         <div className="flex flex-col gap-2">
           <Button asChild block>
             <Link href={`/trainer/sessions/${session.id}/edit`}>{copy.edit}</Link>

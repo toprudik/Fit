@@ -34,7 +34,7 @@ async function EditSession({ params }: { params: PageProps<"/[lang]/trainer/sess
   if (!owner) return <ScheduleSignIn title={t.schedule.sessionForm.editTitle} next={`/trainer/sessions/${sessionId}/edit`} />;
 
   const session = isPairId(sessionId) ? await loadSession(owner, sessionId) : null;
-  if (!session || session.kind !== "personal" || session.status !== "scheduled" || session.startsAt <= now()) {
+  if (!session || session.kind === "trial" || session.status !== "scheduled" || session.startsAt <= now()) {
     return (
       <EmptyState
         icon={CalendarX}
@@ -58,6 +58,7 @@ async function EditSession({ params }: { params: PageProps<"/[lang]/trainer/sess
       kind="edit"
       sessionId={session.id}
       inRepeat={Boolean(session.repeat && !session.repeat.ended)}
+      group={session.kind === "group"}
       clients={data.clients}
       locations={data.locations}
       timeZone={owner.timeZone}

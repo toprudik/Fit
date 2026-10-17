@@ -67,7 +67,7 @@ async function Booking({ searchParams }: { searchParams: PageProps<"/[lang]/clie
       </ChipRow>
     ) : null;
 
-  if (page.slots.length === 0) {
+  if (page.slots.length === 0 && page.groups.length === 0) {
     return (
       <div className="flex flex-col gap-4">
         {switcher}
@@ -96,6 +96,7 @@ async function Booking({ searchParams }: { searchParams: PageProps<"/[lang]/clie
         timeZone={owner.timeZone}
         days={dayRange(today(owner.timeZone), BOOKING_DAYS)}
         slots={page.slots}
+        groups={page.groups}
         busy={page.busy}
         dropInText={
           page.dropIn ? interpolate(copy.dropInPrice, { price: formatMoney(locale, page.dropIn.priceMinor, page.dropIn.currency) }) : null
