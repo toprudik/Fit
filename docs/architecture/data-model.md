@@ -974,7 +974,7 @@ create table public.passes (                    -- абонемент: экзе�
   currency       public.currency_code not null,
   applies_to     public.package_applies_to not null default 'any',
   is_drop_in     boolean not null default false, -- разовое занятие = абонемент на 1
-  -- W3: is_bonus boolean not null default false: бонусный абонемент рефералки, цена 0 (20261017040300_referral_offers.sql).
+  -- W3: is_bonus boolean not null default false: бонусный абонемент рефералки, цена 0 (20261017040300_referral_offers.sql); с 20261017174813 новые не создаются, бонус идёт в действующий абонемент.
   starts_on      date not null,                  -- дата продажи в поясе тренера
   expires_at     timestamptz,                    -- базовый срок без учёта заморозок; null = бессрочно
   status         public.pass_status not null default 'active',
@@ -1547,7 +1547,7 @@ create index on public.break_glass_grants (target_user_id);
 -- Доступ открывается снова только новым грантом.
 ```
 
-Грант создаётся только через `admin_open_break_glass(target_user, categories, reason)`. Функция проверяет `is_admin()`, пишет `admin_audit_log` и ставит пользователю уведомление о факте доступа (новый тип `break_glass` в `notification_type`, см. Допущения, п. 26). Пока грант действует, `private.can_view()` возвращает `true` для этого админа и этих категорий.
+Грант создаётся только через `admin_open_break_glass(target_user, categories, reason, minutes = 60)` (миграция `20261017194837_break_glass_open.sql`): срок от 1 до 60 минут, причина не короче 20 символов после обрезки пробелов, не на свой аккаунт. Функция проверяет `is_admin()`, пишет `admin_audit_log` и ставит пользователю уведомление о факте доступа (новый тип `break_glass` в `notification_type`, см. Допущения, п. 26). Пока грант действует, `private.can_view()` возвращает `true` для этого админа и этих категорий.
 
 ---
 
@@ -1880,6 +1880,8 @@ create index on public.broadcasts (trainer_id, created_at);
 alter table public.notification_outbox add column broadcast_id uuid references public.broadcasts(id) on delete set null;   -- R60
 ```
 
+Аналитика группы (`group_analytics`, миграция `20261017184417_group_adherence.sql`): кроме посещаемости и веса отдаёт среднее попадание в норму за 30 полных дней (`adherence`, `adherence_clients`). Считаются участники, которые делятся питанием и у которых был хотя бы один день с нормой; меньше трёх таких клиентов, и среднее не показывается.
+
 Статистика рассылки считается агрегатом `notification_outbox` по `broadcast_id` и `status`. Лимит 5 в сутки проверяет RPC `send_broadcast`.
 
 Лист ожидания, домашние задания, отзывы, флаги оттока, события продукта:
@@ -1888,7 +1890,8 @@ alter table public.notification_outbox add column broadcast_id uuid references p
 create type public.waitlist_status as enum ('waiting', 'offered', 'accepted', 'declined', 'expired', 'left', 'closed');
 create table public.waitlist_entries (
   id               uuid primary key default gen_random_uuid(),
-  session_id       uuid not null references public.sessions(id) on delete cascade,
+  session_id       uuid references public.sessions(id) on delete cascade,   -- группа
+  slot_id          uuid references public.slots(id) on delete cascade,      -- или занятый персональный слот (20261017203517)
   coaching_id      uuid not null references public.coachings(id) on delete cascade,
   client_id        uuid not null references public.profiles(id) on delete cascade,
   status           public.waitlist_status not null default 'waiting',
@@ -1901,6 +1904,8 @@ create table public.waitlist_entries (
 create unique index on public.waitlist_entries (session_id, client_id) where status in ('waiting', 'offered');
 create index on public.waitlist_entries (session_id, joined_at) where status = 'waiting';
 create index on public.waitlist_entries (offer_expires_at) where status = 'offered';
+-- check (num_nonnulls(session_id, slot_id) = 1). Очередь слота: join_slot_waitlist, waitlist_slots; слот, снова
+-- ставший open, уходит первому в очереди, и предложение держит его (bookable_slot отказывает остальным).
 
 create table public.homework (
   id                  uuid primary key default gen_random_uuid(),
@@ -2017,6 +2022,7 @@ create table public.delegations (
   starts_at           timestamptz not null default now(),
   ends_at             timestamptz,
   status              public.delegation_status not null default 'pending',
+  invited_trainer_id  uuid references public.trainer_profiles(user_id) on delete set null,  -- кому отправлено поиском (W3 §1.1, 20261017202047)
   accepted_at         timestamptz,
   revoked_at          timestamptz,
   created_at          timestamptz not null default now(),
@@ -2157,8 +2163,9 @@ create table public.bonuses (
   beneficiary_id uuid not null references public.profiles(id) on delete cascade,
   kind           public.bonus_kind not null,
   sessions       smallint check (sessions > 0),
-  pass_id        uuid references public.passes(id) on delete set null,   -- бонусный абонемент
-  status         public.bonus_status not null default 'pending',
+  coaching_id    uuid references public.coachings(id) on delete set null, -- пара, в абонемент которой идут занятия (20261017174813)
+  pass_id        uuid references public.passes(id) on delete set null,   -- абонемент, куда добавлены занятия
+  status         public.bonus_status not null default 'pending',          -- pending = ждёт следующего абонемента
   granted_at     timestamptz,
   voided_at      timestamptz,
   created_at     timestamptz not null default now()
@@ -2167,7 +2174,7 @@ create table public.bonuses (
 
 Все четыре таблицы под RLS без грантов: читают и пишут только функции. Тренер: `save_referral_offer` (Pro, `trainer.referral_offers`; новая акция архивирует прежнюю), `stop_referral_offer`, `trainer_referral_offer`, `trainer_referrals`, `decline_referral` (только `pending`). Клиент: `client_referral(coaching_id)` создаёт код при первом вызове, если у тренера идёт акция. Лендинг: `resolve_referral(code)` (доступна anon, как `resolve_client_invite`), `join_by_referral(code)` делает пару через `private.join_pair` с `source = 'referral'` и, если человек новый для тренера и акция идёт, `pending`-реферал.
 
-«Только после факта оплаты» (Q50): триггер `payments_referral` (`after insert or update of status on payments`) на `confirmed`-платеже `direction = 'in'` в паре приглашённого вызывает `private.qualify_referral`: если платёж подходит под условие акции (пакет оплаченного абонемента или сумма в валюте акции), реферал становится `qualified`, каждой стороне создаётся бонусный абонемент (`is_bonus`, цена 0, `grant` в журнале, гасит долг) и уходит `referral_bonus`. Пригласившему не больше 10 бонусов на акцию. Если этот платёж переведён в `voided` в течение 14 дней после `qualified_at`, `private.revoke_referral` отменяет бонусные абонементы без списаний и погашений (`refund` остатка, `cancelled`), бонусы и реферал становятся `void`; использованный бонус остаётся (wave-3 §3.1-7). Завершение пары аннулирует её `pending`-рефералы с обеих сторон.
+«Только после факта оплаты» (Q50): триггер `payments_referral` (`after insert or update of status on payments`) на `confirmed`-платеже `direction = 'in'` в паре приглашённого вызывает `private.qualify_referral`: если платёж подходит под условие акции (пакет оплаченного абонемента или сумма в валюте акции), реферал становится `qualified`, и каждой стороне `private.grant_referral_bonus` добавляет занятия в действующий абонемент её пары (§3.1-6, `20261017174813_referral_bonus_active_pass.sql`): `adjustment` с `note = 'referral_bonus'` и суммой 0, затем гашение долга. Абонемент выбирает `private.referral_bonus_pass`: обычный (не разовый, не старый `is_bonus`), `active` или `frozen` по `pass_balances`; у приглашённого первым идёт оплаченный абонемент, дальше тот, что действует дольше. Выручку бонус не меняет: абонемент зарабатывает цену за первые `sessions_total` занятий (`pass_share_minor`). Если действующего абонемента нет, бонус `pending` с `coaching_id` пары, а триггер `ledger_entries_referral_bonus` на `grant` следующего обычного абонемента этой пары добавляет его туда и ставит `granted`. Уведомление `referral_bonus` уходит в обоих случаях (`waiting: true`, когда ждёт; `applied: true`, когда дождался). Пригласившему не больше 10 бонусов на акцию, ждущие тоже считаются. Если этот платёж переведён в `voided` в течение 14 дней после `qualified_at`, `private.revoke_referral` забирает бонусы: ждущий становится `void`, у добавленного в абонемент снимается свободная часть (`least(sessions, available)`, `adjustment` с `note = 'referral_bonus_voided'`), полностью использованный остаётся `granted`; реферал становится `void` (wave-3 §3.1-7). Бонусные абонементы `is_bonus`, выданные до этой миграции, отменяются по-старому: без списаний и погашений `refund` остатка и `cancelled`. Завершение пары аннулирует её `pending`-рефералы с обеих сторон.
 
 Тренер приводит тренера (§3.2, `20261017090519_trainer_referrals.sql`):
 
@@ -2207,7 +2214,7 @@ create table public.check_ins (                    -- QR-чек-ин
 );
 ```
 
-Сделано в `20261017032700_qr_check_in.sql` (вариант (а) из wave-3 §5: динамический QR занятия). QR на экране тренера содержит ссылку `t.me/<bot>?startapp=ck_<session_id>_<код>`, где код равен `HMAC(ключ, session_id, 15-секундное окно)`, 10 символов base64url. Ключ лежит в `private.check_in_keys` (одна строка, ни одной роли не доступна), код считает и проверяет база: `session_check_in_qr` (тренер, вместе со списком отметившихся) и `check_in_by_qr` (клиент), поэтому отдельного серверного секрета нет. Принимаются текущее и предыдущее окно, так что код живёт 15–30 с. Чек-ин ставит `bookings.status = 'attended'` и сразу списывает занятие через `private.post_charge`, как отметка «Был» тренером; повторный скан ничего не меняет. Статичный QR локации (вариант (б), `20261017035730_location_check_in.sql`): `location_check_in_tokens(location_id, trainer_id, token)` с постоянным 22-символьным токеном, ссылка `startapp=cl_<token>`; `location_check_in_token` выдаёт его тренеру и по запросу перевыпускает (старая распечатка перестаёт работать), `check_in_by_location` отмечает клиента на ближайшую запись в этой локации с открытым окном. Чтение таблицы закрыто всем ролям, токен отдаёт только функция.
+Сделано в `20261017032700_qr_check_in.sql` (вариант (а) из wave-3 §5: динамический QR занятия). QR на экране тренера содержит ссылку `t.me/<bot>?startapp=ck_<session_id>_<код>`, где код равен `HMAC(ключ, session_id, 15-секундное окно)`, 10 символов base64url. Ключ лежит в `private.check_in_keys` (одна строка, ни одной роли не доступна), код считает и проверяет база: `session_check_in_qr` (тренер или подменяющий тренер этого занятия, вместе со списком отметившихся; подменяющему с `20261017202743_substitute_check_in_qr.sql` и только до конца занятия, 1.5) и `check_in_by_qr` (клиент), поэтому отдельного серверного секрета нет. Принимаются текущее и предыдущее окно, так что код живёт 15–30 с. Чек-ин ставит `bookings.status = 'attended'` и сразу списывает занятие через `private.post_charge`, как отметка «Был» тренером; повторный скан ничего не меняет. Статичный QR локации (вариант (б), `20261017035730_location_check_in.sql`): `location_check_in_tokens(location_id, trainer_id, token)` с постоянным 22-символьным токеном, ссылка `startapp=cl_<token>`; `location_check_in_token` выдаёт его тренеру и по запросу перевыпускает (старая распечатка перестаёт работать), `check_in_by_location` отмечает клиента на ближайшую запись в этой локации с открытым окном. Чтение таблицы закрыто всем ролям, токен отдаёт только функция.
 
 Месячный отчёт клиента строится на лету из существующих таблиц, кеша нет. Сделано в `20261017101247_monthly_reports.sql`. `private.monthly_report(user, month)` собирает месяц клиента по его часовому поясу: посещённые занятия по тренерам, тренировки в журнале, рекорды месяца, первый и последний замер каждого вида, дни в дневнике и дни в норме (±10% калорий), средние шаги и сон, домашние задания. Месяц без активности отчёта не имеет. Читает отчёт только сам клиент через `my_monthly_report(month)`, и только за закончившийся месяц. Карточка для сторис замораживает то, что на ней напечатано, в `story_cards(id, user_id, month, kind, data, expires_at)`: `create_story_card(month, kind, coaching, confirm)` считает цифры из отчёта сам, вес кладёт только с `confirm`. Картинку 1080×1920 рисует `/api/story/<id>` по `story_card(id)`, это публичный поиск по случайному id, как витрина; карточка живёт 30 дней. Сообщение «Итоги месяца» (`monthly_report`, отключаемое) ставит pg_cron `monthly-reports` 1-го числа с 10:00 по времени клиента.
 
@@ -2643,6 +2650,8 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `analytics.beta_metrics` | `day` | три показателя Q26 за скользящие 14 дней (определения: wave-2 §8.6 и «Допущения») |
 
 **Как сделано к бете** (миграция `20261017023400_admin_analytics`). На объёмах беты MV не нужны: срезы считают на лету DEFINER-функции `admin_analytics_platform(p_days)`, `admin_analytics_trainers(p_days)`, `admin_analytics_trainer(p_trainer_id, p_days)` (пишет `analytics.view_trainer` в `admin_audit_log`), `admin_analytics_clients(p_days, p_limit)` и `admin_beta_metrics()`; период 7, 14, 30 или 90 дней, иначе `invalid_period`. Открытия приложения пишет `record_app_open(p_source)` в таблицу `app_opens` (`source` = тип уведомления, с которого пришёл пользователь, `null` для прямого входа; повтор того же источника за 30 минут не считается). Таблицу никто не читает напрямую. «Проведено» = прошедшее неотменённое занятие с подтверждённой или отмеченной записью. Когда функции станут медленными, их тела переносятся в MV выше без смены сигнатур.
+
+Использование функций (миграция `20261017202047_admin_feature_use`): срез платформы также считает клиентов, которые за период вели дневник питания (`clients_keeping_diary`) или отмечали шаги, воду и сон (`clients_logging_activity`), и тех, у кого сегодня есть норма питания (`clients_with_target`, по `private.active_nutrition_target`, поэтому норма тренера без доступа к питанию не считается). В срезе клиентов те же три признака: `keeps_diary`, `logs_activity`, `has_target`. Только количества и да/нет, без значений.
 
 Агрегаты по данным тела и питания (средний вес и т. п.) админу не считаются вовсе (wave-2 §8.5). Будущее «сравнение с рынком» строится из `analytics.trainer_daily` с порогом ≥ 10 тренеров в срезе и только процентилями.
 

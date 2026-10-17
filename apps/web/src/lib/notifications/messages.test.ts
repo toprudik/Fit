@@ -37,6 +37,25 @@ describe("renderMessage", () => {
     expect(declined?.buttons[0]).toEqual({ text: "Открыть команду", web_app: { url: "https://fit.example/trainer/team?source=delegation" } });
   });
 
+  it("brings a trainer found by search the invite with a button to answer it (wave-3 §1 rule 1)", () => {
+    const base = { ...row, kind: "delegation" as const };
+    const token = "AbCdEfGhIjKlMnOpQrStUvWx";
+    const sub = renderMessage(
+      { ...base, payload: { event: "invited", kind: "substitute", owner_name: "Иван", starts_at: "2026-11-02T09:00:00Z", token } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(sub?.text).toMatch(/^Иван просит провести за него занятие пн, 2 ноября в 12:00\./);
+    expect(sub?.buttons).toEqual([
+      { text: "Посмотреть приглашение", web_app: { url: `https://fit.example/trainer/team/accept?token=${token}&source=delegation` } },
+    ]);
+    const assistant = renderMessage(
+      { ...base, payload: { event: "invited", kind: "assistant", owner_name: "Иван", token: "not a token" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(assistant?.text).toContain("Иван зовёт тебя помощником");
+    expect(assistant?.buttons[0]).toEqual({ text: "Открыть команду", web_app: { url: "https://fit.example/trainer/team?source=delegation" } });
+  });
+
   it("sends a trainer's broadcast as typed, escaped, under the trainer's name (wave-2 §6.9)", () => {
     const base = { ...row, kind: "trainer_broadcast" as const };
     const payload = { trainer_name: "Иван", body: "Завтра в <10>", button_kind: "deep_link" };
@@ -214,6 +233,28 @@ describe("feedback reply (ADM-10)", () => {
     );
     expect(message?.text).toBe("Команда DaFit ответила на твоё обращение:\nFixed &lt;b&gt;it&lt;/b&gt;");
     expect(message?.buttons).toEqual([{ text: "Написать ещё", web_app: { url: "https://fit.example/feedback?source=feedback_reply" } }]);
+  });
+});
+
+describe("break-glass access (ADM-14)", () => {
+  it("tells the user which sections an admin opened, until when and why", () => {
+    const message = renderMessage(
+      {
+        ...row,
+        kind: "break_glass",
+        payload: {
+          grant_id: "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b",
+          categories: ["measurements", "photos", "unknown"],
+          reason: "Support ticket <about> a lost weigh-in",
+          expires_at: "2026-11-20T15:30:00Z",
+        },
+      },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe(
+      "Администратор DaFit открыл себе доступ к твоим разделам: замеры, фото прогресса. Доступ закроется пт, 20 нояб., 18:30.\nПричина: Support ticket &lt;about&gt; a lost weigh-in",
+    );
+    expect(message?.buttons).toEqual([{ text: "Открыть DaFit", web_app: { url: "https://fit.example/?source=break_glass" } }]);
   });
 });
 
@@ -563,10 +604,16 @@ describe("plan messages", () => {
       expect(debt?.text).toMatch(/занятие уйдёт в долг\.$/);
       const requested = renderMessage({ ...row, kind: "booking_requested", locale: "en", payload: { ...base } }, options);
       expect(requested?.text).toMatch(/^Booking request: a client with no name, .*, Зал\. Confirm or decline it before the session starts\.$/);
-      expect(requested?.buttons[0]).toEqual({
-        text: "Answer the request",
-        web_app: { url: `https://fit.example/trainer/requests/${booking}?source=booking_requested` },
-      });
+      expect(requested?.buttons).toEqual([
+        { text: "Confirm", callback_data: `bky:${booking}` },
+        { text: "Decline", callback_data: `bkn:${booking}` },
+        { text: "Answer the request", web_app: { url: `https://fit.example/trainer/requests/${booking}?source=booking_requested` } },
+      ]);
+      // A tap in a group would act for whoever tapped: there only the link stays.
+      const inGroup = renderMessage({ ...row, kind: "booking_requested", payload: { ...base } }, { ...options, group: true });
+      expect(inGroup?.buttons).toEqual([
+        { text: "Ответить на запрос", url: `https://fit.example/trainer/requests/${booking}?source=booking_requested` },
+      ]);
       const trial = renderMessage({ ...row, kind: "booking_requested", payload: { ...client, ...base, trial: true } }, options);
       expect(trial?.text).toMatch(/^Запрос на пробное: Анна Смирнова, .*, Зал\. Подтверди или отклони его до начала занятия\.$/);
       const onSite = renderMessage({ ...row, kind: "booking_requested", payload: { ...client, ...base, on_site: true } }, options);
@@ -788,6 +835,19 @@ describe("waitlist messages", () => {
       /отменено/,
     );
   });
+
+  it("speaks of the trainer's time for a booked personal slot", () => {
+    const slot = { ...payload, title: null, slot_id: PAIR };
+    expect(renderMessage({ ...row, kind: "waitlist_offer", payload: slot }, options)?.text).toBe(
+      "Освободилось время у тренера Анна Смирнова: пн, 26 октября в 18:00, Студия. Оно ждёт тебя до 12:30.",
+    );
+    expect(renderMessage({ ...row, kind: "waitlist_closed", payload: { ...slot, reason: "started" } }, options)?.text).toBe(
+      "Время у тренера Анна Смирнова (пн, 26 октября в 18:00) так и не освободилось. Очередь закрыта.",
+    );
+    expect(renderMessage({ ...row, kind: "waitlist_closed", payload: { ...slot, reason: "cancelled" } }, options)?.text).toMatch(
+      /убрал время/,
+    );
+  });
 });
 
 describe("charge_posted and charge_waived", () => {
@@ -906,6 +966,20 @@ describe("referral bonus message", () => {
   it("tells the friend in their language", () => {
     const message = renderMessage({ ...row, locale: "en", kind: "referral_bonus", payload: { ...payload, sessions: 1, side: "referee" } }, options);
     expect(message?.text).toBe("Invitation bonus: you get +1 session with Ирина Котова.");
+  });
+
+  it("says the sessions wait for the next pass when there is no active one", () => {
+    const waiting = { ...payload, pass_id: undefined, side: "referrer", waiting: true };
+    const message = renderMessage({ ...row, kind: "referral_bonus", payload: waiting }, options);
+    expect(message?.text).toBe("Бонус за друга: Фёдор теперь занимается с тренером Ирина Котова. +2 занятия добавим в твой следующий абонемент.");
+    expect(message?.buttons).toEqual([
+      { text: "Открыть абонемент", web_app: { url: "https://fit.example/client/passes?source=referral_bonus" } },
+    ]);
+  });
+
+  it("says the next pass has taken the waiting sessions", () => {
+    const message = renderMessage({ ...row, kind: "referral_bonus", payload: { ...payload, side: "referrer", applied: true } }, options);
+    expect(message?.text).toBe("Обещанный бонус: +2 занятия уже в твоём новом абонементе.");
   });
 });
 

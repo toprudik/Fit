@@ -13,6 +13,7 @@ import { addFreeze, cancelPass, changeExpiry, deletePass, endFreeze, removeFreez
 import type { PairMoney, PassView } from "@/lib/passes/load";
 import { formatLocalDay, freezeState, type Freeze } from "@/lib/passes/present";
 import { AdjustForm, DebtCharges, PastSessionForm, WaiveForm, type WaiveTarget } from "./charge-forms";
+import { MoneyChanges } from "./money-changes";
 import { PassHistory, PassSummary } from "./pass-card";
 import { SellPassForm } from "./sell-pass-form";
 import { useReport } from "./use-report";
@@ -281,6 +282,7 @@ export function TrainerPasses({ money, symbol }: { money: PairMoney; symbol: str
                   onWaive={(chargeId) => waive({ chargeId, passTitle: pass.title })}
                 />
               ) : null}
+              <MoneyChanges changes={pass.changes} timeZone={money.timeZone} />
             </li>
           );
         })}

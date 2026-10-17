@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ChevronLeft, ChevronRight, FileDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileDown, Salad } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { TierLock } from "@/components/plans/tier-lock";
@@ -15,6 +15,7 @@ import type { Dictionary } from "@/i18n/dictionaries";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { formatMoney } from "@/lib/money/format";
+import { loadNutritionClients } from "@/lib/nutrition/adherence-load";
 import { addDays } from "@/lib/schedule/time";
 import { EXPORT_KINDS } from "@/lib/trainer-analytics/csv";
 import { loadTrainerAnalytics, type FinanceRow, type TrainerAnalytics } from "@/lib/trainer-analytics/load";
@@ -163,6 +164,41 @@ function Churn({ copy, data }: { copy: Copy; data: Data }) {
   );
 }
 
+/** How many lowest-adherence clients the block names. */
+const LOWEST_SHOWN = 3;
+
+/** «Питание» (§7, wave-2 §5): average adherence over 7 days and the clients furthest from their target. */
+async function Nutrition({ copy }: { copy: Copy }) {
+  const clients = await loadNutritionClients(7);
+  if (!clients) return null;
+  const judged = clients.filter((client) => client.adherence.share !== null);
+  const average = judged.length ? Math.round(judged.reduce((sum, client) => sum + (client.adherence.share ?? 0), 0) / judged.length) : null;
+  const lowest = [...judged].sort((a, b) => (a.adherence.share ?? 0) - (b.adherence.share ?? 0)).slice(0, LOWEST_SHOWN);
+  return (
+    <ListGroup header={copy.nutrition.header} footer={clients.length ? copy.nutrition.footer : undefined} headingLevel={2}>
+      {clients.length === 0 ? (
+        <ListRow title={copy.nutrition.empty} />
+      ) : (
+        <>
+          <ListRow
+            title={copy.nutrition.average}
+            value={average === null ? copy.nutrition.averageEmpty : interpolate(copy.nutrition.averageValue, { share: average })}
+          />
+          {lowest.map((client) => (
+            <ListRow
+              key={client.coachingId}
+              title={client.name}
+              value={interpolate(copy.nutrition.clientValue, { share: client.adherence.share ?? 0 })}
+              href={`/trainer/clients/${client.coachingId}`}
+            />
+          ))}
+        </>
+      )}
+      <ListRow icon={Salad} title={copy.nutrition.all} href="/trainer/nutrition" />
+    </ListGroup>
+  );
+}
+
 function Hints({ copy, finance }: { copy: Copy; finance: NonNullable<Data["finance"]> }) {
   const text = (hint: (typeof finance.hints)[number]) => {
     const template = copy.hints[hint.kind as keyof Omit<Copy["hints"], "header" | "empty">];
@@ -234,6 +270,7 @@ async function Analytics({ searchParams }: { searchParams: PageProps<"/[lang]/tr
       <Debts copy={copy} locale={locale} data={data} />
       <Ending copy={copy} locale={locale} timeZone={analytics.timeZone} data={data} />
       <Churn copy={copy} data={data} />
+      <Nutrition copy={copy} />
       {data.finance ? (
         <>
           <PriceSimulator base={base} />
