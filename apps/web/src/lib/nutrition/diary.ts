@@ -1,3 +1,5 @@
+import type { Locale } from "@/i18n/config";
+import { unitSystem } from "@/lib/progress/measurements";
 import type { Database } from "@/lib/supabase/database.types";
 
 export type Meal = Database["public"]["Enums"]["meal_type"];
@@ -11,6 +13,21 @@ export const ENTRY_GRAMS_MAX = 5000;
 export const ENTRY_KCAL_MAX = 5000;
 export const SERVINGS_MAX = 100;
 export const FOOD_KCAL_100_MAX = 900;
+
+/**
+ * The unit of a portion's weight in the interface: ounces in English, grams otherwise (wave-2 units, §3 rule 4).
+ * The database always keeps grams; macros and the values per 100 g stay in grams, as on labels.
+ */
+export type PortionUnit = "g" | "oz";
+const GRAMS_PER_OZ = 28.349523125;
+export const portionUnit = (locale: Locale): PortionUnit => (unitSystem(locale) === "imperial" ? "oz" : "g");
+/** A weight typed in the portion unit, in grams to a tenth. */
+export const gramsOfPortion = (value: number, unit: PortionUnit) => (unit === "oz" ? Math.round(value * GRAMS_PER_OZ * 10) / 10 : value);
+/** Grams in the portion unit: ounces to a tenth, grams as they are. */
+export const portionOfGrams = (grams: number, unit: PortionUnit) => (unit === "oz" ? Math.round((grams / GRAMS_PER_OZ) * 10) / 10 : grams);
+/** The smallest and the largest portion one entry takes, in the portion unit (§3.10). */
+export const portionRange = (unit: PortionUnit): [number, number] =>
+  unit === "oz" ? [0.1, Math.floor((ENTRY_GRAMS_MAX / GRAMS_PER_OZ) * 10) / 10] : [1, ENTRY_GRAMS_MAX];
 export const COMMENT_MAX = 1000;
 
 export type DiaryEntry = {
