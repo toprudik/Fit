@@ -155,6 +155,9 @@ begin
   values (v_client, 'female', '1995-05-05', 165, 'moderate');
   insert into public.nutrition_targets (source, client_id, kcal, effective_from, set_by)
   values ('calculator', v_client, 1700, current_date, v_client);
+  insert into public.activity_entries (client_id, local_date, metric, value)
+  values (v_client, current_date, 'steps', 8000), (v_client, current_date, 'water', 250);
+  insert into public.ingest_tokens (user_id, token_hash) values (v_client, extensions.digest(v_client::text, 'sha256'));
 end $$;
 select tests.fill_client('client_c');
 select tests.fill_client('client_e');
@@ -241,7 +244,7 @@ create table tests.personal_tables (tbl text primary key);
 insert into tests.personal_tables values
   ('measurements'), ('progress_photos'), ('intakes'), ('coaching_notes'), ('workout_logs'),
   ('workout_log_exercises'), ('workout_sets'), ('personal_records'), ('data_exports'), ('calendar_feeds'),
-  ('client_goals'), ('body_profiles'), ('nutrition_targets');
+  ('client_goals'), ('body_profiles'), ('nutrition_targets'), ('activity_entries'), ('ingest_tokens');
 
 -- What the admin may read without break-glass (data-model §4.2); every other public table and view must give
 -- the admin 0 rows. exercises is listed for the wger catalog; custom exercises are checked separately.
