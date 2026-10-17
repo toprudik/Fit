@@ -1,4 +1,4 @@
--- Admin reply to feedback (migration 20261017125600_feedback_reply.sql, PRD wave-1 §4 ADM-10): only an admin
+-- Admin reply to feedback (migration 20261017141700_feedback_reply.sql, PRD wave-1 §4 ADM-10): only an admin
 -- answers, the answer is kept on the message and logged, the author gets feedback_reply from the bot.
 begin;
 \ir _helpers.psql
