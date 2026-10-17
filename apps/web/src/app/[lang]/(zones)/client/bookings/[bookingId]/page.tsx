@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CalendarClock, CalendarX, Clock, Link2, MapPin, MessageCircle, UserRound } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { BookingHistory } from "@/components/bookings/booking-history";
 import { CancelBooking } from "@/components/bookings/cancel-booking";
 import { ScanCheckIn } from "@/components/check-in/scan-check-in";
 import { WithdrawRequest } from "@/components/bookings/withdraw-request";
@@ -17,9 +18,12 @@ import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { bookingTone } from "@/lib/bookings/book";
+import { loadBookingHistory } from "@/lib/bookings/history";
 import { loadClientBooking } from "@/lib/bookings/load";
 import { isPairId } from "@/lib/pairs/clients";
 import { loadScheduleOwner } from "@/lib/schedule/load";
+import { trainerClock } from "@/lib/schedule/trainer-clock";
+import { loadTrainerZones } from "@/lib/schedule/trainer-zone";
 
 // A booking id is known only at request time, so the page renders on request.
 export const instant = false;
@@ -72,6 +76,8 @@ async function BookingDetails({
     minute: "2-digit",
     timeZone: owner.timeZone,
   });
+  const trainerZone = (await loadTrainerZones(owner.supabase, [booking.trainerId])).get(booking.trainerId);
+  const trainerTime = trainerClock(booking, owner.timeZone, trainerZone, intl);
   const at = now();
   const ahead = booking.startsAt > at;
   const live = booking.status === "confirmed" && ahead;
@@ -103,7 +109,12 @@ async function BookingDetails({
           icon={Clock}
           title={day.format(new Date(booking.startsAt))}
           subtitle={
-            <span className="tabular-nums">{`${time.format(new Date(booking.startsAt))}–${time.format(new Date(booking.endsAt))}`}</span>
+            <>
+              <span className="tabular-nums">{`${time.format(new Date(booking.startsAt))}–${time.format(new Date(booking.endsAt))}`}</span>
+              {trainerTime ? (
+                <span className="block tabular-nums">{interpolate(t.schedule.trainerTime, { time: trainerTime })}</span>
+              ) : null}
+            </>
           }
         />
         {booking.mode === "online" ? (
@@ -133,6 +144,8 @@ async function BookingDetails({
           <ListRow title={booking.cancelReason} />
         </ListGroup>
       ) : null}
+
+      <BookingHistory items={await loadBookingHistory(owner, [booking.id])} timeZone={owner.timeZone} />
 
       {live && deadlineText ? (
         <p className="px-1 text-subhead text-ink-2">{free ? interpolate(copy.deadline, { date: deadlineText }) : copy.lateText}</p>

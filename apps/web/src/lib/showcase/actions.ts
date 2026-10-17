@@ -13,7 +13,9 @@ export type AddressState =
 export type VisibilityState = { failed: boolean };
 
 /** The signed-in trainer's own row, changed under RLS and the column grants; false when nothing matched. */
-async function updateOwnProfile(values: { slug: string } | { is_public: boolean }): Promise<{ ok: boolean; code?: string }> {
+async function updateOwnProfile(
+  values: { slug: string } | { is_public: boolean } | { story_card_showcase: boolean },
+): Promise<{ ok: boolean; code?: string }> {
   const supabase = await createSupabaseServerClient();
   const { data: session } = await supabase.auth.getClaims();
   const userId = session?.claims.sub;
@@ -41,6 +43,14 @@ export async function saveShowcaseAddress(_previous: AddressState, formData: For
   }
   refresh();
   return { status: "saved", slug };
+}
+
+/** "Имя и QR на карточках клиентов" (PRD wave-3 §4 rule 7): applies at once, on by default. */
+export async function setStoryCardShowcase(enabled: boolean): Promise<{ ok: boolean }> {
+  const { ok, code } = await updateOwnProfile({ story_card_showcase: enabled === true });
+  if (!ok) console.error("switching the story card showcase failed", code);
+  else refresh();
+  return { ok };
 }
 
 /** "Выключить витрину" / "Включить витрину": the trainer's own switch (is_public). */

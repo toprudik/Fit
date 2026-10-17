@@ -27,7 +27,17 @@ Quiet hours: non-urgent messages wait until quiet hours end; session reminders a
 - Results: 403 or "chat not found" skips the row and sets `profiles.bot_blocked_at`; sign-in clears it, which is the only sign of life the web sees, since the bot does not touch the database. 429 stops the run and hands the rest back without using their attempts. A wrong token does the same. 5xx and network errors retry after 30 s, 1, 2 and 4 minutes, and the fifth failure is final. Any other 400 fails at once. Error codes never contain the token.
 - Delivery is at least once. Telegram has no idempotency key, so if a run dies between a send and its record, the row goes out again after its 5-minute lease.
 - Texts live in `botMessages` of the web dictionaries, in the recipient's DaFit language. Each type gets its template together with the feature that queues it; a row without a template fails with `no_template`. Buttons are `web_app` buttons to the app route with `?source=<type>`, and plain links in the team group, where Telegram does not allow `web_app`.
-- Buttons that act right in the bot (PRD §3 Т2, Т7a, С1) are not part of this: the bot would have to pass the tap to the web. That is decided together with booking requests.
+- Buttons that act right in the bot (PRD §3 Т2, Т7a, С1) are not part of this; see "Action buttons" below.
+
+## Action buttons (2026-10-17)
+
+Some notifications let the recipient answer without opening the app (PRD §3 Т2: "Подтвердить" and "Отклонить" on a booking request). The bot still does not touch the database, so it passes the tap to the web:
+
+- A template returns such a button as an action; the dispatcher sends it as a `callback_data` button, in private chats only (in a group the tap would act for whoever tapped). The data is short, `<action>:<id>` within Telegram's 64 bytes; `apps/web/src/lib/bot-actions/callback-data.ts` owns the format, and the bot only knows which prefixes to forward.
+- The bot posts the data, the tapping user's Telegram id and their Telegram language to `POST /api/bot/actions` on the `WEBAPP_URL` origin with `Authorization: Bearer <secret>`. The secret is `hex(HMAC-SHA256(key=TELEGRAM_BOT_TOKEN, msg="dafit/bot-actions/v1"))`: both projects already hold the token, so there is no new variable, and it rotates with the token like the webhook secret. The Telegram id is trusted because the update came through the webhook with its own secret.
+- The web finds the existing, unblocked account of that Telegram id, mints a session the way sign-in does (a one-time magic-link token, never mailed), calls the same RPC the app calls (`decide_booking`) with that session and revokes the session afterwards. RLS and the RPC's own checks decide, so a delegate acts within their scope and anyone else gets "request not found". A tap never creates an account.
+- The answer is what the bot shows: a popup on the button in the user's DaFit language and, once the request is settled (decided, or already closed), a line appended to the message in place of the action buttons. Link buttons stay. If the web cannot answer, the bot shows its own "didn't work" popup in the Telegram language and leaves the buttons.
+- Logs on both sides carry status codes and error types only, never the Telegram id, the data or the booking.
 
 Setup, once per environment:
 

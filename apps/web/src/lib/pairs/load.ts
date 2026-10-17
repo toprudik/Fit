@@ -2,7 +2,7 @@ import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PAID_PLAN, requestedPlans } from "@/lib/plans/plans";
 import type { Json } from "@/lib/supabase/database.types";
-import { DELETED_CLIENT_ID, displayName, isLive, isPairId, passIsEnding, type ClientItem, type CoachingStatus } from "./clients";
+import { DELETED_CLIENT_ID, displayName, isLive, isPairId, passIsEnding, type ClientGoal, type ClientItem, type CoachingStatus } from "./clients";
 import { todayMilestones, type Milestone, type TodayMilestones } from "./milestones";
 
 const DEFAULT_TIME_ZONE = "Europe/Moscow";
@@ -35,7 +35,7 @@ export async function loadTrainerClients(): Promise<{ items: ClientItem[]; timeZ
   if (!pairs.length) return { items: [], timeZone: me.timeZone };
 
   const ids = pairs.map((pair) => pair.id);
-  const [meta, people, balances, stats, passes, intakes, deletions] = await Promise.all([
+  const [meta, people, balances, stats, passes, intakes, deletions, goals] = await Promise.all([
     supabase.from("coaching_trainer_meta").select("coaching_id, client_alias, archived_at").in("coaching_id", ids),
     supabase
       .from("profiles")
@@ -68,8 +68,17 @@ export async function loadTrainerClients(): Promise<{ items: ClientItem[]; timeZ
         pairs.map((pair) => pair.client_id),
       )
       .is("cancelled_at", null),
+    // RLS returns a client's goal only while they share nutrition with this trainer (wave-2 §1.2).
+    supabase
+      .from("client_goals")
+      .select("user_id, goal")
+      .in(
+        "user_id",
+        pairs.map((pair) => pair.client_id),
+      )
+      .order("set_at", { ascending: false }),
   ]);
-  for (const [what, result] of Object.entries({ meta, people, balances, stats, passes, intakes, deletions })) {
+  for (const [what, result] of Object.entries({ meta, people, balances, stats, passes, intakes, deletions, goals })) {
     if (result.error) fail(what, result.error);
   }
 
@@ -82,6 +91,8 @@ export async function loadTrainerClients(): Promise<{ items: ClientItem[]; timeZ
   const latestIntake = new Map<string, boolean>();
   for (const row of intakes.data ?? []) if (!latestIntake.has(row.user_id)) latestIntake.set(row.user_id, row.parq_flagged);
   const deleting = new Set((deletions.data ?? []).map((row) => row.user_id));
+  const latestGoal = new Map<string, ClientGoal>();
+  for (const row of goals.data ?? []) if (!latestGoal.has(row.user_id)) latestGoal.set(row.user_id, row.goal);
 
   const items = pairs.map((pair): ClientItem => {
     const person = personById.get(pair.client_id);
@@ -103,6 +114,7 @@ export async function loadTrainerClients(): Promise<{ items: ClientItem[]; timeZ
       parqFlagged: pair.status !== "ended" && (latestIntake.get(pair.client_id) ?? false),
       deleting: pair.status !== "ended" && deleting.has(pair.client_id),
       deleted: pair.client_id === DELETED_CLIENT_ID,
+      goal: latestGoal.get(pair.client_id) ?? null,
     };
   });
   return { items, timeZone: me.timeZone };
