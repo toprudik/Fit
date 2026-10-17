@@ -10,6 +10,7 @@ import { isButtonUrl } from "@/lib/groups/rules";
 import { isBadgeCode } from "@/lib/gamification/gamification";
 import { bookingDecisionData } from "@/lib/bot-actions/callback-data";
 import { isChallengeMetric } from "@/lib/challenges/challenges";
+import { invitePath, isInviteToken } from "@/lib/delegations/rules";
 import { formatOffset } from "@/lib/reminders/offsets";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import type { InlineButton } from "./telegram";
@@ -453,6 +454,15 @@ const templates: Partial<Record<NotificationType, Template>> = {
         };
       case "pending":
         return { text: interpolateEscaped(t.delegationPending, { when }), buttons: team };
+      // Rule 1: the owner sent the invite to this trainer by search; the button opens the one-time invite.
+      case "invited":
+        return {
+          text:
+            payload.kind === "substitute"
+              ? interpolateEscaped(t.delegationInviteSubstitute, { owner, when })
+              : interpolateEscaped(t.delegationInviteAssistant, { owner }),
+          buttons: isInviteToken(payload.token) ? [{ text: t.openInvite, path: invitePath(payload.token) }] : team,
+        };
       default:
         return { text: escapeHtml(t.delegationDeclined), buttons: team };
     }

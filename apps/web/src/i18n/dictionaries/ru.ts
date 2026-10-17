@@ -2089,6 +2089,13 @@ export const ru = {
       title: "Ссылка-приглашение",
       text: "Отправь ссылку тренеру. Доступ начнётся, когда тренер её примет. Ссылка работает один раз.",
       shareText: "Приглашение в команду DaFit",
+      searchLabel: "Или найди тренера в DaFit",
+      searchHint: "Имя или @username. Найдутся верифицированные тренеры с открытой витриной и те, с кем ты уже работал в команде.",
+      noResults: "Никого не нашли",
+      invite: "Пригласить",
+      invited: "Приглашение отправлено: {name}. Ссылка выше больше не работает.",
+      inviteExpired: "Это приглашение уже приняли или оно устарело.",
+      unnamed: "Тренер без имени",
     },
     substitute: {
       header: "Подмена",
@@ -4547,6 +4554,9 @@ export const ru = {
     delegationAssistantAccepted: "{delegate} теперь помогает тебе с клиентами.",
     delegationDeclined: "Приглашение отклонено. Можно отправить новую ссылку другому тренеру.",
     delegationPending: "Подмену на занятие {when} пока никто не принял.",
+    delegationInviteSubstitute: "{owner} просит провести за него занятие {when}. Посмотри, что передают, и прими или откажись.",
+    delegationInviteAssistant: "{owner} зовёт тебя помощником в свою команду в DaFit. Посмотри, что тебе откроют, и прими или откажись.",
+    openInvite: "Посмотреть приглашение",
     openTeam: "Открыть команду",
     openAccess: "Настроить доступ",
     /** Wave-2 §3.12: payload { day, body, first_name, last_name, display_name } from add_food_comment. */
