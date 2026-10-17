@@ -1,6 +1,6 @@
 "use client";
 
-import { animate, type AnimationPlaybackControlsWithThen } from "motion/react";
+import { animate } from "motion/mini";
 import { useRouter, useSelectedLayoutSegments } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ProfileSheet } from "@/components/profile/profile-sheet";
@@ -51,6 +51,9 @@ function transitionBetween(before: Shown, after: Shown, intent: "tab" | "pop" | 
   return how === "load" ? null : how;
 }
 
+/** The controls motion's WAAPI animate() returns. */
+type Playback = ReturnType<typeof animate>;
+
 /**
  * Plays a transition on the element: crossfades over duration-base (zone) or duration-fast (tab);
  * push brings the screen in from 30% of its width on the right and pop from 30% on the left, with a
@@ -58,7 +61,7 @@ function transitionBetween(before: Shown, after: Shown, intent: "tab" | "pop" | 
  * is a fade of 100ms. The outgoing screen's parallax (it shifts a third aside and dims) is not done:
  * Next.js hides the old screen in the same commit that shows the new one.
  */
-function play(element: HTMLElement, transition: Transition): AnimationPlaybackControlsWithThen {
+function play(element: HTMLElement, transition: Transition): Playback {
   const reduced = prefersReducedMotion();
   const controls =
     reduced || transition === "zone" || transition === "tab"
@@ -176,7 +179,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // A layout effect starts the transition before the browser paints the new screen, so it never
   // flashes in place. The first load and a reload show the screen at once.
   const shown = useRef<Shown>({ route, zone, tabId });
-  const running = useRef<AnimationPlaybackControlsWithThen | null>(null);
+  const running = useRef<Playback | null>(null);
   useLayoutEffect(() => {
     const before = shown.current;
     shown.current = { route, zone, tabId };
