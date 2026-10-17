@@ -135,6 +135,7 @@ with r as (
   returning id
 )
 insert into public.bonuses (referral_id, beneficiary_id, kind, sessions) select r.id, tests.user_id('client_c'), 'sessions', 1 from r;
+insert into public.trainer_referral_codes (trainer_id, code) values (tests.user_id('trainer_a'), 'ABCDEFGHJKLM');
 
 -- Personal data of C and E: a self log with a set (which builds a personal record), a measurement, a photo, an
 -- intake; C also has an export, a calendar feed, notification preferences, a consent, feedback and an outbox row.

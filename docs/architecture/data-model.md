@@ -2097,7 +2097,7 @@ create index on public.challenge_participants (user_id);
 
 Лидерборд не хранится в таблице: SECURITY DEFINER-функция `get_challenge_leaderboard(challenge_id)` возвращает имя (`display_name`), аватар и `score` только участников с `show_on_leaderboard`; вызвать могут участники и тренер челленджа. Счёт отдаётся агрегатом, сырых данных (шагов по дням, питания) функция не отдаёт.
 
-Рефералка (миграция `20261017040300_referral_offers.sql`, волна 3 §3.1; бонусы тренерам за тренеров, §3.2, придут позже, их значения перечислений уже есть):
+Рефералка (миграция `20261017040300_referral_offers.sql`, волна 3 §3.1; бонусы тренерам за тренеров, §3.2, в `20261017090519_trainer_referrals.sql`, ниже):
 
 ```sql
 alter table public.passes add column is_bonus boolean not null default false;   -- бонусный абонемент, цена 0 (R60)
@@ -2161,6 +2161,32 @@ create table public.bonuses (
 Все четыре таблицы под RLS без грантов: читают и пишут только функции. Тренер: `save_referral_offer` (Pro, `trainer.referral_offers`; новая акция архивирует прежнюю), `stop_referral_offer`, `trainer_referral_offer`, `trainer_referrals`, `decline_referral` (только `pending`). Клиент: `client_referral(coaching_id)` создаёт код при первом вызове, если у тренера идёт акция. Лендинг: `resolve_referral(code)` (доступна anon, как `resolve_client_invite`), `join_by_referral(code)` делает пару через `private.join_pair` с `source = 'referral'` и, если человек новый для тренера и акция идёт, `pending`-реферал.
 
 «Только после факта оплаты» (Q50): триггер `payments_referral` (`after insert or update of status on payments`) на `confirmed`-платеже `direction = 'in'` в паре приглашённого вызывает `private.qualify_referral`: если платёж подходит под условие акции (пакет оплаченного абонемента или сумма в валюте акции), реферал становится `qualified`, каждой стороне создаётся бонусный абонемент (`is_bonus`, цена 0, `grant` в журнале, гасит долг) и уходит `referral_bonus`. Пригласившему не больше 10 бонусов на акцию. Если этот платёж переведён в `voided` в течение 14 дней после `qualified_at`, `private.revoke_referral` отменяет бонусные абонементы без списаний и погашений (`refund` остатка, `cancelled`), бонусы и реферал становятся `void`; использованный бонус остаётся (wave-3 §3.1-7). Завершение пары аннулирует её `pending`-рефералы с обеих сторон.
+
+Тренер приводит тренера (§3.2, `20261017090519_trainer_referrals.sql`):
+
+```sql
+alter type public.referral_void_reason add value 'verification_rejected';
+-- referrals.trainer_id и coaching_id становятся nullable: у trainer_to_trainer пары нет
+--   check ((kind = 'client_to_client') = (trainer_id is not null and coaching_id is not null)),
+--   unique (referee_id) where kind = 'trainer_to_trainer'
+alter table public.bonuses add column discount_percent smallint;  -- только для plan_discount
+
+create table public.trainer_referral_codes (       -- многоразовый код тренера, вид как у инвайта (12 символов)
+  trainer_id uuid primary key references public.trainer_profiles(user_id) on delete cascade,
+  code       text not null unique,                 -- хранится как есть: не секрет, в отличие от инвайта
+  created_at timestamptz not null default now()
+);
+
+create table public.trainer_referral_terms (       -- одна строка: бонус за приглашённого тренера, задаёт админ
+  id               boolean primary key default true check (id),
+  bonus_kind       public.bonus_kind not null default 'plan_month',  -- plan_month | plan_discount
+  discount_percent smallint,                                         -- 1..100 для plan_discount
+  updated_at       timestamptz not null default now(),
+  updated_by       uuid references public.profiles(id) on delete set null
+);
+```
+
+Ссылка тренера ведёт на обычный экран погашения инвайта (`/onboarding/trainer?code=…`, в Mini App `startapp=ti_<code>`): `trainer_invite_status` отвечает `referral` на чужой реферальный код, `redeem_trainer_invite` принимает его так же, как инвайт, но многоразово: создаёт `trainer_profiles` (Free, `trainer_invite_id = null`), реферал `trainer_to_trainer` (`pending`) и бонус пригласившему по текущим `trainer_referral_terms` (`pending`). Покупки тарифа в бете нет (Q59), поэтому бонус остаётся `pending` (§3.2-11). Решение админа «Отклонить» по верификации приглашённого (триггер на `trainer_verifications`) делает реферал и бонус `void` с причиной `verification_rejected`; доступ и клиенты у тренера остаются (Q55). Тренер видит свой код и приглашённых через `my_trainer_referral()` (код создаётся при первом вызове), бонус читают тренеры и админы через `trainer_referral_terms()`, меняет админ `admin_set_trainer_referral_bonus(kind, percent)` (аудит `trainer_referral.set_bonus`, действует для новых приглашений).
 
 ```sql
 create type public.check_in_method as enum ('qr', 'trainer');
@@ -2529,6 +2555,8 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `challenges` | T; участники | T | T | никто |
 | `challenge_participants` | T; сам; лидерборд: **pub-для-участников** `get_challenge_leaderboard` | C (вступить в челлендж своей группы); T | C: `show_on_leaderboard`; S: `score` | C (выйти); T |
 | `referral_codes` | через `client_referral` (сам) | S | никто | никто |
+| `trainer_referral_codes` | через `my_trainer_referral` (сам) | S | никто | никто |
+| `trainer_referral_terms` | через `trainer_referral_terms` (тренеры, админы) | миграция | A (`admin_set_trainer_referral_bonus`) | никто |
 | `referral_offers` | через функции: T; клиенты тренера (условия) | T (функция) | T (архив, функция) | никто (архив) |
 | `referrals`, `bonuses` | через функции: referrer (имя и статус друга), T | S (при присоединении по реф-коду) | S (триггер оплаты), T (отклонить) | никто |
 | `check_ins` | C; T; D[attendance] | S-RPC `check_in_by_qr` (C) | никто | никто (каскад) |
