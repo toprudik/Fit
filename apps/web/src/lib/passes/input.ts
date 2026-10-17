@@ -91,6 +91,10 @@ export type ReportInput = z.input<typeof reportInput>;
 export const voidInput = z.object({ paymentId: uuid, reason });
 export type VoidInput = z.input<typeof voidInput>;
 
+/** "Исправить": the new amount, method and day of a confirmed payment, and what was wrong (PRD 2.8-13). */
+export const correctInput = z.object({ paymentId: uuid, payment: paymentInput, reason });
+export type CorrectInput = z.input<typeof correctInput>;
+
 /** "Простить": one charge, with an optional reason (PRD 2.6.6-4). */
 export const waiveInput = z.object({ chargeId: uuid, reason: optionalText });
 export type WaiveInput = z.input<typeof waiveInput>;

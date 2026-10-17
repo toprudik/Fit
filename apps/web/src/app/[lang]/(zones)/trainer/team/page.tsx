@@ -11,7 +11,7 @@ import { INTL_LOCALE, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
-import { loadTeam, type Delegation } from "@/lib/delegations/load";
+import { loadTeam, type Delegation, type JournalEntry } from "@/lib/delegations/load";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
@@ -80,6 +80,27 @@ function Row({ copy, row, format }: { copy: Copy; row: Delegation; format: Retur
   );
 }
 
+function journalAction(copy: Copy, action: string) {
+  const actions = copy.journalActions;
+  if (action in actions) return actions[action as keyof Copy["journalActions"]];
+  return action.startsWith("booking:") ? actions.booking : action;
+}
+
+function Journal({ copy, entries, format }: { copy: Copy; entries: JournalEntry[]; format: ReturnType<typeof formatters> }) {
+  return (
+    <ListGroup header={copy.journal} footer={copy.journalFooter} headingLevel={2}>
+      {entries.length === 0 ? <ListRow title={copy.journalEmpty} /> : null}
+      {entries.map((entry, index) => (
+        <ListRow
+          key={`${entry.at}-${index}`}
+          title={interpolate(copy.journalEntry, { action: journalAction(copy, entry.action), client: entry.clientName ?? "" })}
+          subtitle={interpolate(copy.journalBy, { name: entry.delegateName ?? "", when: format.when(entry.at) })}
+        />
+      ))}
+    </ListGroup>
+  );
+}
+
 async function Team() {
   const [t, locale, data] = await Promise.all([getDictionary(), getLocale(), loadTeam()]);
   if (!data) return null;
@@ -111,6 +132,7 @@ async function Team() {
               <Row key={row.id} copy={copy} row={row} format={format} />
             ))}
           </ListGroup>
+          {mine.length > 0 || data.journal.length > 0 ? <Journal copy={copy} entries={data.journal} format={format} /> : null}
         </>
       ) : (
         <TierLock plan="trainer_pro" title={copy.lockTitle} description={copy.lockText} feature="trainer.delegation" requested={data.requested} />

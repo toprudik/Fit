@@ -1385,14 +1385,14 @@ isOneToOne: false
                   ]
                 },"homework": {
                   Row: {
-                    "archived_at": string | null,"coaching_id": string,"created_at": string,"description": string | null,"due_date": string,"id": string,"repeat_until": string | null,"repeat_weekdays": (number)[] | null,"title": string,"updated_at": string,"video_url": string | null
+                    "archived_at": string | null,"coaching_id": string,"created_at": string,"created_by": string | null,"description": string | null,"due_date": string,"id": string,"repeat_until": string | null,"repeat_weekdays": (number)[] | null,"title": string,"updated_at": string,"video_url": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "archived_at"?: string | null,"coaching_id": string,"created_at"?: string,"description"?: string | null,"due_date": string,"id"?: string,"repeat_until"?: string | null,"repeat_weekdays"?: (number)[] | null,"title": string,"updated_at"?: string,"video_url"?: string | null
+                    "archived_at"?: string | null,"coaching_id": string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"due_date": string,"id"?: string,"repeat_until"?: string | null,"repeat_weekdays"?: (number)[] | null,"title": string,"updated_at"?: string,"video_url"?: string | null
                   }
                   Update: {
-                    "archived_at"?: string | null,"coaching_id"?: string,"created_at"?: string,"description"?: string | null,"due_date"?: string,"id"?: string,"repeat_until"?: string | null,"repeat_weekdays"?: (number)[] | null,"title"?: string,"updated_at"?: string,"video_url"?: string | null
+                    "archived_at"?: string | null,"coaching_id"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"due_date"?: string,"id"?: string,"repeat_until"?: string | null,"repeat_weekdays"?: (number)[] | null,"title"?: string,"updated_at"?: string,"video_url"?: string | null
                   }
                   Relationships: [
                     {
@@ -1412,6 +1412,18 @@ isOneToOne: false
       columns: ["coaching_id"]
 isOneToOne: false
       referencedRelation: "coachings"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "homework_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "homework_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -3849,6 +3861,9 @@ isOneToOne: false
 "copy_food_meal":
 { Args: { "p_from": string,"p_meal": Database["public"]['Enums']["meal_type"],"p_to": string,"p_to_meal"?: Database["public"]['Enums']["meal_type"] }; Returns: number
                            },
+"correct_payment":
+{ Args: { "p_amount_minor": number,"p_method": Database["public"]['Enums']["payment_method"],"p_paid_at": string,"p_payment_id": string,"p_reason": string }; Returns: string
+                           },
 "create_calendar_feed":
 { Args: { "p_zone": Database["public"]['Enums']["app_zone"] }; Returns: string
                            },
@@ -3894,8 +3909,8 @@ isOneToOne: false
 { Args: { "p_referral_id": string }; Returns: undefined
                            },
 "delegate_journal":
-{ Args: { "p_coaching_id": string }; Returns: {
-              "action": string,"at": string,"booking_id": string,"delegate_name": string,"owner_name": string,"workout_log_id": string
+{ Args: { "p_coaching_id"?: string }; Returns: {
+              "action": string,"at": string,"booking_id": string,"coaching_id": string,"delegate_name": string,"owner_name": string,"workout_log_id": string
             }[]
                            },
 "delegated_session":
