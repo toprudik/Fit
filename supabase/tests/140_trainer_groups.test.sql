@@ -35,6 +35,9 @@ values ('calculator', tests.user_id('client_d'), 2100, current_date - 10, tests.
 insert into public.nutrition_targets (source, client_id, coaching_id, kcal, effective_from, set_by)
 values ('trainer', tests.user_id('client_e'), :'pair_e', 2000, current_date - 10, tests.user_id('trainer_a'));
 
+-- The group template starts on the trainer's local day, which is already tomorrow in UTC late in the evening.
+select private.client_today(tests.user_id('trainer_a')) as group_day \gset
+
 -- Plan gate and ownership -------------------------------------------------------------------------------------
 
 select tests.authenticate_as('trainer_free');
@@ -101,10 +104,10 @@ select tests.authenticate_as('trainer_a');
 select throws_ok(format($$ select public.add_group_member(%L, %L) $$, :'group_lose', :'pair_bh'), 'P0001', 'pair_not_found',
   'trainer A cannot add a client of another trainer');
 -- A diary day (§3.9): the group template's numbers reach its own trainer only.
-select results_eq(format($$ select source::text, kcal, other_trainer from public.nutrition_target_on(%L, current_date) $$, tests.user_id('client_d')),
+select results_eq(format($$ select source::text, kcal, other_trainer from public.nutrition_target_on(%L, %L) $$, tests.user_id('client_d'), :'group_day'),
   $$ values ('group', 1600, false) $$, 'trainer A sees the numbers of A''s group template on d''s day');
 select tests.authenticate_as('trainer_b');
-select results_eq(format($$ select source::text, kcal, other_trainer from public.nutrition_target_on(%L, current_date) $$, tests.user_id('client_d')),
+select results_eq(format($$ select source::text, kcal, other_trainer from public.nutrition_target_on(%L, %L) $$, tests.user_id('client_d'), :'group_day'),
   $$ values ('group', null::integer, true) $$, 'trainer B gets only that another trainer''s group template is active');
 select tests.authenticate_as('trainer_a');
 select tests.authenticate_as('client_c');

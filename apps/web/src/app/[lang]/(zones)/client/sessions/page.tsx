@@ -20,6 +20,8 @@ import { bookingTone, segmentBookings } from "@/lib/bookings/book";
 import { findSessionBooking, loadClientBookings, type ClientBooking } from "@/lib/bookings/load";
 import { isPairId } from "@/lib/pairs/clients";
 import { loadScheduleOwner } from "@/lib/schedule/load";
+import { trainerClock } from "@/lib/schedule/trainer-clock";
+import { loadTrainerZones } from "@/lib/schedule/trainer-zone";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
@@ -45,7 +47,15 @@ async function Bookings({ searchParams }: { searchParams: PageProps<"/[lang]/cli
     if (booking) redirect(`/client/bookings/${booking}${action}`);
   }
 
-  const { upcoming, past, requests } = segmentBookings(await loadClientBookings(owner), now());
+  const bookings = await loadClientBookings(owner);
+  const { upcoming, past, requests } = segmentBookings(bookings, now());
+  const zones = await loadTrainerZones(owner.supabase, bookings.map((booking) => booking.trainerId));
+  const subtitle = (booking: ClientBooking) => {
+    const name = booking.trainer ? interpolate(copy.trainer, { name: booking.trainer }) : null;
+    const clock = trainerClock(booking, owner.timeZone, zones.get(booking.trainerId), INTL_LOCALE[locale]);
+    const caption = clock ? interpolate(t.schedule.trainerTime, { time: clock }) : null;
+    return [name, caption].filter(Boolean).join(" · ") || undefined;
+  };
   const format = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     weekday: "short",
     day: "numeric",
@@ -64,7 +74,7 @@ async function Bookings({ searchParams }: { searchParams: PageProps<"/[lang]/cli
             key={booking.id}
             icon={CalendarDays}
             title={format.format(new Date(booking.startsAt))}
-            subtitle={booking.trainer ? interpolate(copy.trainer, { name: booking.trainer }) : undefined}
+            subtitle={subtitle(booking)}
             trailing={
               booking.status === "confirmed" ? undefined : <Badge tone={bookingTone(booking.status)}>{copy.status[booking.status]}</Badge>
             }
