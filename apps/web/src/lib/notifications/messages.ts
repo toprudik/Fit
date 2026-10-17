@@ -358,6 +358,34 @@ const templates: Partial<Record<NotificationType, Template>> = {
       buttons: [{ text: t.openNutrition, path: pair === "/trainer/clients" ? pair : `${pair}/nutrition` }],
     };
   },
+  // Wave-3 §1: payload { event, delegation_id, coaching_id, session_id, starts_at, delegate_name, owner_name } from
+  // accept_delegation, decline_delegation and the two-hour reminder of an unaccepted substitute.
+  delegation: ({ t, locale, timeZone, payload }) => {
+    const delegate = typeof payload.delegate_name === "string" && payload.delegate_name.trim() ? payload.delegate_name.trim() : t.unnamedTrainer;
+    const owner = typeof payload.owner_name === "string" && payload.owner_name.trim() ? payload.owner_name.trim() : t.unnamedTrainer;
+    const when = sessionTime(locale, payload.starts_at, timeZone);
+    const team = [{ text: t.openTeam, path: "/trainer/team" }];
+    switch (payload.event) {
+      case "substitute":
+        return { text: interpolateEscaped(t.delegationSubstitute, { delegate, when }), buttons: [{ text: t.openSessions, path: "/client/sessions" }] };
+      case "assistant": {
+        const pair = pairPath("/client/trainers", payload);
+        return {
+          text: interpolateEscaped(t.delegationAssistant, { owner, delegate }),
+          buttons: [{ text: t.openAccess, path: pair === "/client/trainers" ? pair : `${pair}/sharing` }],
+        };
+      }
+      case "accepted":
+        return {
+          text: payload.kind === "assistant" ? interpolateEscaped(t.delegationAssistantAccepted, { delegate }) : interpolateEscaped(t.delegationAccepted, { delegate, when }),
+          buttons: team,
+        };
+      case "pending":
+        return { text: interpolateEscaped(t.delegationPending, { when }), buttons: team };
+      default:
+        return { text: escapeHtml(t.delegationDeclined), buttons: team };
+    }
+  },
   // Wave-2 §6.9: payload { broadcast_id, coaching_id, trainer_name, body, button_kind, button_url } from
   // send_broadcast. The trainer's text goes out as typed, escaped; a link button takes https only.
   trainer_broadcast: ({ t, payload }) => {

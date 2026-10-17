@@ -3724,6 +3724,15 @@ export const ru = {
     /** Wave-2 §6.9: a trainer's broadcast to a group, with the trainer's name above the text. */
     broadcastFrom: "Сообщение от тренера {name}",
     broadcastLink: "Открыть ссылку",
+    /** Wave-3 §1: payload { event, delegation_id, coaching_id, session_id, starts_at, delegate_name, owner_name }. */
+    delegationSubstitute: "Занятие {when} проведёт {delegate}. Если не подходит, запись можно отменить без списания.",
+    delegationAssistant: "У тренера {owner} теперь есть помощник: {delegate}. Помощнику видно только то, что ты разрешаешь тренеру, а доступ к прогрессу можно выключить.",
+    delegationAccepted: "{delegate} проведёт занятие {when}. Клиентам уже сообщили.",
+    delegationAssistantAccepted: "{delegate} теперь помогает тебе с клиентами.",
+    delegationDeclined: "Приглашение отклонено. Можно отправить новую ссылку другому тренеру.",
+    delegationPending: "Подмену на занятие {when} пока никто не принял.",
+    openTeam: "Открыть команду",
+    openAccess: "Настроить доступ",
     /** Wave-2 §3.12: payload { day, body, first_name, last_name, display_name } from add_food_comment. */
     trainerComment: "Комментарий тренера {name} к твоему питанию за {date}: «{body}»",
     openFoodDay: "Открыть день",
