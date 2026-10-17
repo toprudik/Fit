@@ -4166,6 +4166,12 @@ export const en: Dictionary = {
     text: "The link may be out of date.",
     action: "Go to the main screen",
   },
+  errorPage: {
+    title: "Something went wrong",
+    text: "Try again. If it happens again, let us know and we'll look into it.",
+    retry: "Try again",
+    feedback: "Send feedback",
+  },
   botMessages: {
     open: "Open DaFit",
     botTest: "Done, DaFit can now message you here. Session reminders and other notifications will come to this chat.",

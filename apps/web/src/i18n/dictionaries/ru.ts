@@ -4221,6 +4221,13 @@ export const ru = {
     text: "Возможно, ссылка устарела.",
     action: "Открыть главный экран",
   },
+  /** The error boundaries: app/[lang]/error.tsx and app/global-error.tsx (PRD wave-1 §2.13 rule 1). */
+  errorPage: {
+    title: "Что-то пошло не так",
+    text: "Попробуй ещё раз. Если ошибка повторится, напиши нам, и мы разберёмся.",
+    retry: "Попробовать ещё раз",
+    feedback: "Обратная связь",
+  },
   /** Bot messages from the notification outbox, in the recipient's DaFit language (ADR 0006, Q66). */
   botMessages: {
     open: "Открыть DaFit",
