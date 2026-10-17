@@ -2620,7 +2620,7 @@ export const en: Dictionary = {
       noShows: "No-shows",
       earned: "Earned",
       received: "Received",
-      endingPasses: "Passes ending within 14 days",
+      endingPasses: "Passes ending: 2 sessions or 7 days left",
       lastActive: "Last active",
       opens: "App opens",
       features: "What they use",
