@@ -4330,7 +4330,7 @@ isOneToOne: false
 { Args: { "p_carbs_g"?: number,"p_confirm_low"?: boolean,"p_fat_g"?: number,"p_group_id": string,"p_kcal": number,"p_protein_g"?: number,"p_steps_target"?: number,"p_water_ml"?: number }; Returns: string
                            },
 "set_nutrition_target":
-{ Args: { "p_carbs_g"?: number,"p_coaching_id": string,"p_confirm_low"?: boolean,"p_fat_g"?: number,"p_kcal": number,"p_protein_g"?: number }; Returns: string
+{ Args: { "p_carbs_g"?: number,"p_coaching_id": string,"p_confirm_low"?: boolean,"p_fat_g"?: number,"p_kcal": number,"p_protein_g"?: number,"p_steps_target"?: number,"p_water_ml"?: number }; Returns: string
                            },
 "set_primary_nutrition_group":
 { Args: { "p_coaching_id": string,"p_group_id": string }; Returns: undefined
