@@ -6,6 +6,7 @@ import { Chip, ChipRow } from "@/components/ui/chip";
 import { IconButton } from "@/components/ui/icon-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/components/ui/list";
+import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
@@ -80,6 +81,15 @@ function rowBadge(t: Dictionary, item: ClientItem) {
   if (item.isCard) return <Badge>{copy.card}</Badge>;
   if (!item.hasPass) return <Badge>{copy.noPass}</Badge>;
   return null;
+}
+
+/** The next session or the start date, then the client's goal while they share it (PRD wave-2 §1, trainer story). */
+function rowSubtitle(t: Dictionary, locale: Locale, item: ClientItem, timeZone: string) {
+  const when =
+    item.nextSessionAt && item.status !== "ended"
+      ? interpolate(t.pairs.list.nextSession, { date: formatSessionTime(locale, item.nextSessionAt, timeZone) })
+      : interpolate(t.clientLinks.since, { date: formatDay(locale, item.startedAt, timeZone) });
+  return item.goal ? `${when} · ${t.nutrition.goals[item.goal]}` : when;
 }
 
 /** A plain GET form, so the search works before hydration; the filter rides along. */
@@ -175,11 +185,7 @@ export async function ClientList({ filter, query, selectedId }: ClientListProps)
               href={`/trainer/clients/${item.coachingId}`}
               avatar={{ name: clientName(t, item), src: item.photoUrl }}
               title={clientName(t, item)}
-              subtitle={
-                item.nextSessionAt && item.status !== "ended"
-                  ? interpolate(copy.nextSession, { date: formatSessionTime(locale, item.nextSessionAt, loaded.timeZone) })
-                  : interpolate(t.clientLinks.since, { date: formatDay(locale, item.startedAt, loaded.timeZone) })
-              }
+              subtitle={rowSubtitle(t, locale, item, loaded.timeZone)}
               trailing={rowBadge(t, item)}
               className={item.coachingId === selectedId ? "bg-surface-3" : undefined}
             />

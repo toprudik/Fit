@@ -1547,7 +1547,7 @@ create index on public.break_glass_grants (target_user_id);
 -- Доступ открывается снова только новым грантом.
 ```
 
-Грант создаётся только через `admin_open_break_glass(target_user, categories, reason)`. Функция проверяет `is_admin()`, пишет `admin_audit_log` и ставит пользователю уведомление о факте доступа (новый тип `break_glass` в `notification_type`, см. Допущения, п. 26). Пока грант действует, `private.can_view()` возвращает `true` для этого админа и этих категорий.
+Грант создаётся только через `admin_open_break_glass(target_user, categories, reason, minutes = 60)` (миграция `20261017194837_break_glass_open.sql`): срок от 1 до 60 минут, причина не короче 20 символов после обрезки пробелов, не на свой аккаунт. Функция проверяет `is_admin()`, пишет `admin_audit_log` и ставит пользователю уведомление о факте доступа (новый тип `break_glass` в `notification_type`, см. Допущения, п. 26). Пока грант действует, `private.can_view()` возвращает `true` для этого админа и этих категорий.
 
 ---
 
@@ -1890,7 +1890,8 @@ alter table public.notification_outbox add column broadcast_id uuid references p
 create type public.waitlist_status as enum ('waiting', 'offered', 'accepted', 'declined', 'expired', 'left', 'closed');
 create table public.waitlist_entries (
   id               uuid primary key default gen_random_uuid(),
-  session_id       uuid not null references public.sessions(id) on delete cascade,
+  session_id       uuid references public.sessions(id) on delete cascade,   -- группа
+  slot_id          uuid references public.slots(id) on delete cascade,      -- или занятый персональный слот (20261017203517)
   coaching_id      uuid not null references public.coachings(id) on delete cascade,
   client_id        uuid not null references public.profiles(id) on delete cascade,
   status           public.waitlist_status not null default 'waiting',
@@ -1903,6 +1904,8 @@ create table public.waitlist_entries (
 create unique index on public.waitlist_entries (session_id, client_id) where status in ('waiting', 'offered');
 create index on public.waitlist_entries (session_id, joined_at) where status = 'waiting';
 create index on public.waitlist_entries (offer_expires_at) where status = 'offered';
+-- check (num_nonnulls(session_id, slot_id) = 1). Очередь слота: join_slot_waitlist, waitlist_slots; слот, снова
+-- ставший open, уходит первому в очереди, и предложение держит его (bookable_slot отказывает остальным).
 
 create table public.homework (
   id                  uuid primary key default gen_random_uuid(),
@@ -2019,6 +2022,7 @@ create table public.delegations (
   starts_at           timestamptz not null default now(),
   ends_at             timestamptz,
   status              public.delegation_status not null default 'pending',
+  invited_trainer_id  uuid references public.trainer_profiles(user_id) on delete set null,  -- кому отправлено поиском (W3 §1.1, 20261017202047)
   accepted_at         timestamptz,
   revoked_at          timestamptz,
   created_at          timestamptz not null default now(),
@@ -2210,7 +2214,7 @@ create table public.check_ins (                    -- QR-чек-ин
 );
 ```
 
-Сделано в `20261017032700_qr_check_in.sql` (вариант (а) из wave-3 §5: динамический QR занятия). QR на экране тренера содержит ссылку `t.me/<bot>?startapp=ck_<session_id>_<код>`, где код равен `HMAC(ключ, session_id, 15-секундное окно)`, 10 символов base64url. Ключ лежит в `private.check_in_keys` (одна строка, ни одной роли не доступна), код считает и проверяет база: `session_check_in_qr` (тренер, вместе со списком отметившихся) и `check_in_by_qr` (клиент), поэтому отдельного серверного секрета нет. Принимаются текущее и предыдущее окно, так что код живёт 15–30 с. Чек-ин ставит `bookings.status = 'attended'` и сразу списывает занятие через `private.post_charge`, как отметка «Был» тренером; повторный скан ничего не меняет. Статичный QR локации (вариант (б), `20261017035730_location_check_in.sql`): `location_check_in_tokens(location_id, trainer_id, token)` с постоянным 22-символьным токеном, ссылка `startapp=cl_<token>`; `location_check_in_token` выдаёт его тренеру и по запросу перевыпускает (старая распечатка перестаёт работать), `check_in_by_location` отмечает клиента на ближайшую запись в этой локации с открытым окном. Чтение таблицы закрыто всем ролям, токен отдаёт только функция.
+Сделано в `20261017032700_qr_check_in.sql` (вариант (а) из wave-3 §5: динамический QR занятия). QR на экране тренера содержит ссылку `t.me/<bot>?startapp=ck_<session_id>_<код>`, где код равен `HMAC(ключ, session_id, 15-секундное окно)`, 10 символов base64url. Ключ лежит в `private.check_in_keys` (одна строка, ни одной роли не доступна), код считает и проверяет база: `session_check_in_qr` (тренер или подменяющий тренер этого занятия, вместе со списком отметившихся; подменяющему с `20261017202743_substitute_check_in_qr.sql` и только до конца занятия, 1.5) и `check_in_by_qr` (клиент), поэтому отдельного серверного секрета нет. Принимаются текущее и предыдущее окно, так что код живёт 15–30 с. Чек-ин ставит `bookings.status = 'attended'` и сразу списывает занятие через `private.post_charge`, как отметка «Был» тренером; повторный скан ничего не меняет. Статичный QR локации (вариант (б), `20261017035730_location_check_in.sql`): `location_check_in_tokens(location_id, trainer_id, token)` с постоянным 22-символьным токеном, ссылка `startapp=cl_<token>`; `location_check_in_token` выдаёт его тренеру и по запросу перевыпускает (старая распечатка перестаёт работать), `check_in_by_location` отмечает клиента на ближайшую запись в этой локации с открытым окном. Чтение таблицы закрыто всем ролям, токен отдаёт только функция.
 
 Месячный отчёт клиента строится на лету из существующих таблиц, кеша нет. Сделано в `20261017101247_monthly_reports.sql`. `private.monthly_report(user, month)` собирает месяц клиента по его часовому поясу: посещённые занятия по тренерам, тренировки в журнале, рекорды месяца, первый и последний замер каждого вида, дни в дневнике и дни в норме (±10% калорий), средние шаги и сон, домашние задания. Месяц без активности отчёта не имеет. Читает отчёт только сам клиент через `my_monthly_report(month)`, и только за закончившийся месяц. Карточка для сторис замораживает то, что на ней напечатано, в `story_cards(id, user_id, month, kind, data, expires_at)`: `create_story_card(month, kind, coaching, confirm)` считает цифры из отчёта сам, вес кладёт только с `confirm`. Картинку 1080×1920 рисует `/api/story/<id>` по `story_card(id)`, это публичный поиск по случайному id, как витрина; карточка живёт 30 дней. Сообщение «Итоги месяца» (`monthly_report`, отключаемое) ставит pg_cron `monthly-reports` 1-го числа с 10:00 по времени клиента.
 
@@ -2646,6 +2650,8 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `analytics.beta_metrics` | `day` | три показателя Q26 за скользящие 14 дней (определения: wave-2 §8.6 и «Допущения») |
 
 **Как сделано к бете** (миграция `20261017023400_admin_analytics`). На объёмах беты MV не нужны: срезы считают на лету DEFINER-функции `admin_analytics_platform(p_days)`, `admin_analytics_trainers(p_days)`, `admin_analytics_trainer(p_trainer_id, p_days)` (пишет `analytics.view_trainer` в `admin_audit_log`), `admin_analytics_clients(p_days, p_limit)` и `admin_beta_metrics()`; период 7, 14, 30 или 90 дней, иначе `invalid_period`. Открытия приложения пишет `record_app_open(p_source)` в таблицу `app_opens` (`source` = тип уведомления, с которого пришёл пользователь, `null` для прямого входа; повтор того же источника за 30 минут не считается). Таблицу никто не читает напрямую. «Проведено» = прошедшее неотменённое занятие с подтверждённой или отмеченной записью. Когда функции станут медленными, их тела переносятся в MV выше без смены сигнатур.
+
+Использование функций (миграция `20261017202047_admin_feature_use`): срез платформы также считает клиентов, которые за период вели дневник питания (`clients_keeping_diary`) или отмечали шаги, воду и сон (`clients_logging_activity`), и тех, у кого сегодня есть норма питания (`clients_with_target`, по `private.active_nutrition_target`, поэтому норма тренера без доступа к питанию не считается). В срезе клиентов те же три признака: `keeps_diary`, `logs_activity`, `has_target`. Только количества и да/нет, без значений.
 
 Агрегаты по данным тела и питания (средний вес и т. п.) админу не считаются вовсе (wave-2 §8.5). Будущее «сравнение с рынком» строится из `analytics.trainer_daily` с порогом ≥ 10 тренеров в срезе и только процентилями.
 

@@ -18,6 +18,7 @@ const base: ClientItem = {
   parqFlagged: false,
   deleting: false,
   deleted: false,
+  goal: null,
 };
 
 const items: ClientItem[] = [

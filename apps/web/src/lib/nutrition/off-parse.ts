@@ -92,6 +92,14 @@ export function parseOffProduct(raw: unknown, lang: string): OffCacheItem | null
   };
 }
 
+/**
+ * Products named in the interface language first, in the order OFF ranked them; the rest keep their own names
+ * after them. A Russian search then starts with Russian names, and brands like "Coca-Cola" still come up.
+ */
+export function localNamesFirst<T extends { lang: string | null }>(items: T[], lang: string): T[] {
+  return [...items.filter((item) => item.lang === lang), ...items.filter((item) => item.lang !== lang)];
+}
+
 /** An OFF product with a name but no kcal at all; null for anything else, including products parseOffProduct takes. */
 export function parseOffDraft(raw: unknown, lang: string): OffDraft | null {
   if (!raw || typeof raw !== "object") return null;
