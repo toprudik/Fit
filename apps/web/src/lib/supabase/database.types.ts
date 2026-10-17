@@ -3725,6 +3725,21 @@ isOneToOne: false
               "active_invites": number,"active_pairs": number,"blocked_users": number,"trainers": number,"trainers_pending": number,"trainers_verified": number,"users": number
             }[]
                            },
+"admin_owner_cohorts":
+{ Args: { "p_weeks"?: number }; Returns: {
+              "cohort_week": string,"retained": (number)[],"size": number
+            }[]
+                           },
+"admin_owner_summary":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "attended": number,"bookings": number,"cards": number,"client_referrals": number,"client_referrals_qualified": number,"clients": number,"clients_active_30": number,"clients_active_7": number,"dau": number,"held_sessions": number,"joins_by_source": Json,"mau": number,"pairs": number,"passes_sold": number,"trainer_invites_created": number,"trainer_invites_redeemed": number,"trainer_referrals": number,"trainers": number,"trainers_active_30": number,"trainers_active_7": number,"trainers_verified": number,"turnover": Json,"turnover_30": Json,"users": number,"wau": number
+            }[]
+                           },
+"admin_owner_weekly":
+{ Args: { "p_weeks"?: number }; Returns: {
+              "active_clients": number,"active_trainers": number,"active_users": number,"attended": number,"bookings": number,"held_sessions": number,"new_pairs": number,"new_trainers": number,"new_users": number,"passes_sold": number,"referrals": number,"trainer_invites_created": number,"trainer_invites_redeemed": number,"turnover": Json,"week_start": string
+            }[]
+                           },
 "admin_reply_feedback":
 { Args: { "p_body": string,"p_feedback_id": string }; Returns: string
                            },
