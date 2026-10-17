@@ -254,6 +254,8 @@ async def sync_profile(bot: Bot, settings: Settings, *, set_name: bool, dry_run:
             desired=("web_app", ru.menu_button, app_url(webapp, "bot_menu")),
             write=lambda: bot.set_chat_menu_button(menu_button=menu_button(webapp, ru)),
             dry_run=dry_run,
+            # Type and text only, so a button changed in BotFather can be copied into texts.py; no URL in the log.
+            describe=lambda button: " ".join([button[0], *(f'"{text}"' for text in button[1:2])]),
         )
     )
     return steps
@@ -313,12 +315,15 @@ async def _sync_item(
     desired: Any,
     write: Callable[[], Awaitable[Any]],
     dry_run: bool,
+    describe: Callable[[Any], str] | None = None,
 ) -> Step:
     try:
-        if await read() == desired:
+        actual = await read()
+        if actual == desired:
             return Step(name, "unchanged")
         if dry_run:
-            return Step(name, "differs", "not what DaFit sets: run Bot setup in mode setup")
+            now = f"now {describe(actual)}, " if describe else ""
+            return Step(name, "differs", f"{now}not what DaFit sets: run Bot setup in mode setup")
         await write()
     except TelegramRetryAfter as error:
         return Step(name, "postponed", f"flood control, retry in {error.retry_after} s")

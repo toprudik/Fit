@@ -30,7 +30,7 @@ async function Inbox({ searchParams }: { searchParams: PageProps<"/[lang]/admin/
   const { supabase, timeZone } = await requireAdmin();
   let query = supabase
     .from("feedback")
-    .select("id, kind, body, status, created_at, github_issue_url, author:profiles(first_name, last_name, username)")
+    .select("id, kind, body, status, created_at, github_issue_url, author:profiles!feedback_user_id_fkey(first_name, last_name, username)")
     .order("created_at", { ascending: false })
     .limit(PAGE);
   if (status) query = query.eq("status", status);
