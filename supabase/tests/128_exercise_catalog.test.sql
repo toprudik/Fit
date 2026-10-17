@@ -55,7 +55,7 @@ select ok(
   'search: in English the English name'
 );
 select results_eq(
-  $$ select name, own from public.search_exercises('пауз', 'ru') $$,
+  $$ select name, own from public.search_exercises('паузой у а', 'ru') $$,
   $$ values ('Присед с паузой у А'::text, true) $$,
   'search: the trainer finds their own exercise, marked own'
 );
@@ -68,12 +68,12 @@ select is((select count(*) from public.search_exercises('%%', 'ru')), 0::bigint,
 select is((select count(*) from public.search_exercises(null, 'ru', null, false, 500)), 50::bigint, 'search: at most 50 rows a call');
 
 select tests.authenticate_as('trainer_b');
-select is((select count(*) from public.search_exercises('пауз', 'ru')), 0::bigint,
+select is((select count(*) from public.search_exercises('паузой у а', 'ru')), 0::bigint,
   'search: another trainer does not find it (WORK-2)');
 
 select tests.authenticate_as('client_c');
 select results_eq(
-  $$ select name, own from public.search_exercises('пауз', 'ru') $$,
+  $$ select name, own from public.search_exercises('паузой у а', 'ru') $$,
   $$ values ('Присед с паузой у А'::text, false) $$,
   'search: the client of the trainer finds it, not own'
 );
