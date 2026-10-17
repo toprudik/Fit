@@ -3868,6 +3868,7 @@ export const en: Dictionary = {
     /** Wave-2 §3.12: payload { day, body, first_name, last_name, display_name } from add_food_comment. */
     trainerComment: "Your trainer {name} commented on your food for {date}: “{body}”",
     openFoodDay: "Open the day",
+    replyToTrainer: "Reply",
     /** The other side of a live pair is deleting the account: payload { side, first_name, last_name, cancelled, scheduled_for }. */
     clientDeleting: "{name} is deleting their DaFit account. You keep the sessions, passes and payments, and from {date} the client shows up as “Deleted client”.",
     clientDeletingCancelled: "{name} is deleting their DaFit account. Upcoming bookings cancelled: {count}. You keep the sessions, passes and payments, and from {date} the client shows up as “Deleted client”.",
