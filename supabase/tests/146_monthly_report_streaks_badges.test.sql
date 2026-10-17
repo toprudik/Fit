@@ -1,4 +1,4 @@
--- Streaks and new badges in the monthly report, migration 20261017215337_monthly_report_streaks_badges.sql (PRD
+-- Streaks and new badges in the monthly report, migration 20261017230917_monthly_report_streaks_badges.sql (PRD
 -- wave-3 §4 rule 2): the streaks as of the month's last day, the badges earned that month, and no report from a
 -- badge alone.
 begin;
