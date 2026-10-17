@@ -1,4 +1,4 @@
--- Owner statistics of migration 20261017151837_owner_metrics.sql: only admins call them, the summary counts
+-- Owner statistics of migration 20261017172329_owner_metrics.sql: only admins call them, the summary counts
 -- accounts, activity, sessions, money and invites, the weekly series and the cohorts line up with ISO weeks,
 -- and no result carries a person's name or id.
 begin;

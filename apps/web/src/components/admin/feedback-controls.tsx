@@ -1,13 +1,14 @@
 "use client";
 
-import { ExternalLink, SquarePlus } from "lucide-react";
-import { useTransition } from "react";
+import { ExternalLink, Send, SquarePlus } from "lucide-react";
+import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { TextArea } from "@/components/ui/text-area";
 import { toast } from "@/components/ui/sonner";
 import { useI18n } from "@/i18n/client";
-import { fileFeedbackIssueNow, setFeedbackStatus } from "@/lib/feedback/admin-actions";
-import { FEEDBACK_STATUSES, type FeedbackStatus } from "@/lib/feedback/status";
+import { fileFeedbackIssueNow, replyToFeedback, setFeedbackStatus } from "@/lib/feedback/admin-actions";
+import { FEEDBACK_STATUSES, MAX_REPLY_LENGTH, type FeedbackStatus } from "@/lib/feedback/status";
 
 /** The status of one message (ADM-9): the change is saved at once and logged. */
 export function FeedbackStatusControl({ id, status }: { id: string; status: FeedbackStatus }) {
@@ -61,5 +62,43 @@ export function FeedbackIssue({ id, url, enabled }: { id: string; url: string | 
     >
       {copy.fileIssue}
     </Button>
+  );
+}
+
+/** "Ответ автору" (ADM-10): the text goes to the author's bot; the last answer stays on the message. */
+export function FeedbackReply({ id, hasReply }: { id: string; hasReply: boolean }) {
+  const { t } = useI18n();
+  const copy = t.adminFeedback;
+  const [body, setBody] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!body.trim()) return;
+        startTransition(async () => {
+          const { status } = await replyToFeedback({ id, body });
+          if (status === "sent") {
+            setBody("");
+            setError(null);
+            toast.success(copy.replySent);
+          } else setError(status === "author_deleted" ? copy.replyDeleted : copy.replyFailed);
+        });
+      }}
+    >
+      <TextArea
+        label={copy.replyLabel}
+        hint={copy.replyHint}
+        error={error ?? undefined}
+        value={body}
+        maxLength={MAX_REPLY_LENGTH}
+        onChange={(event) => setBody(event.target.value)}
+      />
+      <Button type="submit" size="sm" icon={Send} loading={pending} disabled={!body.trim()} className="self-start">
+        {hasReply ? copy.replyResend : copy.replySend}
+      </Button>
+    </form>
   );
 }

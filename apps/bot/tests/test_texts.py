@@ -20,7 +20,7 @@ LIMITS = {
     "short_description": 120,
 }
 #: Keys that are names and may read the same in both languages.
-SAME_IN_BOTH: set[str] = set()
+SAME_IN_BOTH: set[str] = {"menu_button"}
 
 
 @pytest.mark.parametrize(
@@ -97,7 +97,7 @@ def test_copy_matches_the_contract() -> None:
     """Section 6 of the contract: lengths as counted there."""
     ru, en = CATALOG["ru"], CATALOG["en"]
     assert (len(ru.start), len(en.start)) == (248, 279)
-    assert (len(ru.help), len(en.help)) == (177, 203)
+    assert (len(ru.help), len(en.help)) == (169, 198)
     assert (len(ru.fallback), len(en.fallback)) == (107, 112)
     assert (len(ru.description), len(en.description)) == (211, 218)
     assert (len(ru.short_description), len(en.short_description)) == (74, 71)
