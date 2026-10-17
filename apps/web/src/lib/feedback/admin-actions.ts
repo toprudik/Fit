@@ -4,8 +4,10 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { feedbackIssueTarget, fileFeedbackIssue, type FileIssueResult } from "./github";
+import { MAX_REPLY_LENGTH } from "./status";
 
 const statusInput = z.object({ id: z.uuid(), status: z.enum(["new", "in_progress", "closed"]) });
+const replyInput = z.object({ id: z.uuid(), body: z.string().trim().min(1).max(MAX_REPLY_LENGTH) });
 
 /**
  * Moves a feedback message through new → in_progress → closed in /admin/feedback (ADM-9). A plain update as the
@@ -38,4 +40,20 @@ export async function fileFeedbackIssueNow(raw: { id: string }): Promise<{ statu
   const result = await fileFeedbackIssue(id.data);
   refresh();
   return { status: result };
+}
+
+export type ReplyResult = { status: "sent" | "author_deleted" | "invalid" | "failed" };
+
+/**
+ * "Отправить в бот" (ADM-10): admin_reply_feedback checks the admin, keeps the answer on the message, logs it and
+ * queues feedback_reply for the author.
+ */
+export async function replyToFeedback(raw: { id: string; body: string }): Promise<ReplyResult> {
+  const parsed = replyInput.safeParse(raw);
+  if (!parsed.success) return { status: "invalid" };
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("admin_reply_feedback", { p_feedback_id: parsed.data.id, p_body: parsed.data.body });
+  if (error) return { status: error.message === "author_deleted" ? "author_deleted" : "failed" };
+  refresh();
+  return { status: "sent" };
 }

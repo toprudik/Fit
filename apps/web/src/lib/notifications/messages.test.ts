@@ -206,6 +206,17 @@ describe("feedback message (А2)", () => {
   });
 });
 
+describe("feedback reply (ADM-10)", () => {
+  it("brings the admin's answer to the author and offers to write again", () => {
+    const message = renderMessage(
+      { ...row, kind: "feedback_reply", payload: { feedback_id: "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b", kind: "bug", reply: "Fixed <b>it</b>" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe("Команда DaFit ответила на твоё обращение:\nFixed &lt;b&gt;it&lt;/b&gt;");
+    expect(message?.buttons).toEqual([{ text: "Написать ещё", web_app: { url: "https://fit.example/feedback?source=feedback_reply" } }]);
+  });
+});
+
 describe("intake messages", () => {
   const PAIR = "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b";
   const options = { appUrl: "https://fit.example", group: false };
@@ -301,7 +312,13 @@ describe("plan messages", () => {
     it("says how soon, when, with whom and where, with a button to the booking", () => {
       expect(renderMessage({ ...row, kind: "session_reminder", payload }, options)).toEqual({
         text: "Через 1 час занятие с тренером Давид Р., чт, 22 окт., 18:30.\nМесто: Зал на Ленина, ул. Ленина, 1.",
-        buttons: [{ text: "Открыть занятие", web_app: { url: `https://fit.example/client/sessions?booking=${BOOKING}&source=session_reminder` } }],
+        buttons: [
+          { text: "Открыть занятие", web_app: { url: `https://fit.example/client/sessions?booking=${BOOKING}&source=session_reminder` } },
+          {
+            text: "Отменить",
+            web_app: { url: `https://fit.example/client/sessions?booking=${BOOKING}&action=cancel&source=session_reminder` },
+          },
+        ],
       });
     });
 
@@ -326,6 +343,7 @@ describe("plan messages", () => {
   describe("sessions the trainer assigns, changes and cancels", () => {
     const options = { appUrl: "https://fit.example", group: false };
     const trainer = { first_name: "Иван", last_name: "Петров" };
+    const SESSION = "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e";
 
     it("tells the client about one new session in their own zone", () => {
       const message = renderMessage(
@@ -335,6 +353,7 @@ describe("plan messages", () => {
           time_zone: "Asia/Yekaterinburg",
           payload: {
             ...trainer,
+            session_id: SESSION,
             starts_at: "2026-10-26T15:00:00Z",
             mode: "offline",
             location: "Зал на Ленина",
@@ -346,13 +365,42 @@ describe("plan messages", () => {
       );
       expect(message?.text).toMatch(/^Новое занятие с тренером Иван Петров: .*26 октября.*20:00, Зал на Ленина\.$/);
       expect(message?.buttons).toEqual([
+        { text: "Открыть занятие", web_app: { url: `https://fit.example/client/sessions?session=${SESSION}&source=booking_assigned` } },
         {
-          text: "Открыть занятия",
-          web_app: {
-            url: "https://fit.example/client/sessions?source=booking_assigned",
-          },
+          text: "Отменить",
+          web_app: { url: `https://fit.example/client/sessions?session=${SESSION}&action=cancel&source=booking_assigned` },
         },
       ]);
+    });
+
+    it("opens the list for a repeat and for a payload without a session", () => {
+      const repeat = renderMessage(
+        { ...row, kind: "booking_assigned", payload: { ...trainer, session_id: SESSION, starts_at: "2026-10-26T15:00:00Z", count: 8 } },
+        options,
+      );
+      expect(repeat?.buttons.map((button) => button.text)).toEqual(["Открыть занятия"]);
+      const changed = renderMessage(
+        { ...row, kind: "session_changed", payload: { ...trainer, starts_at: "2026-10-26T15:00:00Z", count: 1 } },
+        options,
+      );
+      expect(changed?.buttons.map((button) => button.text)).toEqual(["Открыть занятия"]);
+    });
+
+    it("offers «Написать тренеру» after a cancellation when the trainer has a username", () => {
+      const dates = ["2026-10-26T15:00:00Z"];
+      const withChat = renderMessage(
+        { ...row, kind: "booking_cancelled_by_trainer", payload: { ...trainer, username: "ivan_coach", dates, reason: "" } },
+        options,
+      );
+      expect(withChat?.buttons).toEqual([
+        { text: "Выбрать другое время", web_app: { url: "https://fit.example/client/book?source=booking_cancelled_by_trainer" } },
+        { text: "Написать тренеру", url: "https://t.me/ivan_coach" },
+      ]);
+      const odd = renderMessage(
+        { ...row, kind: "booking_cancelled_by_trainer", payload: { ...trainer, username: "x y", dates, reason: "" } },
+        options,
+      );
+      expect(odd?.buttons.map((button) => button.text)).toEqual(["Выбрать другое время"]);
     });
 
     it("sends one message for a whole repeat", () => {
@@ -397,12 +445,14 @@ describe("plan messages", () => {
             ...trainer,
             before_starts_at: "2026-10-26T15:00:00Z",
             starts_at: "2026-10-26T16:30:00Z",
+            session_id: SESSION,
             mode: "online",
             count: 1,
           },
         },
         options,
       );
+      expect(moved?.buttons.map((button) => button.text)).toEqual(["Открыть занятие", "Отменить"]);
       expect(moved?.text).toMatch(/^Занятие с тренером Иван Петров перенесено: было .*18:00, стало .*19:30, онлайн\.$/);
       const changed = renderMessage(
         {
@@ -567,8 +617,9 @@ describe("plan messages", () => {
       expect(declined?.text).toMatch(/^Запрос к тренеру Иван Петров на .* отклонён\. Причина: «Зал &lt;закрыт&gt;»\.$/);
       const bare = renderMessage({ ...row, kind: "booking_declined", locale: "en", payload: { ...base, reason: null } }, options);
       expect(bare?.text).toMatch(/^Your request to your trainer for .* was declined\.$/);
-      const expired = renderMessage({ ...row, kind: "booking_expired", payload: { ...trainer, ...base } }, options);
+      const expired = renderMessage({ ...row, kind: "booking_expired", payload: { ...trainer, ...base, username: "ivan_coach" } }, options);
       expect(expired?.text).toMatch(/остался без ответа, запись не состоялась\.$/);
+      expect(expired?.buttons.map((button) => button.text)).toEqual(["Выбрать другое время", "Написать тренеру"]);
     });
   });
 });

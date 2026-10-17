@@ -65,6 +65,11 @@ const templates: Partial<Record<NotificationType, Template>> = {
       buttons: [{ text: t.openFeedback, path: id ? `/admin/feedback/${id}` : "/admin/feedback" }],
     };
   },
+  // ADM-10 to the author: payload { feedback_id, kind, reply } from admin_reply_feedback.
+  feedback_reply: ({ t, payload }) => ({
+    text: interpolateEscaped(t.feedbackReply, { reply: String(payload.reply ?? "") }),
+    buttons: [{ text: t.writeAgain, path: "/feedback" }],
+  }),
   // Т7 and Т7a: payload { coaching_id, claim_id?, first_name, last_name } from the join RPCs.
   coaching_created: ({ t, payload }) => ({
     text: interpolateEscaped(t.newClient, { name: personName(payload) || t.unnamedClient }),
@@ -255,7 +260,12 @@ const templates: Partial<Record<NotificationType, Template>> = {
     const booking = isPairId(payload.booking_id) ? payload.booking_id : null;
     return {
       text: lines.filter(Boolean).join("\n"),
-      buttons: [{ text: t.openSession, path: booking ? `/client/sessions?booking=${booking}` : "/client/sessions" }],
+      buttons: booking
+        ? [
+            { text: t.openSession, path: `/client/sessions?booking=${booking}` },
+            { text: t.cancelSession, path: `/client/sessions?booking=${booking}&action=cancel` },
+          ]
+        : [{ text: t.openSession, path: "/client/sessions" }],
     };
   },
   // Т-сводка (NOTIF-5): payload { day, sessions[{ starts_at, kind, title, name, booked }], sessions_count,
@@ -488,7 +498,7 @@ const templates: Partial<Record<NotificationType, Template>> = {
         : count > 1
           ? interpolateEscaped(t.sessionsAssigned, { ...values, count })
           : interpolateEscaped(t.sessionAssigned, values);
-    return { text, buttons: [{ text: t.openSessions, path: "/client/sessions" }] };
+    return { text, buttons: count > 1 || typeof payload.until === "string" ? [{ text: t.openSessions, path: "/client/sessions" }] : sessionButtons(t, payload) };
   },
   // К6: payload { session_id, before_starts_at, starts_at, mode, location, count, first_name, last_name } from
   // update_session, "было → стало" for the first session the change touched.
@@ -498,7 +508,10 @@ const templates: Partial<Record<NotificationType, Template>> = {
     const after = sessionTime(locale, payload.starts_at, timeZone);
     const values = { name: personName(payload) || t.sessionTrainer, before, after, when: after, place: place(t, payload), count };
     const template = before !== after ? (count > 1 ? t.sessionsMoved : t.sessionMoved) : count > 1 ? t.sessionsChanged : t.sessionChanged;
-    return { text: interpolateEscaped(template, values), buttons: [{ text: t.openSessions, path: "/client/sessions" }] };
+    return {
+      text: interpolateEscaped(template, values),
+      buttons: count > 1 ? [{ text: t.openSessions, path: "/client/sessions" }] : sessionButtons(t, payload),
+    };
   },
   // К5: payload { session_id, dates, reason, first_name, last_name } from cancel_session, every cancelled date in one
   // message (PRD 2.6.2-5); the trainer cancels without a charge (2.6.5).
@@ -512,7 +525,7 @@ const templates: Partial<Record<NotificationType, Template>> = {
         dates: shown.join("; "),
         reason: String(payload.reason ?? ""),
       }),
-      buttons: [{ text: t.openSessions, path: "/client/sessions" }],
+      buttons: withTrainerChat(t, payload, [{ text: t.bookAgain, path: "/client/book" }]),
     };
   },
   // К-referral: payload { pass_id, sessions, side, friend, trainer } from private.grant_referral_bonus (PRD wave-3 §3.1-6);
@@ -611,7 +624,7 @@ const templates: Partial<Record<NotificationType, Template>> = {
       name: personName(payload) || t.sessionTrainer,
       when: sessionTime(locale, payload.starts_at, timeZone),
     }),
-    buttons: [{ text: t.bookAgain, path: "/client/book" }],
+    buttons: withTrainerChat(t, payload, [{ text: t.bookAgain, path: "/client/book" }]),
   }),
   // К-лист: payload { entry_id, session_id, title, starts_at, mode, location, expires_at, first_name, last_name } from
   // private.waitlist_offer_next or trainer_offer_waitlist; sent in quiet hours too, since it lasts minutes.
@@ -784,6 +797,25 @@ function debtMessage({ t, locale, timeZone, payload }: TemplateContext) {
 }
 
 /** A nested object of the payload, such as a person from private.person_name; empty for anything else. */
+/**
+ * «Открыть» and «Отменить» for one session the trainer set or changed (К1, К6). The payload names the session, not
+ * the client's booking, so /client/sessions finds the booking and opens it, with the cancel sheet for «Отменить».
+ */
+function sessionButtons(t: TemplateContext["t"], payload: TemplateContext["payload"]): TemplateButton[] {
+  const session = isPairId(payload.session_id) ? payload.session_id : null;
+  if (!session) return [{ text: t.openSessions, path: "/client/sessions" }];
+  return [
+    { text: t.openSession, path: `/client/sessions?session=${session}` },
+    { text: t.cancelSession, path: `/client/sessions?session=${session}&action=cancel` },
+  ];
+}
+
+/** Adds «Написать тренеру» (the trainer's Telegram chat) when the payload carries their username (К4, К5). */
+function withTrainerChat(t: TemplateContext["t"], payload: TemplateContext["payload"], buttons: TemplateButton[]): TemplateButton[] {
+  const username = typeof payload.username === "string" && TELEGRAM_USERNAME.test(payload.username) ? payload.username : null;
+  return username ? [...buttons, { text: t.writeToTrainer, href: `https://t.me/${username}` }] : buttons;
+}
+
 function nested(value: Json | undefined): TemplateContext["payload"] {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }

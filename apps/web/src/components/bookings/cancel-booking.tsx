@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
@@ -17,17 +17,19 @@ type CancelBookingProps = {
   late: boolean;
   /** "16 октября, 18:00": when the free cancellation ends or ended; null when the trainer set no deadline. */
   deadline: string | null;
+  /** Opens the sheet on the first render (the bot's «Отменить»). */
+  defaultOpen?: boolean;
 };
 
 /**
  * "Отменить запись" (PRD 2.6.5): free before the trainer's deadline, after it with a charge the client agrees to.
  * If the deadline passes while the sheet is open, the server says so and the sheet switches to the late warning.
  */
-export function CancelBooking({ bookingId, late: lateAtRender, deadline }: CancelBookingProps) {
+export function CancelBooking({ bookingId, late: lateAtRender, deadline, defaultOpen = false }: CancelBookingProps) {
   const { t, locale } = useI18n();
   const copy = t.schedule.booking;
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [late, setLate] = useState(lateAtRender);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +37,10 @@ export function CancelBooking({ bookingId, late: lateAtRender, deadline }: Cance
   const [charge, setCharge] = useState<CancelCharge | null>(null);
   const [, startPreview] = useTransition();
   const loadCharge = () => startPreview(async () => setCharge(await previewCancel(bookingId)));
+  // Opened from the bot after the deadline: show what the cancellation costs, as a tap on the button would.
+  useEffect(() => {
+    if (defaultOpen && lateAtRender) startPreview(async () => setCharge(await previewCancel(bookingId)));
+  }, [bookingId, defaultOpen, lateAtRender]);
 
   const confirm = () =>
     startTransition(async () => {
