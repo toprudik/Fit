@@ -11,6 +11,7 @@ import { ScheduleSignIn } from "@/components/schedule/sign-in-state";
 import { WaitlistQueue } from "@/components/schedule/waitlist-queue";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
+import { RevokeButton, SubstituteButton } from "@/components/team/team";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -19,6 +20,7 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
+import { loadSessionDelegation } from "@/lib/delegations/load";
 import { isPairId } from "@/lib/pairs/clients";
 import { loadBookingCharges } from "@/lib/passes/session-charges";
 import { loadScheduleOwner, loadSession, loadSessionFormData, loadSessionWaitlist } from "@/lib/schedule/load";
@@ -213,6 +215,8 @@ async function SessionDetails({
         </ListGroup>
       ) : null}
 
+      {editable ? <SessionSubstitute sessionId={session.id} /> : null}
+
       {editable && group ? (
         <GroupControls
           sessionId={session.id}
@@ -232,6 +236,37 @@ async function SessionDetails({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** «Подмена» (PRD wave-3 §1 rule 2): hand a future session to a colleague, or see who takes it. */
+async function SessionSubstitute({ sessionId }: { sessionId: string }) {
+  const [t, state] = await Promise.all([getDictionary(), loadSessionDelegation(sessionId)]);
+  if (!state) return null;
+  const copy = t.team.substitute;
+  const { delegation } = state;
+  if (delegation) {
+    const name = delegation.otherName ?? t.team.waitingInvite;
+    return (
+      <ListGroup header={copy.header} footer={copy.text}>
+        <ListRow
+          icon={Repeat}
+          title={delegation.status === "active" ? interpolate(copy.active, { name }) : copy.pending}
+          trailing={<RevokeButton delegationId={delegation.id} name={name} />}
+        />
+      </ListGroup>
+    );
+  }
+  return (
+    <ListGroup header={copy.header} footer={state.canDelegate ? copy.text : undefined}>
+      {state.canDelegate ? (
+        <div className="p-4">
+          <SubstituteButton sessionId={sessionId} />
+        </div>
+      ) : (
+        <ListRow title={copy.lockText} href="/trainer/team" />
+      )}
+    </ListGroup>
   );
 }
 
