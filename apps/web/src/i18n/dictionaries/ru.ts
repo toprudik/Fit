@@ -2598,10 +2598,13 @@ export const ru = {
     },
     features: {
       header: "Чем пользуются клиенты",
-      footer: "Доля клиентов с живой парой за период. Сами записи клиентов здесь не видны.",
+      footer: "Доля клиентов с живой парой за период, норма на сегодня. Сами записи клиентов здесь не видны.",
       workouts: "Ведут дневник тренировок",
       measurements: "Вносят замеры",
       photos: "Добавляют фото прогресса",
+      diary: "Ведут дневник питания",
+      activity: "Отмечают шаги, воду или сон",
+      target: "Есть норма питания",
     },
     trainers: {
       header: "Тренеры",
@@ -2621,7 +2624,7 @@ export const ru = {
       subtitle: "пар {pairs}, посещений {attended}",
       lastActive: "активность {date}",
       never: "входов не было",
-      flags: { workouts: "тренировки", measurements: "замеры", photos: "фото" },
+      flags: { workouts: "тренировки", measurements: "замеры", photos: "фото", diary: "питание", activity: "активность", target: "норма" },
     },
     noName: "Без имени",
     trainer: {
