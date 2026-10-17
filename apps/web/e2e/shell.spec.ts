@@ -73,6 +73,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "settings-export", path: "/settings/export", title: "Экспорт данных" },
   { slug: "settings-delete", path: "/settings/delete", title: "Удаление аккаунта" },
   { slug: "profile", path: "/profile", title: "Профиль" },
+  { slug: "feedback", path: "/feedback?from=%2Fclient", title: "Обратная связь" },
   { slug: "login", path: "/login", title: "Вход" },
   { slug: "trainer-invite", path: "/onboarding/trainer?code=ABCD-EFGH-JKLM", title: "Инвайт тренера" },
   { slug: "beta-terms", path: "/onboarding/consent?next=%2Fclient", title: "Закрытая бета DaFit" },
@@ -100,6 +101,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "admin-users-denied", path: "/admin/users", title: "Такой страницы нет", documentTitle: false, status: 404 },
   { slug: "admin-audit-denied", path: "/admin/audit", title: "Такой страницы нет", documentTitle: false, status: 404 },
   { slug: "admin-plans-denied", path: "/admin/plans", title: "Такой страницы нет", documentTitle: false, status: 404 },
+  { slug: "admin-feedback-denied", path: "/admin/feedback", title: "Такой страницы нет", documentTitle: false, status: 404 },
 ];
 
 const html = (page: Page) => page.locator("html");

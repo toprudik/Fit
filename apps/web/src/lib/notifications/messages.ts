@@ -44,6 +44,19 @@ const templates: Partial<Record<NotificationType, Template>> = {
     }),
     buttons: [{ text: t.openQueue, path: "/admin/verification" }],
   }),
+  // А2 to the admin group: payload { feedback_id, kind, zone, excerpt, screenshots } from the feedback trigger.
+  // The author stays out of the group; /admin/feedback shows who wrote it.
+  feedback_received: ({ t, locale, payload }) => {
+    const kind = t.feedbackKinds[payload.kind as keyof typeof t.feedbackKinds] ?? t.feedbackKinds.other;
+    const zone = t.feedbackZones[payload.zone as keyof typeof t.feedbackZones] ?? t.feedbackZones.none;
+    const screenshots = Number(payload.screenshots ?? 0);
+    const text = interpolateEscaped(t.feedbackReceived, { kind, zone, excerpt: String(payload.excerpt ?? "") });
+    const id = typeof payload.feedback_id === "string" && isPairId(payload.feedback_id) ? payload.feedback_id : null;
+    return {
+      text: screenshots > 0 ? `${text}\n${escapeHtml(plural(locale, screenshots, t.feedbackScreenshots))}` : text,
+      buttons: [{ text: t.openFeedback, path: id ? `/admin/feedback/${id}` : "/admin/feedback" }],
+    };
+  },
   // Т7 and Т7a: payload { coaching_id, claim_id?, first_name, last_name } from the join RPCs.
   coaching_created: ({ t, payload }) => ({
     text: interpolateEscaped(t.newClient, { name: personName(payload) || t.unnamedClient }),
