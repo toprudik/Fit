@@ -22,6 +22,21 @@ describe("renderMessage", () => {
     ]);
   });
 
+  it("tells a client who runs a substituted session, and the owner about the invite (wave-3 §1)", () => {
+    const base = { ...row, kind: "delegation" as const };
+    const sub = { event: "substitute", delegate_name: "Анна Смирнова", starts_at: "2026-11-02T09:00:00Z" };
+    const message = renderMessage({ ...base, payload: sub }, { appUrl: "https://fit.example", group: false });
+    expect(message?.text).toContain("проведёт Анна Смирнова");
+    expect(message?.text).toContain("без списания");
+    const assistant = { event: "assistant", delegate_name: "Анна", owner_name: "Иван", coaching_id: "00000000-0000-4000-8000-000000000001" };
+    expect(renderMessage({ ...base, payload: assistant }, { appUrl: "https://fit.example", group: false })?.buttons[0]).toEqual({
+      text: "Настроить доступ",
+      web_app: { url: "https://fit.example/client/trainers/00000000-0000-4000-8000-000000000001/sharing?source=delegation" },
+    });
+    const declined = renderMessage({ ...base, payload: { event: "declined" } }, { appUrl: "https://fit.example", group: false });
+    expect(declined?.buttons[0]).toEqual({ text: "Открыть команду", web_app: { url: "https://fit.example/trainer/team?source=delegation" } });
+  });
+
   it("sends a trainer's broadcast as typed, escaped, under the trainer's name (wave-2 §6.9)", () => {
     const base = { ...row, kind: "trainer_broadcast" as const };
     const payload = { trainer_name: "Иван", body: "Завтра в <10>", button_kind: "deep_link" };
