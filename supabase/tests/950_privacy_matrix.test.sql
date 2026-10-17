@@ -114,6 +114,8 @@ begin
   select h.id, 1, '00000000-0000-4000-8000-000000000950' from public.homework h where h.coaching_id = v_pair;
   insert into public.nutrition_targets (source, client_id, coaching_id, kcal, effective_from, set_by)
   values ('trainer', v_client, v_pair, 1800, current_date, v_trainer);
+  insert into public.food_day_comments (client_id, coaching_id, author_id, local_date, body)
+  values (v_client, v_pair, v_trainer, current_date, 'More protein');
   insert into public.referral_codes (coaching_id, code) values (v_pair, left(md5(v_pair::text), 10));
 end $$;
 select tests.fill_pair('trainer_a', 'client_c');
@@ -138,6 +140,8 @@ declare
   v_log    uuid;
   v_le     uuid;
   v_photo  uuid := gen_random_uuid();
+  v_food   uuid;
+  v_dish   uuid;
 begin
   insert into public.workout_logs (client_id, performed_at, local_date, created_by)
   values (v_client, now(), current_date, v_client) returning id into v_log;
@@ -155,6 +159,13 @@ begin
   values (v_client, 'female', '1995-05-05', 165, 'moderate');
   insert into public.nutrition_targets (source, client_id, kcal, effective_from, set_by)
   values ('calculator', v_client, 1700, current_date, v_client);
+  insert into public.foods (source, owner_id, name, kcal_100g) values ('custom', v_client, 'Pancake', 220) returning id into v_food;
+  insert into public.foods (source, kind, owner_id, name, kcal_100g, serving_g)
+  values ('custom', 'dish', v_client, 'Pancakes', 220, 300) returning id into v_dish;
+  insert into public.food_dish_items (dish_id, position, food_id, grams) values (v_dish, 0, v_food, 300);
+  insert into public.food_favorites (user_id, food_id) values (v_client, v_food);
+  insert into public.food_diary_entries (client_id, local_date, meal, food_id, title, grams, kcal)
+  values (v_client, current_date, 'breakfast', v_food, 'Pancake', 100, 220);
   insert into public.activity_entries (client_id, local_date, metric, value)
   values (v_client, current_date, 'steps', 8000), (v_client, current_date, 'water', 250);
   insert into public.ingest_tokens (user_id, token_hash) values (v_client, extensions.digest(v_client::text, 'sha256'));
@@ -208,7 +219,8 @@ insert into tests.pair_tables values
   ('homework_occurrences',  't.id::text',          't.homework_id in (select h.id from public.homework h where h.coaching_id = %L)'),
   ('homework_exercises',    't.homework_id::text', 't.homework_id in (select h.id from public.homework h where h.coaching_id = %L)'),
   ('workout_logs',          't.id::text',          't.coaching_id = %L'),
-  ('nutrition_targets',     't.id::text',          't.coaching_id = %L');
+  ('nutrition_targets',     't.id::text',          't.coaching_id = %L'),
+  ('food_day_comments',     't.id::text',          't.coaching_id = %L');
 
 -- The keys of every pair row, collected as postgres (no RLS).
 create table tests.pair_rows (tbl text not null, pair text not null, key text not null);
@@ -237,22 +249,23 @@ create table tests.personal_of_client (tbl text primary key, client_col text not
 insert into tests.personal_of_client values
   ('measurements', 'client_id'), ('progress_photos', 'client_id'), ('intakes', 'user_id'),
   ('personal_records', 'client_id'), ('client_goals', 'user_id'), ('body_profiles', 'user_id'),
-  ('nutrition_targets', 'client_id');
+  ('nutrition_targets', 'client_id'), ('food_diary_entries', 'client_id'), ('food_day_comments', 'client_id');
 
 -- Personal data the admin never reads without break-glass.
 create table tests.personal_tables (tbl text primary key);
 insert into tests.personal_tables values
   ('measurements'), ('progress_photos'), ('intakes'), ('coaching_notes'), ('workout_logs'),
   ('workout_log_exercises'), ('workout_sets'), ('personal_records'), ('data_exports'), ('calendar_feeds'),
-  ('client_goals'), ('body_profiles'), ('nutrition_targets'), ('activity_entries'), ('ingest_tokens');
+  ('client_goals'), ('body_profiles'), ('nutrition_targets'), ('food_diary_entries'), ('food_day_comments'),
+  ('food_dish_items'), ('food_favorites'), ('activity_entries'), ('ingest_tokens');
 
 -- What the admin may read without break-glass (data-model §4.2); every other public table and view must give
--- the admin 0 rows. exercises is listed for the wger catalog; custom exercises are checked separately.
+-- the admin 0 rows. exercises and foods are listed for the catalogs; own exercises and foods are checked separately.
 create table tests.admin_readable (tbl text primary key);
 insert into tests.admin_readable values
   ('profiles'), ('public_profiles'), ('user_roles'), ('consents'), ('account_deletions'), ('trainer_profiles'),
   ('trainer_certificates'), ('trainer_verifications'), ('trainer_invites'), ('feedback'), ('reports'),
-  ('admin_audit_log'), ('break_glass_grants'), ('plan_grants'), ('access_requests'), ('plans'), ('exercises');
+  ('admin_audit_log'), ('break_glass_grants'), ('plan_grants'), ('access_requests'), ('plans'), ('exercises'), ('foods');
 create table tests.admin_checked as
 select c.relname::text as tbl
 from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
@@ -353,6 +366,8 @@ where w.cmd = 'update'
                 'workout_sets', 'workout_template_items', 'workout_templates');
 insert into tests.write_cases (label, tbl, cmd, key_expr, owner_expr, actors) values
   ('delete intakes', 'intakes', 'delete', 't.id::text', 't.user_id = %1$L', default),
+  ('delete food_diary_entries', 'food_diary_entries', 'delete', 't.id::text', 't.client_id = %1$L', default),
+  ('delete food_favorites', 'food_favorites', 'delete', 't.food_id::text', 't.user_id = %1$L', default),
   ('delete workout_logs', 'workout_logs', 'delete', 't.id::text',
    $o$t.client_id = %1$L or (t.created_by = %1$L and exists (
       select 1 from public.coachings c where c.id = t.coaching_id and c.trainer_id = %1$L and c.status in ('trial', 'active')))$o$,
@@ -414,14 +429,14 @@ end $$;
 grant select on tests.write_cases to authenticated;
 
 -- 6 checks per pair-scoped table, 1 per ended-pair accounting table, 1 per client personal table, 2 per
--- personal-data table, 1 per relation the admin must not read, 1 custom exercise check, 11 card checks,
+-- personal-data table, 1 per relation the admin must not read, 1 custom exercise and 1 own food check, 11 card checks,
 -- 1 sequence check, one anon check per public table and view, one per blind write and actor.
 select plan(
   (select count(*)::integer * 6 from tests.pair_tables)
   + (select count(*)::integer from tests.ended_accounting)
   + (select count(*)::integer from tests.personal_of_client)
   + (select count(*)::integer * 2 from tests.personal_tables)
-  + (select count(*)::integer from tests.admin_checked) + 1
+  + (select count(*)::integer from tests.admin_checked) + 2
   + 11 + 1
   + (select count(*)::integer
      from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
@@ -532,6 +547,8 @@ select ok(
 from tests.admin_totals t order by t.tbl;
 select is((select count(*)::integer from public.exercises where source = 'custom'), 0,
   'exercises: the admin reads the wger catalog but no custom exercise');
+select is((select count(*)::integer from public.foods where source = 'custom'), 0,
+  'foods: the admin reads the catalog but no own product or dish');
 
 -- =========================================================================================================
 -- anon holds nothing on any public table, view or sequence

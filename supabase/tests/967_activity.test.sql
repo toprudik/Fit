@@ -1,4 +1,4 @@
--- Activity (migration 20261017081700_activity.sql, PRD wave-2 §4): steps, water and sleep of the client's day,
+-- Activity (migration 20261017083100_activity.sql, PRD wave-2 §4): steps, water and sleep of the client's day,
 -- the shares that hide them from the trainer, and the iOS Shortcuts token (4.1–4.7).
 begin;
 \ir _helpers.psql
