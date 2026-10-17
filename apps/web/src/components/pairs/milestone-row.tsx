@@ -15,9 +15,11 @@ type MilestoneRowProps = {
   newest: boolean;
   side: string;
   title: string;
-  /** When it was reached. */
-  date: string;
+  /** Under the title: when it was reached, or which milestone it is. */
+  subtitle: string;
   badge: string;
+  /** Where the row leads, e.g. the pair from "Сегодня". */
+  href?: string;
 };
 
 /**
@@ -25,7 +27,7 @@ type MilestoneRowProps = {
  * this viewer here, plays the Da-moment once and says "Новая веха"; later visits show it closed. Browser storage
  * only remembers what this browser has shown.
  */
-export function MilestoneRow({ milestoneId, achievedAt, newest, side, title, date, badge }: MilestoneRowProps) {
+export function MilestoneRow({ milestoneId, achievedAt, newest, side, title, subtitle, badge, href }: MilestoneRowProps) {
   const [isNew, setIsNew] = useState(false);
   useEffect(() => {
     if (!newest || Date.now() - new Date(achievedAt).getTime() > NEW_MILESTONE_DAYS * 86_400_000) return;
@@ -43,8 +45,9 @@ export function MilestoneRow({ milestoneId, achievedAt, newest, side, title, dat
     <ListRow
       leading={<DaRing key={isNew ? "new" : "seen"} state="done" size={28} animate={isNew} />}
       title={title}
-      subtitle={date}
+      subtitle={subtitle}
       trailing={isNew ? <Badge tone="accent">{badge}</Badge> : undefined}
+      href={href}
     />
   );
 }
