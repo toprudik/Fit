@@ -121,13 +121,7 @@ export function TrialPicker({ token, timeZone, slots, signIn }: TrialPickerProps
           <p>{signIn ? copy.signInLine : copy.requestLine}</p>
           {error ? (
             <p role="alert" className="text-subhead text-danger">
-              {
-                copy.errors[
-                  error === "request_not_found" || error === "invalid_reason" || error === "session_full" || error === "already_booked"
-                    ? "failed"
-                    : error
-                ]
-              }
+              {error in copy.errors ? copy.errors[error as keyof typeof copy.errors] : copy.errors.failed}
             </p>
           ) : null}
         </div>
