@@ -2219,14 +2219,14 @@ export const en: Dictionary = {
     },
     analytics: {
       header: "Group analytics",
-      footer: "Averages appear once at least three clients count. Weight counts only for clients who share measurements.",
+      footer: "Averages appear once at least three clients count. Weight counts only for clients who share measurements, the target only for those who share nutrition.",
       members: "Clients in the group",
       attendance: "Attendance over 30 days",
       attendanceValue: "{share}%",
       weight: "Average weight change over 30 days",
       weightValue: "{change} kg",
-      adherence: "Hitting the target",
-      adherenceLater: "Comes with the food diary",
+      adherence: "Hitting the target over 30 days",
+      adherenceValue: "{share}%",
       few: "Too few clients",
     },
     broadcast: {
