@@ -1662,6 +1662,12 @@ export const en: Dictionary = {
       favorite: "Add to favorites",
       unfavorite: "Remove from favorites",
       added: "Added to {meal}",
+      noFacts: {
+        header: "No calories in the catalog",
+        row: "No calories, type them from the label",
+        brandRow: "{brand}, no calories",
+        footer: "Open the food and copy the calories from the label. It's saved to your foods.",
+      },
     },
     barcode: {
       scan: "Scan with the camera",
@@ -1674,6 +1680,8 @@ export const en: Dictionary = {
       create: "Create food",
       invalid: "8 to 14 digits",
       catalogDown: "The catalog is unavailable right now. Try later or create the food yourself.",
+      noFacts: "{name} is in the catalog, but without calories. Copy them from the label and the food is saved for you.",
+      typeKcal: "Add calories",
     },
     quick: {
       text: "When you'd rather not look the food up: just calories, the rest if you like.",
@@ -1710,6 +1718,7 @@ export const en: Dictionary = {
     },
     product: {
       text: "Calories and macros per 100 g, as on the label.",
+      draftText: "The catalog has no calories for this food. Copy them from the label; macros are optional.",
       name: "Name",
       brand: "Brand",
       optional: "Optional",
