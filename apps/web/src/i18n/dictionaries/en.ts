@@ -2363,6 +2363,16 @@ export const en: Dictionary = {
       until: "until {date}",
       footer: "Passes with 2 sessions or fewer left, or a week or less until they expire.",
     },
+    nutrition: {
+      header: "Nutrition",
+      empty: "No client shares nutrition yet",
+      average: "Average target hit over 7 days",
+      averageValue: "{share}%",
+      averageEmpty: "Nothing to count yet",
+      clientValue: "{share}%",
+      all: "See every client's nutrition",
+      footer: "Counts clients who share nutrition and have a target. The three lowest are listed.",
+    },
     churn: {
       header: "Clients who may leave",
       empty: "Nobody looks like they are about to leave",
