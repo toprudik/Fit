@@ -1272,6 +1272,12 @@ export const en: Dictionary = {
     },
   },
   /** The asked side of "Попросить связаться", /contact/<id> (PRIV-2). */
+  goalStep: {
+    title: "Your goal",
+    text: "One last step. Pick a goal and your nutrition target will be worked out for it. You can skip this and pick one later in “Goal and target”.",
+    done: "Done",
+    skip: "Skip",
+  },
   contactRequest: {
     title: "Request to get in touch",
     askedByTrainer: "Trainer {name} asks to get in touch",
