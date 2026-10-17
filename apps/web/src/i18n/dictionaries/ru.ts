@@ -4315,6 +4315,7 @@ export const ru = {
     reminderPlace: "Место: {place}.",
     reminderOnline: "Занятие онлайн, ссылка в DaFit.",
     openSession: "Открыть занятие",
+    cancelSession: "Отменить",
     /** С3: the admin decided (PRD §3). */
     verificationVerified: "Верификация пройдена, на твоей витрине теперь есть значок.",
     verificationRejected: "Верификацию пройти не получилось, причина: «{reason}». Поправь документы и отправь их снова.",

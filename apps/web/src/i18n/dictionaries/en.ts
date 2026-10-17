@@ -4254,6 +4254,7 @@ export const en: Dictionary = {
     reminderPlace: "Place: {place}.",
     reminderOnline: "The session is online, the link is in DaFit.",
     openSession: "Open session",
+    cancelSession: "Cancel",
     verificationVerified: "You're verified, and your showcase now has the badge.",
     verificationRejected: "Your documents didn't pass verification, the reason: \u201c{reason}\u201d. Fix them and send them again.",
     openVerification: "Open verification",
