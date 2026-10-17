@@ -12,9 +12,10 @@ import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
 import { currencySymbol, formatMoney, majorText } from "@/lib/money/format";
-import { confirmPayment, recordPayment, voidPayment } from "@/lib/passes/actions";
+import { confirmPayment, correctPayment, recordPayment, voidPayment } from "@/lib/passes/actions";
 import { debtText } from "@/lib/passes/debt";
 import type { PairMoney, PaymentView } from "@/lib/passes/load";
+import { localDay, PAYMENT_METHODS } from "@/lib/passes/present";
 import { formatNoteTime } from "@/lib/pairs/format";
 import { hapticSuccess } from "@/lib/telegram/mini-app";
 import { ChoiceList } from "./choice-list";
@@ -216,8 +217,62 @@ function VoidForm({ payment, onDone }: { payment: PaymentView; onDone: () => voi
   );
 }
 
-/** Confirm a client's report, or void any payment that is not voided yet. */
-export function PaymentControls({ payment, onVoid }: { payment: PaymentView; onVoid: () => void }) {
+/** "Исправить": the payment's amount, method and day to change, and what was wrong. */
+function CorrectForm({ payment, money, onDone }: { payment: PaymentView; money: PairMoney; onDone: () => void }) {
+  const { t, locale } = useI18n();
+  const copy = t.money.payments.correctForm;
+  const method = PAYMENT_METHODS.find((known) => known === payment.method) ?? "other";
+  const [values, setValues] = useState<PaymentValues>({
+    amount: majorText(payment.amountMinor),
+    method,
+    paidOn: localDay(payment.paidAt, money.timeZone),
+  });
+  const [reason, setReason] = useState("");
+  const [errors, setErrors] = useState<string[]>([]);
+  const [pending, startTransition] = useTransition();
+  return (
+    <form
+      noValidate
+      className="flex flex-col gap-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        startTransition(async () => {
+          const result = await correctPayment({ paymentId: payment.id, payment: values, reason });
+          setErrors(result.status === "invalid" ? result.fields : []);
+          if (result.status === "done") {
+            hapticSuccess();
+            toast.success(t.money.payments.corrected);
+            onDone();
+          } else if (result.status === "stale") toast.error(t.money.passes.stale);
+          else if (result.status !== "invalid") toast.error(t.money.passes.failed);
+        });
+      }}
+    >
+      <p className="text-subhead text-ink-2">{copy.text}</p>
+      <PaymentFields
+        values={values}
+        onChange={setValues}
+        symbol={currencySymbol(locale, payment.currency)}
+        today={money.today}
+        errors={{ amount: errors.includes("payment.amount"), paidOn: errors.includes("payment.paidOn") }}
+      />
+      <TextField
+        label={copy.reason}
+        maxLength={500}
+        value={reason}
+        onChange={(event) => setReason(event.target.value)}
+        error={errors.includes("reason") ? copy.reasonError : undefined}
+        autoComplete="off"
+      />
+      <Button type="submit" size="lg" block loading={pending}>
+        {copy.submit}
+      </Button>
+    </form>
+  );
+}
+
+/** Confirm a client's report or correct a confirmed payment, and void any payment that is not voided yet. */
+export function PaymentControls({ payment, onVoid, onCorrect }: { payment: PaymentView; onVoid: () => void; onCorrect?: () => void }) {
   const { t } = useI18n();
   const copy = t.money.payments;
   const [pending, startTransition] = useTransition();
@@ -242,6 +297,11 @@ export function PaymentControls({ payment, onVoid }: { payment: PaymentView; onV
           {copy.confirm}
         </Button>
       ) : null}
+      {payment.status === "confirmed" && onCorrect ? (
+        <Button size="sm" variant="secondary" onClick={onCorrect}>
+          {copy.correct}
+        </Button>
+      ) : null}
       <Button size="sm" variant="ghost" onClick={onVoid}>
         {copy.void}
       </Button>
@@ -258,6 +318,7 @@ export function TrainerPayments({ money, symbol, startOpen }: { money: PairMoney
   const copy = t.money.payments;
   const [recording, setRecording] = useState(startOpen);
   const [voiding, setVoiding] = useState<PaymentView | null>(null);
+  const [correcting, setCorrecting] = useState<PaymentView | null>(null);
   const close = useCallback(() => setRecording(false), []);
   const titles = new Map(money.passes.map((pass) => [pass.id, pass.title]));
 
@@ -276,7 +337,7 @@ export function TrainerPayments({ money, symbol, startOpen }: { money: PairMoney
         <ul className="flex flex-col gap-2">
           {money.payments.map((payment) => (
             <PaymentItem key={payment.id} payment={payment} passTitle={payment.passId ? (titles.get(payment.passId) ?? null) : null} timeZone={money.timeZone}>
-              <PaymentControls payment={payment} onVoid={() => setVoiding(payment)} />
+              <PaymentControls payment={payment} onVoid={() => setVoiding(payment)} onCorrect={() => setCorrecting(payment)} />
             </PaymentItem>
           ))}
         </ul>
@@ -287,6 +348,9 @@ export function TrainerPayments({ money, symbol, startOpen }: { money: PairMoney
       </Sheet>
       <Sheet open={voiding !== null} onOpenChange={(next) => (next ? null : setVoiding(null))} title={copy.voidForm.title}>
         {voiding ? <VoidForm key={voiding.id} payment={voiding} onDone={() => setVoiding(null)} /> : null}
+      </Sheet>
+      <Sheet open={correcting !== null} onOpenChange={(next) => (next ? null : setCorrecting(null))} title={copy.correctForm.title}>
+        {correcting ? <CorrectForm key={correcting.id} payment={correcting} money={money} onDone={() => setCorrecting(null)} /> : null}
       </Sheet>
     </div>
   );

@@ -1014,6 +1014,16 @@ export const ru = {
       voidReason: "Причина: {reason}",
       confirm: "Подтвердить",
       void: "Аннулировать",
+      correct: "Исправить",
+      corrected: "Оплата исправлена",
+      /** "Исправить" a confirmed payment: the old one is voided with the reason, the new one takes its place. */
+      correctForm: {
+        title: "Исправить оплату",
+        text: "Старая запись останется в истории с причиной, вместо неё появится новая.",
+        reason: "Что исправили",
+        reasonError: "Напиши, что исправили",
+        submit: "Сохранить",
+      },
       confirmed: "Оплата подтверждена",
       voided: "Оплата аннулирована",
       changed: "Клиент изменил сообщение об оплате. Проверь сумму ещё раз.",
