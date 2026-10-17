@@ -61,6 +61,11 @@ function PendingClaims({ t, claims }: { t: Dictionary; claims: { id: string; nam
   );
 }
 
+/** The row's name: «Удалённый клиент» once the account is gone, then the name, then a placeholder. */
+function clientName(t: Dictionary, item: ClientItem) {
+  return item.deleted ? t.pairs.deletedClient : item.name || t.botMessages.unnamedClient;
+}
+
 /** One badge per row, the most pressing first: the pair state, then money, then the account. */
 function rowBadge(t: Dictionary, item: ClientItem) {
   const copy = t.pairs.badges;
@@ -168,8 +173,8 @@ export async function ClientList({ filter, query, selectedId }: ClientListProps)
             <ListRow
               key={item.coachingId}
               href={`/trainer/clients/${item.coachingId}`}
-              avatar={{ name: item.name || t.botMessages.unnamedClient, src: item.photoUrl }}
-              title={item.name || t.botMessages.unnamedClient}
+              avatar={{ name: clientName(t, item), src: item.photoUrl }}
+              title={clientName(t, item)}
               subtitle={
                 item.nextSessionAt && item.status !== "ended"
                   ? interpolate(copy.nextSession, { date: formatSessionTime(locale, item.nextSessionAt, loaded.timeZone) })
