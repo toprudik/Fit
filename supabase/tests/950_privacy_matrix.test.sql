@@ -193,6 +193,7 @@ insert into public.feedback (user_id, kind, body)
 values (tests.user_id('client_c'), 'bug', 'The button is grey'), (tests.user_id('client_d'), 'idea', 'Dark mode');
 insert into public.notification_outbox (user_id, type, dedupe_key, payload, scheduled_for, deliver_after)
 values (tests.user_id('client_c'), 'daily_digest', 'digest:c', '{}', now(), now());
+insert into public.story_cards (user_id, month, kind, data) values (tests.user_id('client_c'), '2026-09-01', 'sessions', '{"count": 2}');
 -- A reported payment of C (the client may still edit it).
 insert into public.payments (coaching_id, amount_minor, currency, method, paid_at, status, note)
 values (tests.pair_id('trainer_a', 'client_c'), 500, 'RUB', 'sbp', now(), 'reported', 'c report');
