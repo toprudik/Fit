@@ -9,6 +9,7 @@ import {
   currentOccurrence,
   draftFromHomework,
   homeworkPayload,
+  logDraftFromHomework,
   occurrenceState,
   type Homework,
   type HomeworkDraft,
@@ -18,7 +19,7 @@ const PAIR = "0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f";
 const HOMEWORK = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
 const TODAY = "2026-10-17";
 
-const occurrence = (id: string, dueOn: string, doneAt: string | null = null) => ({ id, dueOn, doneAt, comment: null });
+const occurrence = (id: string, dueOn: string, doneAt: string | null = null) => ({ id, dueOn, doneAt, comment: null, workoutLogId: null });
 
 const homework = (occurrences: Homework["occurrences"], extra: Partial<Homework> = {}): Homework => ({
   id: HOMEWORK,
@@ -30,6 +31,7 @@ const homework = (occurrences: Homework["occurrences"], extra: Partial<Homework>
   repeatWeekdays: null,
   repeatUntil: null,
   archived: false,
+  exercises: [],
   occurrences,
   ...extra,
 });
@@ -42,6 +44,7 @@ const draft = (extra: Partial<HomeworkDraft> = {}): HomeworkDraft => ({
   repeat: false,
   weekdays: [],
   repeatUntil: "",
+  exercises: [],
   ...extra,
 });
 
@@ -109,8 +112,21 @@ describe("homeworkPayload", () => {
         due_date: "2026-10-18",
         repeat_weekdays: null,
         repeat_until: null,
+        exercises: [],
       },
     });
+  });
+
+  it("sends the exercises in order with a trimmed prescription", () => {
+    const exercises = [
+      { key: "a", exerciseId: "e1", name: "Планка", prescription: " 3 × 1 мин " },
+      { key: "b", exerciseId: "e2", name: "Мостик", prescription: "  " },
+    ];
+    const result = homeworkPayload(draft({ exercises }), TODAY, { coachingId: PAIR });
+    expect(result.ok && result.payload.exercises).toEqual([
+      { exercise_id: "e1", prescription: "3 × 1 мин" },
+      { exercise_id: "e2", prescription: null },
+    ]);
   });
 
   it("sorts weekdays and keeps them once", () => {
@@ -143,6 +159,28 @@ describe("homeworkPayload", () => {
       repeat: true,
       weekdays: [1],
       repeatUntil: "2026-11-16",
+      exercises: [],
+    });
+  });
+
+  it("starts a log of sets from the homework's exercises (10.2)", () => {
+    const saved = homework([occurrence("a", TODAY)], {
+      exercises: [{ exerciseId: "e1", name: "Планка", prescription: "3 × 1 мин" }],
+    });
+    expect(logDraftFromHomework(saved, TODAY)).toEqual({
+      title: "Планка",
+      date: TODAY,
+      durationMin: "",
+      notes: "",
+      exercises: [
+        {
+          key: "homework-0-e1",
+          exerciseId: "e1",
+          name: "Планка",
+          notes: "3 × 1 мин",
+          sets: [{ reps: "", weight: "", duration: "", warmup: false }],
+        },
+      ],
     });
   });
 });
