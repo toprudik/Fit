@@ -1,4 +1,4 @@
--- Trainer groups and broadcasts of migration 20261017082611_trainer_groups.sql (PRD wave-2 §6, 6.1-6.7): plan
+-- Trainer groups and broadcasts of migration 20261017084217_trainer_groups.sql (PRD wave-2 §6, 6.1-6.7): plan
 -- gates, the group template as a target source, the primary nutrition group, the goal warning, broadcasts with
 -- their stats, the daily limit, muting, and what other trainers and clients see.
 begin;
