@@ -21,8 +21,14 @@ export type CalcResult =
   | ({ status: "ok"; bmr: number; age: number } & { kcal: number; proteinG: number; fatG: number; carbsG: number })
   | { status: "minor" | "too_low" | "incomplete" };
 
+/** A trainer's water and steps goals a day (wave-2 §4 rules 5 and 7); null keeps the default. */
+export type ActivityGoals = { waterMl: number | null; steps: number | null };
+
 export const KCAL_MIN = 500;
 export const KCAL_MAX = 10000;
+/** Bounds of the trainer's water and steps goals, as the database checks them. */
+export const WATER_ML_MAX = 10000;
+export const STEPS_MAX = 100000;
 export const WEIGHT_MIN_KG = 25;
 export const WEIGHT_MAX_KG = 350;
 export const HEIGHT_MIN_CM = 80;

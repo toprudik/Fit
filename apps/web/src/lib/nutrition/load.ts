@@ -1,7 +1,7 @@
 import "server-only";
 import { todayIn } from "@/lib/passes/present";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { ActivityLevel, CalcSex, Goal, Macros } from "./target";
+import type { ActivityGoals, ActivityLevel, CalcSex, Goal, Macros } from "./target";
 
 type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
@@ -135,6 +135,8 @@ export type PairNutrition =
       goal: Goal | null;
       /** This trainer's target in force. */
       mine: Macros | null;
+      /** Water and steps goals of this trainer's target; null where it keeps the defaults. */
+      mineGoals: ActivityGoals;
       /** Whose target is active today, never another trainer's values (§2.8). */
       active: "mine" | "group" | "other_trainer" | "calculator" | "none";
       calculator: MyNutrition["calculator"];
@@ -156,7 +158,7 @@ export async function loadPairNutrition(coachingId: string): Promise<PairNutriti
     latestGoal(supabase, pair.client_id),
     supabase
       .from("nutrition_targets")
-      .select("kcal, protein_g, fat_g, carbs_g")
+      .select("kcal, protein_g, fat_g, carbs_g, water_ml, steps_target")
       .eq("coaching_id", coachingId)
       .eq("source", "trainer")
       .is("effective_to", null)
@@ -177,6 +179,7 @@ export async function loadPairNutrition(coachingId: string): Promise<PairNutriti
     state: "open",
     goal,
     mine: mine.data ? macrosOf(mine.data) : null,
+    mineGoals: { waterMl: mine.data?.water_ml ?? null, steps: mine.data?.steps_target ?? null },
     active: state,
     calculator,
     sex: sex === "male" || sex === "female" ? sex : null,

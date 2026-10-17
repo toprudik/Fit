@@ -32,7 +32,7 @@ const sdk = vi.hoisted(() => {
     isTMA: vi.fn(() => true),
     init: vi.fn(() => vi.fn()),
     retrieveRawInitData: vi.fn<() => string | undefined>(),
-    retrieveLaunchParams: vi.fn<() => { tgWebAppStartParam?: string }>(() => ({})),
+    retrieveLaunchParams: vi.fn<() => { tgWebAppStartParam?: string; tgWebAppPlatform?: string }>(() => ({})),
     miniApp: { mount: vi.fn(), ready: vi.fn(), setHeaderColor: vi.fn(), setBgColor: vi.fn(), setBottomBarColor: vi.fn() },
     themeParams: { mount: vi.fn(), bgColor: signal<string | undefined>(undefined) },
     backButton: { mount: vi.fn(), show: vi.fn(), hide: vi.fn(), onClick: vi.fn(() => () => {}) },
@@ -48,14 +48,20 @@ const sdk = vi.hoisted(() => {
       press: () => onSettings?.(),
     },
     swipeBehavior: { mount: vi.fn(), enableVertical: vi.fn(), disableVertical: vi.fn() },
-    viewport: { mount: vi.fn(() => Promise.resolve()), expand: vi.fn(), bindCssVars: vi.fn(() => () => {}) },
+    closingBehavior: { mount: vi.fn(), enableConfirmation: vi.fn() },
+    viewport: {
+      mount: vi.fn(() => Promise.resolve()),
+      expand: vi.fn(),
+      bindCssVars: vi.fn(() => () => {}),
+      requestFullscreen: Object.assign(vi.fn(() => Promise.resolve()), { isAvailable: vi.fn(() => true) }),
+    },
     hapticFeedback: { impactOccurred: vi.fn(), selectionChanged: vi.fn() },
   };
 });
 vi.mock("@tma.js/sdk-react", () => sdk);
 
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => window.location.pathname }));
 
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 vi.mock("@/components/ui/sonner", () => ({ toast }));
@@ -202,7 +208,7 @@ describe("inside Telegram", () => {
     renderApp();
 
     expect(screen.getByText("telegram")).toBeTruthy();
-    for (const component of [sdk.miniApp, sdk.themeParams, sdk.backButton, sdk.settingsButton, sdk.swipeBehavior]) {
+    for (const component of [sdk.miniApp, sdk.themeParams, sdk.backButton, sdk.settingsButton, sdk.swipeBehavior, sdk.closingBehavior]) {
       expect(component.mount).toHaveBeenCalledOnce();
     }
     expect(sdk.viewport.expand).toHaveBeenCalledOnce();
@@ -266,6 +272,57 @@ describe("inside Telegram", () => {
     window.history.replaceState(null, "", "/settings");
     sdk.settingsButton.press();
     expect(router.push).toHaveBeenCalledOnce();
+  });
+
+  it("shows Telegram's BackButton on a screen that did not ask for it, and not on a tab root", () => {
+    launch();
+    window.history.replaceState(null, "", "/client/diary/food");
+    const nested = renderApp();
+    expect(sdk.backButton.show).toHaveBeenCalled();
+    nested.unmount();
+
+    vi.clearAllMocks();
+    window.history.replaceState(null, "", "/client/diary");
+    renderApp();
+    expect(sdk.backButton.show).not.toHaveBeenCalled();
+  });
+
+  it("stays put: vertical swipes off, and closing asks first", () => {
+    launch();
+    renderApp();
+
+    expect(sdk.swipeBehavior.disableVertical).toHaveBeenCalled();
+    expect(sdk.swipeBehavior.enableVertical).not.toHaveBeenCalled();
+    expect(sdk.closingBehavior.enableConfirmation).toHaveBeenCalledOnce();
+  });
+
+  it.each(["ios", "android", "android_x"])("opens fullscreen on %s", async (platform) => {
+    launch();
+    sdk.retrieveLaunchParams.mockReturnValue({ tgWebAppPlatform: platform });
+    renderApp();
+
+    await waitFor(() => expect(sdk.viewport.requestFullscreen).toHaveBeenCalledOnce());
+    expect(sdk.viewport.expand).toHaveBeenCalledOnce();
+  });
+
+  it.each(["tdesktop", "macos", "weba", "webk", "unigram"])("stays at full height without fullscreen on %s", async (platform) => {
+    launch();
+    sdk.retrieveLaunchParams.mockReturnValue({ tgWebAppPlatform: platform });
+    renderApp();
+
+    await waitFor(() => expect(sdk.viewport.mount).toHaveBeenCalledOnce());
+    await act(async () => {});
+    expect(sdk.viewport.expand).toHaveBeenCalledOnce();
+    expect(sdk.viewport.requestFullscreen).not.toHaveBeenCalled();
+  });
+
+  it("leaves fullscreen alone when the client is too old for it", async () => {
+    launch();
+    sdk.retrieveLaunchParams.mockReturnValue({ tgWebAppPlatform: "ios" });
+    sdk.viewport.requestFullscreen.isAvailable.mockReturnValueOnce(false);
+    renderApp();
+    await act(async () => {});
+    expect(sdk.viewport.requestFullscreen).not.toHaveBeenCalled();
   });
 
   it("keeps working when the client lacks a feature", () => {

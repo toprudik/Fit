@@ -47,13 +47,15 @@ type LaunchOptions = {
   theme?: TelegramTheme;
   /** Leave `signature` out of initData, as old clients do: tma.js 3 then rejects the launch params. */
   unsigned?: boolean;
+  /** tgWebAppPlatform: "android" (a phone) unless a test needs a computer. */
+  platform?: string;
 };
 
 /**
  * The launch params Telegram appends to the Mini App URL, shaped to pass tma.js's schema. The hash
  * and signature are fake: the sign-in endpoint is stubbed, so nothing checks them.
  */
-export function launchHash({ theme = "dark", unsigned = false }: LaunchOptions = {}): string {
+export function launchHash({ theme = "dark", unsigned = false, platform = "android" }: LaunchOptions = {}): string {
   const initData = new URLSearchParams({
     user: JSON.stringify({ id: 42, first_name: "Sam", username: "sam", language_code: "ru", allows_write_to_pm: true }),
     chat_instance: "-4242",
@@ -65,7 +67,7 @@ export function launchHash({ theme = "dark", unsigned = false }: LaunchOptions =
   const params = new URLSearchParams({
     tgWebAppData: initData.toString(),
     tgWebAppVersion: "9.0",
-    tgWebAppPlatform: "android",
+    tgWebAppPlatform: platform,
     tgWebAppThemeParams: JSON.stringify(TELEGRAM_THEMES[theme]),
   });
   return `#${params}`;
