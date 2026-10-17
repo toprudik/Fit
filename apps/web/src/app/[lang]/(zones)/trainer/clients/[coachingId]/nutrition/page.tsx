@@ -10,7 +10,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.nutrition.tab };
 }
 
-/** Client card, "Питание": the client's goal and the trainer's target while nutrition is shared (wave-2 §1–2). */
+/**
+ * Client card, "Питание": the client's goal, the trainer's target and the food diary of a day (`?day=`) with the
+ * trainer's comments, while nutrition is shared (wave-2 §1–3).
+ */
 export default function TrainerPairNutritionPage(props: PageProps<"/[lang]/trainer/clients/[coachingId]/nutrition">) {
-  return <TrainerPairPage params={props.params} tab="nutrition" />;
+  return <TrainerPairPage params={props.params} tab="nutrition" searchParams={props.searchParams} />;
 }

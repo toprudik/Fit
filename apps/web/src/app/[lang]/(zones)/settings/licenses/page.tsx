@@ -41,6 +41,16 @@ export default async function LicensesPage() {
             <External href="https://creativecommons.org/licenses/by-sa/4.0/">{copy.licenseLink}</External>
           </div>
         </section>
+        <section aria-labelledby="license-off" className="flex flex-col gap-3 rounded-md bg-surface-2 p-4">
+          <h2 id="license-off" className="text-headline">
+            {copy.offTitle}
+          </h2>
+          <p className="text-body">{copy.offText}</p>
+          <div className="flex flex-col gap-2 text-subhead">
+            <External href="https://world.openfoodfacts.org">{copy.offLink}</External>
+            <External href="https://opendatacommons.org/licenses/odbl/1-0/">{copy.odblLink}</External>
+          </div>
+        </section>
       </div>
     </Screen>
   );
