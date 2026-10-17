@@ -563,10 +563,16 @@ describe("plan messages", () => {
       expect(debt?.text).toMatch(/занятие уйдёт в долг\.$/);
       const requested = renderMessage({ ...row, kind: "booking_requested", locale: "en", payload: { ...base } }, options);
       expect(requested?.text).toMatch(/^Booking request: a client with no name, .*, Зал\. Confirm or decline it before the session starts\.$/);
-      expect(requested?.buttons[0]).toEqual({
-        text: "Answer the request",
-        web_app: { url: `https://fit.example/trainer/requests/${booking}?source=booking_requested` },
-      });
+      expect(requested?.buttons).toEqual([
+        { text: "Confirm", callback_data: `bky:${booking}` },
+        { text: "Decline", callback_data: `bkn:${booking}` },
+        { text: "Answer the request", web_app: { url: `https://fit.example/trainer/requests/${booking}?source=booking_requested` } },
+      ]);
+      // A tap in a group would act for whoever tapped: there only the link stays.
+      const inGroup = renderMessage({ ...row, kind: "booking_requested", payload: { ...base } }, { ...options, group: true });
+      expect(inGroup?.buttons).toEqual([
+        { text: "Ответить на запрос", url: `https://fit.example/trainer/requests/${booking}?source=booking_requested` },
+      ]);
       const trial = renderMessage({ ...row, kind: "booking_requested", payload: { ...client, ...base, trial: true } }, options);
       expect(trial?.text).toMatch(/^Запрос на пробное: Анна Смирнова, .*, Зал\. Подтверди или отклони его до начала занятия\.$/);
       const onSite = renderMessage({ ...row, kind: "booking_requested", payload: { ...client, ...base, on_site: true } }, options);
@@ -906,6 +912,20 @@ describe("referral bonus message", () => {
   it("tells the friend in their language", () => {
     const message = renderMessage({ ...row, locale: "en", kind: "referral_bonus", payload: { ...payload, sessions: 1, side: "referee" } }, options);
     expect(message?.text).toBe("Invitation bonus: you get +1 session with Ирина Котова.");
+  });
+
+  it("says the sessions wait for the next pass when there is no active one", () => {
+    const waiting = { ...payload, pass_id: undefined, side: "referrer", waiting: true };
+    const message = renderMessage({ ...row, kind: "referral_bonus", payload: waiting }, options);
+    expect(message?.text).toBe("Бонус за друга: Фёдор теперь занимается с тренером Ирина Котова. +2 занятия добавим в твой следующий абонемент.");
+    expect(message?.buttons).toEqual([
+      { text: "Открыть абонемент", web_app: { url: "https://fit.example/client/passes?source=referral_bonus" } },
+    ]);
+  });
+
+  it("says the next pass has taken the waiting sessions", () => {
+    const message = renderMessage({ ...row, kind: "referral_bonus", payload: { ...payload, side: "referrer", applied: true } }, options);
+    expect(message?.text).toBe("Обещанный бонус: +2 занятия уже в твоём новом абонементе.");
   });
 });
 

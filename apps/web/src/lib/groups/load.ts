@@ -102,7 +102,16 @@ export type GroupDetails = {
   template: Template | null;
   /** Members who would get the template today. */
   impact: number;
-  analytics: { members: number; attendance: number | null; attendanceClients: number; weightChangeKg: number | null; weightClients: number };
+  analytics: {
+    members: number;
+    attendance: number | null;
+    attendanceClients: number;
+    weightChangeKg: number | null;
+    weightClients: number;
+    /** Average adherence over 30 full days, in %; null under three judged clients (§6 rule 8). */
+    adherence: number | null;
+    adherenceClients: number;
+  };
   broadcasts: BroadcastRow[];
   broadcastsToday: number;
 };
@@ -203,6 +212,8 @@ export async function loadGroup(groupId: string): Promise<GroupDetails | null> {
       attendanceClients: analytics.data.attendance_clients,
       weightChangeKg: analytics.data.weight_change_kg,
       weightClients: analytics.data.weight_clients,
+      adherence: analytics.data.adherence,
+      adherenceClients: analytics.data.adherence_clients,
     },
     broadcasts: history.data.map((row) => ({
       id: row.id,
