@@ -69,7 +69,9 @@ export function SegmentedControl<T extends string>({
           key={option.value}
           value={option.value}
           className={cn(
-            "relative min-w-0 cursor-pointer rounded-xs px-2 text-subhead font-semibold text-ink-2",
+            "relative min-w-0 cursor-pointer rounded-xs text-subhead font-semibold text-ink-2",
+            // Four or more segments share a phone's width: less padding keeps words like «Наличные» whole.
+            options.length >= 4 ? "px-1" : "px-2",
             // Only the text color eases: transition-colors would also fade the focus ring and borders in.
             "transition-[color] duration-[var(--duration-base)] ease-standard motion-reduce:transition-none",
             "data-[state=on]:text-on-inverse data-[state=off]:hover:bg-surface-3",

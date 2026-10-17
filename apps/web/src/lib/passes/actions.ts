@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   cancelInput,
+  correctInput,
   endFreezeInput,
   expiryInput,
   freezeInput,
@@ -18,6 +19,7 @@ import {
   waiveInput,
   type AdjustInput,
   type CancelInput,
+  type CorrectInput,
   type PastSessionInput,
   type WaiveInput,
   type EndFreezeInput,
@@ -28,7 +30,7 @@ import {
   type SellInput,
   type VoidInput,
 } from "./input";
-import { addDays, freezePeriod, localInstant, paidAtFor } from "./present";
+import { addDays, freezePeriod, localDay, localInstant, paidAtFor } from "./present";
 
 /**
  * Writes on passes, freezes and payments (PRD wave-1 §2.8). Every write goes through the user's client, so the
@@ -252,6 +254,33 @@ export async function confirmPayment(paymentId: string, seenUpdatedAt: string): 
     refresh();
     return { status: "stale" };
   }
+  refresh();
+  return { status: "done" };
+}
+
+/**
+ * "Исправить" a confirmed payment: correct_payment voids it with the reason and enters the corrected one in
+ * the same transaction, so the pass never counts it twice or not at all.
+ */
+export async function correctPayment(input: CorrectInput): Promise<MoneyResult> {
+  const parsed = correctInput.safeParse(input);
+  if (!parsed.success) return { status: "invalid", fields: invalidFields(parsed.error) };
+  const { paymentId, payment, reason } = parsed.data;
+  const supabase = await createSupabaseServerClient();
+  const user = await me(supabase);
+  if (!user) return { status: "failed" };
+  // The same day keeps the time it was entered with, so the corrected payment stays where it was in the list.
+  const { data: old } = await supabase.from("payments").select("paid_at").eq("id", paymentId).maybeSingle();
+  if (!old) return { status: "stale" };
+  const { error } = await supabase.rpc("correct_payment", {
+    p_payment_id: paymentId,
+    p_amount_minor: payment.amount,
+    p_method: payment.method,
+    p_paid_at: localDay(old.paid_at, user.timeZone) === payment.paidOn ? old.paid_at : paidAtFor(payment.paidOn, user.timeZone),
+    p_reason: reason,
+  });
+  if (error?.code === "P0002") return { status: "stale" };
+  if (error) return failed("correcting a payment", error);
   refresh();
   return { status: "done" };
 }
