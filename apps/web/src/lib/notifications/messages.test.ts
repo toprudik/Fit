@@ -473,6 +473,31 @@ describe("plan messages", () => {
       expect(withdrawn?.text).toMatch(/^Запрос на .* отозван, клиент: Анна Смирнова\.$/);
     });
 
+    it("tells the trainer about a client cancellation, a late one and its escaped reason", () => {
+      const free = renderMessage({ ...row, kind: "booking_cancelled_by_client", payload: { ...client, ...base, late: false } }, options);
+      expect(free?.text).toMatch(/^Запись на .* отменена, клиент: Анна Смирнова\.$/);
+      const late = renderMessage(
+        { ...row, kind: "booking_cancelled_by_client", payload: { ...client, ...base, late: true, reason: "Заболел <сильно>" } },
+        options,
+      );
+      expect(late?.text).toMatch(/^Запись на .* отменена позже срока, клиент: Анна Смирнова\. Занятие списано\.\nПричина: Заболел &lt;сильно&gt;$/);
+    });
+
+    it("tells the trainer about a move, confirmed or as a request", () => {
+      const from = "2026-10-26T07:00:00Z";
+      const moved = renderMessage({ ...row, kind: "booking_rescheduled", payload: { ...client, ...base, rescheduled_from: from } }, options);
+      expect(moved?.text).toMatch(/^Перенос записи: Анна Смирнова, с .*26 октября.* на .*27 октября.*, Зал\.$/);
+      expect(moved?.buttons[0]).toEqual({
+        text: "Открыть занятие",
+        web_app: { url: `https://fit.example/trainer/sessions/${PAIR}?source=booking_rescheduled` },
+      });
+      const request = renderMessage(
+        { ...row, kind: "booking_requested", locale: "en", payload: { ...client, ...base, rescheduled_from: from } },
+        options,
+      );
+      expect(request?.text).toMatch(/^Request to move: Анна Смирнова, from .* to .*, Зал\. Confirm or decline it before the session starts\.$/);
+    });
+
     it("tells the client the answer, with the decline reason escaped, or that none came", () => {
       const trainer = { first_name: "Иван", last_name: "Петров" };
       const confirmed = renderMessage({ ...row, kind: "booking_confirmed", payload: { ...trainer, ...base } }, options);
