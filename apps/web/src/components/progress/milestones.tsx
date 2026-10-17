@@ -1,31 +1,44 @@
-import { Award, CalendarHeart, CircleCheck, Flag } from "lucide-react";
+import { DaRing } from "@/components/brand/da-ring";
+import { MilestoneRow } from "@/components/pairs/milestone-row";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import type { Dictionary } from "@/i18n/dictionaries";
 import type { Locale } from "@/i18n/config";
 import { interpolate, plural } from "@/i18n/format";
-import { formatLocalDay, localDay } from "@/lib/passes/present";
-import { MILESTONE_SESSIONS, type PairMilestones } from "@/lib/progress/load";
-
-const THRESHOLDS = Object.values(MILESTONE_SESSIONS).sort((a, b) => a - b);
+import { formatDay } from "@/lib/pairs/format";
+import { MILESTONE_SESSIONS, nextMilestone } from "@/lib/pairs/milestones";
+import type { PairMilestones } from "@/lib/progress/load";
 
 /**
- * Milestones of one pair (PRD wave-1 §2.11-9): "Вместе с …", attended sessions, the 10/25/50/100 marks reached
- * and the next one. Shown to both sides; only attended sessions count (PROG-8).
+ * Milestones of one of the client's pairs on "Прогресс" (PRD wave-1 §2.11-9), drawn like "Вехи" on the pair
+ * (components/pairs/milestones.tsx): the way to the next mark, then the reached ones, newest first. Only attended
+ * sessions count (PROG-8). Nothing before the first attended session.
  */
 export function MilestoneGroup({ t, locale, item, header }: { t: Dictionary; locale: Locale; item: PairMilestones; header: string }) {
-  const copy = t.progress.milestones;
-  const next = THRESHOLDS.find((count) => count > item.attended);
+  if (item.attended === 0 && item.milestones.length === 0) return null;
+  const copy = t.pairs.milestones;
+  const next = nextMilestone(item.attended, item.milestones);
   return (
     <ListGroup header={header}>
-      <ListRow
-        icon={CalendarHeart}
-        title={interpolate(copy.together, { date: formatLocalDay(locale, localDay(item.startedAt, item.timeZone)) })}
-      />
-      <ListRow icon={CircleCheck} title={plural(locale, item.attended, copy.attended)} />
-      {[...item.reached].reverse().map((count) => (
-        <ListRow key={count} icon={Award} iconTone="accent" title={plural(locale, count, copy.reached)} />
+      {next ? (
+        <ListRow
+          leading={<DaRing state="progress" value={next.share} size={28} />}
+          title={interpolate(plural(locale, next.left, copy.next), { sessions: next.sessions })}
+        />
+      ) : (
+        <ListRow leading={<DaRing state="done" size={28} />} title={copy.allReached} />
+      )}
+      {[...item.milestones].reverse().map((milestone, index) => (
+        <MilestoneRow
+          key={milestone.id}
+          milestoneId={milestone.id}
+          achievedAt={milestone.achievedAt}
+          newest={index === 0}
+          side="client"
+          title={plural(locale, MILESTONE_SESSIONS[milestone.kind], t.pairs.together)}
+          subtitle={formatDay(locale, milestone.achievedAt, item.timeZone)}
+          badge={copy.newBadge}
+        />
       ))}
-      {next ? <ListRow icon={Flag} title={interpolate(copy.next, { count: plural(locale, next, copy.sessions) })} /> : null}
     </ListGroup>
   );
 }

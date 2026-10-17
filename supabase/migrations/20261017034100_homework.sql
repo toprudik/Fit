@@ -64,7 +64,7 @@ create policy "homework_occurrences: homework readers read"
 grant select on table public.homework, public.homework_occurrences to authenticated;
 
 -- The client's day now: their time zone, else Moscow as everywhere else.
-create function private.client_today(p_coaching uuid, p_now timestamptz default now())
+create function private.pair_client_today(p_coaching uuid, p_now timestamptz default now())
 returns date
 language sql
 stable
@@ -78,8 +78,8 @@ as $$
             'Europe/Moscow'))::date
 $$;
 
-comment on function private.client_today(uuid, timestamptz) is 'The current day of the pair''s client, in their time zone.';
-revoke all on function private.client_today(uuid, timestamptz) from public;
+comment on function private.pair_client_today(uuid, timestamptz) is 'The current day of the pair''s client, in their time zone.';
+revoke all on function private.pair_client_today(uuid, timestamptz) from public;
 
 -- The client's day for either side of the pair: deadlines and "overdue" are in the client's days, and the
 -- trainer cannot read the client's settings. Null for anyone else.
@@ -90,7 +90,7 @@ stable
 security definer
 set search_path = ''
 as $$
-  select private.client_today(p_coaching) where private.is_coaching_member(p_coaching)
+  select private.pair_client_today(p_coaching) where private.is_coaching_member(p_coaching)
 $$;
 
 comment on function public.homework_today(uuid) is 'Pair members: the client''s current day, which homework deadlines follow.';
@@ -166,7 +166,7 @@ begin
     raise exception 'card_client' using errcode = 'P0001';
   end if;
 
-  v_today := private.client_today(v_coaching);
+  v_today := private.pair_client_today(v_coaching);
   if v_due < v_today and v_due is distinct from v_old_due then
     raise exception 'due_in_past' using errcode = 'P0001';
   end if;
@@ -251,7 +251,7 @@ begin
     update public.homework_occurrences set comment = v_comment where id = r.id;
     return r.done_at;
   end if;
-  if r.due_on > private.client_today(r.coaching_id) and exists (
+  if r.due_on > private.pair_client_today(r.coaching_id) and exists (
        select 1 from public.homework_occurrences o
        where o.homework_id = r.homework_id and o.done_at is null and o.due_on < r.due_on) then
     raise exception 'not_yet' using errcode = 'P0001';

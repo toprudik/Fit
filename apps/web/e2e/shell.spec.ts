@@ -66,6 +66,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "client-photos", path: "/client/progress/photos", title: "Фото прогресса" },
   { slug: "client-photo-new", path: "/client/progress/photos/new", title: "Новое фото" },
   { slug: "client-compare", path: "/client/progress/compare", title: "До и после" },
+  { slug: "client-nutrition-target", path: "/client/diary/food/target", title: "Цель и норма" },
   { slug: "client-trainers", path: "/client/trainers", title: "Тренеры" },
   { slug: "settings", path: "/settings", title: "Настройки" },
   { slug: "settings-plan", path: "/settings/plan", title: "Мой тариф" },
