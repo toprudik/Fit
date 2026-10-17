@@ -157,8 +157,13 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
   const dishItems = await byIds(db, "food_dish_items", "dish_id", ids(ownFoods.filter((food) => food.kind === "dish")));
   // Steps, water and sleep (wave-2 §4); the Shortcuts token is a secret and stays out.
   const activity = await mine("activity_entries", "client_id");
-  // Badges and the weekly workouts goal (wave-3 §2); streaks are worked out on read, so there is nothing to export.
-  const [badges, weekGoal] = await Promise.all([mine("user_badges", "user_id"), mine("workout_week_goals", "client_id")]);
+  // Badges, the weekly workouts goal and challenge participations (wave-3 §2); streaks are worked out on read, so
+  // there is nothing to export for them.
+  const [badges, weekGoal, challenges] = await Promise.all([
+    mine("user_badges", "user_id"),
+    mine("workout_week_goals", "client_id"),
+    mine("challenge_participants", "user_id"),
+  ]);
   // Wave 3: referrals and bonuses (§3), delegations (§1), story cards (§4; the monthly report itself is worked out on
   // read), QR check-ins (§5). Rows are cut to what the user sees in the app: no other people's ids or contacts.
   const [referrals, bonuses, referralOffers, trainerReferralCode, delegations, storyCards, checkIns] = await Promise.all([
@@ -295,6 +300,7 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
     assistant_progress_blocks: assistantBlocks,
     story_cards: storyCards,
     check_ins: checkInRows(checkIns, userId),
+    challenges,
     personal_records: records,
     workout_logs: logs,
     workout_log_exercises: logExercises,

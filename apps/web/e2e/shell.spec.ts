@@ -116,6 +116,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "client-referral-signed-out", path: "/client/trainers/00000000-0000-4000-8000-000000000000/referral", title: "Приведи друга" },
   // Signed out, the answer to "Попросить связаться" asks to sign in and come back.
   { slug: "contact-request-signed-out", path: "/contact/00000000-0000-4000-8000-000000000000", title: "Просьба связаться" },
+  { slug: "client-challenge-signed-out", path: "/client/challenges/00000000-0000-4000-8000-000000000000", title: "Челлендж" },
   { slug: "not-found", path: "/no-such-page", title: "Такой страницы нет", documentTitle: false, status: 404 },
   // ADM-12: the admin section is a 404 for everyone but admins, signed out included.
   { slug: "admin-denied", path: "/admin/invites", title: "Такой страницы нет", documentTitle: false, status: 404 },
