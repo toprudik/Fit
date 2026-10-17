@@ -49,6 +49,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "trainer-exercises", path: "/trainer/exercises", title: "Упражнения" },
   { slug: "trainer-new-exercise", path: "/trainer/exercises/new", title: "Своё упражнение" },
   { slug: "trainer-templates", path: "/trainer/templates", title: "Шаблоны тренировок" },
+  { slug: "trainer-referrals", path: "/trainer/referrals", title: "Приведи друга" },
   { slug: "trainer-new-template", path: "/trainer/templates/new", title: "Новый шаблон" },
   { slug: "trainer-packages", path: "/trainer/money/packages", title: "Пакеты и цены" },
   { slug: "client-passes", path: "/client/passes", title: "Абонементы" },
@@ -89,6 +90,8 @@ const SCREENS: readonly Screen[] = [
   { slug: "join", path: "/join?code=abc-def", title: "Код тренера" },
   // A malformed token is answered without the database: the "link no longer works" state.
   { slug: "client-link-invalid", path: "/i/not-a-token", title: "Приглашение тренера" },
+  // A malformed code is answered without the database: the "link no longer works" state.
+  { slug: "referral-invalid", path: "/r/not-a-code", title: "Приглашение к тренеру" },
   // A malformed token is answered without the database: the "link doesn't work" state.
   { slug: "trial-link-invalid", path: "/trial/not-a-token", title: "Пробное занятие" },
   // A malformed address is answered without the database: the "trainer unavailable" state (Q60).
@@ -98,6 +101,8 @@ const SCREENS: readonly Screen[] = [
   { slug: "client-intake-signed-out", path: "/client/trainers/00000000-0000-4000-8000-000000000000/intake", title: "Анкета" },
   // Signed out, "Что видит тренер" asks to sign in and come back.
   { slug: "client-sharing-signed-out", path: "/client/trainers/00000000-0000-4000-8000-000000000000/sharing", title: "Что видит тренер" },
+  // Signed out, "Приведи друга" of a trainer asks to sign in and come back.
+  { slug: "client-referral-signed-out", path: "/client/trainers/00000000-0000-4000-8000-000000000000/referral", title: "Приведи друга" },
   // Signed out, the answer to "Попросить связаться" asks to sign in and come back.
   { slug: "contact-request-signed-out", path: "/contact/00000000-0000-4000-8000-000000000000", title: "Просьба связаться" },
   { slug: "not-found", path: "/no-such-page", title: "Такой страницы нет", documentTitle: false, status: 404 },

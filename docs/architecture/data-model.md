@@ -220,7 +220,7 @@ create type public.share_category as enum ('nutrition', 'measurements', 'photos'
 | R57 | Индекс `access_requests` | Один открытый запрос на пользователя и тариф | старый индекс с приведением даты не компилировался |
 | R58 | `has_entitlement` | Публичная обёртка не отвечает о чужих пользователях (кроме админа); наследование требует клиента пары, живую пару и платный тариф тренера; `nutrition_advanced` наследуется с волны 2. Живая пара включает `trial`, как и везде ([Q63](../decisions.md#12-решения-по-поручению-владельца)) | старая версия позволяла узнать чужой тариф |
 | R59 | Админ и выдачи тарифов | `plan_grants` читают сам пользователь и админ | админке нужна история |
-| R60 | Столбцы поздних волн | Не созданы: `coachings.broadcasts_muted`, `primary_nutrition_group_id`, `churn_hidden_until`, `user_settings.leaderboard_opt_in`, `trainer_profiles.referred_by_trainer_id`, `locations.club_id`, `sessions.conducted_by`, `passes.is_bonus`, `notification_outbox.broadcast_id` | nullable-столбец добавляется мгновенно |
+| R60 | Столбцы поздних волн | Не созданы: `coachings.broadcasts_muted`, `primary_nutrition_group_id`, `churn_hidden_until`, `user_settings.leaderboard_opt_in`, `trainer_profiles.referred_by_trainer_id`, `locations.club_id`, `sessions.conducted_by`, `notification_outbox.broadcast_id` | nullable-столбец добавляется мгновенно |
 | R61 | Свои упражнения ушедшего тренера | `owner_id on delete set null`; такое упражнение видно только через записи клиента | каскад блокировал удаление аккаунта |
 | R62 | Свои тренировки | `coaching_id is null and created_by = client_id`; записи удалённой пары видит только клиент | иначе записи старой пары видны другим тренерам |
 | R63 | Блокировка админом | `profiles.blocked_at`, `blocked_reason`, не выданы пользователям | ADM-7 |
@@ -975,7 +975,7 @@ create table public.passes (                    -- абонемент: экзе�
   currency       public.currency_code not null,
   applies_to     public.package_applies_to not null default 'any',
   is_drop_in     boolean not null default false, -- разовое занятие = абонемент на 1
-  -- W3: is_bonus boolean (начислен рефералкой, цена 0) добавится вместе с рефералкой (R60).
+  -- W3: is_bonus boolean not null default false: бонусный абонемент рефералки, цена 0 (20261017040300_referral_offers.sql).
   starts_on      date not null,                  -- дата продажи в поясе тренера
   expires_at     timestamptz,                    -- базовый срок без учёта заморозок; null = бессрочно
   status         public.pass_status not null default 'active',
@@ -2096,67 +2096,70 @@ create index on public.challenge_participants (user_id);
 
 Лидерборд не хранится в таблице: SECURITY DEFINER-функция `get_challenge_leaderboard(challenge_id)` возвращает имя (`display_name`), аватар и `score` только участников с `show_on_leaderboard`; вызвать могут участники и тренер челленджа. Счёт отдаётся агрегатом, сырых данных (шагов по дням, питания) функция не отдаёт.
 
-Рефералка:
+Рефералка (миграция `20261017040300_referral_offers.sql`, волна 3 §3.1; бонусы тренерам за тренеров, §3.2, придут позже, их значения перечислений уже есть):
 
 ```sql
-create table public.referral_codes (
-  user_id uuid primary key references public.profiles(id) on delete cascade,
-  code    text not null unique check (code ~ '^[a-z0-9]{6,12}$')
-);
+alter table public.passes add column is_bonus boolean not null default false;   -- бонусный абонемент, цена 0 (R60)
 
-create type public.referral_reward_side as enum ('referrer', 'referee', 'both');
-create table public.referral_offers (              -- акция тренера «приведи друга → +1 занятие»
+create table public.referral_offers (              -- акция тренера «приведи друга → +N занятий»
   id                uuid primary key default gen_random_uuid(),
   trainer_id        uuid not null references public.trainer_profiles(user_id) on delete cascade,
-  title             text not null,
-  reward_sessions   smallint not null check (reward_sessions between 1 and 10),
-  reward_side       public.referral_reward_side not null default 'referrer',
-  active_from       date not null,
-  active_to         date,
-  archived_at       timestamptz,
+  referrer_sessions smallint not null check (referrer_sessions between 1 and 5),   -- пригласившему
+  referee_sessions  smallint not null default 0 check (referee_sessions between 0 and 5),  -- другу
+  min_amount_minor  bigint check (min_amount_minor > 0),   -- условие: оплата от суммы (с currency)
+  currency          public.currency_code,
+  package_id        uuid,                                  -- или оплата этого пакета; FK (package_id, trainer_id)
+  active_to         date,                                  -- последний день в часовом поясе тренера; null = без срока
+  archived_at       timestamptz,                           -- одна неархивная акция на тренера (частичный unique)
   created_at        timestamptz not null default now()
 );
 
+create table public.referral_codes (               -- личная ссылка клиента в паре: /r/<code>, startapp=rf_<code>
+  coaching_id uuid primary key references public.coachings(id) on delete cascade,
+  code        text not null unique check (code ~ '^[a-z0-9]{10}$'),
+  created_at  timestamptz not null default now()
+);
+
 create type public.referral_kind as enum ('client_to_client', 'trainer_to_trainer');
--- trainer_to_trainer (Q15, Q55): приглашённый по реферальной ссылке тренера сразу получает trainer_profiles
--- и зону «Тренер» на тарифе trainer_free; верификация — отдельно.
 create type public.referral_status as enum ('pending', 'qualified', 'void');
+create type public.referral_void_reason as enum ('declined', 'pair_ended', 'payment_voided');
 create table public.referrals (
   id                    uuid primary key default gen_random_uuid(),
-  kind                  public.referral_kind not null,
-  offer_id              uuid references public.referral_offers(id) on delete set null,
+  kind                  public.referral_kind not null default 'client_to_client',
+  offer_id              uuid references public.referral_offers(id) on delete set null,  -- условия на момент прихода
+  trainer_id            uuid not null references public.profiles(id) on delete cascade,
   referrer_id           uuid not null references public.profiles(id) on delete cascade,
   referee_id            uuid not null references public.profiles(id) on delete cascade,
-  coaching_id           uuid references public.coachings(id) on delete cascade,   -- пара приглашённого
+  coaching_id           uuid not null unique references public.coachings(id) on delete cascade,  -- пара приглашённого
+  referrer_coaching_id  uuid references public.coachings(id) on delete set null,
   status                public.referral_status not null default 'pending',
-  qualifying_payment_id uuid references public.payments(id) on delete set null,   -- client_to_client
-  qualifying_subscription_id uuid,                                               -- trainer_to_trainer (later)
+  qualifying_payment_id uuid references public.payments(id) on delete set null,
   qualified_at          timestamptz,
+  voided_at             timestamptz,
+  void_reason           public.referral_void_reason,
   created_at            timestamptz not null default now(),
-  unique (kind, referee_id, offer_id),
-  check (referrer_id <> referee_id),
-  check (status <> 'qualified' or qualifying_payment_id is not null or qualifying_subscription_id is not null)
+  check (referrer_id <> referee_id)
 );
 
 create type public.bonus_kind as enum ('sessions', 'plan_month', 'plan_discount');
 create type public.bonus_status as enum ('pending', 'granted', 'void');
 create table public.bonuses (
-  id              uuid primary key default gen_random_uuid(),
-  referral_id     uuid not null references public.referrals(id) on delete cascade,
-  beneficiary_id  uuid not null references public.profiles(id) on delete cascade,
-  kind            public.bonus_kind not null,
-  sessions        smallint check (sessions > 0),
-  percent_off     smallint check (percent_off between 1 and 100),
-  pass_id         uuid references public.passes(id) on delete set null,   -- бонусный абонемент
-  status          public.bonus_status not null default 'pending',
-  granted_at      timestamptz,
-  created_at      timestamptz not null default now(),
-  check ((kind = 'sessions') = (sessions is not null)),
-  check (status <> 'granted' or granted_at is not null)
+  id             uuid primary key default gen_random_uuid(),
+  referral_id    uuid not null references public.referrals(id) on delete cascade,
+  beneficiary_id uuid not null references public.profiles(id) on delete cascade,
+  kind           public.bonus_kind not null,
+  sessions       smallint check (sessions > 0),
+  pass_id        uuid references public.passes(id) on delete set null,   -- бонусный абонемент
+  status         public.bonus_status not null default 'pending',
+  granted_at     timestamptz,
+  voided_at      timestamptz,
+  created_at     timestamptz not null default now()
 );
 ```
 
-«Только после факта оплаты» (Q50) кодируется так: бонус переходит в `granted` только функцией `private.qualify_referral(referral_id)`, которую вызывает триггер `after insert or update of status on payments` при первом `confirmed`-платеже `direction = 'in'` в паре приглашённого; функция ставит `referrals.status = 'qualified'` с `qualifying_payment_id` (CHECK не даёт квалифицировать без платежа) и создаёт бонусный абонемент (`passes.is_bonus`, `grant` в журнале). Если квалифицирующий платёж переведён в `voided` в течение 14 дней после `qualified_at` **и** бонусный абонемент не использован (нет списаний), триггер на `payments` вызывает `private.revoke_referral_bonus()`: `bonuses.status = 'void'`, бонусный абонемент отменяется (`refund −remaining`), `referrals.status = 'void'`. Иначе бонус сохраняется (wave-3 §3.1-7).
+Все четыре таблицы под RLS без грантов: читают и пишут только функции. Тренер: `save_referral_offer` (Pro, `trainer.referral_offers`; новая акция архивирует прежнюю), `stop_referral_offer`, `trainer_referral_offer`, `trainer_referrals`, `decline_referral` (только `pending`). Клиент: `client_referral(coaching_id)` создаёт код при первом вызове, если у тренера идёт акция. Лендинг: `resolve_referral(code)` (доступна anon, как `resolve_client_invite`), `join_by_referral(code)` делает пару через `private.join_pair` с `source = 'referral'` и, если человек новый для тренера и акция идёт, `pending`-реферал.
+
+«Только после факта оплаты» (Q50): триггер `payments_referral` (`after insert or update of status on payments`) на `confirmed`-платеже `direction = 'in'` в паре приглашённого вызывает `private.qualify_referral`: если платёж подходит под условие акции (пакет оплаченного абонемента или сумма в валюте акции), реферал становится `qualified`, каждой стороне создаётся бонусный абонемент (`is_bonus`, цена 0, `grant` в журнале, гасит долг) и уходит `referral_bonus`. Пригласившему не больше 10 бонусов на акцию. Если этот платёж переведён в `voided` в течение 14 дней после `qualified_at`, `private.revoke_referral` отменяет бонусные абонементы без списаний и погашений (`refund` остатка, `cancelled`), бонусы и реферал становятся `void`; использованный бонус остаётся (wave-3 §3.1-7). Завершение пары аннулирует её `pending`-рефералы с обеих сторон.
 
 ```sql
 create type public.check_in_method as enum ('qr', 'trainer');
@@ -2524,9 +2527,9 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `user_badges`, `streaks` | сам; T/D активных пар | S | S | S |
 | `challenges` | T; участники | T | T | никто |
 | `challenge_participants` | T; сам; лидерборд: **pub-для-участников** `get_challenge_leaderboard` | C (вступить в челлендж своей группы); T | C: `show_on_leaderboard`; S: `score` | C (выйти); T |
-| `referral_codes` | сам | S | никто | никто |
-| `referral_offers` | T; клиенты тренера | T | T | никто (архив) |
-| `referrals`, `bonuses` | referrer; referee; T пары; A | S (при присоединении по реф-коду) | S (триггер оплаты) | никто |
+| `referral_codes` | через `client_referral` (сам) | S | никто | никто |
+| `referral_offers` | через функции: T; клиенты тренера (условия) | T (функция) | T (архив, функция) | никто (архив) |
+| `referrals`, `bonuses` | через функции: referrer (имя и статус друга), T | S (при присоединении по реф-коду) | S (триггер оплаты), T (отклонить) | никто |
 | `check_ins` | C; T; D[attendance] | S-RPC `check_in_by_qr` (C) | никто | никто (каскад) |
 | **W4** `posts` | по `visibility` + `follows` − `user_blocks`; модерация A | автор | автор; A (`moderation_status`) | автор (soft) |
 | `follows`, `user_blocks` | участники связи | follower / user | никто | follower / user |
