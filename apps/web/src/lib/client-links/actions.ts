@@ -6,7 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isTrialToken } from "@/lib/trial-links/link";
 import { isClientLinkToken, normalizeClientCode } from "./link";
 
-export type JoinFailure = "invalid" | "unavailable" | "own" | "limit" | "failed";
+export type JoinFailure = "invalid" | "unavailable" | "own" | "limit" | "deleting" | "failed";
 
 export type JoinState = { status: "idle" } | { status: "joined"; coachingId: string } | { status: "error"; reason: JoinFailure };
 
@@ -16,6 +16,7 @@ const FAILURES: Record<string, JoinFailure> = {
   trainer_unavailable: "unavailable",
   own_invite: "own",
   plan_limit_reached: "limit",
+  account_deleting: "deleting",
 };
 
 /**

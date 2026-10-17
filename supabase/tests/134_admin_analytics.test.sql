@@ -1,4 +1,4 @@
--- Admin analytics of migration 20261017012300_admin_analytics.sql (PRD wave-2 §8, 8.1-8.4): app openings with
+-- Admin analytics of migration 20261017021700_admin_analytics.sql (PRD wave-2 §8, 8.1-8.4): app openings with
 -- their bot source, the platform, trainers and clients slices, the audit row for one trainer, the beta metrics,
 -- and no field of a client's data in any result.
 begin;
