@@ -1,4 +1,4 @@
--- Trainer analytics «Прогресс» of migration 20261017215917_trainer_progress.sql (PRD wave-2 §7): first and last
+-- Trainer analytics «Прогресс» of migration 20261017232917_trainer_progress.sql (PRD wave-2 §7): first and last
 -- value per kind over a period, only for clients who share measurements, and the plan gate.
 begin;
 \ir _helpers.psql
