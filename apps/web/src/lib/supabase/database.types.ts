@@ -537,6 +537,82 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"challenge_participants": {
+                  Row: {
+                    "alias": string | null,"challenge_id": string,"coaching_id": string,"joined_at": string,"score": number,"score_updated_at": string | null,"show_on_leaderboard": boolean,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "alias"?: string | null,"challenge_id": string,"coaching_id": string,"joined_at"?: string,"score"?: number,"score_updated_at"?: string | null,"show_on_leaderboard"?: boolean,"user_id": string
+                  }
+                  Update: {
+                    "alias"?: string | null,"challenge_id"?: string,"coaching_id"?: string,"joined_at"?: string,"score"?: number,"score_updated_at"?: string | null,"show_on_leaderboard"?: boolean,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "challenge_participants_challenge_id_fkey"
+      columns: ["challenge_id"]
+isOneToOne: false
+      referencedRelation: "challenges"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "challenge_participants_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_balances"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "challenge_participants_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_stats"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "challenge_participants_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coachings"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "challenge_participants_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "challenge_participants_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"challenges": {
+                  Row: {
+                    "cancelled_at": string | null,"created_at": string,"ends_on": string,"finished_at": string | null,"goal": number | null,"group_id": string,"id": string,"leaderboard": boolean,"metric": string,"starts_on": string,"title": string,"trainer_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cancelled_at"?: string | null,"created_at"?: string,"ends_on": string,"finished_at"?: string | null,"goal"?: number | null,"group_id": string,"id"?: string,"leaderboard"?: boolean,"metric": string,"starts_on": string,"title": string,"trainer_id": string
+                  }
+                  Update: {
+                    "cancelled_at"?: string | null,"created_at"?: string,"ends_on"?: string,"finished_at"?: string | null,"goal"?: number | null,"group_id"?: string,"id"?: string,"leaderboard"?: boolean,"metric"?: string,"starts_on"?: string,"title"?: string,"trainer_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "challenges_group_id_fkey"
+      columns: ["group_id"]
+isOneToOne: false
+      referencedRelation: "groups"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "challenges_trainer_id_fkey"
+      columns: ["trainer_id"]
+isOneToOne: false
+      referencedRelation: "trainer_profiles"
+      referencedColumns: ["user_id"]
+    }
+                  ]
                 },"check_ins": {
                   Row: {
                     "booking_id": string,"checked_in_at": string,"client_id": string,"method": Database["public"]['Enums']["check_in_method"],"recorded_by": string | null,"trainer_id": string
@@ -3677,6 +3753,9 @@ isOneToOne: false
 "cancel_account_deletion":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"cancel_challenge":
+{ Args: { "p_challenge_id": string }; Returns: undefined
+                           },
 "cancel_my_booking":
 { Args: { "p_booking_id": string,"p_late"?: boolean,"p_reason"?: string }; Returns: Database["public"]['Enums']["booking_status"]
                            },
@@ -3690,6 +3769,11 @@ isOneToOne: false
                            },
 "cancel_session":
 { Args: { "p_following"?: boolean,"p_reason": string,"p_session_id": string }; Returns: number
+                           },
+"challenge_board":
+{ Args: { "p_challenge_id": string }; Returns: {
+              "alias": string,"hidden": boolean,"is_me": boolean,"name": string,"place": number,"score": number,"shown": boolean
+            }[]
                            },
 "change_pass_expiry":
 { Args: { "p_last_day": string,"p_pass_id": string,"p_reason": string }; Returns: undefined
@@ -3741,6 +3825,9 @@ isOneToOne: false
                            },
 "create_calendar_feed":
 { Args: { "p_zone": Database["public"]['Enums']["app_zone"] }; Returns: string
+                           },
+"create_challenge":
+{ Args: { "p_goal"?: number,"p_group_id": string,"p_leaderboard"?: boolean,"p_metric": string,"p_starts_on": string,"p_title": string,"p_weeks": number }; Returns: string
                            },
 "create_delegation":
 { Args: { "p_all_clients"?: boolean,"p_coaching_ids"?: (string)[],"p_ends_at"?: string,"p_kind": Database["public"]['Enums']["delegation_kind"],"p_scopes"?: (Database["public"]['Enums']["delegation_scope"])[],"p_session_id"?: string }; Returns: {
@@ -3896,6 +3983,9 @@ isOneToOne: false
 "join_by_trial_link":
 { Args: { "p_token": string }; Returns: string
                            },
+"join_challenge":
+{ Args: { "p_alias"?: string,"p_challenge_id": string,"p_show_on_leaderboard"?: boolean }; Returns: undefined
+                           },
 "join_waitlist":
 { Args: { "p_session_id": string }; Returns: {
               "entry_id": string,"place": number
@@ -3905,6 +3995,9 @@ isOneToOne: false
 { Args: { "p_before"?: string,"p_client": string,"p_exercises": (string)[] }; Returns: {
               "exercise_id": string,"log_id": string,"performed_at": string,"sets": Json
             }[]
+                           },
+"leave_challenge":
+{ Args: { "p_challenge_id": string }; Returns: undefined
                            },
 "leave_waitlist":
 { Args: { "p_entry_id": string }; Returns: undefined
@@ -3920,6 +4013,11 @@ isOneToOne: false
                            },
 "mark_homework_done":
 { Args: { "p_comment"?: string,"p_log"?: string,"p_occurrence": string }; Returns: string
+                           },
+"my_challenges":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "alias": string,"coaching_id": string,"ends_on": string,"goal": number,"id": string,"joined": boolean,"leaderboard": boolean,"metric": string,"score": number,"shared": boolean,"show_on_leaderboard": boolean,"starts_on": string,"state": string,"title": string,"trainer_name": string
+            }[]
                            },
 "my_client_invite":
 { Args: Record<PropertyKey, never>; Returns: {
@@ -4151,6 +4249,9 @@ isOneToOne: false
                            },
 "set_broadcasts_muted":
 { Args: { "p_coaching_id": string,"p_muted": boolean }; Returns: undefined
+                           },
+"set_challenge_leaderboard":
+{ Args: { "p_alias"?: string,"p_challenge_id": string,"p_show": boolean }; Returns: undefined
                            },
 "set_client_goal":
 { Args: { "p_goal": Database["public"]['Enums']["goal_type"] }; Returns: boolean

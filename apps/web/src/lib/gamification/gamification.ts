@@ -20,6 +20,8 @@ export const BADGE_CODES = [
   "records_1",
   "records_10",
   "homework_10",
+  "challenge_done",
+  "challenge_winner",
 ] as const;
 
 export type BadgeCode = (typeof BADGE_CODES)[number];

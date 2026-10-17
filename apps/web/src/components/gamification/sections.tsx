@@ -1,4 +1,5 @@
 import { Award } from "lucide-react";
+import { ClientChallengesEntry } from "@/components/challenges/sections";
 import { Badge } from "@/components/ui/badge";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import type { Dictionary } from "@/i18n/dictionaries";
@@ -44,6 +45,7 @@ export async function ClientGamificationEntry() {
           chevron
         />
       </ListGroup>
+      <ClientChallengesEntry t={t} locale={locale} />
     </section>
   );
 }

@@ -919,3 +919,29 @@ describe("badge messages (wave-3 §2.2-7)", () => {
     expect(renderMessage({ ...row, kind: "badge", payload: { badge: "unknown" } }, app)?.text).toBe("У тебя новый значок.");
   });
 });
+
+describe("challenge invitations (wave-3 §2.3-11)", () => {
+  const app = { appUrl: "https://fit.example", group: false };
+  const payload = {
+    challenge_id: PAIR,
+    title: "Октябрь на ногах",
+    metric: "steps",
+    starts_on: "2026-10-19",
+    ends_on: "2026-11-01",
+    trainer_name: "Анна",
+  };
+
+  it("names the trainer, the challenge and its dates, and opens the challenge", () => {
+    expect(renderMessage({ ...row, kind: "challenge", payload }, app)).toEqual({
+      text: "Тренер Анна зовёт в челлендж «Октябрь на ногах»: шаги, с 19 октября по 1 ноября. Участвовать или нет, решаешь ты.",
+      buttons: [{ text: "Открыть челлендж", web_app: { url: `https://fit.example/client/challenges/${PAIR}?source=challenge` } }],
+    });
+    expect(renderMessage({ ...row, locale: "en", kind: "challenge", payload: { ...payload, metric: "adherence_days" } }, app)?.text).toBe(
+      "Trainer Анна invites you to the challenge “Октябрь на ногах”: days on target, October 19 to November 1. Joining is up to you.",
+    );
+  });
+
+  it("escapes the title the trainer typed", () => {
+    expect(renderMessage({ ...row, kind: "challenge", payload: { ...payload, title: "<b>Шаг</b>" } }, app)?.text).toContain("«&lt;b&gt;Шаг&lt;/b&gt;»");
+  });
+});
