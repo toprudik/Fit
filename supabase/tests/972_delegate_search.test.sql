@@ -1,4 +1,4 @@
--- Invite a delegate by search (migration 20261017175137_delegate_search.sql, PRD wave-3 §1 rule 1): the owner finds
+-- Invite a delegate by search (migration 20261017200317_delegate_search.sql, PRD wave-3 §1 rule 1): the owner finds
 -- a verified trainer among their contacts and sends them the invite by the bot; the invite works like the link.
 begin;
 \ir _helpers.psql
