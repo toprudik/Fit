@@ -1,4 +1,4 @@
--- The team message of migration 20261017001900_feedback_received.sql (PRD wave-1 §2.13, FDBK-1, А2): a new feedback
+-- The team message of migration 20261017014930_feedback_received.sql (PRD wave-1 §2.13, FDBK-1, А2): a new feedback
 -- row queues one feedback_received for the admin group, and the payload names nobody.
 begin;
 \ir _helpers.psql
