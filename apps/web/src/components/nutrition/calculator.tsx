@@ -12,7 +12,6 @@ import { calculateNutrition, saveCalculatorTarget } from "@/lib/nutrition/action
 import {
   ACTIVITY_LEVELS,
   CALC_SEXES,
-  GOALS,
   HEIGHT_MAX_CM,
   HEIGHT_MIN_CM,
   WEIGHT_MAX_KG,
@@ -24,6 +23,7 @@ import {
   type Goal,
 } from "@/lib/nutrition/target";
 import { formatMeasurement, formatValue, fromMetric, toMetric, unitSystem } from "@/lib/progress/measurements";
+import { GoalPicker } from "./goal-picker";
 import { TargetCard } from "./target-card";
 
 type Field = "goal" | "sex" | "birthDate" | "height" | "weight";
@@ -36,18 +36,44 @@ function parseMetric(text: string, unit: "kg" | "lb" | "cm" | "in", min: number,
   return metric >= min && metric <= max ? metric : null;
 }
 
+type CalcInitial = { sex: CalcSex | null; birthDate: string | null; heightCm: number | null; activity: ActivityLevel | null };
+
+/** The goal picker and the calculator, sharing the goal: the calculator works the target out for the picked goal. */
+export function NutritionPlanner({
+  initialGoal,
+  activeSource,
+  ...calculator
+}: {
+  initialGoal: Goal | null;
+  activeSource: "calculator" | "trainer" | "group" | null;
+  initial: CalcInitial;
+  latestWeightKg: number | null;
+  today: string;
+  trainerName: string | null;
+}) {
+  const [goal, setGoal] = useState<Goal | null>(initialGoal);
+  return (
+    <>
+      <GoalPicker goal={goal} onChange={setGoal} activeSource={activeSource} trainerName={calculator.trainerName} />
+      <NutritionCalculator goal={goal} {...calculator} />
+    </>
+  );
+}
+
 /**
- * The Mifflin-St Jeor calculator (wave-2 §2): goal, sex, date of birth, height, weight and activity. "Рассчитать"
- * saves the inputs and the goal and shows the result; it becomes the target only on "Сделать нормой", so a new
- * goal shows the new numbers before anything changes (§1.3).
+ * The Mifflin-St Jeor calculator (wave-2 §2) for the picked goal: sex, date of birth, height, weight and activity.
+ * "Рассчитать" saves the inputs and shows the result; it becomes the target only on "Сделать нормой", so a new goal
+ * shows the new numbers before anything changes (§1.3).
  */
-export function NutritionCalculator({
+function NutritionCalculator({
+  goal,
   initial,
   latestWeightKg,
   today,
   trainerName,
 }: {
-  initial: { goal: Goal | null; sex: CalcSex | null; birthDate: string | null; heightCm: number | null; activity: ActivityLevel | null };
+  goal: Goal | null;
+  initial: CalcInitial;
   latestWeightKg: number | null;
   today: string;
   /** Set when a trainer's target is active: the calculation is saved but the diary keeps the trainer's target. */
@@ -58,7 +84,6 @@ export function NutritionCalculator({
   const system = unitSystem(locale);
   const heightUnit = system === "imperial" ? "in" : "cm";
   const weightUnit = system === "imperial" ? "lb" : "kg";
-  const [goal, setGoal] = useState<Goal | null>(initial.goal);
   const [sex, setSex] = useState<CalcSex | null>(initial.sex);
   const [activity, setActivity] = useState<ActivityLevel>(initial.activity ?? "moderate");
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
@@ -146,7 +171,11 @@ export function NutritionCalculator({
         noValidate
         className="flex flex-col gap-5 rounded-lg bg-surface-1 p-4"
       >
-        {radioGroup("goal", t.nutrition.goalLabel, GOALS, (value) => t.nutrition.goals[value], goal, setGoal, errors.goal)}
+        {errors.goal ? (
+          <p role="alert" className="px-1 text-footnote text-danger">
+            {errors.goal}
+          </p>
+        ) : null}
         {radioGroup("sex", copy.sex, CALC_SEXES, (value) => copy.sexes[value], sex, setSex, errors.sex)}
         <TextField
           name="birthDate"

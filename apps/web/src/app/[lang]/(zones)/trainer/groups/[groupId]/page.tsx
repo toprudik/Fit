@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Users } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { GroupChallenges } from "@/components/challenges/group-challenges";
 import { BroadcastComposer, DeleteBroadcastButton } from "@/components/groups/broadcast";
 import { ArchiveGroupButton, GroupFormButton } from "@/components/groups/group-form";
 import { ClearGroupTargetButton, GroupTargetForm } from "@/components/groups/group-target";
@@ -182,6 +183,7 @@ async function Group({ params }: { params: PageProps<"/[lang]/trainer/groups/[gr
       </div>
       <Members copy={copy} details={details} />
       <Template copy={copy.template} locale={locale} details={details} />
+      <GroupChallenges groupId={group.id} />
       <Analytics copy={copy.analytics} locale={locale} details={details} />
       {access.broadcasts ? (
         <Broadcasts copy={copy.broadcast} locale={locale} details={details} />

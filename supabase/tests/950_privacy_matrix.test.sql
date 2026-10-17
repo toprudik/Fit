@@ -77,6 +77,7 @@ declare
   v_log     uuid;
   v_le      uuid;
   v_group   uuid;
+  v_challenge uuid;
 begin
   insert into public.coaching_notes (coaching_id, author_id, body, visible_to_client)
   values (v_pair, v_trainer, 'Note of ' || p_trainer, true);
@@ -118,6 +119,9 @@ begin
   insert into public.groups (trainer_id, name, goal) values (v_trainer, 'Group of ' || p_trainer, 'lose') returning id into v_group;
   insert into public.group_members (group_id, coaching_id, client_id) values (v_group, v_pair, v_client);
   insert into public.broadcasts (trainer_id, group_id, body, created_by) values (v_trainer, v_group, 'Hello', v_trainer);
+  insert into public.challenges (trainer_id, group_id, title, metric, starts_on, ends_on)
+  values (v_trainer, v_group, 'Steps', 'steps', current_date, current_date + 13) returning id into v_challenge;
+  insert into public.challenge_participants (challenge_id, coaching_id, user_id) values (v_challenge, v_pair, v_client);
   insert into public.food_day_comments (client_id, coaching_id, author_id, local_date, body)
   values (v_client, v_pair, v_trainer, current_date, 'More protein');
   insert into public.referral_codes (coaching_id, code) values (v_pair, left(md5(v_pair::text), 10));
@@ -270,7 +274,7 @@ insert into tests.personal_tables values
   ('workout_log_exercises'), ('workout_sets'), ('personal_records'), ('data_exports'), ('calendar_feeds'),
   ('client_goals'), ('body_profiles'), ('nutrition_targets'), ('food_diary_entries'), ('food_day_comments'),
   ('food_dish_items'), ('food_favorites'), ('activity_entries'), ('ingest_tokens'),
-  ('user_badges'), ('workout_week_goals');
+  ('user_badges'), ('workout_week_goals'), ('challenge_participants');
 
 -- What the admin may read without break-glass (data-model §4.2); every other public table and view must give
 -- the admin 0 rows. exercises and foods are listed for the catalogs; own exercises and foods are checked separately.

@@ -21,10 +21,16 @@ async function NewProduct({ searchParams }: { searchParams: Promise<Record<strin
   // Created from "+ Еда" (a barcode the catalog did not know): back there, to the same day and meal.
   const fromDiary = isDay(search.day) && isMeal(search.meal);
   const doneHref = fromDiary ? `${ADD_FOOD_PATH}?day=${search.day}&meal=${search.meal}` : OWN_FOODS_PATH;
-  return <ProductForm food={null} barcode={barcode} doneHref={doneHref} />;
+  // A catalog product without kcal (§3.8): its name and brand come along, the client types the kcal.
+  const name = typeof search.name === "string" ? search.name.trim().slice(0, 200) : "";
+  const brand = typeof search.brand === "string" ? search.brand.trim().slice(0, 200) : "";
+  return <ProductForm food={null} barcode={barcode} doneHref={doneHref} draft={name ? { name, brand } : null} />;
 }
 
-/** "Новый продукт": `?barcode=&day=&meal=` when it comes from a barcode that was not found (wave-2 §3.4). */
+/**
+ * "Новый продукт": `?barcode=&day=&meal=` when it comes from a barcode that was not found (wave-2 §3.4), plus
+ * `&name=&brand=` for a catalog product that has no kcal there.
+ */
 export default async function NewProductPage(props: PageProps<"/[lang]/client/diary/food/foods/new">) {
   const t = await getDictionary();
   return (

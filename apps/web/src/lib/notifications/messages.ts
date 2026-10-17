@@ -8,6 +8,7 @@ import { formatSessionTime } from "@/lib/pairs/format";
 import { DEFAULT_TIME_ZONE, formatPlanDate, isPlanCode } from "@/lib/plans/plans";
 import { isButtonUrl } from "@/lib/groups/rules";
 import { isBadgeCode } from "@/lib/gamification/gamification";
+import { isChallengeMetric } from "@/lib/challenges/challenges";
 import { formatOffset } from "@/lib/reminders/offsets";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import type { InlineButton } from "./telegram";
@@ -118,6 +119,22 @@ const templates: Partial<Record<NotificationType, Template>> = {
     return {
       text: item ? interpolateEscaped(t.badge, { title: item.title, text: item.text }) : escapeHtml(t.badgeUnknown),
       buttons: [{ text: t.openBadges, path: "/client/progress/badges" }],
+    };
+  },
+  // Wave-3 §2.3-11: payload { challenge_id, title, metric, starts_on, ends_on, trainer_name } from
+  // create_challenge, one per client of the group; joining stays the client's choice.
+  challenge: ({ t, locale, payload }) => {
+    const day = (value: Json | undefined) => (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? diaryDay(locale, value) : "");
+    const metrics = dictionaries[locale].challenges.metrics;
+    const id = typeof payload.challenge_id === "string" && isPairId(payload.challenge_id) ? payload.challenge_id : null;
+    return {
+      text: interpolateEscaped(t.challenge, {
+        name: String(payload.trainer_name ?? "").trim() || t.unnamedTrainer,
+        title: String(payload.title ?? ""),
+        metric: (isChallengeMetric(payload.metric) ? metrics[payload.metric] : "").toLowerCase(),
+        period: interpolate(dictionaries[locale].challenges.period, { from: day(payload.starts_on), to: day(payload.ends_on) }),
+      }),
+      buttons: [{ text: t.openChallenge, path: id ? `/client/challenges/${id}` : "/client/progress" }],
     };
   },
   // Д1: payload { coaching_id, homework_id, title, first_name, last_name } from queue_homework_reminders, the
