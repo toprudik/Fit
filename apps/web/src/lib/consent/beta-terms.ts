@@ -5,7 +5,7 @@ import { cookieAttributes, SECURE_COOKIES } from "@/lib/cookie-attributes";
  * means a new version here and new strings under `consent` in the dictionaries: everyone who accepted an
  * older one sees the screen again on their next visit (AUTH-5).
  */
-export const BETA_TERMS_VERSION = "2026-10-beta";
+export const BETA_TERMS_VERSION = "2026-11-beta";
 
 /** The beta terms screen; every other screen waits until the user accepts (AUTH-4). */
 export const CONSENT_PATH = "/onboarding/consent";
