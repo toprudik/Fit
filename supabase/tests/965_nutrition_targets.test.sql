@@ -1,4 +1,4 @@
--- Goal and nutrition target of migration 20261017024300_nutrition_targets.sql (wave-2 §1–2, data-model §2.2):
+-- Goal and nutrition target of migration 20261017030740_nutrition_targets.sql (wave-2 §1–2, data-model §2.2):
 -- the calculator and its acceptance cases, who reads the goal and the targets, the trainer target with the low
 -- floor, the order of sources and the client's pick between two trainers, versions by day.
 begin;
