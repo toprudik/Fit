@@ -242,7 +242,7 @@ def test_happy_path(harness: Harness) -> None:
     assert harness.telegram.short_description == {None: ru.short_description, "en": en.short_description}
     (menu,) = harness.telegram.of(SetChatMenuButton)
     assert menu.chat_id is None
-    assert menu.menu_button.text == "Открыть DaFit"  # type: ignore[union-attr]
+    assert menu.menu_button.text == "DaFit"  # type: ignore[union-attr]
     assert menu.menu_button.web_app.url == "https://app.example/?source=bot_menu"  # type: ignore[union-attr]
     # probes: one without the secret, one with it (a group message no handler answers)
     assert [authenticated for authenticated, _ in harness.deployment.posts] == [False, True]
