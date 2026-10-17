@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bell, CalendarDays, Scale } from "lucide-react";
+import { Archive, Bell, CalendarDays, Scale, Trash2 } from "lucide-react";
 import { SettingsPanel } from "@/components/settings/settings-panel";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
@@ -30,6 +30,10 @@ export default async function SettingsPage() {
         </ListGroup>
         <ListGroup>
           <ListRow icon={Scale} title={t.workouts.licenses.title} href="/settings/licenses" />
+        </ListGroup>
+        <ListGroup header={t.account.settings.header}>
+          <ListRow icon={Archive} title={t.account.settings.export} href="/settings/export" />
+          <ListRow icon={Trash2} tone="danger" title={t.account.settings.delete} href="/settings/delete" />
         </ListGroup>
       </div>
     </Screen>

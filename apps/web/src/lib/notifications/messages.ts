@@ -281,6 +281,39 @@ const templates: Partial<Record<NotificationType, Template>> = {
     }),
     buttons: [{ text: t.openPlan, path: "/settings/plan" }],
   }),
+  // Account deletion (PRIV-7): payload { stage: requested, scheduled_for } or { stage: cancelled }.
+  account_deletion: ({ t, locale, timeZone, payload }) =>
+    payload.stage === "cancelled"
+      ? { text: escapeHtml(t.deletionCancelled), buttons: [{ text: t.open, path: "/" }] }
+      : {
+          text: interpolateEscaped(t.deletionRequested, { date: planDate(locale, payload.scheduled_for, timeZone) }),
+          buttons: [{ text: t.cancelDeletion, path: "/settings/delete" }],
+        },
+  // The other side of a live pair asked to delete the account: payload { coaching_id, side, first_name,
+  // last_name, cancelled, scheduled_for } from request_account_deletion. side names the one leaving.
+  counterpart_deleting: ({ t, locale, timeZone, payload }) => {
+    if (payload.side === "trainer") {
+      return {
+        text: interpolateEscaped(t.trainerDeleting, { name: personName(payload) || t.unnamedTrainer }),
+        buttons: [{ text: t.openTrainer, path: pairPath("/client/trainers", payload) }],
+      };
+    }
+    const cancelled = Number(payload.cancelled ?? 0);
+    return {
+      text: interpolateEscaped(cancelled > 0 ? t.clientDeletingCancelled : t.clientDeleting, {
+        name: personName(payload) || t.unnamedClient,
+        count: cancelled,
+        date: planDate(locale, payload.scheduled_for, timeZone),
+      }),
+      buttons: [{ text: t.openClient, path: pairPath("/trainer/clients", payload) }],
+    };
+  },
+  // PRIV-6: payload { export_id, expires_at } from complete_data_export. The link itself is signed on the
+  // export screen, so the chat never holds a working download URL.
+  export_ready: ({ t, locale, timeZone, payload }) => ({
+    text: interpolateEscaped(t.exportReady, { date: planDate(locale, payload.expires_at, timeZone) }),
+    buttons: [{ text: t.downloadExport, path: "/settings/export" }],
+  }),
   // Т8: payload { coaching_id, first_name, last_name, parq_flagged } from the intakes trigger.
   intake_submitted: ({ t, payload }) => ({
     text: interpolateEscaped(payload.parq_flagged === true ? t.intakeSubmittedFlagged : t.intakeSubmitted, {
@@ -464,6 +497,11 @@ function sessionTime(locale: Locale, value: Json | undefined, timeZone: string |
   } catch {
     return format(DEFAULT_TIME_ZONE);
   }
+}
+
+/** A date like "16 ноября 2026" in the recipient's zone; empty when the payload has none. */
+function planDate(locale: Locale, value: Json | undefined, timeZone: string | null): string {
+  return typeof value === "string" ? formatPlanDate(locale, value, timeZone) : "";
 }
 
 /** Where a session happens: the trainer's place by name, or in person or online. */
