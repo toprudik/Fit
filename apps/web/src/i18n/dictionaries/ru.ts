@@ -3763,6 +3763,7 @@ export const ru = {
         coaching_ended: "Конец занятий",
         homework_reminder: "Домашние задания",
         monthly_report: "Итоги месяца",
+        review_prompt: "Предложение оставить отзыв",
         homework_done: "Клиент выполнил задание",
         badge: "Достижения",
         challenge: "Челленджи",
@@ -4853,6 +4854,15 @@ export const ru = {
     waiveCharge: "Простить",
     openBooking: "Открыть запись",
     bookAgain: "Выбрать другое время",
+    /** §11 rule 4: once, after the third attended session of a pair. */
+    reviewPrompt: "Позади три занятия с тренером {name}. Как тебе? Оставь отзыв, его увидят тренер и команда DaFit.",
+    leaveReview: "Оставить отзыв",
+    /** §11 rule 7: the admin's decision on a review the trainer disputed. */
+    reviewHiddenAuthor: "Мы посмотрели твой отзыв о тренере и скрыли его. Причина: «{reason}».",
+    reviewKeptAuthor: "Тренер оспорил твой отзыв. Мы посмотрели его и оставили как есть.",
+    reviewHiddenTrainer: "Мы посмотрели спорный отзыв и скрыли его.",
+    reviewKeptTrainer: "Мы посмотрели спорный отзыв и оставили его: правила он не нарушает.",
+    openReviews: "Открыть отзывы",
   },
   toast: {
     /** Screen reader name of the area where toasts appear. */

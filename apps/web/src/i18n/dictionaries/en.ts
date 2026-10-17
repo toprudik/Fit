@@ -3749,6 +3749,7 @@ export const en: Dictionary = {
         coaching_ended: "Coaching ended",
         homework_reminder: "Homework",
         monthly_report: "Month in review",
+        review_prompt: "Invitation to leave a review",
         homework_done: "Client finished homework",
         badge: "Achievements",
         challenge: "Challenges",
@@ -4785,6 +4786,15 @@ export const en: Dictionary = {
     waiveCharge: "Forgive",
     openBooking: "Open booking",
     bookAgain: "Pick another time",
+    /** §11 rule 4: once, after the third attended session of a pair. */
+    reviewPrompt: "That's three sessions with {name}. How is it going? Leave a review; your trainer and the DaFit team will see it.",
+    leaveReview: "Leave a review",
+    /** §11 rule 7: the admin's decision on a review the trainer disputed. */
+    reviewHiddenAuthor: "We looked at your review of your trainer and hid it. Reason: “{reason}”.",
+    reviewKeptAuthor: "Your trainer disputed your review. We looked at it and left it as it is.",
+    reviewHiddenTrainer: "We looked at the review you disputed and hid it.",
+    reviewKeptTrainer: "We looked at the review you disputed and kept it: it doesn't break the rules.",
+    openReviews: "Open reviews",
   },
   toast: {
     region: "Notifications",

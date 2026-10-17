@@ -712,6 +712,29 @@ const templates: Partial<Record<NotificationType, Template>> = {
       buttons: [{ text: t.bookAgain, path: "/client/book" }],
     };
   },
+  // payload { coaching_id, first_name, last_name } from private.offer_review_on_booking: the third attended session
+  // of the pair (PRD wave-2 §11 rule 4).
+  review_prompt: ({ t, payload }) => ({
+    text: interpolateEscaped(t.reviewPrompt, { name: personName(payload) || t.sessionTrainer }),
+    buttons: [{ text: t.leaveReview, path: pairPath("/client/trainers", payload) }],
+  }),
+  // payload { target_type: review, review_id, coaching_id, hidden, role: author | trainer, reason? } from
+  // admin_decide_review_dispute (§11 rule 7); the author also gets the reason a hidden review shows.
+  report_resolution: ({ t, payload }) => {
+    const hidden = payload.hidden === true;
+    if (payload.role === "author") {
+      return {
+        text: hidden
+          ? interpolateEscaped(t.reviewHiddenAuthor, { reason: typeof payload.reason === "string" ? payload.reason : "" })
+          : escapeHtml(t.reviewKeptAuthor),
+        buttons: [{ text: t.openTrainer, path: pairPath("/client/trainers", payload) }],
+      };
+    }
+    return {
+      text: escapeHtml(hidden ? t.reviewHiddenTrainer : t.reviewKeptTrainer),
+      buttons: [{ text: t.openReviews, path: "/trainer/reviews" }],
+    };
+  },
 };
 
 /** "18:30" in the recipient's zone. */
