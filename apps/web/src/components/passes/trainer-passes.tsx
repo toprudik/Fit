@@ -1,42 +1,27 @@
 "use client";
 
-import { CalendarClock, Plus, Snowflake, Trash2, XCircle } from "lucide-react";
+import { CalendarClock, History, Plus, Snowflake, SlidersHorizontal, Trash2, XCircle } from "lucide-react";
 import { useCallback, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Sheet } from "@/components/ui/sheet";
-import { toast } from "@/components/ui/sonner";
 import { Switch } from "@/components/ui/switch";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate, plural } from "@/i18n/format";
-import { addFreeze, cancelPass, changeExpiry, deletePass, endFreeze, removeFreeze, type MoneyResult } from "@/lib/passes/actions";
+import { addFreeze, cancelPass, changeExpiry, deletePass, endFreeze, removeFreeze } from "@/lib/passes/actions";
 import type { PairMoney, PassView } from "@/lib/passes/load";
 import { formatLocalDay, freezeState, type Freeze } from "@/lib/passes/present";
-import { hapticSuccess } from "@/lib/telegram/mini-app";
+import { AdjustForm, DebtCharges, PastSessionForm, WaiveForm, type WaiveTarget } from "./charge-forms";
 import { PassHistory, PassSummary } from "./pass-card";
 import { SellPassForm } from "./sell-pass-form";
+import { useReport } from "./use-report";
 
-type Action = { kind: "sell" } | { kind: "freeze" | "expiry" | "cancel" | "delete"; pass: PassView } | null;
-
-/** Turns an action result into a toast; true when it went through. */
-function useReport() {
-  const { t } = useI18n();
-  return useCallback(
-    (result: MoneyResult, done: string, refused?: string): boolean => {
-      if (result.status === "done") {
-        hapticSuccess();
-        toast.success(done);
-        return true;
-      }
-      if (result.status === "refused" && refused) toast.error(refused);
-      else if (result.status === "stale") toast.error(t.money.passes.stale);
-      else if (result.status !== "invalid") toast.error(t.money.passes.failed);
-      return false;
-    },
-    [t],
-  );
-}
+type Action =
+  | { kind: "sell" | "past" }
+  | { kind: "freeze" | "expiry" | "cancel" | "delete" | "adjust"; pass: PassView }
+  | { kind: "waive"; target: WaiveTarget }
+  | null;
 
 function FreezeRow({ freeze, today, live }: { freeze: Freeze; today: string; live: boolean }) {
   const { t, locale } = useI18n();
@@ -220,24 +205,33 @@ export function TrainerPasses({ money, symbol }: { money: PairMoney; symbol: str
   const close = useCallback(() => setAction(null), []);
   const live = money.status !== "ended";
 
-  const sheetTitle =
-    action?.kind === "sell"
-      ? copy.sellForm.title
-      : action?.kind === "freeze"
-        ? copy.freezeForm.title
-        : action?.kind === "expiry"
-          ? copy.expiryForm.title
-          : action?.kind === "cancel"
-            ? copy.cancelForm.title
-            : copy.deleteForm.title;
+  const titles = {
+    sell: copy.sellForm.title,
+    past: copy.pastForm.title,
+    freeze: copy.freezeForm.title,
+    expiry: copy.expiryForm.title,
+    cancel: copy.cancelForm.title,
+    delete: copy.deleteForm.title,
+    adjust: copy.adjustForm.title,
+    waive: copy.waiveForm.title,
+  };
+  const sheetTitle = titles[action?.kind ?? "delete"];
+  const waive = (target: WaiveTarget) => setAction({ kind: "waive", target });
 
   return (
     <div className="flex flex-col gap-4">
       {live ? (
-        <Button size="lg" block icon={Plus} onClick={() => setAction({ kind: "sell" })}>
-          {copy.sell}
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button size="lg" block icon={Plus} onClick={() => setAction({ kind: "sell" })}>
+            {copy.sell}
+          </Button>
+          <Button size="lg" block variant="secondary" icon={History} onClick={() => setAction({ kind: "past" })}>
+            {copy.recordPast}
+          </Button>
+        </div>
       ) : null}
+
+      {money.debtCharges.length ? <DebtCharges charges={money.debtCharges} timeZone={money.timeZone} onWaive={waive} /> : null}
 
       {money.passes.length === 0 ? <EmptyState icon={CalendarClock} title={copy.empty} description={live ? copy.emptyText : undefined} /> : null}
 
@@ -265,6 +259,9 @@ export function TrainerPasses({ money, symbol }: { money: PairMoney; symbol: str
                     <Button size="sm" variant="secondary" icon={CalendarClock} onClick={() => setAction({ kind: "expiry", pass })}>
                       {copy.expiry}
                     </Button>
+                    <Button size="sm" variant="ghost" icon={SlidersHorizontal} onClick={() => setAction({ kind: "adjust", pass })}>
+                      {copy.adjust}
+                    </Button>
                     {pass.deletable ? (
                       <Button size="sm" variant="ghost" icon={Trash2} onClick={() => setAction({ kind: "delete", pass })}>
                         {copy.delete}
@@ -277,7 +274,13 @@ export function TrainerPasses({ money, symbol }: { money: PairMoney; symbol: str
                   </div>
                 ) : null}
               </PassSummary>
-              {pass.history.length ? <PassHistory entries={pass.history} timeZone={money.timeZone} /> : null}
+              {pass.history.length ? (
+                <PassHistory
+                  entries={pass.history}
+                  timeZone={money.timeZone}
+                  onWaive={(chargeId) => waive({ chargeId, passTitle: pass.title })}
+                />
+              ) : null}
             </li>
           );
         })}
@@ -303,6 +306,12 @@ export function TrainerPasses({ money, symbol }: { money: PairMoney; symbol: str
           <ExpiryForm key={action.pass.id} pass={action.pass} onDone={close} />
         ) : action?.kind === "cancel" ? (
           <CancelForm key={action.pass.id} pass={action.pass} onDone={close} />
+        ) : action?.kind === "adjust" ? (
+          <AdjustForm key={action.pass.id} pass={action.pass} onDone={close} />
+        ) : action?.kind === "waive" ? (
+          <WaiveForm key={action.target.chargeId} target={action.target} onDone={close} />
+        ) : action?.kind === "past" ? (
+          <PastSessionForm coachingId={money.coachingId} today={money.today} onDone={close} />
         ) : null}
       </Sheet>
 

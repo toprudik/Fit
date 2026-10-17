@@ -12,6 +12,7 @@ import {
   passStatus,
   paidAtFor,
   paymentState,
+  localInstant,
 } from "./present";
 
 describe("paymentState", () => {
@@ -91,5 +92,13 @@ describe("paidAtFor", () => {
   it("puts an earlier day at local noon", () => {
     expect(paidAtFor("2026-10-10", "Europe/Moscow", now)).toBe("2026-10-10T09:00:00.000Z");
     expect(paidAtFor("2026-10-10", "America/New_York", now)).toBe("2026-10-10T16:00:00.000Z");
+  });
+});
+
+describe("localInstant", () => {
+  it("reads a local day and time in the trainer's zone", () => {
+    expect(localInstant("2026-10-16", "18:30", "Europe/Moscow")).toBe("2026-10-16T15:30:00.000Z");
+    expect(localInstant("2026-01-15", "09:00", "Europe/Berlin")).toBe("2026-01-15T08:00:00.000Z");
+    expect(localInstant("2026-07-15", "09:00", "Europe/Berlin")).toBe("2026-07-15T07:00:00.000Z");
   });
 });

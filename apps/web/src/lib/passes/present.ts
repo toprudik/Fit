@@ -111,6 +111,8 @@ export type HistoryEntry = {
   amountMinor: number;
   at: string;
   note: string | null;
+  /** The charge "Простить" would forgive: an open charge, or the debt charge an unreversed settlement covers. */
+  chargeId: string | null;
 };
 
 /** The UTC offset of a time zone at an instant, in minutes ("GMT+03:00" → 180). */
@@ -130,4 +132,14 @@ export function paidAtFor(day: string, timeZone: string, now: Date = new Date())
   const [year, month, date] = day.split("-").map(Number);
   const noonUtc = Date.UTC(year, month - 1, date, 12);
   return new Date(noonUtc - offsetMinutes(timeZone, new Date(noonUtc)) * 60 * 1000).toISOString();
+}
+
+/** The instant of a local day and time ("2026-10-16", "18:30") in a time zone. */
+export function localInstant(day: string, time: string, timeZone: string): string {
+  const [year, month, date] = day.split("-").map(Number);
+  const [hours, minutes] = time.split(":").map(Number);
+  const asUtc = Date.UTC(year, month - 1, date, hours, minutes);
+  const first = asUtc - offsetMinutes(timeZone, new Date(asUtc)) * 60 * 1000;
+  // Near a clock change the offset at the guess may differ from the offset at the result.
+  return new Date(asUtc - offsetMinutes(timeZone, new Date(first)) * 60 * 1000).toISOString();
 }
