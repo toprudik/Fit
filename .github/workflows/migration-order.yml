@@ -5,7 +5,10 @@ name: Migration order
 
 on:
   pull_request:
-    paths: ["supabase/migrations/**"]
+    paths:
+      - "supabase/migrations/**"
+      - "scripts/check-migration-order.sh"
+      - ".github/workflows/migration-order.yml"
 
 permissions:
   contents: read
