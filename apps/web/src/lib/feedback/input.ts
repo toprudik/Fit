@@ -1,6 +1,7 @@
-import { z } from "zod";
-import { LOCALES } from "@/i18n/config";
-import { ZONES } from "@/lib/navigation/zones";
+import type { Locale } from "@/i18n/config";
+import type { Zone } from "@/lib/navigation/zones";
+
+// The feedback form imports this module, so it stays free of zod; the schema lives in ./schema (server only).
 
 /** The form's limits (PRD wave-1 §2.13-2, FDBK-3) and the database checks on public.feedback. */
 export const FEEDBACK_KINDS = ["bug", "idea", "other"] as const;
@@ -41,16 +42,15 @@ export function routeOf(from: string | null | undefined): string | null {
   return path.slice(0, 200) || null;
 }
 
-export const feedbackInput = z.object({
-  id: z.uuid(),
-  kind: z.enum(FEEDBACK_KINDS),
-  body: z.string().trim().min(1).max(MAX_FEEDBACK_LENGTH),
-  route: z.string().max(200).nullable(),
-  zone: z.enum(ZONES).nullable(),
-  platform: z.string().max(32).nullable(),
-  locale: z.enum(LOCALES),
-  theme: z.enum(["light", "dark"]).nullable(),
-  screenshots: z.array(z.string()).max(MAX_SCREENSHOTS),
-});
-
-export type FeedbackInput = z.infer<typeof feedbackInput>;
+/** What the form sends; ./schema checks it on the server. */
+export type FeedbackInput = {
+  id: string;
+  kind: FeedbackKind;
+  body: string;
+  route: string | null;
+  zone: Zone | null;
+  platform: string | null;
+  locale: Locale;
+  theme: "light" | "dark" | null;
+  screenshots: string[];
+};

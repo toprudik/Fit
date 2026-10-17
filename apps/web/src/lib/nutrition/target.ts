@@ -39,6 +39,17 @@ export function kcalOfMacros(proteinG: number | null, fatG: number | null, carbs
   return proteinG * 4 + fatG * 9 + carbsG * 4;
 }
 
+/** kcal in one gram of protein, fat and carbs. */
+const KCAL_PER_GRAM = { protein: 4, fat: 9, carbs: 4 } as const;
+export type Macro = keyof typeof KCAL_PER_GRAM;
+
+/** Grams of a macro that give this share of the kcal, rounded to whole grams (§2.11: macros in %). */
+export const gramsOfPercent = (kcal: number, macro: Macro, percent: number) => Math.round((kcal * percent) / 100 / KCAL_PER_GRAM[macro]);
+
+/** The share of the kcal these grams give, rounded to a whole percent; null without kcal. */
+export const percentOfGrams = (kcal: number, macro: Macro, grams: number) =>
+  kcal > 0 ? Math.round(((grams * KCAL_PER_GRAM[macro]) / kcal) * 100) : null;
+
 /** True when the macros add up to more than 5% away from the kcal (§2.11). */
 export function macrosDisagree(target: Macros): boolean {
   const fromMacros = kcalOfMacros(target.proteinG, target.fatG, target.carbsG);

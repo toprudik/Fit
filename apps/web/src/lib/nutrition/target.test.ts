@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ageOn, kcalOfMacros, macrosDisagree, minKcal, parseCalcResult } from "./target";
+import { ageOn, gramsOfPercent, kcalOfMacros, macrosDisagree, minKcal, parseCalcResult, percentOfGrams } from "./target";
 
 describe("minKcal", () => {
   it("is 1500 for men and 1200 otherwise, unknown included (wave-2 §2.8)", () => {
@@ -10,6 +10,13 @@ describe("minKcal", () => {
 });
 
 describe("macros", () => {
+  it("turns shares of the kcal into grams and back (§2.11)", () => {
+    expect([gramsOfPercent(1800, "protein", 30), gramsOfPercent(1800, "fat", 30), gramsOfPercent(1800, "carbs", 40)]).toEqual([135, 60, 180]);
+    expect(kcalOfMacros(135, 60, 180)).toBe(1800);
+    expect([percentOfGrams(1800, "protein", 135), percentOfGrams(1800, "fat", 60), percentOfGrams(1800, "carbs", 180)]).toEqual([30, 30, 40]);
+    expect(percentOfGrams(0, "fat", 60)).toBeNull();
+  });
+
   it("adds 4/9/4 kcal per gram once all three are given", () => {
     expect(kcalOfMacros(120, 60, 195)).toBe(1800);
     expect(kcalOfMacros(120, null, 195)).toBeNull();
