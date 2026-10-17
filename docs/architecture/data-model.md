@@ -2164,13 +2164,15 @@ create table public.bonuses (
 create type public.check_in_method as enum ('qr', 'trainer');
 create table public.check_ins (                    -- QR-чек-ин
   booking_id    uuid primary key references public.bookings(id) on delete cascade,
+  client_id     uuid not null references public.profiles(id) on delete cascade,
+  trainer_id    uuid not null references public.profiles(id) on delete cascade,  -- для политики чтения тренера
   method        public.check_in_method not null,
-  checked_in_at timestamptz not null default now(),
+  checked_in_at timestamptz not null default clock_timestamp(),
   recorded_by   uuid references public.profiles(id) on delete set null
 );
 ```
 
-QR в зале содержит ротируемый токен `HMAC(secret, location_id, 5-минутное окно)`; его генерирует сервер, в БД он не хранится. Чек-ин ставит `bookings.status = 'attended'` досрочно (с обычным списанием при завершении занятия).
+Сделано в `20261017032700_qr_check_in.sql` (вариант (а) из wave-3 §5: динамический QR занятия). QR на экране тренера содержит ссылку `t.me/<bot>?startapp=ck_<session_id>_<код>`, где код равен `HMAC(ключ, session_id, 15-секундное окно)`, 10 символов base64url. Ключ лежит в `private.check_in_keys` (одна строка, ни одной роли не доступна), код считает и проверяет база: `session_check_in_qr` (тренер, вместе со списком отметившихся) и `check_in_by_qr` (клиент), поэтому отдельного серверного секрета нет. Принимаются текущее и предыдущее окно, так что код живёт 15–30 с. Чек-ин ставит `bookings.status = 'attended'` и сразу списывает занятие через `private.post_charge`, как отметка «Был» тренером; повторный скан ничего не меняет. Статичный QR локации (вариант (б)) пока не сделан.
 
 Месячный отчёт клиента и карточки для сторис строятся на лету из существующих таблиц; кеш при необходимости: `monthly_reports(user_id, coaching_id, month date, payload jsonb, generated_at)`, без новых источников данных.
 
@@ -2527,7 +2529,7 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `referral_codes` | сам | S | никто | никто |
 | `referral_offers` | T; клиенты тренера | T | T | никто (архив) |
 | `referrals`, `bonuses` | referrer; referee; T пары; A | S (при присоединении по реф-коду) | S (триггер оплаты) | никто |
-| `check_ins` | C; T; D[attendance] | S-RPC `check_in_by_qr` (C), T/D[attendance] | никто | T |
+| `check_ins` | C; T; D[attendance] | S-RPC `check_in_by_qr` (C) | никто | никто (каскад) |
 | **W4** `posts` | по `visibility` + `follows` − `user_blocks`; модерация A | автор | автор; A (`moderation_status`) | автор (soft) |
 | `follows`, `user_blocks` | участники связи | follower / user | никто | follower / user |
 | `buddy_profiles` | сам; другим: через RPC поиска (без точных координат, только расстояние, 18+) | сам | сам | сам |
