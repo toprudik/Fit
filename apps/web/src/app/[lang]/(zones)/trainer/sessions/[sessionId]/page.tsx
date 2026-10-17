@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CalendarX, Clock, Link2, MapPin, Repeat, User, Users } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { CheckInQr } from "@/components/check-in/check-in-qr";
 import { AttendanceMarks } from "@/components/passes/attendance-marks";
 import { SessionWaivers } from "@/components/passes/session-waivers";
 import { CancelSession } from "@/components/schedule/cancel-session";
@@ -183,8 +184,19 @@ async function SessionDetails({
         />
       ) : null}
 
+      {session.status !== "cancelled" &&
+      session.mode === "offline" &&
+      Date.parse(now()) >= Date.parse(session.startsAt) - 30 * 60_000 &&
+      Date.parse(now()) <= Date.parse(session.endsAt) + 15 * 60_000 ? (
+        <CheckInQr sessionId={session.id} timeZone={owner.timeZone} />
+      ) : null}
+
       {session.status !== "cancelled" && session.startsAt <= now() ? (
-        <AttendanceMarks clients={session.clients.filter((client) => ["confirmed", "attended", "no_show"].includes(client.status))} />
+        <AttendanceMarks
+          // A check-in by QR changes a status on the server: the marks start over from the new ones.
+          key={session.clients.map((client) => `${client.bookingId}:${client.status}`).join(",")}
+          clients={session.clients.filter((client) => ["confirmed", "attended", "no_show"].includes(client.status))}
+        />
       ) : null}
 
       <SessionWaivers

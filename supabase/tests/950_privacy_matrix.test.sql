@@ -82,6 +82,8 @@ begin
   v_booking := tests.create_booking(v_session, p_trainer, p_client);
   insert into public.booking_events (booking_id, from_status, to_status, actor_id, actor_role, reason)
   values (v_booking, null, 'confirmed', v_trainer, 'trainer', 'test');
+  insert into public.check_ins (booking_id, client_id, trainer_id, method, recorded_by)
+  values (v_booking, v_client, v_trainer, 'qr', v_client);
   insert into public.waitlist_entries (session_id, coaching_id, client_id, trainer_id)
   values (v_session, v_pair, v_client, v_trainer);
   insert into public.app_opens (user_id, source) values (v_client, 'session_reminder');
@@ -102,6 +104,8 @@ begin
   values (v_client, 'waist', 80, now(), current_date, v_trainer);
   insert into public.contact_requests (coaching_id, requester_id, recipient_id) values (v_pair, v_trainer, v_client);
   insert into public.managed_client_claims (trainer_id, claimant_id, new_coaching_id) values (v_trainer, v_client, v_pair);
+  insert into public.nutrition_targets (source, client_id, coaching_id, kcal, effective_from, set_by)
+  values ('trainer', v_client, v_pair, 1800, current_date, v_trainer);
 end $$;
 select tests.fill_pair('trainer_a', 'client_c');
 select tests.fill_pair('trainer_b', 'client_c');
@@ -127,6 +131,11 @@ begin
   values (v_photo, v_client, 'front', current_date, v_client::text || '/' || v_photo::text || '.webp', true, 'auto', 1080, 1440);
   insert into public.intakes (user_id, form_version, answers, parq_answers)
   values (v_client, 'v1', '{"goal": "strength"}', '{"q1": false}');
+  insert into public.client_goals (user_id, goal) values (v_client, 'lose');
+  insert into public.body_profiles (user_id, calc_sex, birth_date, height_cm, activity_level)
+  values (v_client, 'female', '1995-05-05', 165, 'moderate');
+  insert into public.nutrition_targets (source, client_id, kcal, effective_from, set_by)
+  values ('calculator', v_client, 1700, current_date, v_client);
 end $$;
 select tests.fill_client('client_c');
 select tests.fill_client('client_e');
@@ -166,13 +175,15 @@ insert into tests.pair_tables values
   ('recurrences',           't.id::text',          't.coaching_id = %L'),
   ('bookings',              't.id::text',          't.coaching_id = %L'),
   ('booking_events',        't.id::text',          't.booking_id in (select b.id from public.bookings b where b.coaching_id = %L)'),
+  ('check_ins',             't.booking_id::text',  't.booking_id in (select b.id from public.bookings b where b.coaching_id = %L)'),
   ('passes',                't.id::text',          't.coaching_id = %L'),
   ('pass_freezes',          't.id::text',          't.pass_id in (select p.id from public.passes p where p.coaching_id = %L)'),
   ('ledger_entries',        't.id::text',          't.coaching_id = %L'),
   ('payments',              't.id::text',          't.coaching_id = %L'),
   ('money_events',          't.id::text',          't.coaching_id = %L'),
   ('milestones',            't.id::text',          't.coaching_id = %L'),
-  ('workout_logs',          't.id::text',          't.coaching_id = %L');
+  ('workout_logs',          't.id::text',          't.coaching_id = %L'),
+  ('nutrition_targets',     't.id::text',          't.coaching_id = %L');
 
 -- The keys of every pair row, collected as postgres (no RLS).
 create table tests.pair_rows (tbl text not null, pair text not null, key text not null);
@@ -195,18 +206,20 @@ grant select on tests.pair_tables, tests.pair_rows to authenticated;
 -- Accounting of an ended pair stays with both sides (§4.3); personal data of the client closes.
 create table tests.ended_accounting (tbl text primary key);
 insert into tests.ended_accounting values
-  ('bookings'), ('booking_events'), ('passes'), ('pass_freezes'), ('ledger_entries'), ('payments'), ('money_events'),
+  ('bookings'), ('booking_events'), ('check_ins'), ('passes'), ('pass_freezes'), ('ledger_entries'), ('payments'), ('money_events'),
   ('milestones');
 create table tests.personal_of_client (tbl text primary key, client_col text not null);
 insert into tests.personal_of_client values
   ('measurements', 'client_id'), ('progress_photos', 'client_id'), ('intakes', 'user_id'),
-  ('personal_records', 'client_id');
+  ('personal_records', 'client_id'), ('client_goals', 'user_id'), ('body_profiles', 'user_id'),
+  ('nutrition_targets', 'client_id');
 
 -- Personal data the admin never reads without break-glass.
 create table tests.personal_tables (tbl text primary key);
 insert into tests.personal_tables values
   ('measurements'), ('progress_photos'), ('intakes'), ('coaching_notes'), ('workout_logs'),
-  ('workout_log_exercises'), ('workout_sets'), ('personal_records'), ('data_exports'), ('calendar_feeds');
+  ('workout_log_exercises'), ('workout_sets'), ('personal_records'), ('data_exports'), ('calendar_feeds'),
+  ('client_goals'), ('body_profiles'), ('nutrition_targets');
 
 -- What the admin may read without break-glass (data-model §4.2); every other public table and view must give
 -- the admin 0 rows. exercises is listed for the wger catalog; custom exercises are checked separately.
@@ -237,6 +250,7 @@ create table tests.write_cases (
   actors     text[] not null default array['trainer_a', 'trainer_b', 'client_c', 'client_d', 'client_e', 'stranger_s', 'admin_x']
 );
 insert into tests.write_cases (label, tbl, cmd, set_clause, key_expr, owner_expr, actors) values
+  ('body_profiles', 'body_profiles', 'update', 'height_cm = 170', 't.user_id::text', 't.user_id = %1$L', default),
   ('break_glass_grants', 'break_glass_grants', 'update', 'revoked_at = now()', 't.id::text',
    $o$t.admin_id = %1$L and t.revoked_at is null and exists (select 1 from public.user_roles r where r.user_id = %1$L and r.role = 'admin')$o$,
    default),

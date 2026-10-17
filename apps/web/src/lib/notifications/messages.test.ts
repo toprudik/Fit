@@ -489,6 +489,8 @@ describe("plan messages", () => {
       });
       const trial = renderMessage({ ...row, kind: "booking_requested", payload: { ...client, ...base, trial: true } }, options);
       expect(trial?.text).toMatch(/^Запрос на пробное: Анна Смирнова, .*, Зал\. Подтверди или отклони его до начала занятия\.$/);
+      const onSite = renderMessage({ ...row, kind: "booking_requested", payload: { ...client, ...base, on_site: true } }, options);
+      expect(onSite?.text).toMatch(/^Запрос на место: Анна Смирнова на занятии .*, Зал, но без записи\. Подтверди или отклони его\.$/);
     });
 
     it("tells the trainer a request was withdrawn", () => {
@@ -564,6 +566,19 @@ describe("payment_reported", () => {
     );
     expect(message?.text).toBe("Ann says they paid $500. Confirm it once the money arrives.");
     expect(message?.buttons[0]).toEqual({ text: "Open payments", web_app: { url: "https://fit.example/trainer/money?source=payment_reported" } });
+  });
+});
+
+describe("goal_changed", () => {
+  it("tells the trainer the new goal and opens the client's nutrition tab (wave-2 §1.3)", () => {
+    const message = renderMessage(
+      { ...row, kind: "goal_changed", payload: { coaching_id: PAIR, goal: "gain", previous_goal: "lose", first_name: "Анна" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe("У клиента Анна новая цель: «набрать массу». Твоя норма осталась прежней, проверь, подходит ли она.");
+    expect(message?.buttons).toEqual([
+      { text: "Открыть питание", web_app: { url: `https://fit.example/trainer/clients/${PAIR}/nutrition?source=goal_changed` } },
+    ]);
   });
 });
 

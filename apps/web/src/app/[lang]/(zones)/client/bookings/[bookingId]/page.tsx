@@ -3,6 +3,7 @@ import { CalendarClock, CalendarX, Clock, Link2, MapPin, MessageCircle, UserRoun
 import Link from "next/link";
 import { Suspense } from "react";
 import { CancelBooking } from "@/components/bookings/cancel-booking";
+import { ScanCheckIn } from "@/components/check-in/scan-check-in";
 import { WithdrawRequest } from "@/components/bookings/withdraw-request";
 import { ScheduleSignIn } from "@/components/schedule/sign-in-state";
 import { Screen } from "@/components/shell/screen";
@@ -73,6 +74,12 @@ async function BookingDetails({ params }: { params: PageProps<"/[lang]/client/bo
   // A trial or group booking is cancelled, not moved (PRD 2.6.5).
   const movable = free && booking.kind === "personal" && booking.source !== "trial";
   const place = t.schedule.sessionPage;
+  // QR check-in is open from 30 minutes before the start to 15 minutes after the end (PRD wave-3 §5 rule 3).
+  const checkInOpen =
+    booking.status === "confirmed" &&
+    booking.mode === "offline" &&
+    Date.parse(at) >= Date.parse(booking.startsAt) - 30 * 60_000 &&
+    Date.parse(at) <= Date.parse(booking.endsAt) + 15 * 60_000;
 
   return (
     <div className="flex flex-col gap-6">
@@ -126,6 +133,7 @@ async function BookingDetails({ params }: { params: PageProps<"/[lang]/client/bo
       ) : null}
 
       <div className="flex flex-col gap-2">
+        {checkInOpen ? <ScanCheckIn /> : null}
         {booking.status === "requested" && ahead ? <WithdrawRequest bookingId={booking.id} /> : null}
         {movable ? (
           <Button asChild variant="secondary" block>
