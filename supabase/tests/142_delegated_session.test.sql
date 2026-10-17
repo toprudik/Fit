@@ -1,4 +1,4 @@
--- delegated_session of migration 20261017094137_delegated_session.sql (PRD wave-3 §1): the substitute reads its
+-- delegated_session of migration 20261017101423_delegated_session.sql (PRD wave-3 §1): the substitute reads its
 -- session with the participants' names until the session ends; other trainers read nothing.
 begin;
 \ir _helpers.psql
