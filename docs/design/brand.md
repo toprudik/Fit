@@ -194,4 +194,4 @@ Tektur Narrow (Tektur с осью ширины, зафиксированной �
 
 ## Экран загрузки в Telegram (Splash Screen)
 
-`assets/splash-icon.svg`: Da-ring с галочкой одним контуром, 512×512, для BotFather → Bot Settings → Configure Mini App → Configure Splash Screen. Фон: `#000000` (тёмная тема), `#f2f3f5` (светлая); текст: `#f5f6f7` и `#0e0f11`.
+`assets/splash-icon.svg`: Da-ring с галочкой, 48×48, два простых контура (только M/L/Z, без fill-rule): превью BotFather не показывало версию 512×512 с одним контуром. `assets/splash-icon.png` (512×512) запасной вариант. Оба для BotFather → Bot Settings → Configure Mini App → Configure Splash Screen. Фон: `#000000` (тёмная тема), `#f2f3f5` (светлая); текст: `#f5f6f7` и `#0e0f11`.
