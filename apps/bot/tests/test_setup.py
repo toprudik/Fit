@@ -432,7 +432,15 @@ def test_check_finds_a_drifted_menu_button(harness: Harness) -> None:
     }
     assert harness.run(check_only=True) == 1
     assert harness.status("menu button (default)") == "differs"
+    assert 'now web_app "Открыть DaFit"' in harness.line("menu button (default)")
     assert "old.example" not in harness.report
+
+
+def test_check_names_a_menu_button_of_another_type(harness: Harness) -> None:
+    assert harness.run() == 0
+    harness.telegram.menu_button = {"type": "commands"}
+    assert harness.run(check_only=True) == 1
+    assert "now commands, not what DaFit sets" in harness.line("menu button (default)")
 
 
 @pytest.mark.parametrize(
