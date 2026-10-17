@@ -3966,6 +3966,11 @@ isOneToOne: false
               "code": string,"trainers": Json
             }[]
                            },
+"nutrition_adherence":
+{ Args: { "p_client_id": string,"p_days": number }; Returns: {
+              "adherence": number,"counted": number,"days": number,"has_target": boolean,"in_norm": number,"logged": number,"previous_adherence": number
+            }[]
+                           },
 "nutrition_target_on":
 { Args: { "p_client_id": string,"p_day": string }; Returns: {
               "carbs_g": number,"fat_g": number,"kcal": number,"other_trainer": boolean,"protein_g": number,"source": Database["public"]['Enums']["target_source"]
@@ -4199,6 +4204,11 @@ isOneToOne: false
                            },
 "trainer_invite_status":
 { Args: { "p_code": string }; Returns: string
+                           },
+"trainer_nutrition_adherence":
+{ Args: { "p_days": number }; Returns: {
+              "adherence": number,"client_id": string,"coaching_id": string,"counted": number,"days": number,"has_target": boolean,"in_norm": number,"last_day": string,"logged": number,"previous_adherence": number
+            }[]
                            },
 "trainer_offer_waitlist":
 { Args: { "p_entry_id": string }; Returns: undefined
