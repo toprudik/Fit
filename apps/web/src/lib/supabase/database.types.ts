@@ -251,14 +251,14 @@ isOneToOne: true
                   ]
                 },"bonuses": {
                   Row: {
-                    "beneficiary_id": string,"created_at": string,"discount_percent": number | null,"granted_at": string | null,"id": string,"kind": Database["public"]['Enums']["bonus_kind"],"pass_id": string | null,"referral_id": string,"sessions": number | null,"status": Database["public"]['Enums']["bonus_status"],"voided_at": string | null
+                    "beneficiary_id": string,"coaching_id": string | null,"created_at": string,"discount_percent": number | null,"granted_at": string | null,"id": string,"kind": Database["public"]['Enums']["bonus_kind"],"pass_id": string | null,"referral_id": string,"sessions": number | null,"status": Database["public"]['Enums']["bonus_status"],"voided_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "beneficiary_id": string,"created_at"?: string,"discount_percent"?: number | null,"granted_at"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["bonus_kind"],"pass_id"?: string | null,"referral_id": string,"sessions"?: number | null,"status"?: Database["public"]['Enums']["bonus_status"],"voided_at"?: string | null
+                    "beneficiary_id": string,"coaching_id"?: string | null,"created_at"?: string,"discount_percent"?: number | null,"granted_at"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["bonus_kind"],"pass_id"?: string | null,"referral_id": string,"sessions"?: number | null,"status"?: Database["public"]['Enums']["bonus_status"],"voided_at"?: string | null
                   }
                   Update: {
-                    "beneficiary_id"?: string,"created_at"?: string,"discount_percent"?: number | null,"granted_at"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["bonus_kind"],"pass_id"?: string | null,"referral_id"?: string,"sessions"?: number | null,"status"?: Database["public"]['Enums']["bonus_status"],"voided_at"?: string | null
+                    "beneficiary_id"?: string,"coaching_id"?: string | null,"created_at"?: string,"discount_percent"?: number | null,"granted_at"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["bonus_kind"],"pass_id"?: string | null,"referral_id"?: string,"sessions"?: number | null,"status"?: Database["public"]['Enums']["bonus_status"],"voided_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -272,6 +272,24 @@ isOneToOne: false
       columns: ["beneficiary_id"]
 isOneToOne: false
       referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bonuses_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_balances"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "bonuses_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_stats"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "bonuses_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coachings"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "bonuses_pass_id_fkey"

@@ -529,11 +529,24 @@ const templates: Partial<Record<NotificationType, Template>> = {
     };
   },
   // К-referral: payload { pass_id, sessions, side, friend, trainer } from private.grant_referral_bonus (PRD wave-3 §3.1-6);
-  // side is referrer (the client who shared the link) or referee (the friend), friend and trainer are names.
+  // side is referrer (the client who shared the link) or referee (the friend), friend and trainer are names. The
+  // sessions go into the active pass; waiting = no active pass, they go into the next one; applied = the next
+  // pass has just taken them (trigger ledger_entries_referral_bonus).
   referral_bonus: ({ t, locale, payload }) => {
     const passId = typeof payload.pass_id === "string" && isPairId(payload.pass_id) ? payload.pass_id : null;
+    const referee = payload.side === "referee";
+    const template =
+      payload.applied === true
+        ? t.referralBonusApplied
+        : payload.waiting === true
+          ? referee
+            ? t.referralBonusRefereeWaiting
+            : t.referralBonusReferrerWaiting
+          : referee
+            ? t.referralBonusReferee
+            : t.referralBonusReferrer;
     return {
-      text: interpolateEscaped(payload.side === "referee" ? t.referralBonusReferee : t.referralBonusReferrer, {
+      text: interpolateEscaped(template, {
         friend: personName(nested(payload.friend)) || t.unnamedClient,
         trainer: personName(nested(payload.trainer)) || t.unnamedTrainer,
         sessions: plural(locale, Number(payload.sessions ?? 0), t.referralSessions),
