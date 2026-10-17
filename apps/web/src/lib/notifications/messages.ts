@@ -8,8 +8,9 @@ import { formatSessionTime } from "@/lib/pairs/format";
 import { DEFAULT_TIME_ZONE, formatPlanDate, isPlanCode } from "@/lib/plans/plans";
 import { isButtonUrl } from "@/lib/groups/rules";
 import { isBadgeCode } from "@/lib/gamification/gamification";
-import { bookingDecisionData } from "@/lib/bot-actions/callback-data";
+import { bookingDecisionData, claimAnswerData } from "@/lib/bot-actions/callback-data";
 import { isChallengeMetric } from "@/lib/challenges/challenges";
+import { invitePath, isInviteToken } from "@/lib/delegations/rules";
 import { formatOffset } from "@/lib/reminders/offsets";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import type { InlineButton } from "./telegram";
@@ -94,11 +95,15 @@ const templates: Partial<Record<NotificationType, Template>> = {
   }),
   managed_client_claim: ({ t, payload }) => ({
     text: interpolateEscaped(t.newClientWithCards, { name: personName(payload) || t.unnamedClient }),
-    buttons: [
+    // Т7a: "Это он(а)" and "Новый клиент" answer right in the bot (lib/bot-actions); "Ответить" opens the choice.
+    buttons:
       typeof payload.claim_id === "string" && isPairId(payload.claim_id)
-        ? { text: t.answerClaim, path: `/trainer/clients/claims/${payload.claim_id}` }
-        : { text: t.openClients, path: "/trainer/clients" },
-    ],
+        ? [
+            { text: t.claimIsCard, action: claimAnswerData(payload.claim_id, true) },
+            { text: t.claimIsNew, action: claimAnswerData(payload.claim_id, false) },
+            { text: t.answerClaim, path: `/trainer/clients/claims/${payload.claim_id}` },
+          ]
+        : [{ text: t.openClients, path: "/trainer/clients" }],
   }),
   // С1: payload { request_id, coaching_id, side, first_name, last_name } from request_contact, side being the
   // requester's. Both buttons open the answer screen, where sharing goes through Telegram's own popup (PRIV-2).
@@ -453,6 +458,15 @@ const templates: Partial<Record<NotificationType, Template>> = {
         };
       case "pending":
         return { text: interpolateEscaped(t.delegationPending, { when }), buttons: team };
+      // Rule 1: the owner sent the invite to this trainer by search; the button opens the one-time invite.
+      case "invited":
+        return {
+          text:
+            payload.kind === "substitute"
+              ? interpolateEscaped(t.delegationInviteSubstitute, { owner, when })
+              : interpolateEscaped(t.delegationInviteAssistant, { owner }),
+          buttons: isInviteToken(payload.token) ? [{ text: t.openInvite, path: invitePath(payload.token) }] : team,
+        };
       default:
         return { text: escapeHtml(t.delegationDeclined), buttons: team };
     }
@@ -666,9 +680,10 @@ const templates: Partial<Record<NotificationType, Template>> = {
     buttons: withTrainerChat(t, payload, [{ text: t.bookAgain, path: "/client/book" }]),
   }),
   // К-лист: payload { entry_id, session_id, title, starts_at, mode, location, expires_at, first_name, last_name } from
-  // private.waitlist_offer_next or trainer_offer_waitlist; sent in quiet hours too, since it lasts minutes.
+  // private.waitlist_offer_next or trainer_offer_waitlist; sent in quiet hours too, since it lasts minutes. A booked
+  // personal slot sends slot_id and no title (private.slot_offer_to).
   waitlist_offer: ({ t, locale, timeZone, payload }) => ({
-    text: interpolateEscaped(t.waitlistOffer, {
+    text: interpolateEscaped(payload.slot_id ? t.waitlistSlotOffer : t.waitlistOffer, {
       title: typeof payload.title === "string" ? payload.title : "",
       name: personName(payload) || t.sessionTrainer,
       when: sessionTime(locale, payload.starts_at, timeZone),
@@ -678,15 +693,25 @@ const templates: Partial<Record<NotificationType, Template>> = {
     buttons: [{ text: t.answerOffer, path: idPath("/client/waitlist", payload.entry_id, "/client/book") }],
   }),
   // payload { entry_id, session_id, reason: started | cancelled, title, starts_at, first_name, last_name } from
-  // private.waitlist_close (PRD wave-2 §9 rule 8).
-  waitlist_closed: ({ t, locale, timeZone, payload }) => ({
-    text: interpolateEscaped(payload.reason === "cancelled" ? t.waitlistCancelled : t.waitlistClosed, {
-      title: typeof payload.title === "string" ? payload.title : "",
-      name: personName(payload) || t.sessionTrainer,
-      when: sessionTime(locale, payload.starts_at, timeZone),
-    }),
-    buttons: [{ text: t.bookAgain, path: "/client/book" }],
-  }),
+  // private.waitlist_close (PRD wave-2 §9 rule 8); slot_id and no title from private.slot_waitlist_close.
+  waitlist_closed: ({ t, locale, timeZone, payload }) => {
+    const cancelled = payload.reason === "cancelled";
+    const template = payload.slot_id
+      ? cancelled
+        ? t.waitlistSlotCancelled
+        : t.waitlistSlotClosed
+      : cancelled
+        ? t.waitlistCancelled
+        : t.waitlistClosed;
+    return {
+      text: interpolateEscaped(template, {
+        title: typeof payload.title === "string" ? payload.title : "",
+        name: personName(payload) || t.sessionTrainer,
+        when: sessionTime(locale, payload.starts_at, timeZone),
+      }),
+      buttons: [{ text: t.bookAgain, path: "/client/book" }],
+    };
+  },
 };
 
 /** "18:30" in the recipient's zone. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarX, Clock, Users } from "lucide-react";
+import { CalendarX, Clock, Hourglass, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { interpolate } from "@/i18n/format";
 import {
   bookGroupSession,
   bookSlot,
+  joinSlotWaitlist,
   joinWaitlist,
   previewBooking,
   previewGroupBooking,
@@ -24,6 +25,7 @@ import {
 import { findOverlap, groupByDay } from "@/lib/bookings/book";
 import { previewReschedule, rescheduleBooking } from "@/lib/bookings/changes";
 import type { BookableGroup, BookableSlot, BusyTime } from "@/lib/bookings/load";
+import type { QueueSlot } from "@/lib/bookings/slot-waitlist";
 import { localToUtc } from "@/lib/schedule/time";
 import { trainerClock } from "@/lib/schedule/trainer-clock";
 
@@ -36,6 +38,8 @@ type BookPickerProps = {
   slots: BookableSlot[];
   /** Open group sessions of the trainer, listed among the slots of their day. */
   groups: BookableGroup[];
+  /** Slots someone else booked, which the client can queue for (PRD wave-2 §9). */
+  queueSlots?: QueueSlot[];
   busy: BusyTime[];
   /** "Разовое занятие стоит 2 000 ₽.", or null without a drop-in price. */
   dropInText: string | null;
@@ -44,29 +48,44 @@ type BookPickerProps = {
   moveBookingId?: string;
 };
 
-type Item = ({ type: "slot" } & BookableSlot) | ({ type: "group" } & BookableGroup);
+type Item = ({ type: "slot" } & BookableSlot) | ({ type: "group" } & BookableGroup) | ({ type: "queue" } & QueueSlot);
 
 /**
  * "Запись на занятие" (screens.md /client/book): a strip of days, the free slots and group sessions of the chosen
  * day and a confirm sheet that says what pays for the session (PRD 2.6.4): a pass, allowed debt, or a request to
- * the trainer. A group shows its free seats; a full one cannot be picked (SCHED-15).
+ * the trainer. A group shows its free seats; a full one cannot be picked (SCHED-15). A full group or a slot someone
+ * else booked offers the waitlist instead (PRD wave-2 §9).
  */
-export function BookPicker({ timeZone, trainerTimeZone, days, slots, groups, busy, dropInText, paymentLinks, moveBookingId }: BookPickerProps) {
+export function BookPicker({
+  timeZone,
+  trainerTimeZone,
+  days,
+  slots,
+  groups,
+  queueSlots = [],
+  busy,
+  dropInText,
+  paymentLinks,
+  moveBookingId,
+}: BookPickerProps) {
   const { t, locale } = useI18n();
   const copy = t.schedule.book;
   const router = useRouter();
   const groupCopy = t.schedule.groupSession;
   const byDay = useMemo(() => {
+    // A free slot held by someone's waitlist offer is listed for the queue, not for booking.
+    const queued = new Set(queueSlots.map((slot) => slot.id));
     const items: Item[] = [
-      ...slots.map((slot) => ({ type: "slot" as const, ...slot })),
+      ...slots.filter((slot) => !queued.has(slot.id)).map((slot) => ({ type: "slot" as const, ...slot })),
       ...groups.map((group) => ({ type: "group" as const, ...group })),
+      ...(moveBookingId ? [] : queueSlots.map((slot) => ({ type: "queue" as const, ...slot }))),
     ].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
     return groupByDay(items, timeZone);
-  }, [slots, groups, timeZone]);
+  }, [slots, groups, queueSlots, moveBookingId, timeZone]);
   const [day, setDay] = useState(() => days.find((candidate) => byDay.has(candidate)) ?? days[0]);
-  const [slot, setSlot] = useState<Item | null>(null);
+  const [slot, setSlot] = useState<Exclude<Item, { type: "queue" }> | null>(null);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
-  const [queueFor, setQueueFor] = useState<BookableGroup | null>(null);
+  const [queueFor, setQueueFor] = useState<Extract<Item, { type: "group" | "queue" }> | null>(null);
   const [queueError, setQueueError] = useState<BookingError | null>(null);
   const waitCopy = t.schedule.waitlist;
   const [pending, startTransition] = useTransition();
@@ -83,7 +102,7 @@ export function BookPicker({ timeZone, trainerTimeZone, days, slots, groups, bus
   };
   const where = (item: BookableSlot) => (item.mode === "online" ? copy.online : (item.place ?? copy.offline));
 
-  const open = (next: Item) => {
+  const open = (next: Exclude<Item, { type: "queue" }>) => {
     setSlot(next);
     setPreview(null);
     startTransition(async () =>
@@ -120,7 +139,7 @@ export function BookPicker({ timeZone, trainerTimeZone, days, slots, groups, bus
   const joinQueue = () => {
     if (!queueFor) return;
     startTransition(async () => {
-      const result = await joinWaitlist(queueFor.id);
+      const result = queueFor.type === "queue" ? await joinSlotWaitlist(queueFor.id) : await joinWaitlist(queueFor.id);
       if (result.status === "done") {
         setQueueFor(null);
         toast.success(interpolate(waitCopy.joined, { place: result.place }));
@@ -169,6 +188,25 @@ export function BookPicker({ timeZone, trainerTimeZone, days, slots, groups, bus
       {daySlots.length > 0 ? (
         <ListGroup header={dayFormat.format(localToUtc(day, 12 * 60, timeZone))}>
           {daySlots.map((item) => {
+            if (item.type === "queue") {
+              return (
+                <ListRow
+                  key={item.id}
+                  icon={Hourglass}
+                  title={<span className="tabular-nums">{range(item)}</span>}
+                  subtitle={`${where(item)}${trainerTime(item)}, ${item.myEntryId ? waitCopy.inQueueRow : waitCopy.bookedRow}`}
+                  href={item.myEntryId ? `/client/waitlist/${item.myEntryId}` : undefined}
+                  onClick={
+                    item.myEntryId
+                      ? undefined
+                      : () => {
+                          setQueueError(null);
+                          setQueueFor(item);
+                        }
+                  }
+                />
+              );
+            }
             if (item.type === "slot") {
               return (
                 <ListRow
@@ -260,8 +298,12 @@ export function BookPicker({ timeZone, trainerTimeZone, days, slots, groups, bus
       <Sheet
         open={queueFor !== null}
         onOpenChange={(next) => (next ? null : setQueueFor(null))}
-        title={queueFor ? interpolate(waitCopy.joinTitle, { title: queueFor.title }) : waitCopy.joinTitle}
-        description={queueFor ? `${dayFormat.format(new Date(queueFor.startsAt))}, ${range(queueFor)}${trainerTime(queueFor)}, ${where(queueFor)}` : undefined}
+        title={
+          queueFor?.type === "group" ? interpolate(waitCopy.joinTitle, { title: queueFor.title }) : waitCopy.joinSlotTitle
+        }
+        description={
+          queueFor ? `${dayFormat.format(new Date(queueFor.startsAt))}, ${range(queueFor)}${trainerTime(queueFor)}, ${where(queueFor)}` : undefined
+        }
         actions={
           <>
             <Button type="button" block loading={pending} onClick={joinQueue}>

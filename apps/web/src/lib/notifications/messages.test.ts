@@ -37,6 +37,25 @@ describe("renderMessage", () => {
     expect(declined?.buttons[0]).toEqual({ text: "Открыть команду", web_app: { url: "https://fit.example/trainer/team?source=delegation" } });
   });
 
+  it("brings a trainer found by search the invite with a button to answer it (wave-3 §1 rule 1)", () => {
+    const base = { ...row, kind: "delegation" as const };
+    const token = "AbCdEfGhIjKlMnOpQrStUvWx";
+    const sub = renderMessage(
+      { ...base, payload: { event: "invited", kind: "substitute", owner_name: "Иван", starts_at: "2026-11-02T09:00:00Z", token } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(sub?.text).toMatch(/^Иван просит провести за него занятие пн, 2 ноября в 12:00\./);
+    expect(sub?.buttons).toEqual([
+      { text: "Посмотреть приглашение", web_app: { url: `https://fit.example/trainer/team/accept?token=${token}&source=delegation` } },
+    ]);
+    const assistant = renderMessage(
+      { ...base, payload: { event: "invited", kind: "assistant", owner_name: "Иван", token: "not a token" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(assistant?.text).toContain("Иван зовёт тебя помощником");
+    expect(assistant?.buttons[0]).toEqual({ text: "Открыть команду", web_app: { url: "https://fit.example/trainer/team?source=delegation" } });
+  });
+
   it("sends a trainer's broadcast as typed, escaped, under the trainer's name (wave-2 §6.9)", () => {
     const base = { ...row, kind: "trainer_broadcast" as const };
     const payload = { trainer_name: "Иван", body: "Завтра в <10>", button_kind: "deep_link" };
@@ -94,12 +113,14 @@ describe("renderMessage", () => {
     expect(message?.buttons).toEqual([{ text: "Открыть клиентов", web_app: { url: "https://fit.example/trainer/clients?source=managed_client_claim" } }]);
   });
 
-  it("opens the claim itself when the payload names it (Т7a)", () => {
+  it("answers the claim in the bot or opens it when the payload names it (Т7a)", () => {
     const message = renderMessage(
       { ...row, kind: "managed_client_claim", payload: { claim_id: PAIR, first_name: "Иван" } },
       { appUrl: "https://fit.example", group: false },
     );
     expect(message?.buttons).toEqual([
+      { text: "Это он(а)", callback_data: `mcy:${PAIR}` },
+      { text: "Новый клиент", callback_data: `mcn:${PAIR}` },
       { text: "Ответить", web_app: { url: `https://fit.example/trainer/clients/claims/${PAIR}?source=managed_client_claim` } },
     ]);
   });
@@ -814,6 +835,19 @@ describe("waitlist messages", () => {
     );
     expect(renderMessage({ ...row, kind: "waitlist_closed", payload: { ...payload, reason: "cancelled" } }, options)?.text).toMatch(
       /отменено/,
+    );
+  });
+
+  it("speaks of the trainer's time for a booked personal slot", () => {
+    const slot = { ...payload, title: null, slot_id: PAIR };
+    expect(renderMessage({ ...row, kind: "waitlist_offer", payload: slot }, options)?.text).toBe(
+      "Освободилось время у тренера Анна Смирнова: пн, 26 октября в 18:00, Студия. Оно ждёт тебя до 12:30.",
+    );
+    expect(renderMessage({ ...row, kind: "waitlist_closed", payload: { ...slot, reason: "started" } }, options)?.text).toBe(
+      "Время у тренера Анна Смирнова (пн, 26 октября в 18:00) так и не освободилось. Очередь закрыта.",
+    );
+    expect(renderMessage({ ...row, kind: "waitlist_closed", payload: { ...slot, reason: "cancelled" } }, options)?.text).toMatch(
+      /убрал время/,
     );
   });
 });

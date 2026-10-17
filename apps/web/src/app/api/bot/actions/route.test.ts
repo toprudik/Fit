@@ -13,6 +13,8 @@ const user = vi.hoisted(() => ({
   exists: true,
   locale: "ru" as string | null,
   error: null as null | { message: string; code: string },
+  /** Answers by function name; decide_booking falls back to error above. */
+  results: {} as Record<string, { data: unknown; error: null | { message: string; code: string } }>,
   calls: [] as { telegramId: number; fn: string; args: unknown }[],
 }));
 vi.mock("@/lib/bot-actions/act-as", () => ({
@@ -22,7 +24,7 @@ vi.mock("@/lib/bot-actions/act-as", () => ({
       from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: user.locale ? { locale: user.locale } : null }) }) }) }),
       rpc: async (fn: string, args: unknown) => {
         user.calls.push({ telegramId, fn, args });
-        return { data: user.error ? null : "confirmed", error: user.error };
+        return user.results[fn] ?? { data: user.error ? null : "confirmed", error: user.error };
       },
     };
     return work(supabase, "user-1");
@@ -44,6 +46,7 @@ beforeEach(() => {
   user.exists = true;
   user.locale = "ru";
   user.error = null;
+  user.results = {};
   user.calls = [];
 });
 
@@ -110,5 +113,65 @@ describe("POST /api/bot/actions", () => {
       resolved: false,
     });
     expect(user.calls).toEqual([]);
+  });
+
+  describe("claims (Т7a)", () => {
+    const CLAIM = "9e8d7c6b-5a49-4382-9716-a5b4c3d2e1f0";
+    const CARD = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+    const claim = (fields: Record<string, unknown>) => ({
+      data: { status: "pending", limit_full: false, cards: [{ id: CARD, name: "Аня" }], ...fields },
+      error: null,
+    });
+    const tap = async (data: string) => (await call({ telegram_id: 7, data })).json();
+
+    it("merges into the only card and names it", async () => {
+      user.results.get_managed_client_claim = claim({});
+      user.results.resolve_managed_client_claim = { data: "pair", error: null };
+      expect(await tap(`mcy:${CLAIM}`)).toEqual({
+        notice: "Готово, история карточки теперь у этого клиента.",
+        resolved: true,
+        line: "Это Аня. Карточка объединена с клиентом.",
+      });
+      expect(user.calls.map((c) => [c.fn, c.args])).toEqual([
+        ["get_managed_client_claim", { p_claim_id: CLAIM }],
+        ["resolve_managed_client_claim", { p_claim_id: CLAIM, p_managed_client_id: CARD }],
+      ]);
+    });
+
+    it("leaves the choice between several cards to the app", async () => {
+      user.results.get_managed_client_claim = claim({ cards: [{ id: CARD, name: "Аня" }, { id: CLAIM, name: "Аня К." }] });
+      expect(await tap(`mcy:${CLAIM}`)).toEqual({ notice: "Карточек без аккаунта несколько. Выбери нужную в приложении.", resolved: false });
+      expect(user.calls.map((c) => c.fn)).toEqual(["get_managed_client_claim"]);
+    });
+
+    it("says there is no card to merge", async () => {
+      user.results.get_managed_client_claim = claim({ cards: [] });
+      expect(await tap(`mcy:${CLAIM}`)).toEqual({ notice: "У тебя нет карточек без аккаунта. Нажми «Новый клиент».", resolved: false });
+    });
+
+    it("keeps a new client", async () => {
+      user.results.get_managed_client_claim = claim({});
+      user.results.resolve_managed_client_claim = { data: "pair", error: null };
+      expect(await tap(`mcn:${CLAIM}`)).toEqual({
+        notice: "Готово, это новый клиент.",
+        resolved: true,
+        line: "Новый клиент. Карточки остались как были.",
+      });
+      expect(user.calls[1]).toMatchObject({ fn: "resolve_managed_client_claim", args: { p_claim_id: CLAIM } });
+    });
+
+    it("sends a new client on a full Free plan to the app", async () => {
+      user.results.get_managed_client_claim = claim({ limit_full: true });
+      expect(await tap(`mcn:${CLAIM}`)).toEqual({ notice: "На тарифе Free новая пара закроется. Ответь в приложении.", resolved: false });
+      expect(user.calls.map((c) => c.fn)).toEqual(["get_managed_client_claim"]);
+    });
+
+    it.each([
+      ["already answered", claim({ status: "merged" })],
+      ["not this trainer's", { data: null, error: { message: "claim_not_found", code: "P0001" } }],
+    ])("closes a claim that is %s", async (_name, result) => {
+      user.results.get_managed_client_claim = result;
+      expect(await tap(`mcy:${CLAIM}`)).toEqual({ notice: "Этот запрос уже не ждёт ответа.", resolved: true, line: "Запрос уже закрыт." });
+    });
   });
 });

@@ -96,8 +96,8 @@ describe("mealAt and hourIn", () => {
 });
 
 describe("portion weights", () => {
-  it("are ounces in English and grams in Russian, kept in grams", () => {
-    expect([portionUnit("en"), portionUnit("ru")]).toEqual(["oz", "g"]);
+  it("are grams in both languages, kept in grams; ounces still convert", () => {
+    expect([portionUnit("en"), portionUnit("ru")]).toEqual(["g", "g"]);
     expect(portionOfGrams(100, "oz")).toBe(3.5);
     expect(gramsOfPortion(4, "oz")).toBe(113.4);
     expect([portionOfGrams(150, "g"), gramsOfPortion(150, "g")]).toEqual([150, 150]);
