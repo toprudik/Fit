@@ -4381,6 +4381,13 @@ export const en: Dictionary = {
     requestClosed: "This request no longer needs an answer.",
     requestClosedLine: "This request is already closed.",
     noAccount: "Sign in to DaFit to answer requests.",
+    claimMerged: "Done. The card's history now belongs to this client.",
+    claimMergedLine: "This is {name}. The card was merged into the client.",
+    claimNewClient: "Done. This is a new client.",
+    claimNewClientLine: "New client. Your cards stay as they were.",
+    claimNoCards: "You have no cards without an account. Use the new client button.",
+    claimSeveralCards: "You have several cards without an account. Pick the right one in the app.",
+    claimLimitFull: "On the Free plan the new pair would close. Answer in the app.",
     failed: "That didn't work. Answer the request in the app.",
   },
   botMessages: {
@@ -4408,6 +4415,8 @@ export const en: Dictionary = {
     coachingEndedPlanLimit:
         "{name} can't take new clients on the free plan right now, so your sessions didn't start. Once a place frees up, open the trainer's link again.",
     answerClaim: "Answer",
+    claimIsCard: "Same person",
+    claimIsNew: "New client",
     unnamedTrainer: "with no name",
     openTrainer: "Open trainer",
     /** Д1: the 10:00 reminder on the day a homework is due (PRD 10-5). */

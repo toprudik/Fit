@@ -94,12 +94,14 @@ describe("renderMessage", () => {
     expect(message?.buttons).toEqual([{ text: "Открыть клиентов", web_app: { url: "https://fit.example/trainer/clients?source=managed_client_claim" } }]);
   });
 
-  it("opens the claim itself when the payload names it (Т7a)", () => {
+  it("answers the claim in the bot or opens it when the payload names it (Т7a)", () => {
     const message = renderMessage(
       { ...row, kind: "managed_client_claim", payload: { claim_id: PAIR, first_name: "Иван" } },
       { appUrl: "https://fit.example", group: false },
     );
     expect(message?.buttons).toEqual([
+      { text: "Это он(а)", callback_data: `mcy:${PAIR}` },
+      { text: "Новый клиент", callback_data: `mcn:${PAIR}` },
       { text: "Ответить", web_app: { url: `https://fit.example/trainer/clients/claims/${PAIR}?source=managed_client_claim` } },
     ]);
   });
