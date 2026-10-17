@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n/client";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
@@ -83,7 +84,18 @@ export function historyLabel(t: Dictionary, entry: HistoryEntry): string {
 }
 
 /** The pass history (screens.md "история списаний с причинами"), newest first. */
-export function PassHistory({ entries, timeZone, headingLevel = 3 }: { entries: HistoryEntry[]; timeZone: string; headingLevel?: 2 | 3 }) {
+export function PassHistory({
+  entries,
+  timeZone,
+  headingLevel = 3,
+  onWaive,
+}: {
+  entries: HistoryEntry[];
+  timeZone: string;
+  headingLevel?: 2 | 3;
+  /** The trainer's "Простить" on the rows that still have a charge to forgive. */
+  onWaive?: (chargeId: string) => void;
+}) {
   const { t, locale } = useI18n();
   const copy = t.money.passes.history;
   const Heading = headingLevel === 2 ? "h2" : "h3";
@@ -102,7 +114,14 @@ export function PassHistory({ entries, timeZone, headingLevel = 3 }: { entries: 
                   {[formatNoteTime(locale, entry.at, timeZone), entry.note].filter(Boolean).join(", ")}
                 </span>
               </span>
-              <span className="shrink-0 text-body text-ink-2 tabular-nums">{entry.delta > 0 ? `+${entry.delta}` : String(entry.delta)}</span>
+              <span className="flex shrink-0 items-center gap-2">
+                {onWaive && entry.chargeId ? (
+                  <Button size="sm" variant="ghost" onClick={() => onWaive(entry.chargeId as string)}>
+                    {t.money.passes.waive}
+                  </Button>
+                ) : null}
+                <span className="text-body text-ink-2 tabular-nums">{entry.delta > 0 ? `+${entry.delta}` : String(entry.delta)}</span>
+              </span>
             </li>
           ))}
         </ul>

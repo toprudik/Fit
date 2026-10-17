@@ -11,6 +11,7 @@ import {
   passStatus,
   todayIn,
   type Freeze,
+  type ChargeReason,
   type HistoryEntry,
   type PassStatus,
   type PaymentDirection,
@@ -85,7 +86,7 @@ function amounts(value: Json | null | undefined): Record<string, number> {
 const PASS_COLUMNS =
   "id, coaching_id, title, sessions_total, price_minor, currency, applies_to, is_drop_in, starts_on, expires_at, status, cancel_reason, note, created_at";
 const BALANCE_COLUMNS = "pass_id, remaining, available, status, effective_expires_at, freeze_days, paid_minor, unpaid_minor";
-const LEDGER_COLUMNS = "id, pass_id, entry_type, charge_reason, sessions_delta, amount_minor, occurred_at, note";
+const LEDGER_COLUMNS = "id, pass_id, entry_type, related_entry_id, charge_reason, sessions_delta, amount_minor, occurred_at, note";
 const PAYMENT_COLUMNS =
   "id, pass_id, direction, amount_minor, currency, method, paid_at, status, note, void_reason, reported_by, client_id, updated_at";
 
@@ -120,6 +121,23 @@ function paymentView(row: PaymentRow): PaymentView {
     reported: row.reported_by !== null && row.reported_by === row.client_id,
     updatedAt: row.updated_at,
   };
+}
+
+type LedgerRow = { id: string; entry_type: string; related_entry_id: string | null };
+
+/**
+ * The charge "Простить" would forgive for this row of a pass: the charge itself while it has no waiver, or the
+ * debt charge a settlement covered while that settlement is not reversed (the session then returns here).
+ */
+function waivableCharge(row: LedgerRow, rows: LedgerRow[]): string | null {
+  if (row.entry_type === "charge") {
+    return rows.some((other) => other.entry_type === "waiver" && other.related_entry_id === row.id) ? null : row.id;
+  }
+  if (row.entry_type === "settlement" && row.related_entry_id) {
+    const charge = row.related_entry_id;
+    return rows.some((other) => other.entry_type === "settlement_reversal" && other.related_entry_id === charge) ? null : charge;
+  }
+  return null;
 }
 
 /** Passes, balances, freezes, ledger and payments of some passes or pairs, read under RLS and put together. */
@@ -180,6 +198,7 @@ async function passViews(
       history: rows
         .filter((row) => row.entry_type !== "grant")
         .map((row) => ({
+          chargeId: waivableCharge(row, rows),
           id: row.id,
           type: row.entry_type,
           reason: row.charge_reason,
@@ -217,8 +236,41 @@ export type PairMoney = {
   passes: PassView[];
   payments: PaymentView[];
   debt: Debt;
+  /** Sessions that went into debt and are neither forgiven nor covered by a pass, oldest first. */
+  debtCharges: DebtCharge[];
   packages: SellablePackage[];
 };
+
+export type DebtCharge = {
+  id: string;
+  reason: ChargeReason | null;
+  amountMinor: number;
+  currency: string | null;
+  at: string;
+  note: string | null;
+};
+
+/**
+ * Debt charges (no pass) without a waiver and without a settlement: the waiver of a debt charge has no pass
+ * either, a settlement sits on the pass that covered it, so those are read by the charge ids.
+ */
+async function openDebtCharges(
+  supabase: Supabase,
+  rows: { id: string; entry_type: string; charge_reason: ChargeReason | null; amount_minor: number; currency: string | null; occurred_at: string; note: string | null }[],
+): Promise<DebtCharge[]> {
+  const charges = rows.filter((row) => row.entry_type === "charge");
+  if (!charges.length) return [];
+  const { data, error } = await supabase
+    .from("ledger_entries")
+    .select("related_entry_id")
+    .in("entry_type", ["waiver", "settlement"])
+    .in("related_entry_id", charges.map((row) => row.id));
+  if (error) fail("debt charges", error);
+  const closed = new Set((data ?? []).map((row) => row.related_entry_id));
+  return charges
+    .filter((row) => !closed.has(row.id))
+    .map((row) => ({ id: row.id, reason: row.charge_reason, amountMinor: row.amount_minor, currency: row.currency, at: row.occurred_at, note: row.note }));
+}
 
 /** The pair's money for its signed-in trainer; null without a session or when the pair is not theirs. */
 export async function loadPairMoney(coachingId: string): Promise<PairMoney | null> {
@@ -237,7 +289,7 @@ export async function loadPairMoney(coachingId: string): Promise<PairMoney | nul
   if (error) fail("pair", error);
   if (!pair) return null;
 
-  const [me, trainer, person, meta, balance, packages] = await Promise.all([
+  const [me, trainer, person, meta, balance, packages, debtRows] = await Promise.all([
     supabase.from("profiles").select("time_zone").eq("id", userId).maybeSingle(),
     supabase.from("trainer_profiles").select("default_currency").eq("user_id", userId).maybeSingle(),
     supabase.from("profiles").select("first_name, last_name, display_name, username, managed_by_trainer_id").eq("id", pair.client_id).maybeSingle(),
@@ -250,8 +302,14 @@ export async function loadPairMoney(coachingId: string): Promise<PairMoney | nul
       .is("archived_at", null)
       .order("sessions_count")
       .order("sort_order"),
+    supabase
+      .from("ledger_entries")
+      .select("id, entry_type, related_entry_id, charge_reason, amount_minor, currency, occurred_at, note")
+      .eq("coaching_id", pair.id)
+      .is("pass_id", null)
+      .order("occurred_at"),
   ]);
-  for (const [what, result] of Object.entries({ me, trainer, person, meta, balance, packages })) {
+  for (const [what, result] of Object.entries({ me, trainer, person, meta, balance, packages, debtRows })) {
     if (result.error) fail(what, result.error);
   }
   const timeZone = me.data?.time_zone ?? DEFAULT_TIME_ZONE;
@@ -267,6 +325,7 @@ export async function loadPairMoney(coachingId: string): Promise<PairMoney | nul
     passes,
     payments,
     debt: { sessions: balance.data?.debt_sessions ?? 0, amounts: amounts(balance.data?.debt_amounts) },
+    debtCharges: await openDebtCharges(supabase, debtRows.data ?? []),
     packages: (packages.data ?? []).map((row) => ({
       id: row.id,
       title: row.title,
