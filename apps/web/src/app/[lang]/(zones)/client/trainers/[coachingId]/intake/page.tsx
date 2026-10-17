@@ -13,6 +13,7 @@ import { getDictionary, getLocale } from "@/i18n/server";
 import { toValues } from "@/lib/intake/form";
 import { loadClientIntake, SIGNED_OUT } from "@/lib/intake/load";
 import { clientIntakePath, clientPairPath } from "@/lib/intake/paths";
+import { clientGoalPath, loadOwnGoal } from "@/lib/onboarding/goal";
 
 // A pair id is known only at request time.
 export const instant = false;
@@ -26,7 +27,7 @@ type Params = PageProps<"/[lang]/client/trainers/[coachingId]/intake">["params"]
 
 async function Intake({ params }: { params: Params }) {
   const { coachingId } = await params;
-  const [t, locale, intake] = await Promise.all([getDictionary(), getLocale(), loadClientIntake(coachingId)]);
+  const [t, locale, intake, goal] = await Promise.all([getDictionary(), getLocale(), loadClientIntake(coachingId), loadOwnGoal()]);
   if (intake === SIGNED_OUT) return <IntakeSignedOut t={t} next={clientIntakePath(coachingId)} />;
   if (!intake) notFound();
   const copy = t.intake.form;
@@ -39,7 +40,11 @@ async function Intake({ params }: { params: Params }) {
         </p>
       ) : null}
       {intake.live ? <IntakeShareToggle coachingId={intake.coachingId} shared={intake.shared} trainerName={intake.trainerName} /> : null}
-      <IntakeForm coachingId={intake.coachingId} initial={intake.latest ? toValues(intake.latest) : null} />
+      <IntakeForm
+        coachingId={intake.coachingId}
+        initial={intake.latest ? toValues(intake.latest) : null}
+        goalHref={goal ? null : clientGoalPath(intake.coachingId)}
+      />
     </div>
   );
 }

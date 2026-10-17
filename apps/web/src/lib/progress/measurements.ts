@@ -3,7 +3,7 @@ import { KG_PER_LB } from "@/lib/workouts/units";
 
 /**
  * Body measurements (PRD wave-1 §2.11-1, Q24): weight and girths on a date. Stored in kg and cm
- * (numeric(7,2)); shown in kg/cm or lb/in by the interface language, as weights in the workout log are.
+ * (numeric(7,2)); shown in kg and cm (see unitSystem).
  */
 export const MEASUREMENT_KINDS = ["weight", "neck", "chest", "waist", "abdomen", "hips", "thigh", "upper_arm", "calf"] as const;
 
@@ -15,9 +15,13 @@ export type UnitSystem = "metric" | "imperial";
 
 export const CM_PER_IN = 2.54;
 
-/** English means en-US (INTL_LOCALE), so pounds and inches; Russian is metric. */
+/**
+ * Kilograms, centimetres and grams in both languages, as across the CIS (owner's decision of 17.10.2026); the
+ * locale stays in the signature so a later per-user choice can come in here. Imperial units remain convertible.
+ */
 export function unitSystem(locale: Locale): UnitSystem {
-  return locale === "en" ? "imperial" : "metric";
+  void locale;
+  return "metric";
 }
 
 export type MeasurementUnit = "kg" | "lb" | "cm" | "in";

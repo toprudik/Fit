@@ -1295,6 +1295,12 @@ export const en: Dictionary = {
     },
   },
   /** The asked side of "Попросить связаться", /contact/<id> (PRIV-2). */
+  goalStep: {
+    title: "Your goal",
+    text: "One last step. Pick a goal and your nutrition target will be worked out for it. You can skip this and pick one later in “Goal and target”.",
+    done: "Done",
+    skip: "Skip",
+  },
   contactRequest: {
     title: "Request to get in touch",
     askedByTrainer: "Trainer {name} asks to get in touch",
@@ -2365,6 +2371,16 @@ export const en: Dictionary = {
       until: "until {date}",
       footer: "Passes with 2 sessions or fewer left, or a week or less until they expire.",
     },
+    nutrition: {
+      header: "Nutrition",
+      empty: "No client shares nutrition yet",
+      average: "Average target hit over 7 days",
+      averageValue: "{share}%",
+      averageEmpty: "Nothing to count yet",
+      clientValue: "{share}%",
+      all: "See every client's nutrition",
+      footer: "Counts clients who share nutrition and have a target. The three lowest are listed.",
+    },
     churn: {
       header: "Clients who may leave",
       empty: "Nobody looks like they are about to leave",
@@ -2652,7 +2668,7 @@ export const en: Dictionary = {
       noShows: "No-shows",
       earned: "Earned",
       received: "Received",
-      endingPasses: "Passes ending within 14 days",
+      endingPasses: "Passes ending: 2 sessions or 7 days left",
       lastActive: "Last active",
       opens: "App opens",
       features: "What they use",
@@ -4447,6 +4463,13 @@ export const en: Dictionary = {
     requestClosed: "This request no longer needs an answer.",
     requestClosedLine: "This request is already closed.",
     noAccount: "Sign in to DaFit to answer requests.",
+    claimMerged: "Done. The card's history now belongs to this client.",
+    claimMergedLine: "This is {name}. The card was merged into the client.",
+    claimNewClient: "Done. This is a new client.",
+    claimNewClientLine: "New client. Your cards stay as they were.",
+    claimNoCards: "You have no cards without an account. Use the new client button.",
+    claimSeveralCards: "You have several cards without an account. Pick the right one in the app.",
+    claimLimitFull: "On the Free plan the new pair would close. Answer in the app.",
     failed: "That didn't work. Answer the request in the app.",
   },
   botMessages: {
@@ -4474,6 +4497,8 @@ export const en: Dictionary = {
     coachingEndedPlanLimit:
         "{name} can't take new clients on the free plan right now, so your sessions didn't start. Once a place frees up, open the trainer's link again.",
     answerClaim: "Answer",
+    claimIsCard: "Same person",
+    claimIsNew: "New client",
     unnamedTrainer: "with no name",
     openTrainer: "Open trainer",
     /** Д1: the 10:00 reminder on the day a homework is due (PRD 10-5). */
