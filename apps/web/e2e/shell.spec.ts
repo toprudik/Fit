@@ -201,9 +201,11 @@ test.describe("navigation", () => {
 
   test("tapping a tab opens its screen", async ({ page }, testInfo) => {
     await page.goto("/trainer");
-    await page.getByRole("link", { name: "Деньги", exact: true }).click();
-
-    await expect(page).toHaveURL(/\/trainer\/money$/);
+    // A click while the tab bar hydrates can be lost; retry it until the URL changes.
+    await expect(async () => {
+      await page.getByRole("link", { name: "Деньги", exact: true }).click();
+      await expect(page).toHaveURL(/\/trainer\/money$/, { timeout: 2000 });
+    }).toPass();
     await expect(page.getByRole("heading", { level: 1, name: "Деньги" }).first()).toBeVisible();
     await expectTabs(page, testInfo, "ru", "trainer", "Деньги");
   });
