@@ -240,6 +240,17 @@ export const ru = {
       other: "{count} занятия вместе",
     } as PluralForms,
     since: "с {date}",
+    milestones: {
+      title: "Вехи",
+      newBadge: "Новая веха",
+      next: {
+        one: "Ещё {count} занятие до {sessions}",
+        few: "Ещё {count} занятия до {sessions}",
+        many: "Ещё {count} занятий до {sessions}",
+        other: "Ещё {count} занятия до {sessions}",
+      } as PluralForms,
+      allReached: "Все вехи пройдены: 100 занятий вместе",
+    },
     write: "Написать",
     tabsLabel: "Разделы",
     tabs: {

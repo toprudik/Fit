@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PAID_PLAN, requestedPlans } from "@/lib/plans/plans";
 import type { Json } from "@/lib/supabase/database.types";
 import { displayName, isPairId, passIsEnding, type ClientItem, type CoachingStatus } from "./clients";
+import type { Milestone } from "./milestones";
 
 const DEFAULT_TIME_ZONE = "Europe/Moscow";
 
@@ -128,6 +129,7 @@ export type PairDetail = {
   timeZone: string;
   partner: { name: string; photoUrl: string | null; username: string | null; isCard: boolean };
   attended: number;
+  milestones: Milestone[];
   nextSessionAt: string | null;
   availableSessions: number;
   debtSessions: number;
@@ -159,7 +161,7 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
   if (!pair) return null;
 
   const partnerId = side === "trainer" ? pair.client_id : pair.trainer_id;
-  const [person, meta, balance, stats, passes, notes] = await Promise.all([
+  const [person, meta, balance, stats, passes, notes, milestones] = await Promise.all([
     supabase.from("profiles").select(PERSON_COLUMNS).eq("id", partnerId).maybeSingle(),
     side === "trainer"
       ? supabase.from("coaching_trainer_meta").select("client_alias, archived_at").eq("coaching_id", pair.id).maybeSingle()
@@ -176,8 +178,9 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
       .select("id, author_id, body, visible_to_client, created_at, updated_at")
       .eq("coaching_id", pair.id)
       .order("created_at", { ascending: false }),
+    supabase.from("milestones").select("id, kind, achieved_at").eq("coaching_id", pair.id).order("achieved_at"),
   ]);
-  for (const [what, result] of Object.entries({ person, meta, balance, stats, passes, notes })) {
+  for (const [what, result] of Object.entries({ person, meta, balance, stats, passes, notes, milestones })) {
     if (result.error) fail(what, result.error);
   }
 
@@ -197,6 +200,7 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
       isCard: Boolean(person.data?.managed_by_trainer_id),
     },
     attended: stats.data?.attended_count ?? 0,
+    milestones: (milestones.data ?? []).map((row) => ({ id: row.id, kind: row.kind, achievedAt: row.achieved_at })),
     nextSessionAt: stats.data?.next_session_at ?? null,
     availableSessions: balance.data?.available_sessions ?? 0,
     debtSessions: balance.data?.debt_sessions ?? 0,
