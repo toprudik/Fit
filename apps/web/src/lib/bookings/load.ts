@@ -180,6 +180,20 @@ export type ClientBooking = {
 };
 
 /** Every booking of the signed-in client with every trainer (PRD 2.6.4-7), newest sessions first. */
+/** The client's latest booking of a session, for the bot's buttons that name a session (К1, К6); null when none. */
+export async function findSessionBooking(owner: ScheduleOwner, sessionId: string): Promise<string | null> {
+  const { data, error } = await owner.supabase
+    .from("bookings")
+    .select("id")
+    .eq("client_id", owner.userId)
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) fail("bookings", error);
+  return data?.id ?? null;
+}
+
 export async function loadClientBookings(owner: ScheduleOwner, bookingId?: string): Promise<ClientBooking[]> {
   const { supabase, userId } = owner;
   let query = supabase
