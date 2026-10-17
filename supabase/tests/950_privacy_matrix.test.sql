@@ -82,6 +82,8 @@ begin
   v_booking := tests.create_booking(v_session, p_trainer, p_client);
   insert into public.booking_events (booking_id, from_status, to_status, actor_id, actor_role, reason)
   values (v_booking, null, 'confirmed', v_trainer, 'trainer', 'test');
+  insert into public.waitlist_entries (session_id, coaching_id, client_id, trainer_id)
+  values (v_session, v_pair, v_client, v_trainer);
   v_pass := tests.create_pass(p_trainer, p_client, 10, 10000);
   insert into public.pass_freezes (pass_id, period, reason)
   values (v_pass, daterange(current_date + 10, current_date + 12), 'trip');

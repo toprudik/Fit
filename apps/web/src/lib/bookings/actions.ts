@@ -19,6 +19,10 @@ const KNOWN_ERRORS = [
   "plan_limit_reached",
   "session_full",
   "already_booked",
+  "already_waiting",
+  "seats_available",
+  "waitlist_not_found",
+  "offer_expired",
 ] as const;
 
 export type BookingError = (typeof KNOWN_ERRORS)[number] | "failed";
@@ -123,4 +127,36 @@ export async function decideRequest(raw: { bookingId: string; accept: boolean; r
   if (error) return { status: "error", error: known(error, "deciding a request") };
   refresh();
   return { status: "done" };
+}
+
+export type JoinWaitlistResult = { status: "done"; entryId: string; place: number } | { status: "error"; error: BookingError };
+
+/** "В лист ожидания" on a full group session (PRD wave-2 §9.1): the caller's place in line. */
+export async function joinWaitlist(sessionId: string): Promise<JoinWaitlistResult> {
+  if (!id.safeParse(sessionId).success) return { status: "error", error: "failed" };
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("join_waitlist", { p_session_id: sessionId });
+  if (error) return { status: "error", error: known(error, "joining a waitlist") };
+  refresh();
+  return { status: "done", entryId: data[0].entry_id, place: data[0].place };
+}
+
+/** "Выйти из очереди", or "Отказаться" from an offered seat, which then goes to the next in line. */
+export async function leaveWaitlist(entryId: string): Promise<BookingActionResult> {
+  if (!id.safeParse(entryId).success) return { status: "error", error: "failed" };
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("leave_waitlist", { p_entry_id: entryId });
+  if (error) return { status: "error", error: known(error, "leaving a waitlist") };
+  refresh();
+  return { status: "done" };
+}
+
+/** "Занять место": the offered seat becomes a booking, confirmed or a request (PRD wave-2 §9 rule 5). */
+export async function acceptWaitlistOffer(entryId: string): Promise<BookResult> {
+  if (!id.safeParse(entryId).success) return { status: "error", error: "failed" };
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("accept_waitlist_offer", { p_entry_id: entryId });
+  if (error) return { status: "error", error: known(error, "accepting a waitlist offer") };
+  refresh();
+  return { status: "done", bookingId: data[0].booking_id, confirmed: data[0].status === "confirmed" };
 }

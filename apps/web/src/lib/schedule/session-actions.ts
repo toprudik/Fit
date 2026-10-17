@@ -301,3 +301,19 @@ export async function updateGroupSeats(raw: { sessionId: string; capacity: numbe
   refresh();
   return { status: "done" };
 }
+
+export type OfferSeatResult = { status: "done" } | { status: "error"; error: "session_full" | "waitlist_not_found" | "failed" };
+
+/** "Предложить место" in a group's queue (PRD wave-2 §9.6): the trainer offers a free seat to someone out of turn. */
+export async function offerWaitlistSeat(entryId: string): Promise<OfferSeatResult> {
+  if (!z.uuid().safeParse(entryId).success) return { status: "error", error: "failed" };
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("trainer_offer_waitlist", { p_entry_id: entryId });
+  if (error) {
+    if (error.message === "session_full" || error.message === "waitlist_not_found") return { status: "error", error: error.message };
+    console.error("offering a waitlist seat failed", error.code);
+    return { status: "error", error: "failed" };
+  }
+  refresh();
+  return { status: "done" };
+}
