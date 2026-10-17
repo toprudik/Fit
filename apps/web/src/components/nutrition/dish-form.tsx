@@ -16,7 +16,7 @@ import { ENTRY_GRAMS_MAX, amountOf, parseAmount } from "@/lib/nutrition/diary";
 import { findFoods, saveDish } from "@/lib/nutrition/diary-actions";
 import type { Food } from "@/lib/nutrition/foods";
 import { formatValue } from "@/lib/progress/measurements";
-import { foodSubtitle } from "./add-food";
+import { foodSubtitle } from "./food-subtitle";
 
 type Item = { key: number; food: Food; grams: string };
 const SEARCH_DELAY_MS = 400;
