@@ -1,13 +1,12 @@
 import "server-only";
 import { z } from "zod";
 import { todayIn } from "@/lib/passes/present";
+import type { Milestone } from "@/lib/pairs/milestones";
 import { loadTrainerShares } from "@/lib/sharing/load";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { Database } from "@/lib/supabase/database.types";
 import type { MeasurementKind } from "./measurements";
 
 type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
-type MilestoneKind = Database["public"]["Enums"]["milestone_kind"];
 
 /** Who entered a value, from the viewer's side: the viewer, the client, or a trainer (named when known). */
 export type Author = { kind: "me" } | { kind: "client" } | { kind: "trainer"; name: string };
@@ -111,36 +110,16 @@ export async function loadPairMeasurements(coachingId: string): Promise<PairMeas
   };
 }
 
-export const MILESTONE_SESSIONS: Record<MilestoneKind, number> = { sessions_10: 10, sessions_25: 25, sessions_50: 50, sessions_100: 100 };
-
 export type PairMilestones = {
   coachingId: string;
   /** The other side of the pair, for the client's list of trainers. */
   partnerName: string;
-  startedAt: string;
   /** Attended sessions only: no-shows and late cancellations do not count (PROG-8). */
   attended: number;
-  /** Reached thresholds, smallest first; recorded by the bookings trigger and never taken back. */
-  reached: number[];
+  /** Reached milestones, oldest first; recorded by the bookings trigger and never taken back. */
+  milestones: Milestone[];
   timeZone: string;
 };
-
-async function milestonesOf(supabase: Supabase, coachingIds: string[]) {
-  const [milestones, ...counts] = await Promise.all([
-    supabase.from("milestones").select("coaching_id, kind").in("coaching_id", coachingIds),
-    ...coachingIds.map((id) =>
-      supabase.from("bookings").select("id", { count: "exact", head: true }).eq("coaching_id", id).eq("status", "attended"),
-    ),
-  ]);
-  if (milestones.error) throw new Error(`loading milestones failed: ${milestones.error.code}`);
-  const reached = new Map<string, number[]>();
-  for (const row of milestones.data) reached.set(row.coaching_id, [...(reached.get(row.coaching_id) ?? []), MILESTONE_SESSIONS[row.kind]]);
-  return coachingIds.map((id, index) => {
-    const count = counts[index];
-    if (count.error) throw new Error(`counting attended sessions failed: ${count.error.code}`);
-    return { coachingId: id, attended: count.count ?? 0, reached: (reached.get(id) ?? []).sort((a, b) => a - b) };
-  });
-}
 
 /** Milestones of the signed-in client's live pairs, one per trainer, oldest pair first. */
 export async function loadMyMilestones(): Promise<PairMilestones[]> {
@@ -149,17 +128,16 @@ export async function loadMyMilestones(): Promise<PairMilestones[]> {
   if (!me) return [];
   const { data: pairs, error } = await supabase
     .from("coachings")
-    .select("id, trainer_id, started_at")
+    .select("id, trainer_id")
     .eq("client_id", me.id)
     .neq("status", "ended")
     .order("started_at");
   if (error) throw new Error(`loading pairs failed: ${error.code}`);
   if (!pairs.length) return [];
-  const [counted, people] = await Promise.all([
-    milestonesOf(
-      supabase,
-      pairs.map((pair) => pair.id),
-    ),
+  const ids = pairs.map((pair) => pair.id);
+  const [stats, milestones, people] = await Promise.all([
+    supabase.from("coaching_stats").select("coaching_id, attended_count").in("coaching_id", ids),
+    supabase.from("milestones").select("id, coaching_id, kind, achieved_at").in("coaching_id", ids).order("achieved_at"),
     supabase
       .from("profiles")
       .select("id, first_name, last_name, display_name")
@@ -168,11 +146,17 @@ export async function loadMyMilestones(): Promise<PairMilestones[]> {
         pairs.map((pair) => pair.trainer_id),
       ),
   ]);
+  if (stats.error) throw new Error(`loading attended sessions failed: ${stats.error.code}`);
+  if (milestones.error) throw new Error(`loading milestones failed: ${milestones.error.code}`);
   const byId = new Map((people.data ?? []).map((person) => [person.id, person]));
-  return pairs.map((pair, index) => ({
-    ...counted[index],
+  const attended = new Map(stats.data.map((row) => [row.coaching_id, row.attended_count ?? 0]));
+  return pairs.map((pair) => ({
+    coachingId: pair.id,
     partnerName: nameOf(byId.get(pair.trainer_id)),
-    startedAt: pair.started_at,
+    attended: attended.get(pair.id) ?? 0,
+    milestones: milestones.data
+      .filter((row) => row.coaching_id === pair.id)
+      .map((row) => ({ id: row.id, kind: row.kind, achievedAt: row.achieved_at })),
     timeZone: me.timeZone,
   }));
 }
