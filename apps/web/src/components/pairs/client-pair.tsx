@@ -43,6 +43,9 @@ export async function ClientPair({ coachingId }: { coachingId: string }) {
               : interpolate(t.pairs.end.endedClient, { date: formatDay(locale, pair.endedAt ?? pair.startedAt, pair.timeZone) })}
           </PairNotice>
         )}
+        {live && pair.partnerDeletingOn ? (
+          <PairNotice>{interpolate(t.pairs.deletingTrainer, { date: formatDay(locale, pair.partnerDeletingOn, pair.timeZone) })}</PairNotice>
+        ) : null}
 
         <ListGroup>
           <ListRow

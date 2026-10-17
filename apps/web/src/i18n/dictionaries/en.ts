@@ -291,6 +291,7 @@ export const en: Dictionary = {
       ended: "Ended",
       archived: "Archived",
       parq: "PAR-Q: a yes answer",
+      deleting: "Deleting account",
     },
     together: {
       one: "{count} session together",
@@ -342,6 +343,8 @@ export const en: Dictionary = {
     archive: "Move to archive",
     unarchive: "Back to the list",
     archivedText: "This client is archived and hidden from the main list. Bookings and passes keep working.",
+    deletingClient: "This client is deleting their account. Their profile will be erased on {date} unless they cancel. Sessions and payments stay with you.",
+    deletingTrainer: "Your trainer is deleting their account. Their profile will leave DaFit on {date} unless they cancel.",
     archivedToast: "Client archived",
     unarchivedToast: "Client is back on the list",
     cardText: "A client without an account: they get no messages, and you enter all their data.",

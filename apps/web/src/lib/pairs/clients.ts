@@ -46,6 +46,8 @@ export type ClientItem = {
   passEnding: boolean;
   /** The latest intake the client shows this trainer has a "yes" in PAR-Q (INTK-3). */
   parqFlagged: boolean;
+  /** The client asked to delete their account and can still cancel (R10). */
+  deleting: boolean;
 };
 
 /** A live pair: trial or active. An ended one keeps its history and sits in the archive filter. */

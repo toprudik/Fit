@@ -16,6 +16,7 @@ const base: ClientItem = {
   hasPass: false,
   passEnding: false,
   parqFlagged: false,
+  deleting: false,
 };
 
 const items: ClientItem[] = [

@@ -66,6 +66,7 @@ function rowBadge(t: Dictionary, item: ClientItem) {
   const copy = t.pairs.badges;
   if (item.status === "ended") return <Badge>{copy.ended}</Badge>;
   if (item.archived) return <Badge>{copy.archived}</Badge>;
+  if (item.deleting) return <Badge tone="warning">{copy.deleting}</Badge>;
   // Health first: a "yes" in PAR-Q asks the trainer to decide before the next session (INTK-3).
   if (item.parqFlagged) return <Badge tone="danger">{copy.parq}</Badge>;
   if (item.debtSessions > 0) return <Badge tone="danger">{interpolate(copy.debt, { count: item.debtSessions })}</Badge>;
