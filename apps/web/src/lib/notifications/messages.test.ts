@@ -217,6 +217,28 @@ describe("feedback reply (ADM-10)", () => {
   });
 });
 
+describe("break-glass access (ADM-14)", () => {
+  it("tells the user which sections an admin opened, until when and why", () => {
+    const message = renderMessage(
+      {
+        ...row,
+        kind: "break_glass",
+        payload: {
+          grant_id: "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b",
+          categories: ["measurements", "photos", "unknown"],
+          reason: "Support ticket <about> a lost weigh-in",
+          expires_at: "2026-11-20T15:30:00Z",
+        },
+      },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe(
+      "Администратор DaFit открыл себе доступ к твоим разделам: замеры, фото прогресса. Доступ закроется пт, 20 нояб., 18:30.\nПричина: Support ticket &lt;about&gt; a lost weigh-in",
+    );
+    expect(message?.buttons).toEqual([{ text: "Открыть DaFit", web_app: { url: "https://fit.example/?source=break_glass" } }]);
+  });
+});
+
 describe("intake messages", () => {
   const PAIR = "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b";
   const options = { appUrl: "https://fit.example", group: false };
@@ -563,10 +585,16 @@ describe("plan messages", () => {
       expect(debt?.text).toMatch(/занятие уйдёт в долг\.$/);
       const requested = renderMessage({ ...row, kind: "booking_requested", locale: "en", payload: { ...base } }, options);
       expect(requested?.text).toMatch(/^Booking request: a client with no name, .*, Зал\. Confirm or decline it before the session starts\.$/);
-      expect(requested?.buttons[0]).toEqual({
-        text: "Answer the request",
-        web_app: { url: `https://fit.example/trainer/requests/${booking}?source=booking_requested` },
-      });
+      expect(requested?.buttons).toEqual([
+        { text: "Confirm", callback_data: `bky:${booking}` },
+        { text: "Decline", callback_data: `bkn:${booking}` },
+        { text: "Answer the request", web_app: { url: `https://fit.example/trainer/requests/${booking}?source=booking_requested` } },
+      ]);
+      // A tap in a group would act for whoever tapped: there only the link stays.
+      const inGroup = renderMessage({ ...row, kind: "booking_requested", payload: { ...base } }, { ...options, group: true });
+      expect(inGroup?.buttons).toEqual([
+        { text: "Ответить на запрос", url: `https://fit.example/trainer/requests/${booking}?source=booking_requested` },
+      ]);
       const trial = renderMessage({ ...row, kind: "booking_requested", payload: { ...client, ...base, trial: true } }, options);
       expect(trial?.text).toMatch(/^Запрос на пробное: Анна Смирнова, .*, Зал\. Подтверди или отклони его до начала занятия\.$/);
       const onSite = renderMessage({ ...row, kind: "booking_requested", payload: { ...client, ...base, on_site: true } }, options);

@@ -18,6 +18,7 @@ LIMITS = {
     "command_help": 256,
     "description": 512,
     "short_description": 120,
+    "action_failed": 200,
 }
 #: Keys that are names and may read the same in both languages.
 SAME_IN_BOTH: set[str] = {"menu_button"}

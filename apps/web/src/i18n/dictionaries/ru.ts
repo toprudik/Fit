@@ -699,6 +699,9 @@ export const ru = {
       show: "Включить витрину",
       hide: "Выключить витрину",
       hideHint: "Выключенная витрина никому не видна, клиенты и ссылки остаются.",
+      storyCards: "Имя и QR на карточках клиентов",
+      storyCardsHint: "Клиенты делятся итогами месяца в сторис. На карточке «занятия с тренером» будут твоё имя и QR витрины.",
+      storyCardsFailed: "Не получилось сохранить, попробуй ещё раз",
       toggleFailed: "Не получилось, попробуй ещё раз.",
       checklist: {
         title: "Чего не хватает на витрине",
@@ -1491,6 +1494,7 @@ export const ru = {
       trainer: { one: "занятие с тренером", few: "занятия с тренером", many: "занятий с тренером", other: "занятия с тренером" } as PluralForms,
       records: { one: "новый рекорд", few: "новых рекорда", many: "новых рекордов", other: "новых рекорда" } as PluralForms,
       weight: "вес за месяц",
+      showcase: "Витрина тренера",
     },
   },
   nutrition: {
@@ -2243,14 +2247,14 @@ export const ru = {
     },
     analytics: {
       header: "Аналитика группы",
-      footer: "Среднее показываем, когда набирается хотя бы три клиента. Вес считаем только у тех, кто делится замерами.",
+      footer: "Среднее показываем, когда набирается хотя бы три клиента. Вес считаем только у тех, кто делится замерами, попадание в норму у тех, кто делится питанием.",
       members: "Клиентов в группе",
       attendance: "Посещаемость за 30 дней",
       attendanceValue: "{share}%",
       weight: "Вес за 30 дней, в среднем",
       weightValue: "{change} кг",
-      adherence: "Попадание в норму",
-      adherenceLater: "Появится с дневником питания",
+      adherence: "Попадание в норму за 30 дней",
+      adherenceValue: "{share}%",
       few: "Мало клиентов",
     },
     broadcast: {
@@ -2587,10 +2591,13 @@ export const ru = {
     },
     features: {
       header: "Чем пользуются клиенты",
-      footer: "Доля клиентов с живой парой за период. Сами записи клиентов здесь не видны.",
+      footer: "Доля клиентов с живой парой за период, норма на сегодня. Сами записи клиентов здесь не видны.",
       workouts: "Ведут дневник тренировок",
       measurements: "Вносят замеры",
       photos: "Добавляют фото прогресса",
+      diary: "Ведут дневник питания",
+      activity: "Отмечают шаги, воду или сон",
+      target: "Есть норма питания",
     },
     trainers: {
       header: "Тренеры",
@@ -2610,7 +2617,7 @@ export const ru = {
       subtitle: "пар {pairs}, посещений {attended}",
       lastActive: "активность {date}",
       never: "входов не было",
-      flags: { workouts: "тренировки", measurements: "замеры", photos: "фото" },
+      flags: { workouts: "тренировки", measurements: "замеры", photos: "фото", diary: "питание", activity: "активность", target: "норма" },
     },
     noName: "Без имени",
     trainer: {
@@ -2886,6 +2893,7 @@ export const ru = {
   /** Trainer schedule: the week, the week template and slots (PRD wave-1 §2.6.1, screens.md §3.2). */
   schedule: {
     newSession: "Занятие",
+    trainerTime: "{time} по времени тренера",
     weekLabel: "Неделя",
     previousWeek: "Прошлая неделя",
     nextWeek: "Следующая неделя",
@@ -4427,6 +4435,16 @@ export const ru = {
     feedback: "Обратная связь",
   },
   /** Bot messages from the notification outbox, in the recipient's DaFit language (ADR 0006, Q66). */
+  botActions: {
+    bookingConfirmed: "Запись подтверждена. Клиенту придёт сообщение.",
+    bookingConfirmedLine: "Подтверждено.",
+    bookingDeclined: "Запрос отклонён. Клиенту придёт сообщение.",
+    bookingDeclinedLine: "Отклонено.",
+    requestClosed: "Этот запрос уже не ждёт ответа.",
+    requestClosedLine: "Запрос уже закрыт.",
+    noAccount: "Войди в DaFit, чтобы отвечать на запросы.",
+    failed: "Не получилось. Ответь на запрос в приложении.",
+  },
   botMessages: {
     open: "Открыть DaFit",
     /** AUTH-7: the test message after the user allows the bot to write. */
@@ -4496,6 +4514,15 @@ export const ru = {
     openFeedback: "Открыть обращение",
     feedbackReply: "Команда DaFit ответила на твоё обращение:\n{reply}",
     writeAgain: "Написать ещё",
+    breakGlass: "Администратор DaFit открыл себе доступ к твоим разделам: {categories}. Доступ закроется {until}.\nПричина: {reason}",
+    breakGlassCategories: {
+      nutrition: "питание",
+      measurements: "замеры",
+      photos: "фото прогресса",
+      steps: "шаги",
+      intake: "анкета",
+      workouts: "свои тренировки",
+    },
     /** П1–П3: plan granted, revoked and ending in three days (PRD §2.14-8, 9). */
     planGranted: "Тебе выдан тариф {plan} без срока. Спасибо, что ты в бете DaFit.",
     planGrantedUntil: "Тебе выдан тариф {plan} до {date}. Спасибо, что ты в бете DaFit.",
@@ -4655,6 +4682,8 @@ export const ru = {
     requestDeclinedReason: "Запрос к тренеру {name} на {when} отклонён. Причина: «{reason}».",
     requestExpired: "Запрос к тренеру {name} на {when} остался без ответа, запись не состоялась.",
     answerRequest: "Ответить на запрос",
+    confirmRequest: "Подтвердить",
+    declineRequest: "Отклонить",
     openSchedule: "Открыть расписание",
     waiveCharge: "Простить",
     openBooking: "Открыть запись",

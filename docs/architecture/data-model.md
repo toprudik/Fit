@@ -1547,7 +1547,7 @@ create index on public.break_glass_grants (target_user_id);
 -- Доступ открывается снова только новым грантом.
 ```
 
-Грант создаётся только через `admin_open_break_glass(target_user, categories, reason)`. Функция проверяет `is_admin()`, пишет `admin_audit_log` и ставит пользователю уведомление о факте доступа (новый тип `break_glass` в `notification_type`, см. Допущения, п. 26). Пока грант действует, `private.can_view()` возвращает `true` для этого админа и этих категорий.
+Грант создаётся только через `admin_open_break_glass(target_user, categories, reason, minutes = 60)` (миграция `20261017194837_break_glass_open.sql`): срок от 1 до 60 минут, причина не короче 20 символов после обрезки пробелов, не на свой аккаунт. Функция проверяет `is_admin()`, пишет `admin_audit_log` и ставит пользователю уведомление о факте доступа (новый тип `break_glass` в `notification_type`, см. Допущения, п. 26). Пока грант действует, `private.can_view()` возвращает `true` для этого админа и этих категорий.
 
 ---
 
@@ -1879,6 +1879,8 @@ create table public.broadcasts (
 create index on public.broadcasts (trainer_id, created_at);
 alter table public.notification_outbox add column broadcast_id uuid references public.broadcasts(id) on delete set null;   -- R60
 ```
+
+Аналитика группы (`group_analytics`, миграция `20261017184417_group_adherence.sql`): кроме посещаемости и веса отдаёт среднее попадание в норму за 30 полных дней (`adherence`, `adherence_clients`). Считаются участники, которые делятся питанием и у которых был хотя бы один день с нормой; меньше трёх таких клиентов, и среднее не показывается.
 
 Статистика рассылки считается агрегатом `notification_outbox` по `broadcast_id` и `status`. Лимит 5 в сутки проверяет RPC `send_broadcast`.
 
@@ -2644,6 +2646,8 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `analytics.beta_metrics` | `day` | три показателя Q26 за скользящие 14 дней (определения: wave-2 §8.6 и «Допущения») |
 
 **Как сделано к бете** (миграция `20261017023400_admin_analytics`). На объёмах беты MV не нужны: срезы считают на лету DEFINER-функции `admin_analytics_platform(p_days)`, `admin_analytics_trainers(p_days)`, `admin_analytics_trainer(p_trainer_id, p_days)` (пишет `analytics.view_trainer` в `admin_audit_log`), `admin_analytics_clients(p_days, p_limit)` и `admin_beta_metrics()`; период 7, 14, 30 или 90 дней, иначе `invalid_period`. Открытия приложения пишет `record_app_open(p_source)` в таблицу `app_opens` (`source` = тип уведомления, с которого пришёл пользователь, `null` для прямого входа; повтор того же источника за 30 минут не считается). Таблицу никто не читает напрямую. «Проведено» = прошедшее неотменённое занятие с подтверждённой или отмеченной записью. Когда функции станут медленными, их тела переносятся в MV выше без смены сигнатур.
+
+Использование функций (миграция `20261017200317_admin_feature_use`): срез платформы также считает клиентов, которые за период вели дневник питания (`clients_keeping_diary`) или отмечали шаги, воду и сон (`clients_logging_activity`), и тех, у кого сегодня есть норма питания (`clients_with_target`, по `private.active_nutrition_target`, поэтому норма тренера без доступа к питанию не считается). В срезе клиентов те же три признака: `keeps_diary`, `logs_activity`, `has_target`. Только количества и да/нет, без значений.
 
 Агрегаты по данным тела и питания (средний вес и т. п.) админу не считаются вовсе (wave-2 §8.5). Будущее «сравнение с рынком» строится из `analytics.trainer_daily` с порогом ≥ 10 тренеров в срезе и только процентилями.
 
