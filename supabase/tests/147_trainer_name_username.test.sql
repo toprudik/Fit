@@ -1,4 +1,4 @@
--- «Написать тренеру» in the bot, migration 20261017134613_trainer_name_username.sql (PRD wave-1 §3, К1/К4–К6).
+-- «Написать тренеру» in the bot, migration 20261017150254_trainer_name_username.sql (PRD wave-1 §3, К1/К4–К6).
 begin;
 \ir _helpers.psql
 select plan(4);
