@@ -133,6 +133,50 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"body_profiles": {
+                  Row: {
+                    "activity_level": Database["public"]['Enums']["activity_level"] | null,"birth_date": string | null,"calc_sex": Database["public"]['Enums']["calc_sex"] | null,"height_cm": number | null,"preferred_target_coaching_id": string | null,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "activity_level"?: Database["public"]['Enums']["activity_level"] | null,"birth_date"?: string | null,"calc_sex"?: Database["public"]['Enums']["calc_sex"] | null,"height_cm"?: number | null,"preferred_target_coaching_id"?: string | null,"updated_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "activity_level"?: Database["public"]['Enums']["activity_level"] | null,"birth_date"?: string | null,"calc_sex"?: Database["public"]['Enums']["calc_sex"] | null,"height_cm"?: number | null,"preferred_target_coaching_id"?: string | null,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "body_profiles_preferred_target_coaching_id_fkey"
+      columns: ["preferred_target_coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_balances"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "body_profiles_preferred_target_coaching_id_fkey"
+      columns: ["preferred_target_coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_stats"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "body_profiles_preferred_target_coaching_id_fkey"
+      columns: ["preferred_target_coaching_id"]
+isOneToOne: false
+      referencedRelation: "coachings"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "body_profiles_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "body_profiles_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"booking_events": {
                   Row: {
                     "actor_id": string | null,"actor_role": Database["public"]['Enums']["actor_role"],"booking_id": string,"created_at": string,"from_status": Database["public"]['Enums']["booking_status"] | null,"id": number,"payload": NonNullable<Json>,"reason": string | null,"to_status": Database["public"]['Enums']["booking_status"]
@@ -390,6 +434,32 @@ isOneToOne: false
     },{
       foreignKeyName: "check_ins_trainer_id_fkey"
       columns: ["trainer_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"client_goals": {
+                  Row: {
+                    "goal": Database["public"]['Enums']["goal_type"],"id": string,"set_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "goal": Database["public"]['Enums']["goal_type"],"id"?: string,"set_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "goal"?: Database["public"]['Enums']["goal_type"],"id"?: string,"set_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "client_goals_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "client_goals_user_id_fkey"
+      columns: ["user_id"]
 isOneToOne: false
       referencedRelation: "public_profiles"
       referencedColumns: ["id"]
@@ -1187,6 +1257,62 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"nutrition_targets": {
+                  Row: {
+                    "calc_inputs": Json | null,"carbs_g": number | null,"client_id": string | null,"coaching_id": string | null,"created_at": string,"effective_from": string,"effective_to": string | null,"fat_g": number | null,"group_id": string | null,"id": string,"kcal": number,"low_kcal_confirmed_at": string | null,"protein_g": number | null,"set_by": string | null,"source": Database["public"]['Enums']["target_source"],"steps_target": number | null,"water_ml": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "calc_inputs"?: Json | null,"carbs_g"?: number | null,"client_id"?: string | null,"coaching_id"?: string | null,"created_at"?: string,"effective_from": string,"effective_to"?: string | null,"fat_g"?: number | null,"group_id"?: string | null,"id"?: string,"kcal": number,"low_kcal_confirmed_at"?: string | null,"protein_g"?: number | null,"set_by"?: string | null,"source": Database["public"]['Enums']["target_source"],"steps_target"?: number | null,"water_ml"?: number | null
+                  }
+                  Update: {
+                    "calc_inputs"?: Json | null,"carbs_g"?: number | null,"client_id"?: string | null,"coaching_id"?: string | null,"created_at"?: string,"effective_from"?: string,"effective_to"?: string | null,"fat_g"?: number | null,"group_id"?: string | null,"id"?: string,"kcal"?: number,"low_kcal_confirmed_at"?: string | null,"protein_g"?: number | null,"set_by"?: string | null,"source"?: Database["public"]['Enums']["target_source"],"steps_target"?: number | null,"water_ml"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "nutrition_targets_client_id_fkey"
+      columns: ["client_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "nutrition_targets_client_id_fkey"
+      columns: ["client_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "nutrition_targets_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_balances"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "nutrition_targets_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_stats"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "nutrition_targets_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coachings"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "nutrition_targets_set_by_fkey"
+      columns: ["set_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "nutrition_targets_set_by_fkey"
+      columns: ["set_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"packages": {
                   Row: {
                     "applies_to": Database["public"]['Enums']["package_applies_to"],"archived_at": string | null,"created_at": string,"currency": string,"id": string,"is_public": boolean,"price_minor": number,"price_updated_at": string,"sessions_count": number,"sort_order": number,"title": string,"trainer_id": string,"updated_at": string,"validity_days": number | null
@@ -1839,6 +1965,38 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "trainer_profiles"
       referencedColumns: ["user_id"]
+    }
+                  ]
+                },"trainer_churn_dismissals": {
+                  Row: {
+                    "coaching_id": string,"created_at": string,"hidden_until": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "coaching_id": string,"created_at"?: string,"hidden_until": string
+                  }
+                  Update: {
+                    "coaching_id"?: string,"created_at"?: string,"hidden_until"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "trainer_churn_dismissals_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: true
+      referencedRelation: "coaching_balances"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "trainer_churn_dismissals_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: true
+      referencedRelation: "coaching_stats"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "trainer_churn_dismissals_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: true
+      referencedRelation: "coachings"
+      referencedColumns: ["id"]
     }
                   ]
                 },"trainer_invites": {
@@ -2583,6 +2741,9 @@ isOneToOne: false
 "bot_messages_blocked":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"calculate_nutrition_target":
+{ Args: { "p_weight_kg": number }; Returns: Json
+                           },
 "calendar_feed":
 { Args: { "p_token": string }; Returns: Json
                            },
@@ -2616,6 +2777,9 @@ isOneToOne: false
               "booking_id": string,"opens_at": string,"outcome": string
             }[]
                            },
+"choose_nutrition_target":
+{ Args: { "p_coaching_id": string }; Returns: undefined
+                           },
 "claim_data_exports":
 { Args: { "p_limit"?: number }; Returns: {
               "id": string,"user_id": string
@@ -2625,6 +2789,9 @@ isOneToOne: false
 { Args: { "p_limit"?: number }; Returns: {
               "attempt": number,"chat_id": number,"chat_target": string,"kind": Database["public"]['Enums']["notification_type"],"locale": Database["public"]['Enums']["app_locale"],"outbox_id": number,"payload": Json,"silent": boolean,"time_zone": string
             }[]
+                           },
+"clear_nutrition_target":
+{ Args: { "p_coaching_id": string }; Returns: boolean
                            },
 "close_schedule_days":
 { Args: { "p_from": string,"p_to": string }; Returns: {
@@ -2742,10 +2909,18 @@ isOneToOne: false
               "coaching_id": string,"first_name": string,"last_name": string,"trainer_id": string,"username": string
             }[]
                            },
+"my_nutrition_target":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "calc_inputs": Json,"carbs_g": number,"coaching_id": string,"effective_from": string,"fat_g": number,"id": string,"kcal": number,"protein_g": number,"source": Database["public"]['Enums']["target_source"],"trainer_name": string
+            }[]
+                           },
 "my_plan":
 { Args: Record<PropertyKey, never>; Returns: {
               "active_clients": number,"client_limit": number,"expires_at": string,"plan_code": string,"side": Database["public"]['Enums']["plan_side"]
             }[]
+                           },
+"pair_nutrition_state":
+{ Args: { "p_coaching_id": string }; Returns: string
                            },
 "purge_account":
 { Args: { "p_user": string }; Returns: (string)[]
@@ -2814,6 +2989,9 @@ isOneToOne: false
 "revoke_calendar_feed":
 { Args: { "p_zone": Database["public"]['Enums']["app_zone"] }; Returns: boolean
                            },
+"save_calculator_target":
+{ Args: { "p_weight_kg": number }; Returns: string
+                           },
 "save_week_template":
 { Args: { "p_buffer_min"?: number,"p_horizon_weeks"?: number,"p_items": Json }; Returns: number
                            },
@@ -2849,17 +3027,51 @@ isOneToOne: false
 "set_bot_messages":
 { Args: { "p_allowed": boolean,"p_send_test"?: boolean }; Returns: undefined
                            },
+"set_client_goal":
+{ Args: { "p_goal": Database["public"]['Enums']["goal_type"] }; Returns: boolean
+                           },
+"set_nutrition_target":
+{ Args: { "p_carbs_g"?: number,"p_coaching_id": string,"p_confirm_low"?: boolean,"p_fat_g"?: number,"p_kcal": number,"p_protein_g"?: number }; Returns: string
+                           },
 "set_progress_photo_angle":
 { Args: { "p_angle": Database["public"]['Enums']["photo_angle"],"p_photo_id": string }; Returns: undefined
                            },
 "submit_trainer_verification":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
+"trainer_analytics":
+{ Args: { "p_from": string,"p_to": string }; Returns: {
+              "active_clients": number,"attended": number,"client_cancels": number,"debt": Json,"debt_clients": number,"ending_passes": number,"held_sessions": number,"late_cancels": number,"no_shows": number,"trainer_cancels": number
+            }[]
+                           },
+"trainer_churn_risk":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "client_alias": string,"client_id": string,"coaching_id": string,"days_absent": number,"display_name": string,"first_name": string,"last_name": string,"pass_ended_at": string,"reasons": (string)[],"username": string
+            }[]
+                           },
+"trainer_dismiss_churn":
+{ Args: { "p_coaching_id": string }; Returns: string
+                           },
+"trainer_ending_passes":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "client_alias": string,"client_id": string,"coaching_id": string,"display_name": string,"effective_expires_at": string,"first_name": string,"last_name": string,"remaining": number,"title": string,"username": string
+            }[]
+                           },
+"trainer_finance":
+{ Args: { "p_from": string,"p_to": string }; Returns: {
+              "charges": number,"currency": string,"earned_minor": number,"received_minor": number
+            }[]
+                           },
 "trainer_invite_status":
 { Args: { "p_code": string }; Returns: string
                            },
 "trainer_offer_waitlist":
 { Args: { "p_entry_id": string }; Returns: undefined
+                           },
+"trainer_price_hints":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "a": string,"b": string,"currency": string,"kind": string,"value": number
+            }[]
                            },
 "update_session":
 { Args: { "p_duration_min": number,"p_following"?: boolean,"p_location_id"?: string,"p_meeting_url"?: string,"p_mode": Database["public"]['Enums']["session_mode"],"p_session_id": string,"p_starts_at": string,"p_title"?: string }; Returns: number
@@ -2877,7 +3089,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "access_request_status": "open"|"granted"|"declined","actor_role": "client"|"trainer"|"delegate"|"system"|"admin","app_locale": "ru"|"en","app_role": "admin","app_theme": "system"|"light"|"dark","app_zone": "trainer"|"client","booking_source": "trainer"|"client_slot"|"client_session"|"waitlist"|"recurrence"|"trial","booking_status": "requested"|"confirmed"|"declined"|"expired"|"cancelled"|"late_cancelled"|"rescheduled"|"attended"|"no_show","charge_reason": "attended"|"late_cancel"|"no_show"|"manual","check_in_method": "qr"|"trainer","coaching_source": "client_invite"|"trainer_code"|"trial_link"|"referral"|"manual","coaching_status": "trial"|"active"|"ended","consent_kind": "beta_terms"|"privacy_policy"|"contact_share","contact_request_status": "pending"|"accepted"|"declined"|"expired","delegation_scope": "schedule"|"attendance"|"workouts"|"homework"|"notes"|"progress"|"nutrition"|"passes"|"payments","exercise_source": "wger"|"custom","export_status": "queued"|"processing"|"ready"|"failed"|"expired","feedback_kind": "bug"|"idea"|"other","feedback_status": "new"|"in_progress"|"closed","ledger_entry_type": "grant"|"charge"|"waiver"|"settlement"|"settlement_reversal"|"refund"|"adjustment","managed_client_claim_status": "pending"|"merged"|"rejected","measurement_kind": "weight"|"neck"|"chest"|"waist"|"abdomen"|"hips"|"thigh"|"upper_arm"|"calf","milestone_kind": "sessions_10"|"sessions_25"|"sessions_50"|"sessions_100","money_event_action": "pass_created"|"pass_changed"|"pass_cancelled"|"pass_deleted"|"freeze_added"|"freeze_changed"|"freeze_removed"|"payment_created"|"payment_changed"|"payment_confirmed"|"payment_voided","notification_type": "booking_assigned"|"booking_created"|"booking_requested"|"booking_confirmed"|"booking_declined"|"booking_expired"|"booking_cancelled_by_trainer"|"booking_cancelled_by_client"|"booking_rescheduled"|"session_reminder"|"session_changed"|"charge_posted"|"charge_waived"|"pass_ending"|"client_pass_ending"|"pass_expired"|"debt"|"payment_reported"|"daily_digest"|"coaching_created"|"coaching_ended"|"managed_client_claim"|"intake_submitted"|"intake_reminder"|"contact_request"|"contact_response"|"verification_result"|"export_ready"|"account_deletion"|"counterpart_deleting"|"plan_granted"|"plan_revoked"|"plan_expiring"|"feedback_reply"|"break_glass"|"report_resolution"|"bot_test"|"verification_submitted"|"feedback_received"|"trainer_comment"|"trainer_broadcast"|"homework_reminder"|"homework_done"|"waitlist_offer"|"waitlist_closed"|"review_prompt"|"review_reply"|"goal_changed"|"delegation"|"challenge"|"badge"|"referral_bonus","outbox_status": "pending"|"processing"|"sent"|"failed"|"skipped"|"cancelled","package_applies_to": "any"|"personal"|"group","pass_status": "active"|"cancelled","payment_direction": "in"|"refund","payment_link_kind": "sbp"|"self_employed"|"bank"|"other","payment_method": "cash"|"bank_transfer"|"sbp"|"card"|"payment_link"|"other","payment_status": "reported"|"confirmed"|"voided","photo_angle": "front"|"side"|"back","plan_grant_source": "admin"|"purchase"|"referral_bonus","plan_side": "trainer"|"client","pr_type": "max_weight"|"max_reps"|"max_duration","report_status": "open"|"kept"|"hidden"|"dismissed","report_target": "review"|"user"|"trainer_profile"|"club"|"post"|"buddy_profile","session_kind": "personal"|"group"|"trial","session_mode": "offline"|"online","session_status": "scheduled"|"completed"|"cancelled","share_category": "nutrition"|"measurements"|"photos"|"steps"|"intake"|"workouts","slot_status": "open"|"booked"|"closed","unit_system": "metric"|"imperial","verification_status": "not_submitted"|"pending"|"verified"|"rejected","waitlist_status": "waiting"|"offered"|"accepted"|"declined"|"expired"|"left"|"closed"
+            "access_request_status": "open"|"granted"|"declined","activity_level": "minimal"|"low"|"moderate"|"high"|"very_high","actor_role": "client"|"trainer"|"delegate"|"system"|"admin","app_locale": "ru"|"en","app_role": "admin","app_theme": "system"|"light"|"dark","app_zone": "trainer"|"client","booking_source": "trainer"|"client_slot"|"client_session"|"waitlist"|"recurrence"|"trial","booking_status": "requested"|"confirmed"|"declined"|"expired"|"cancelled"|"late_cancelled"|"rescheduled"|"attended"|"no_show","calc_sex": "male"|"female","charge_reason": "attended"|"late_cancel"|"no_show"|"manual","check_in_method": "qr"|"trainer","coaching_source": "client_invite"|"trainer_code"|"trial_link"|"referral"|"manual","coaching_status": "trial"|"active"|"ended","consent_kind": "beta_terms"|"privacy_policy"|"contact_share","contact_request_status": "pending"|"accepted"|"declined"|"expired","delegation_scope": "schedule"|"attendance"|"workouts"|"homework"|"notes"|"progress"|"nutrition"|"passes"|"payments","exercise_source": "wger"|"custom","export_status": "queued"|"processing"|"ready"|"failed"|"expired","feedback_kind": "bug"|"idea"|"other","feedback_status": "new"|"in_progress"|"closed","goal_type": "lose"|"gain"|"maintain","ledger_entry_type": "grant"|"charge"|"waiver"|"settlement"|"settlement_reversal"|"refund"|"adjustment","managed_client_claim_status": "pending"|"merged"|"rejected","measurement_kind": "weight"|"neck"|"chest"|"waist"|"abdomen"|"hips"|"thigh"|"upper_arm"|"calf","milestone_kind": "sessions_10"|"sessions_25"|"sessions_50"|"sessions_100","money_event_action": "pass_created"|"pass_changed"|"pass_cancelled"|"pass_deleted"|"freeze_added"|"freeze_changed"|"freeze_removed"|"payment_created"|"payment_changed"|"payment_confirmed"|"payment_voided","notification_type": "booking_assigned"|"booking_created"|"booking_requested"|"booking_confirmed"|"booking_declined"|"booking_expired"|"booking_cancelled_by_trainer"|"booking_cancelled_by_client"|"booking_rescheduled"|"session_reminder"|"session_changed"|"charge_posted"|"charge_waived"|"pass_ending"|"client_pass_ending"|"pass_expired"|"debt"|"payment_reported"|"daily_digest"|"coaching_created"|"coaching_ended"|"managed_client_claim"|"intake_submitted"|"intake_reminder"|"contact_request"|"contact_response"|"verification_result"|"export_ready"|"account_deletion"|"counterpart_deleting"|"plan_granted"|"plan_revoked"|"plan_expiring"|"feedback_reply"|"break_glass"|"report_resolution"|"bot_test"|"verification_submitted"|"feedback_received"|"trainer_comment"|"trainer_broadcast"|"homework_reminder"|"homework_done"|"waitlist_offer"|"waitlist_closed"|"review_prompt"|"review_reply"|"goal_changed"|"delegation"|"challenge"|"badge"|"referral_bonus","outbox_status": "pending"|"processing"|"sent"|"failed"|"skipped"|"cancelled","package_applies_to": "any"|"personal"|"group","pass_status": "active"|"cancelled","payment_direction": "in"|"refund","payment_link_kind": "sbp"|"self_employed"|"bank"|"other","payment_method": "cash"|"bank_transfer"|"sbp"|"card"|"payment_link"|"other","payment_status": "reported"|"confirmed"|"voided","photo_angle": "front"|"side"|"back","plan_grant_source": "admin"|"purchase"|"referral_bonus","plan_side": "trainer"|"client","pr_type": "max_weight"|"max_reps"|"max_duration","report_status": "open"|"kept"|"hidden"|"dismissed","report_target": "review"|"user"|"trainer_profile"|"club"|"post"|"buddy_profile","session_kind": "personal"|"group"|"trial","session_mode": "offline"|"online","session_status": "scheduled"|"completed"|"cancelled","share_category": "nutrition"|"measurements"|"photos"|"steps"|"intake"|"workouts","slot_status": "open"|"booked"|"closed","target_source": "trainer"|"group"|"calculator","unit_system": "metric"|"imperial","verification_status": "not_submitted"|"pending"|"verified"|"rejected","waitlist_status": "waiting"|"offered"|"accepted"|"declined"|"expired"|"left"|"closed"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -2997,7 +3209,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "access_request_status": ["open", "granted", "declined"],"actor_role": ["client", "trainer", "delegate", "system", "admin"],"app_locale": ["ru", "en"],"app_role": ["admin"],"app_theme": ["system", "light", "dark"],"app_zone": ["trainer", "client"],"booking_source": ["trainer", "client_slot", "client_session", "waitlist", "recurrence", "trial"],"booking_status": ["requested", "confirmed", "declined", "expired", "cancelled", "late_cancelled", "rescheduled", "attended", "no_show"],"charge_reason": ["attended", "late_cancel", "no_show", "manual"],"check_in_method": ["qr", "trainer"],"coaching_source": ["client_invite", "trainer_code", "trial_link", "referral", "manual"],"coaching_status": ["trial", "active", "ended"],"consent_kind": ["beta_terms", "privacy_policy", "contact_share"],"contact_request_status": ["pending", "accepted", "declined", "expired"],"delegation_scope": ["schedule", "attendance", "workouts", "homework", "notes", "progress", "nutrition", "passes", "payments"],"exercise_source": ["wger", "custom"],"export_status": ["queued", "processing", "ready", "failed", "expired"],"feedback_kind": ["bug", "idea", "other"],"feedback_status": ["new", "in_progress", "closed"],"ledger_entry_type": ["grant", "charge", "waiver", "settlement", "settlement_reversal", "refund", "adjustment"],"managed_client_claim_status": ["pending", "merged", "rejected"],"measurement_kind": ["weight", "neck", "chest", "waist", "abdomen", "hips", "thigh", "upper_arm", "calf"],"milestone_kind": ["sessions_10", "sessions_25", "sessions_50", "sessions_100"],"money_event_action": ["pass_created", "pass_changed", "pass_cancelled", "pass_deleted", "freeze_added", "freeze_changed", "freeze_removed", "payment_created", "payment_changed", "payment_confirmed", "payment_voided"],"notification_type": ["booking_assigned", "booking_created", "booking_requested", "booking_confirmed", "booking_declined", "booking_expired", "booking_cancelled_by_trainer", "booking_cancelled_by_client", "booking_rescheduled", "session_reminder", "session_changed", "charge_posted", "charge_waived", "pass_ending", "client_pass_ending", "pass_expired", "debt", "payment_reported", "daily_digest", "coaching_created", "coaching_ended", "managed_client_claim", "intake_submitted", "intake_reminder", "contact_request", "contact_response", "verification_result", "export_ready", "account_deletion", "counterpart_deleting", "plan_granted", "plan_revoked", "plan_expiring", "feedback_reply", "break_glass", "report_resolution", "bot_test", "verification_submitted", "feedback_received", "trainer_comment", "trainer_broadcast", "homework_reminder", "homework_done", "waitlist_offer", "waitlist_closed", "review_prompt", "review_reply", "goal_changed", "delegation", "challenge", "badge", "referral_bonus"],"outbox_status": ["pending", "processing", "sent", "failed", "skipped", "cancelled"],"package_applies_to": ["any", "personal", "group"],"pass_status": ["active", "cancelled"],"payment_direction": ["in", "refund"],"payment_link_kind": ["sbp", "self_employed", "bank", "other"],"payment_method": ["cash", "bank_transfer", "sbp", "card", "payment_link", "other"],"payment_status": ["reported", "confirmed", "voided"],"photo_angle": ["front", "side", "back"],"plan_grant_source": ["admin", "purchase", "referral_bonus"],"plan_side": ["trainer", "client"],"pr_type": ["max_weight", "max_reps", "max_duration"],"report_status": ["open", "kept", "hidden", "dismissed"],"report_target": ["review", "user", "trainer_profile", "club", "post", "buddy_profile"],"session_kind": ["personal", "group", "trial"],"session_mode": ["offline", "online"],"session_status": ["scheduled", "completed", "cancelled"],"share_category": ["nutrition", "measurements", "photos", "steps", "intake", "workouts"],"slot_status": ["open", "booked", "closed"],"unit_system": ["metric", "imperial"],"verification_status": ["not_submitted", "pending", "verified", "rejected"],"waitlist_status": ["waiting", "offered", "accepted", "declined", "expired", "left", "closed"]
+            "access_request_status": ["open", "granted", "declined"],"activity_level": ["minimal", "low", "moderate", "high", "very_high"],"actor_role": ["client", "trainer", "delegate", "system", "admin"],"app_locale": ["ru", "en"],"app_role": ["admin"],"app_theme": ["system", "light", "dark"],"app_zone": ["trainer", "client"],"booking_source": ["trainer", "client_slot", "client_session", "waitlist", "recurrence", "trial"],"booking_status": ["requested", "confirmed", "declined", "expired", "cancelled", "late_cancelled", "rescheduled", "attended", "no_show"],"calc_sex": ["male", "female"],"charge_reason": ["attended", "late_cancel", "no_show", "manual"],"check_in_method": ["qr", "trainer"],"coaching_source": ["client_invite", "trainer_code", "trial_link", "referral", "manual"],"coaching_status": ["trial", "active", "ended"],"consent_kind": ["beta_terms", "privacy_policy", "contact_share"],"contact_request_status": ["pending", "accepted", "declined", "expired"],"delegation_scope": ["schedule", "attendance", "workouts", "homework", "notes", "progress", "nutrition", "passes", "payments"],"exercise_source": ["wger", "custom"],"export_status": ["queued", "processing", "ready", "failed", "expired"],"feedback_kind": ["bug", "idea", "other"],"feedback_status": ["new", "in_progress", "closed"],"goal_type": ["lose", "gain", "maintain"],"ledger_entry_type": ["grant", "charge", "waiver", "settlement", "settlement_reversal", "refund", "adjustment"],"managed_client_claim_status": ["pending", "merged", "rejected"],"measurement_kind": ["weight", "neck", "chest", "waist", "abdomen", "hips", "thigh", "upper_arm", "calf"],"milestone_kind": ["sessions_10", "sessions_25", "sessions_50", "sessions_100"],"money_event_action": ["pass_created", "pass_changed", "pass_cancelled", "pass_deleted", "freeze_added", "freeze_changed", "freeze_removed", "payment_created", "payment_changed", "payment_confirmed", "payment_voided"],"notification_type": ["booking_assigned", "booking_created", "booking_requested", "booking_confirmed", "booking_declined", "booking_expired", "booking_cancelled_by_trainer", "booking_cancelled_by_client", "booking_rescheduled", "session_reminder", "session_changed", "charge_posted", "charge_waived", "pass_ending", "client_pass_ending", "pass_expired", "debt", "payment_reported", "daily_digest", "coaching_created", "coaching_ended", "managed_client_claim", "intake_submitted", "intake_reminder", "contact_request", "contact_response", "verification_result", "export_ready", "account_deletion", "counterpart_deleting", "plan_granted", "plan_revoked", "plan_expiring", "feedback_reply", "break_glass", "report_resolution", "bot_test", "verification_submitted", "feedback_received", "trainer_comment", "trainer_broadcast", "homework_reminder", "homework_done", "waitlist_offer", "waitlist_closed", "review_prompt", "review_reply", "goal_changed", "delegation", "challenge", "badge", "referral_bonus"],"outbox_status": ["pending", "processing", "sent", "failed", "skipped", "cancelled"],"package_applies_to": ["any", "personal", "group"],"pass_status": ["active", "cancelled"],"payment_direction": ["in", "refund"],"payment_link_kind": ["sbp", "self_employed", "bank", "other"],"payment_method": ["cash", "bank_transfer", "sbp", "card", "payment_link", "other"],"payment_status": ["reported", "confirmed", "voided"],"photo_angle": ["front", "side", "back"],"plan_grant_source": ["admin", "purchase", "referral_bonus"],"plan_side": ["trainer", "client"],"pr_type": ["max_weight", "max_reps", "max_duration"],"report_status": ["open", "kept", "hidden", "dismissed"],"report_target": ["review", "user", "trainer_profile", "club", "post", "buddy_profile"],"session_kind": ["personal", "group", "trial"],"session_mode": ["offline", "online"],"session_status": ["scheduled", "completed", "cancelled"],"share_category": ["nutrition", "measurements", "photos", "steps", "intake", "workouts"],"slot_status": ["open", "booked", "closed"],"target_source": ["trainer", "group", "calculator"],"unit_system": ["metric", "imperial"],"verification_status": ["not_submitted", "pending", "verified", "rejected"],"waitlist_status": ["waiting", "offered", "accepted", "declined", "expired", "left", "closed"]
           }
         }
 } as const

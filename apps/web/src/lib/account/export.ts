@@ -81,6 +81,13 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
       either("contact_requests", "requester_id", "recipient_id"),
     ]);
 
+  // Goal, calculator inputs and targets (wave-2 §1–2): the user's own and those the user set as a trainer.
+  const [goals, bodyProfile, targets] = await Promise.all([
+    mine("client_goals", "user_id"),
+    mine("body_profiles", "user_id"),
+    either("nutrition_targets", "client_id", "set_by"),
+  ]);
+
   const [pairs, bookings, trainerSessions, passes, payments, ledger, moneyEvents] = await Promise.all([
     either("coachings", "client_id", "trainer_id"),
     either("bookings", "client_id", "trainer_id"),
@@ -166,6 +173,9 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
     intake: intakes,
     measurements,
     progress_photos: photos,
+    goals,
+    body_profile: bodyProfile,
+    nutrition_targets: targets,
     personal_records: records,
     workout_logs: logs,
     workout_log_exercises: logExercises,

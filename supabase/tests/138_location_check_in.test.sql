@@ -1,4 +1,4 @@
--- The printed check-in QR of a location, migration 20261017034100_location_check_in.sql (PRD wave-3 §5 rule 2b):
+-- The printed check-in QR of a location, migration 20261017034731_location_check_in.sql (PRD wave-3 §5 rule 2b):
 -- the trainer's token, the check-in to the nearest booking there, a renewed token and the session QR still working.
 begin;
 \ir _helpers.psql
