@@ -25,9 +25,12 @@ import { findOverlap, groupByDay } from "@/lib/bookings/book";
 import { previewReschedule, rescheduleBooking } from "@/lib/bookings/changes";
 import type { BookableGroup, BookableSlot, BusyTime } from "@/lib/bookings/load";
 import { localToUtc } from "@/lib/schedule/time";
+import { trainerClock } from "@/lib/schedule/trainer-clock";
 
 type BookPickerProps = {
   timeZone: string;
+  /** The trainer's time zone: when their clock differs, the confirmation adds their time (SCHED-19). */
+  trainerTimeZone?: string | null;
   /** Local days of the strip, today first. */
   days: string[];
   slots: BookableSlot[];
@@ -48,7 +51,7 @@ type Item = ({ type: "slot" } & BookableSlot) | ({ type: "group" } & BookableGro
  * day and a confirm sheet that says what pays for the session (PRD 2.6.4): a pass, allowed debt, or a request to
  * the trainer. A group shows its free seats; a full one cannot be picked (SCHED-15).
  */
-export function BookPicker({ timeZone, days, slots, groups, busy, dropInText, paymentLinks, moveBookingId }: BookPickerProps) {
+export function BookPicker({ timeZone, trainerTimeZone, days, slots, groups, busy, dropInText, paymentLinks, moveBookingId }: BookPickerProps) {
   const { t, locale } = useI18n();
   const copy = t.schedule.book;
   const router = useRouter();
@@ -74,6 +77,10 @@ export function BookPicker({ timeZone, days, slots, groups, busy, dropInText, pa
   const timeFormat = new Intl.DateTimeFormat(intl, { hour: "2-digit", minute: "2-digit", timeZone });
   const range = (item: { startsAt: string; endsAt: string }) =>
     `${timeFormat.format(new Date(item.startsAt))}–${timeFormat.format(new Date(item.endsAt))}`;
+  const trainerTime = (item: { startsAt: string; endsAt: string }) => {
+    const clock = trainerClock(item, timeZone, trainerTimeZone, intl);
+    return clock ? `, ${interpolate(t.schedule.trainerTime, { time: clock })}` : "";
+  };
   const where = (item: BookableSlot) => (item.mode === "online" ? copy.online : (item.place ?? copy.offline));
 
   const open = (next: Item) => {
@@ -168,7 +175,7 @@ export function BookPicker({ timeZone, days, slots, groups, busy, dropInText, pa
                   key={item.id}
                   icon={Clock}
                   title={<span className="tabular-nums">{range(item)}</span>}
-                  subtitle={where(item)}
+                  subtitle={`${where(item)}${trainerTime(item)}`}
                   onClick={() => open(item)}
                 />
               );
@@ -183,7 +190,7 @@ export function BookPicker({ timeZone, days, slots, groups, busy, dropInText, pa
                     <span className="tabular-nums">{range(item)}</span>, {item.title}
                   </>
                 }
-                subtitle={`${where(item)}, ${state.text}`}
+                subtitle={`${where(item)}${trainerTime(item)}, ${state.text}`}
                 href={state.href}
                 onClick={state.onClick}
               />
@@ -203,7 +210,7 @@ export function BookPicker({ timeZone, days, slots, groups, busy, dropInText, pa
         title={
           slot?.type === "group" ? interpolate(groupCopy.confirmTitle, { title: slot.title }) : moveBookingId ? copy.moveTitle : copy.confirmTitle
         }
-        description={slot ? `${dayFormat.format(new Date(slot.startsAt))}, ${range(slot)}, ${where(slot)}` : undefined}
+        description={slot ? `${dayFormat.format(new Date(slot.startsAt))}, ${range(slot)}${trainerTime(slot)}, ${where(slot)}` : undefined}
         actions={
           <>
             <Button type="button" block loading={pending} disabled={!ready} onClick={confirm}>
@@ -254,7 +261,7 @@ export function BookPicker({ timeZone, days, slots, groups, busy, dropInText, pa
         open={queueFor !== null}
         onOpenChange={(next) => (next ? null : setQueueFor(null))}
         title={queueFor ? interpolate(waitCopy.joinTitle, { title: queueFor.title }) : waitCopy.joinTitle}
-        description={queueFor ? `${dayFormat.format(new Date(queueFor.startsAt))}, ${range(queueFor)}, ${where(queueFor)}` : undefined}
+        description={queueFor ? `${dayFormat.format(new Date(queueFor.startsAt))}, ${range(queueFor)}${trainerTime(queueFor)}, ${where(queueFor)}` : undefined}
         actions={
           <>
             <Button type="button" block loading={pending} onClick={joinQueue}>

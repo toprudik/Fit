@@ -52,5 +52,7 @@ describe("monthly report", () => {
     expect(storyCardFrom({ kind: "sessions", month: "2026-09-01", data: { count: 2 } })?.data.count).toBe(2);
     expect(storyCardFrom({ kind: "photo", month: "2026-09-01", data: {} })).toBeNull();
     expect(storyCardFrom(null)).toBeNull();
+    expect(storyCardFrom({ kind: "trainer", month: "2026-09-01", data: { count: 2, name: "Ира", slug: "ira-fit" } })?.data.slug).toBe("ira-fit");
+    expect(storyCardFrom({ kind: "trainer", month: "2026-09-01", data: { count: 2, slug: "../admin" } })).toBeNull();
   });
 });

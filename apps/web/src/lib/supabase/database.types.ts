@@ -251,14 +251,14 @@ isOneToOne: true
                   ]
                 },"bonuses": {
                   Row: {
-                    "beneficiary_id": string,"created_at": string,"discount_percent": number | null,"granted_at": string | null,"id": string,"kind": Database["public"]['Enums']["bonus_kind"],"pass_id": string | null,"referral_id": string,"sessions": number | null,"status": Database["public"]['Enums']["bonus_status"],"voided_at": string | null
+                    "beneficiary_id": string,"coaching_id": string | null,"created_at": string,"discount_percent": number | null,"granted_at": string | null,"id": string,"kind": Database["public"]['Enums']["bonus_kind"],"pass_id": string | null,"referral_id": string,"sessions": number | null,"status": Database["public"]['Enums']["bonus_status"],"voided_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "beneficiary_id": string,"created_at"?: string,"discount_percent"?: number | null,"granted_at"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["bonus_kind"],"pass_id"?: string | null,"referral_id": string,"sessions"?: number | null,"status"?: Database["public"]['Enums']["bonus_status"],"voided_at"?: string | null
+                    "beneficiary_id": string,"coaching_id"?: string | null,"created_at"?: string,"discount_percent"?: number | null,"granted_at"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["bonus_kind"],"pass_id"?: string | null,"referral_id": string,"sessions"?: number | null,"status"?: Database["public"]['Enums']["bonus_status"],"voided_at"?: string | null
                   }
                   Update: {
-                    "beneficiary_id"?: string,"created_at"?: string,"discount_percent"?: number | null,"granted_at"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["bonus_kind"],"pass_id"?: string | null,"referral_id"?: string,"sessions"?: number | null,"status"?: Database["public"]['Enums']["bonus_status"],"voided_at"?: string | null
+                    "beneficiary_id"?: string,"coaching_id"?: string | null,"created_at"?: string,"discount_percent"?: number | null,"granted_at"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["bonus_kind"],"pass_id"?: string | null,"referral_id"?: string,"sessions"?: number | null,"status"?: Database["public"]['Enums']["bonus_status"],"voided_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -272,6 +272,24 @@ isOneToOne: false
       columns: ["beneficiary_id"]
 isOneToOne: false
       referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "bonuses_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_balances"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "bonuses_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_stats"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "bonuses_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coachings"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "bonuses_pass_id_fkey"
@@ -2939,14 +2957,14 @@ isOneToOne: true
                   ]
                 },"trainer_profiles": {
                   Row: {
-                    "bio": string | null,"cancellation_deadline_hours": number,"city": string | null,"created_at": string,"default_client_reminder_offsets": (number)[],"default_currency": string,"headline": string | null,"is_public": boolean,"min_booking_notice_minutes": number,"slug": string,"specialties": (string)[],"trainer_invite_id": string | null,"updated_at": string,"user_id": string,"verification_status": Database["public"]['Enums']["verification_status"],"verified_at": string | null,"works_offline": boolean,"works_online": boolean
+                    "bio": string | null,"cancellation_deadline_hours": number,"city": string | null,"created_at": string,"default_client_reminder_offsets": (number)[],"default_currency": string,"headline": string | null,"is_public": boolean,"min_booking_notice_minutes": number,"slug": string,"specialties": (string)[],"story_card_showcase": boolean,"trainer_invite_id": string | null,"updated_at": string,"user_id": string,"verification_status": Database["public"]['Enums']["verification_status"],"verified_at": string | null,"works_offline": boolean,"works_online": boolean
                   }
                   ComputedFields: never
                   Insert: {
-                    "bio"?: string | null,"cancellation_deadline_hours"?: number,"city"?: string | null,"created_at"?: string,"default_client_reminder_offsets"?: (number)[],"default_currency"?: string,"headline"?: string | null,"is_public"?: boolean,"min_booking_notice_minutes"?: number,"slug": string,"specialties"?: (string)[],"trainer_invite_id"?: string | null,"updated_at"?: string,"user_id": string,"verification_status"?: Database["public"]['Enums']["verification_status"],"verified_at"?: string | null,"works_offline"?: boolean,"works_online"?: boolean
+                    "bio"?: string | null,"cancellation_deadline_hours"?: number,"city"?: string | null,"created_at"?: string,"default_client_reminder_offsets"?: (number)[],"default_currency"?: string,"headline"?: string | null,"is_public"?: boolean,"min_booking_notice_minutes"?: number,"slug": string,"specialties"?: (string)[],"story_card_showcase"?: boolean,"trainer_invite_id"?: string | null,"updated_at"?: string,"user_id": string,"verification_status"?: Database["public"]['Enums']["verification_status"],"verified_at"?: string | null,"works_offline"?: boolean,"works_online"?: boolean
                   }
                   Update: {
-                    "bio"?: string | null,"cancellation_deadline_hours"?: number,"city"?: string | null,"created_at"?: string,"default_client_reminder_offsets"?: (number)[],"default_currency"?: string,"headline"?: string | null,"is_public"?: boolean,"min_booking_notice_minutes"?: number,"slug"?: string,"specialties"?: (string)[],"trainer_invite_id"?: string | null,"updated_at"?: string,"user_id"?: string,"verification_status"?: Database["public"]['Enums']["verification_status"],"verified_at"?: string | null,"works_offline"?: boolean,"works_online"?: boolean
+                    "bio"?: string | null,"cancellation_deadline_hours"?: number,"city"?: string | null,"created_at"?: string,"default_client_reminder_offsets"?: (number)[],"default_currency"?: string,"headline"?: string | null,"is_public"?: boolean,"min_booking_notice_minutes"?: number,"slug"?: string,"specialties"?: (string)[],"story_card_showcase"?: boolean,"trainer_invite_id"?: string | null,"updated_at"?: string,"user_id"?: string,"verification_status"?: Database["public"]['Enums']["verification_status"],"verified_at"?: string | null,"works_offline"?: boolean,"works_online"?: boolean
                   }
                   Relationships: [
                     {
@@ -3720,6 +3738,9 @@ isOneToOne: false
 "admin_grant_plan":
 { Args: { "p_expires_at"?: string,"p_plan_code": string,"p_reason": string,"p_user_id": string }; Returns: string
                            },
+"admin_open_break_glass":
+{ Args: { "p_categories": (Database["public"]['Enums']["share_category"])[],"p_minutes"?: number,"p_reason": string,"p_target_user": string }; Returns: string
+                           },
 "admin_overview":
 { Args: Record<PropertyKey, never>; Returns: {
               "active_invites": number,"active_pairs": number,"blocked_users": number,"trainers": number,"trainers_pending": number,"trainers_verified": number,"users": number
@@ -4021,7 +4042,7 @@ isOneToOne: false
                            },
 "group_analytics":
 { Args: { "p_group_id": string }; Returns: {
-              "attendance": number,"attendance_clients": number,"members": number,"weight_change_kg": number,"weight_clients": number
+              "adherence": number,"adherence_clients": number,"attendance": number,"attendance_clients": number,"members": number,"weight_change_kg": number,"weight_clients": number
             }[]
                            },
 "group_booking_preview":
