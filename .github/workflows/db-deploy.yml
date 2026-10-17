@@ -37,8 +37,18 @@ jobs:
             echo "::error::Repository secret SUPABASE_DB_URL is not set (Supabase dashboard → Connect → Session pooler)."
             exit 1
           fi
+      # No --include-all on purpose: threads often redefine the same function in separate migrations, so applying
+      # an older file after a newer one could leave production on the older definition while CI and local
+      # databases (which apply in timestamp order) have the newer one. An out-of-order file is renamed instead.
       - name: Migrations that will be applied
-        run: supabase db push --db-url "$SUPABASE_DB_URL" --skip-vault --dry-run
+        shell: bash
+        run: |
+          if ! supabase db push --db-url "$SUPABASE_DB_URL" --skip-vault --dry-run 2>&1 | tee "$RUNNER_TEMP/dry-run.log"; then
+            if grep -q "inserted before the last migration" "$RUNNER_TEMP/dry-run.log"; then
+              echo "::error::A migration listed above is older than the last one already applied in production, so it was not applied. Open a PR that renames it to a timestamp later than the newest file in supabase/migrations (scripts/check-migration-order.sh suggests one); merging it re-runs this deploy."
+            fi
+            exit 1
+          fi
       - name: Apply migrations
         run: supabase db push --db-url "$SUPABASE_DB_URL" --skip-vault --yes
       # The schema already passes the advisors at warn level in CI (job "db"). Here they also see the hosted

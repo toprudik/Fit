@@ -27,7 +27,7 @@ Working name DaFit (repo `fit`). Web app + Telegram Mini App (`apps/web`, Next.j
 - **Backend**: Supabase project `fit` (ref `zxwabddqqtitybtsdeqp`, `us-east-1`). See `docs/adr/0001-supabase-backend.md`.
 - **Telegram bot**: `@fitconnection_bot`. Token is server-only (`TELEGRAM_BOT_TOKEN`), never in the repo or client code.
 - **Env & secrets**: build as production from day one (`docs/adr/0002-secrets-handling.md`). Every variable is listed in `.env.example` (public vs server-only); `NEXT_PUBLIC_*` only for browser-safe values; server-only vars are read solely via `src/env/server.ts` (`server-only` + zod validation, errors name the variable, never the value); separate keys per environment (local / preview / production). Never read or commit `.env*.local`, never print secret values.
-- **Database rules**: RLS on every exposed table; schema changes only via migrations in `supabase/migrations/`, each with pgTAP tests in `supabase/tests/`; run the database checks above after DDL changes.
+- **Database rules**: RLS on every exposed table; schema changes only via migrations in `supabase/migrations/`, each with pgTAP tests in `supabase/tests/`; run the database checks above after DDL changes. A new migration's timestamp must be later than the latest one on main at merge time and unique (`db push` skips older ones silently); the `Migration order` check enforces it, run `scripts/check-migration-order.sh` after `git fetch origin main` and re-check after merging main in.
 
 ## Agent skills
 
