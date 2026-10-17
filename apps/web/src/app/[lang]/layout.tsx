@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { lang } from "next/root-params";
 import { Suspense } from "react";
 import { AccountLoader } from "@/components/account/account-loader";
+import { AppOpenBeacon } from "@/components/analytics/app-open-beacon";
 import { NavigationTracker } from "@/components/shell/navigation-tracker";
 import { TelegramProvider } from "@/components/telegram/telegram-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -24,7 +25,13 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: t.meta.appName, template: `%s | ${t.meta.appName}` },
     description: t.meta.description,
     applicationName: t.meta.appName,
-    icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/favicon.ico", sizes: "48x48" }], apple: "/apple-icon.png" },
+    icons: {
+      icon: [
+        { url: "/icon.svg", type: "image/svg+xml" },
+        { url: "/favicon.ico", sizes: "48x48" },
+      ],
+      apple: "/apple-icon.png",
+    },
   };
 }
 
@@ -53,6 +60,7 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
           <Toaster />
           <ThemeSync />
           <NavigationTracker />
+          <AppOpenBeacon />
           {/* The only per-request part of the page: who is signed in. Everything else is prerendered. */}
           <Suspense fallback={null}>
             <AccountLoader />

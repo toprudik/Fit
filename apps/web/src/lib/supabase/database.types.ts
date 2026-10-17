@@ -107,6 +107,32 @@ isOneToOne: true
                   Relationships: [
                     
                   ]
+                },"app_opens": {
+                  Row: {
+                    "id": number,"opened_at": string,"source": Database["public"]['Enums']["notification_type"] | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: never,"opened_at"?: string,"source"?: Database["public"]['Enums']["notification_type"] | null,"user_id": string
+                  }
+                  Update: {
+                    "id"?: never,"opened_at"?: string,"source"?: Database["public"]['Enums']["notification_type"] | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "app_opens_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "app_opens_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"booking_events": {
                   Row: {
                     "actor_id": string | null,"actor_role": Database["public"]['Enums']["actor_role"],"booking_id": string,"created_at": string,"from_status": Database["public"]['Enums']["booking_status"] | null,"id": number,"payload": NonNullable<Json>,"reason": string | null,"to_status": Database["public"]['Enums']["booking_status"]
@@ -2375,6 +2401,31 @@ isOneToOne: false
 "adjust_pass":
 { Args: { "p_delta": number,"p_note": string,"p_pass_id": string }; Returns: string
                            },
+"admin_analytics_clients":
+{ Args: { "p_days"?: number,"p_limit"?: number }; Returns: {
+              "adds_photos": boolean,"attended": number,"client_id": string,"first_name": string,"last_active": string,"last_name": string,"logs_workouts": boolean,"pairs": number,"takes_measurements": boolean,"username": string
+            }[]
+                           },
+"admin_analytics_platform":
+{ Args: { "p_days"?: number }; Returns: {
+              "active_30": number,"active_7": number,"bookings": number,"cancellations": number,"cards": number,"clients": number,"clients_logging_workouts": number,"clients_with_measurements": number,"clients_with_photos": number,"held_sessions": number,"held_without_edits": number,"invites_created": number,"no_shows": number,"opens": number,"opens_from_bot": number,"sessions": number,"trainers_registered": number,"trainers_verified": number,"trainers_with_client": number,"trainers_with_session": number
+            }[]
+                           },
+"admin_analytics_trainer":
+{ Args: { "p_days"?: number,"p_trainer_id": string }; Returns: {
+              "attended": number,"clients": number,"earned": Json,"ending_passes": number,"first_name": string,"held_sessions": number,"last_active": string,"last_name": string,"no_shows": number,"opens": number,"received": Json,"trainer_id": string,"username": string,"uses_groups": boolean,"uses_passes": boolean,"uses_repeats": boolean,"uses_workout_templates": boolean,"verification_status": Database["public"]['Enums']["verification_status"],"weeks": (number)[]
+            }[]
+                           },
+"admin_analytics_trainers":
+{ Args: { "p_days"?: number }; Returns: {
+              "attended": number,"clients": number,"earned": Json,"ending_passes": number,"first_name": string,"held_sessions": number,"last_active": string,"last_name": string,"no_shows": number,"opens": number,"received": Json,"trainer_id": string,"username": string,"uses_groups": boolean,"uses_passes": boolean,"uses_repeats": boolean,"uses_workout_templates": boolean,"verification_status": Database["public"]['Enums']["verification_status"]
+            }[]
+                           },
+"admin_beta_metrics":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "held_sessions": number,"held_without_edits": number,"opens": number,"opens_from_bot": number,"opens_from_bot_prev": number,"trainers_on_schedule": number,"trainers_total": number
+            }[]
+                           },
 "admin_block_user":
 { Args: { "p_reason": string,"p_user_id": string }; Returns: undefined
                            },
@@ -2592,6 +2643,9 @@ isOneToOne: false
                            },
 "purge_account":
 { Args: { "p_user": string }; Returns: (string)[]
+                           },
+"record_app_open":
+{ Args: { "p_source"?: string }; Returns: undefined
                            },
 "record_outbox_result":
 { Args: { "p_error"?: string,"p_id": number,"p_outcome": string,"p_retry_after_s"?: number,"p_telegram_message_id"?: number }; Returns: Database["public"]['Enums']["outbox_status"]

@@ -84,6 +84,7 @@ begin
   values (v_booking, null, 'confirmed', v_trainer, 'trainer', 'test');
   insert into public.waitlist_entries (session_id, coaching_id, client_id, trainer_id)
   values (v_session, v_pair, v_client, v_trainer);
+  insert into public.app_opens (user_id, source) values (v_client, 'session_reminder');
   v_pass := tests.create_pass(p_trainer, p_client, 10, 10000);
   insert into public.pass_freezes (pass_id, period, reason)
   values (v_pass, daterange(current_date + 10, current_date + 12), 'trip');
