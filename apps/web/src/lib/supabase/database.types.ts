@@ -357,6 +357,44 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"broadcasts": {
+                  Row: {
+                    "body": string,"button_kind": string | null,"button_url": string | null,"created_at": string,"created_by": string | null,"deleted_at": string | null,"group_id": string,"id": string,"trainer_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "body": string,"button_kind"?: string | null,"button_url"?: string | null,"created_at"?: string,"created_by"?: string | null,"deleted_at"?: string | null,"group_id": string,"id"?: string,"trainer_id": string
+                  }
+                  Update: {
+                    "body"?: string,"button_kind"?: string | null,"button_url"?: string | null,"created_at"?: string,"created_by"?: string | null,"deleted_at"?: string | null,"group_id"?: string,"id"?: string,"trainer_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "broadcasts_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "broadcasts_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "broadcasts_group_id_fkey"
+      columns: ["group_id"]
+isOneToOne: false
+      referencedRelation: "groups"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "broadcasts_trainer_id_fkey"
+      columns: ["trainer_id"]
+isOneToOne: false
+      referencedRelation: "trainer_profiles"
+      referencedColumns: ["user_id"]
+    }
+                  ]
                 },"calendar_feeds": {
                   Row: {
                     "created_at": string,"id": string,"last_accessed_at": string | null,"revoked_at": string | null,"token_hash": string,"user_id": string,"zone": Database["public"]['Enums']["app_zone"]
@@ -569,14 +607,14 @@ isOneToOne: true
                   ]
                 },"coachings": {
                   Row: {
-                    "client_id": string,"client_invite_id": string | null,"client_reminder_offsets": (number)[],"created_at": string,"debt_limit_sessions": number | null,"end_reason": string | null,"ended_at": string | null,"ended_by": string | null,"id": string,"self_book_on_debt": boolean,"source": Database["public"]['Enums']["coaching_source"],"started_at": string,"status": Database["public"]['Enums']["coaching_status"],"trainer_id": string,"trial_link_id": string | null,"updated_at": string
+                    "broadcasts_muted": boolean,"client_id": string,"client_invite_id": string | null,"client_reminder_offsets": (number)[],"created_at": string,"debt_limit_sessions": number | null,"end_reason": string | null,"ended_at": string | null,"ended_by": string | null,"id": string,"primary_nutrition_group_id": string | null,"self_book_on_debt": boolean,"source": Database["public"]['Enums']["coaching_source"],"started_at": string,"status": Database["public"]['Enums']["coaching_status"],"trainer_id": string,"trial_link_id": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "client_id": string,"client_invite_id"?: string | null,"client_reminder_offsets": (number)[],"created_at"?: string,"debt_limit_sessions"?: number | null,"end_reason"?: string | null,"ended_at"?: string | null,"ended_by"?: string | null,"id"?: string,"self_book_on_debt"?: boolean,"source": Database["public"]['Enums']["coaching_source"],"started_at"?: string,"status"?: Database["public"]['Enums']["coaching_status"],"trainer_id": string,"trial_link_id"?: string | null,"updated_at"?: string
+                    "broadcasts_muted"?: boolean,"client_id": string,"client_invite_id"?: string | null,"client_reminder_offsets": (number)[],"created_at"?: string,"debt_limit_sessions"?: number | null,"end_reason"?: string | null,"ended_at"?: string | null,"ended_by"?: string | null,"id"?: string,"primary_nutrition_group_id"?: string | null,"self_book_on_debt"?: boolean,"source": Database["public"]['Enums']["coaching_source"],"started_at"?: string,"status"?: Database["public"]['Enums']["coaching_status"],"trainer_id": string,"trial_link_id"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "client_id"?: string,"client_invite_id"?: string | null,"client_reminder_offsets"?: (number)[],"created_at"?: string,"debt_limit_sessions"?: number | null,"end_reason"?: string | null,"ended_at"?: string | null,"ended_by"?: string | null,"id"?: string,"self_book_on_debt"?: boolean,"source"?: Database["public"]['Enums']["coaching_source"],"started_at"?: string,"status"?: Database["public"]['Enums']["coaching_status"],"trainer_id"?: string,"trial_link_id"?: string | null,"updated_at"?: string
+                    "broadcasts_muted"?: boolean,"client_id"?: string,"client_invite_id"?: string | null,"client_reminder_offsets"?: (number)[],"created_at"?: string,"debt_limit_sessions"?: number | null,"end_reason"?: string | null,"ended_at"?: string | null,"ended_by"?: string | null,"id"?: string,"primary_nutrition_group_id"?: string | null,"self_book_on_debt"?: boolean,"source"?: Database["public"]['Enums']["coaching_source"],"started_at"?: string,"status"?: Database["public"]['Enums']["coaching_status"],"trainer_id"?: string,"trial_link_id"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -608,6 +646,12 @@ isOneToOne: false
       columns: ["ended_by"]
 isOneToOne: false
       referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "coachings_primary_nutrition_group_id_fkey"
+      columns: ["primary_nutrition_group_id"]
+isOneToOne: false
+      referencedRelation: "groups"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "coachings_trainer_id_fkey"
@@ -833,6 +877,76 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "public_profiles"
       referencedColumns: ["id"]
+    }
+                  ]
+                },"group_members": {
+                  Row: {
+                    "added_at": string,"client_id": string,"coaching_id": string,"group_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "added_at"?: string,"client_id": string,"coaching_id": string,"group_id": string
+                  }
+                  Update: {
+                    "added_at"?: string,"client_id"?: string,"coaching_id"?: string,"group_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "group_members_client_id_fkey"
+      columns: ["client_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "group_members_client_id_fkey"
+      columns: ["client_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "group_members_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_balances"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "group_members_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coaching_stats"
+      referencedColumns: ["coaching_id"]
+    },{
+      foreignKeyName: "group_members_coaching_id_fkey"
+      columns: ["coaching_id"]
+isOneToOne: false
+      referencedRelation: "coachings"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "group_members_group_id_fkey"
+      columns: ["group_id"]
+isOneToOne: false
+      referencedRelation: "groups"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"groups": {
+                  Row: {
+                    "archived_at": string | null,"color": string | null,"created_at": string,"description": string | null,"goal": Database["public"]['Enums']["goal_type"] | null,"id": string,"name": string,"trainer_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archived_at"?: string | null,"color"?: string | null,"created_at"?: string,"description"?: string | null,"goal"?: Database["public"]['Enums']["goal_type"] | null,"id"?: string,"name": string,"trainer_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"color"?: string | null,"created_at"?: string,"description"?: string | null,"goal"?: Database["public"]['Enums']["goal_type"] | null,"id"?: string,"name"?: string,"trainer_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "groups_trainer_id_fkey"
+      columns: ["trainer_id"]
+isOneToOne: false
+      referencedRelation: "trainer_profiles"
+      referencedColumns: ["user_id"]
     }
                   ]
                 },"intakes": {
@@ -1163,14 +1277,14 @@ isOneToOne: false
                   ]
                 },"notification_outbox": {
                   Row: {
-                    "attempts": number,"booking_id": string | null,"chat_target": string | null,"created_at": string,"dedupe_key": string,"deliver_after": string,"id": number,"last_error": string | null,"locked_until": string | null,"payload": NonNullable<Json>,"scheduled_for": string,"sent_at": string | null,"session_id": string | null,"status": Database["public"]['Enums']["outbox_status"],"telegram_message_id": number | null,"type": Database["public"]['Enums']["notification_type"],"user_id": string | null
+                    "attempts": number,"booking_id": string | null,"broadcast_id": string | null,"chat_target": string | null,"created_at": string,"dedupe_key": string,"deliver_after": string,"id": number,"last_error": string | null,"locked_until": string | null,"payload": NonNullable<Json>,"scheduled_for": string,"sent_at": string | null,"session_id": string | null,"status": Database["public"]['Enums']["outbox_status"],"telegram_message_id": number | null,"type": Database["public"]['Enums']["notification_type"],"user_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "attempts"?: number,"booking_id"?: string | null,"chat_target"?: string | null,"created_at"?: string,"dedupe_key": string,"deliver_after": string,"id"?: never,"last_error"?: string | null,"locked_until"?: string | null,"payload": NonNullable<Json>,"scheduled_for": string,"sent_at"?: string | null,"session_id"?: string | null,"status"?: Database["public"]['Enums']["outbox_status"],"telegram_message_id"?: number | null,"type": Database["public"]['Enums']["notification_type"],"user_id"?: string | null
+                    "attempts"?: number,"booking_id"?: string | null,"broadcast_id"?: string | null,"chat_target"?: string | null,"created_at"?: string,"dedupe_key": string,"deliver_after": string,"id"?: never,"last_error"?: string | null,"locked_until"?: string | null,"payload": NonNullable<Json>,"scheduled_for": string,"sent_at"?: string | null,"session_id"?: string | null,"status"?: Database["public"]['Enums']["outbox_status"],"telegram_message_id"?: number | null,"type": Database["public"]['Enums']["notification_type"],"user_id"?: string | null
                   }
                   Update: {
-                    "attempts"?: number,"booking_id"?: string | null,"chat_target"?: string | null,"created_at"?: string,"dedupe_key"?: string,"deliver_after"?: string,"id"?: never,"last_error"?: string | null,"locked_until"?: string | null,"payload"?: NonNullable<Json>,"scheduled_for"?: string,"sent_at"?: string | null,"session_id"?: string | null,"status"?: Database["public"]['Enums']["outbox_status"],"telegram_message_id"?: number | null,"type"?: Database["public"]['Enums']["notification_type"],"user_id"?: string | null
+                    "attempts"?: number,"booking_id"?: string | null,"broadcast_id"?: string | null,"chat_target"?: string | null,"created_at"?: string,"dedupe_key"?: string,"deliver_after"?: string,"id"?: never,"last_error"?: string | null,"locked_until"?: string | null,"payload"?: NonNullable<Json>,"scheduled_for"?: string,"sent_at"?: string | null,"session_id"?: string | null,"status"?: Database["public"]['Enums']["outbox_status"],"telegram_message_id"?: number | null,"type"?: Database["public"]['Enums']["notification_type"],"user_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -1178,6 +1292,12 @@ isOneToOne: false
       columns: ["booking_id"]
 isOneToOne: false
       referencedRelation: "bookings"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "notification_outbox_broadcast_id_fkey"
+      columns: ["broadcast_id"]
+isOneToOne: false
+      referencedRelation: "broadcasts"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "notification_outbox_session_id_fkey"
@@ -1266,6 +1386,12 @@ isOneToOne: false
       columns: ["coaching_id"]
 isOneToOne: false
       referencedRelation: "coachings"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "nutrition_targets_group_id_fkey"
+      columns: ["group_id"]
+isOneToOne: false
+      referencedRelation: "groups"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "nutrition_targets_set_by_fkey"
@@ -2609,6 +2735,9 @@ isOneToOne: false
               "booking_id": string,"status": Database["public"]['Enums']["booking_status"]
             }[]
                            },
+"add_group_member":
+{ Args: { "p_coaching_id": string,"p_group_id": string,"p_make_primary"?: boolean }; Returns: boolean
+                           },
 "add_group_participant":
 { Args: { "p_coaching_id": string,"p_session_id": string }; Returns: string
                            },
@@ -2709,6 +2838,14 @@ isOneToOne: false
 "bot_messages_blocked":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"broadcast_history":
+{ Args: { "p_group_id": string }; Returns: {
+              "body": string,"button_kind": string,"button_url": string,"created_at": string,"deferred": number,"id": string,"muted": number,"recipients": number,"sent": number,"undelivered": number
+            }[]
+                           },
+"broadcasts_today":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
 "calculate_nutrition_target":
 { Args: { "p_weight_kg": number }; Returns: Json
                            },
@@ -2752,6 +2889,9 @@ isOneToOne: false
 { Args: { "p_limit"?: number }; Returns: {
               "attempt": number,"chat_id": number,"chat_target": string,"kind": Database["public"]['Enums']["notification_type"],"locale": Database["public"]['Enums']["app_locale"],"outbox_id": number,"payload": Json,"silent": boolean,"time_zone": string
             }[]
+                           },
+"clear_group_target":
+{ Args: { "p_group_id": string }; Returns: undefined
                            },
 "clear_nutrition_target":
 { Args: { "p_coaching_id": string }; Returns: boolean
@@ -2823,10 +2963,18 @@ isOneToOne: false
               "ends_at": string,"location_name": string,"mode": Database["public"]['Enums']["session_mode"],"slot_id": string,"starts_at": string
             }[]
                            },
+"group_analytics":
+{ Args: { "p_group_id": string }; Returns: {
+              "attendance": number,"attendance_clients": number,"members": number,"weight_change_kg": number,"weight_clients": number
+            }[]
+                           },
 "group_booking_preview":
 { Args: { "p_session_id": string }; Returns: {
               "confirmed": boolean,"pass_title": string,"sessions_left": number
             }[]
+                           },
+"group_target_impact":
+{ Args: { "p_group_id": string }; Returns: number
                            },
 "has_entitlement":
 { Args: { "p_feature": string,"p_pair"?: string,"p_user": string }; Returns: boolean
@@ -2862,6 +3010,11 @@ isOneToOne: false
 "my_client_invite":
 { Args: Record<PropertyKey, never>; Returns: {
               "code": string,"created_at": string,"invite_id": string,"token": string,"uses_count": number
+            }[]
+                           },
+"my_groups":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "broadcasts_muted": boolean,"coaching_id": string,"color": string,"goal": Database["public"]['Enums']["goal_type"],"group_id": string,"name": string,"trainer_name": string
             }[]
                            },
 "my_inherited_rights":
@@ -2966,6 +3119,9 @@ isOneToOne: false
               "category": string,"equipment": (string)[],"id": string,"name": string,"own": boolean,"source": Database["public"]['Enums']["exercise_source"]
             }[]
                            },
+"send_broadcast":
+{ Args: { "p_body": string,"p_button_kind"?: string,"p_button_url"?: string,"p_group_id": string }; Returns: string
+                           },
 "session_check_in_qr":
 { Args: { "p_session_id": string }; Returns: {
               "checked_in": Json,"code": string,"opens_at": string,"refresh_at": string
@@ -2987,11 +3143,20 @@ isOneToOne: false
 "set_bot_messages":
 { Args: { "p_allowed": boolean,"p_send_test"?: boolean }; Returns: undefined
                            },
+"set_broadcasts_muted":
+{ Args: { "p_coaching_id": string,"p_muted": boolean }; Returns: undefined
+                           },
 "set_client_goal":
 { Args: { "p_goal": Database["public"]['Enums']["goal_type"] }; Returns: boolean
                            },
+"set_group_target":
+{ Args: { "p_carbs_g"?: number,"p_confirm_low"?: boolean,"p_fat_g"?: number,"p_group_id": string,"p_kcal": number,"p_protein_g"?: number,"p_steps_target"?: number,"p_water_ml"?: number }; Returns: string
+                           },
 "set_nutrition_target":
 { Args: { "p_carbs_g"?: number,"p_coaching_id": string,"p_confirm_low"?: boolean,"p_fat_g"?: number,"p_kcal": number,"p_protein_g"?: number }; Returns: string
+                           },
+"set_primary_nutrition_group":
+{ Args: { "p_coaching_id": string,"p_group_id": string }; Returns: undefined
                            },
 "set_progress_photo_angle":
 { Args: { "p_angle": Database["public"]['Enums']["photo_angle"],"p_photo_id": string }; Returns: undefined
