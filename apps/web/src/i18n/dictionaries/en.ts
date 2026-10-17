@@ -1472,6 +1472,8 @@ export const en: Dictionary = {
       count: { one: "{count} workout", few: "{count} workouts", many: "{count} workouts", other: "{count} workouts" },
     },
     records: "New records",
+    streaks: { header: "Streaks", footer: "As they stood on the last day of the month." },
+    badges: "New badges",
     measurements: { header: "Measurements", range: "From {from} to {to}" },
     nutrition: {
       header: "Nutrition",

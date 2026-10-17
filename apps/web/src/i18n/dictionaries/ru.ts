@@ -1481,6 +1481,8 @@ export const ru = {
       count: { one: "{count} тренировка", few: "{count} тренировки", many: "{count} тренировок", other: "{count} тренировки" } as PluralForms,
     },
     records: "Новые рекорды",
+    streaks: { header: "Серии", footer: "Какими они были в последний день месяца." },
+    badges: "Новые значки",
     measurements: { header: "Замеры", range: "С {from} до {to}" },
     nutrition: {
       header: "Питание",
