@@ -76,6 +76,7 @@ declare
   v_pass    uuid;
   v_log     uuid;
   v_le      uuid;
+  v_group   uuid;
 begin
   insert into public.coaching_notes (coaching_id, author_id, body, visible_to_client)
   values (v_pair, v_trainer, 'Note of ' || p_trainer, true);
@@ -114,6 +115,9 @@ begin
   select h.id, 1, '00000000-0000-4000-8000-000000000950' from public.homework h where h.coaching_id = v_pair;
   insert into public.nutrition_targets (source, client_id, coaching_id, kcal, effective_from, set_by)
   values ('trainer', v_client, v_pair, 1800, current_date, v_trainer);
+  insert into public.groups (trainer_id, name, goal) values (v_trainer, 'Group of ' || p_trainer, 'lose') returning id into v_group;
+  insert into public.group_members (group_id, coaching_id, client_id) values (v_group, v_pair, v_client);
+  insert into public.broadcasts (trainer_id, group_id, body, created_by) values (v_trainer, v_group, 'Hello', v_trainer);
   insert into public.food_day_comments (client_id, coaching_id, author_id, local_date, body)
   values (v_client, v_pair, v_trainer, current_date, 'More protein');
   insert into public.referral_codes (coaching_id, code) values (v_pair, left(md5(v_pair::text), 10));
@@ -221,6 +225,7 @@ insert into tests.pair_tables values
   ('homework_exercises',    't.homework_id::text', 't.homework_id in (select h.id from public.homework h where h.coaching_id = %L)'),
   ('workout_logs',          't.id::text',          't.coaching_id = %L'),
   ('nutrition_targets',     't.id::text',          't.coaching_id = %L'),
+  ('group_members',         't.group_id::text',    't.coaching_id = %L'),
   ('food_day_comments',     't.id::text',          't.coaching_id = %L');
 
 -- The keys of every pair row, collected as postgres (no RLS).

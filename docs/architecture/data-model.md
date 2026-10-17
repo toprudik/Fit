@@ -2097,7 +2097,7 @@ create index on public.challenge_participants (user_id);
 
 Лидерборд не хранится в таблице: SECURITY DEFINER-функция `get_challenge_leaderboard(challenge_id)` возвращает имя (`display_name`), аватар и `score` только участников с `show_on_leaderboard`; вызвать могут участники и тренер челленджа. Счёт отдаётся агрегатом, сырых данных (шагов по дням, питания) функция не отдаёт.
 
-Рефералка (миграция `20261017040300_referral_offers.sql`, волна 3 §3.1; бонусы тренерам за тренеров, §3.2, в `20261017084213_trainer_referrals.sql`, ниже):
+Рефералка (миграция `20261017040300_referral_offers.sql`, волна 3 §3.1; бонусы тренерам за тренеров, §3.2, в `20261017090519_trainer_referrals.sql`, ниже):
 
 ```sql
 alter table public.passes add column is_bonus boolean not null default false;   -- бонусный абонемент, цена 0 (R60)
@@ -2162,7 +2162,7 @@ create table public.bonuses (
 
 «Только после факта оплаты» (Q50): триггер `payments_referral` (`after insert or update of status on payments`) на `confirmed`-платеже `direction = 'in'` в паре приглашённого вызывает `private.qualify_referral`: если платёж подходит под условие акции (пакет оплаченного абонемента или сумма в валюте акции), реферал становится `qualified`, каждой стороне создаётся бонусный абонемент (`is_bonus`, цена 0, `grant` в журнале, гасит долг) и уходит `referral_bonus`. Пригласившему не больше 10 бонусов на акцию. Если этот платёж переведён в `voided` в течение 14 дней после `qualified_at`, `private.revoke_referral` отменяет бонусные абонементы без списаний и погашений (`refund` остатка, `cancelled`), бонусы и реферал становятся `void`; использованный бонус остаётся (wave-3 §3.1-7). Завершение пары аннулирует её `pending`-рефералы с обеих сторон.
 
-Тренер приводит тренера (§3.2, `20261017084213_trainer_referrals.sql`):
+Тренер приводит тренера (§3.2, `20261017090519_trainer_referrals.sql`):
 
 ```sql
 alter type public.referral_void_reason add value 'verification_rejected';
