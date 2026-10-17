@@ -1,4 +1,4 @@
--- Migration 20261017121519_delegate_journal.sql (PRD wave-3 §1 rule 8, 1.9): the owner's journal lists the notes,
+-- Migration 20261017131427_delegate_journal.sql (PRD wave-3 §1 rule 8, 1.9): the owner's journal lists the notes,
 -- homework and personal sessions a delegate made or cancelled, for one pair or all of them.
 begin;
 \ir _helpers.psql
