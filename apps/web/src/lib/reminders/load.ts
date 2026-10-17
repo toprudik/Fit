@@ -2,7 +2,7 @@ import "server-only";
 import { displayName } from "@/lib/pairs/clients";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { sortOffsets } from "./offsets";
-import { isToggleType, shortTime, type ToggleType } from "./types";
+import { isToggleType, OFF_BY_DEFAULT, shortTime, type ToggleType } from "./types";
 
 export type PairReminders = {
   coachingId: string;
@@ -72,6 +72,9 @@ export async function loadNotificationSettings(): Promise<NotificationSettingsDa
     trainerDefaults: trainer.data ? sortOffsets(trainer.data.default_client_reminder_offsets) : null,
     quietHours: start && end ? { start, end } : null,
     digestTime: shortTime(settings.data?.daily_digest_time) ?? "08:00",
-    disabled: preferences.data.filter((row) => !row.enabled && isToggleType(row.type)).map((row) => row.type as ToggleType),
+    disabled: [
+      ...preferences.data.filter((row) => !row.enabled && isToggleType(row.type) && !OFF_BY_DEFAULT.includes(row.type)),
+      ...OFF_BY_DEFAULT.filter((type) => !preferences.data.some((row) => row.type === type && row.enabled)).map((type) => ({ type })),
+    ].map((row) => row.type as ToggleType),
   };
 }

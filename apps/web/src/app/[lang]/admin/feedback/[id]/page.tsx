@@ -10,9 +10,9 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
-import { serverEnv } from "@/env/server";
 import { personName } from "@/lib/admin/people";
 import { requireAdmin } from "@/lib/admin/require-admin";
+import { feedbackIssueTarget } from "@/lib/feedback/github";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
@@ -96,7 +96,7 @@ async function Message({ params }: { params: PageProps<"/[lang]/admin/feedback/[
         <h2 id="feedback-issue" className="px-4 text-footnote text-ink-2">
           {copy.issue}
         </h2>
-        <FeedbackIssue id={row.id} url={row.github_issue_url} enabled={Boolean(serverEnv().GITHUB_FEEDBACK_TOKEN)} />
+        <FeedbackIssue id={row.id} url={row.github_issue_url} enabled={feedbackIssueTarget() !== null} />
       </section>
     </div>
   );
