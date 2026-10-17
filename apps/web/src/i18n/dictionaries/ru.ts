@@ -4515,6 +4515,13 @@ export const ru = {
     requestClosed: "Этот запрос уже не ждёт ответа.",
     requestClosedLine: "Запрос уже закрыт.",
     noAccount: "Войди в DaFit, чтобы отвечать на запросы.",
+    claimMerged: "Готово, история карточки теперь у этого клиента.",
+    claimMergedLine: "Это {name}. Карточка объединена с клиентом.",
+    claimNewClient: "Готово, это новый клиент.",
+    claimNewClientLine: "Новый клиент. Карточки остались как были.",
+    claimNoCards: "У тебя нет карточек без аккаунта. Нажми «Новый клиент».",
+    claimSeveralCards: "Карточек без аккаунта несколько. Выбери нужную в приложении.",
+    claimLimitFull: "На тарифе Free новая пара закроется. Ответь в приложении.",
     failed: "Не получилось. Ответь на запрос в приложении.",
   },
   botMessages: {
@@ -4545,6 +4552,8 @@ export const ru = {
     coachingEndedPlanLimit:
         "Тренер {name} сейчас не может добавить новых клиентов на бесплатном тарифе, поэтому занятия не начались. Когда место освободится, открой ссылку тренера ещё раз.",
     answerClaim: "Ответить",
+    claimIsCard: "Это он(а)",
+    claimIsNew: "Новый клиент",
     unnamedTrainer: "без имени",
     openTrainer: "Открыть тренера",
     /** Д1: the 10:00 reminder on the day a homework is due (PRD 10-5). */
