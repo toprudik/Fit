@@ -136,7 +136,7 @@ def test_menu_button_failure_keeps_the_reply(
 
 
 def test_used_update_types() -> None:
-    assert build_dispatcher().resolve_used_update_types() == ["message"]
+    assert build_dispatcher().resolve_used_update_types() == ["callback_query", "message"]
 
 
 def test_dispatcher_can_be_built_twice() -> None:

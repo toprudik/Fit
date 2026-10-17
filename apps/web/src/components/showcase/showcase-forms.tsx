@@ -1,12 +1,19 @@
 "use client";
 
 import { Eye, EyeOff } from "lucide-react";
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useOptimistic, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
+import { Switch } from "@/components/ui/switch";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
-import { saveShowcaseAddress, setShowcaseVisible, type AddressState, type VisibilityState } from "@/lib/showcase/actions";
+import {
+  saveShowcaseAddress,
+  setShowcaseVisible,
+  setStoryCardShowcase,
+  type AddressState,
+  type VisibilityState,
+} from "@/lib/showcase/actions";
 import { SLUG_MAX_LENGTH } from "@/lib/showcase/link";
 import { hapticSuccess } from "@/lib/telegram/mini-app";
 
@@ -66,5 +73,30 @@ export function ShowcaseVisibilityForm({ visible }: { visible: boolean }) {
       </Button>
       {visible ? <p className="px-1 text-footnote text-ink-2">{copy.hideHint}</p> : null}
     </form>
+  );
+}
+
+/** "Имя и QR на карточках клиентов" (PRD wave-3 §4 rule 7): the trainer card of a client's month, on by default. */
+export function StoryCardsSwitch({ enabled }: { enabled: boolean }) {
+  const { t } = useI18n();
+  const copy = t.showcase.editor;
+  const [optimistic, setOptimistic] = useOptimistic(enabled);
+  const [, startTransition] = useTransition();
+  return (
+    <div className="rounded-lg bg-surface-1 px-4 py-3">
+      <Switch
+        showLabel
+        label={copy.storyCards}
+        hint={copy.storyCardsHint}
+        checked={optimistic}
+        onCheckedChange={(next) =>
+          startTransition(async () => {
+            setOptimistic(next);
+            const result = await setStoryCardShowcase(next);
+            if (!result.ok) toast.error(copy.storyCardsFailed);
+          })
+        }
+      />
+    </div>
   );
 }

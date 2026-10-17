@@ -692,6 +692,9 @@ export const en: Dictionary = {
       show: "Turn the showcase on",
       hide: "Turn the showcase off",
       hideHint: "Nobody sees a showcase that's off. Your clients and links stay.",
+      storyCards: "Name and QR on clients' cards",
+      storyCardsHint: "Clients share their month in stories. Their sessions-with-a-trainer card will show your name and showcase QR.",
+      storyCardsFailed: "Couldn't save, try again",
       toggleFailed: "That didn't work. Try again.",
       checklist: {
         title: "Missing from your showcase",
@@ -1482,6 +1485,7 @@ export const en: Dictionary = {
       trainer: { one: "session with my trainer", few: "sessions with my trainer", many: "sessions with my trainer", other: "sessions with my trainer" },
       records: { one: "new record", few: "new records", many: "new records", other: "new records" },
       weight: "weight this month",
+      showcase: "Trainer showcase",
     },
   },
   nutrition: {
@@ -2238,14 +2242,14 @@ export const en: Dictionary = {
     },
     analytics: {
       header: "Group analytics",
-      footer: "Averages appear once at least three clients count. Weight counts only for clients who share measurements.",
+      footer: "Averages appear once at least three clients count. Weight counts only for clients who share measurements, the target only for those who share nutrition.",
       members: "Clients in the group",
       attendance: "Attendance over 30 days",
       attendanceValue: "{share}%",
       weight: "Average weight change over 30 days",
       weightValue: "{change} kg",
-      adherence: "Hitting the target",
-      adherenceLater: "Comes with the food diary",
+      adherence: "Hitting the target over 30 days",
+      adherenceValue: "{share}%",
       few: "Too few clients",
     },
     broadcast: {
@@ -2881,6 +2885,7 @@ export const en: Dictionary = {
   /** Trainer schedule: the week, the week template and slots (PRD wave-1 §2.6.1, screens.md §3.2). */
   schedule: {
     newSession: "Session",
+    trainerTime: "{time} on your trainer's clock",
     weekLabel: "Week",
     previousWeek: "Previous week",
     nextWeek: "Next week",
@@ -4376,6 +4381,16 @@ export const en: Dictionary = {
     retry: "Try again",
     feedback: "Send feedback",
   },
+  botActions: {
+    bookingConfirmed: "Booking confirmed. The client will get a message.",
+    bookingConfirmedLine: "Confirmed.",
+    bookingDeclined: "Request declined. The client will get a message.",
+    bookingDeclinedLine: "Declined.",
+    requestClosed: "This request no longer needs an answer.",
+    requestClosedLine: "This request is already closed.",
+    noAccount: "Sign in to DaFit to answer requests.",
+    failed: "That didn't work. Answer the request in the app.",
+  },
   botMessages: {
     open: "Open DaFit",
     botTest: "Done, DaFit can now message you here. Session reminders and other notifications will come to this chat.",
@@ -4440,6 +4455,15 @@ export const en: Dictionary = {
     openFeedback: "Open feedback",
     feedbackReply: "The DaFit team answered your feedback:\n{reply}",
     writeAgain: "Write again",
+    breakGlass: "A DaFit admin opened access to your {categories}. Access ends {until}.\nReason: {reason}",
+    breakGlassCategories: {
+      nutrition: "nutrition",
+      measurements: "measurements",
+      photos: "progress photos",
+      steps: "steps",
+      intake: "intake form",
+      workouts: "your own workouts",
+    },
     /** П1–П3: plan granted, revoked and ending in three days (PRD §2.14-8, 9). */
     planGranted: "You now have {plan} with no end date. Thanks for being in the DaFit beta.",
     planGrantedUntil: "You now have {plan} until {date}. Thanks for being in the DaFit beta.",
@@ -4580,6 +4604,10 @@ export const en: Dictionary = {
     bookingRequested: "Booking request: {name}, {when}, {place}. Confirm or decline it before the session starts.",
     referralBonusReferrer: "Referral bonus: {friend} now trains with {trainer}, and you get +{sessions}.",
     referralBonusReferee: "Invitation bonus: you get +{sessions} with {trainer}.",
+    referralBonusReferrerWaiting:
+      "Referral bonus: {friend} now trains with {trainer}. We'll add +{sessions} to your next pass.",
+    referralBonusRefereeWaiting: "Invitation bonus: we'll add +{sessions} with {trainer} to your next pass.",
+    referralBonusApplied: "The promised bonus: your new pass now has +{sessions}.",
     referralSessions: { one: "{count} session", few: "{count} sessions", many: "{count} sessions", other: "{count} sessions" },
     bookingRequestedOnSite: "Request for a spot: {name} came to the session {when}, {place}, without a booking. Confirm or decline it.",
     /** Т3: the client took back a request or cancelled a booking. */
@@ -4596,6 +4624,8 @@ export const en: Dictionary = {
     requestDeclinedReason: "Your request to {name} for {when} was declined. Reason: “{reason}”.",
     requestExpired: "Your request to {name} for {when} got no answer, so the booking did not happen.",
     answerRequest: "Answer the request",
+    confirmRequest: "Confirm",
+    declineRequest: "Decline",
     openSchedule: "Open schedule",
     waiveCharge: "Forgive",
     openBooking: "Open booking",

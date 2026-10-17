@@ -27,7 +27,7 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-const { saveShowcaseAddress, setShowcaseVisible } = await import("./actions");
+const { saveShowcaseAddress, setShowcaseVisible, setStoryCardShowcase } = await import("./actions");
 
 const IDLE = { status: "idle" } as const;
 
@@ -82,5 +82,19 @@ describe("setShowcaseVisible", () => {
   it("reports a refused update", async () => {
     db.answer = { data: [], error: { code: "42501" } };
     expect(await setShowcaseVisible({ failed: false }, form({ visible: "false" }))).toEqual({ failed: true });
+  });
+});
+
+describe("setStoryCardShowcase", () => {
+  it("switches the name and QR on clients' cards", async () => {
+    expect(await setStoryCardShowcase(false)).toEqual({ ok: true });
+    expect(db.updates).toEqual([{ table: "trainer_profiles", values: { story_card_showcase: false }, id: "trainer-1" }]);
+    expect(next.refresh).toHaveBeenCalled();
+  });
+
+  it("reports a refused update", async () => {
+    db.answer = { data: [], error: { code: "42501" } };
+    expect(await setStoryCardShowcase(true)).toEqual({ ok: false });
+    expect(next.refresh).not.toHaveBeenCalled();
   });
 });

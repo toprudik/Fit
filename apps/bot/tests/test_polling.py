@@ -83,5 +83,5 @@ def test_dev_bot_syncs_profile_without_name_and_polls(
     assert "SetMyCommands" in names and "SetChatMenuButton" in names
     assert "SetMyName" not in names and "GetMyName" not in names
     assert "DeleteWebhook" not in names
-    assert started == [{"allowed_updates": ["message"], "settings": settings}]
+    assert started == [{"allowed_updates": ["callback_query", "message"], "settings": settings}]
     assert DEV_BOT_USERNAME
