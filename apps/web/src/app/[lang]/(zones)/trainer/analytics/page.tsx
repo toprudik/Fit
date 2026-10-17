@@ -6,7 +6,7 @@ import { TierLock } from "@/components/plans/tier-lock";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { DismissChurn } from "@/components/trainer-analytics/dismiss-churn";
-import { PriceSimulator } from "@/components/trainer-analytics/price-simulator";
+import { PriceSimulatorSection } from "@/components/trainer-analytics/price-simulator-section";
 import { Chip, ChipRow } from "@/components/ui/chip";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { SkeletonRows } from "@/components/ui/skeleton";
@@ -273,7 +273,7 @@ async function Analytics({ searchParams }: { searchParams: PageProps<"/[lang]/tr
       <Nutrition copy={copy} />
       {data.finance ? (
         <>
-          <PriceSimulator base={base} />
+          <PriceSimulatorSection base={base} />
           <Hints copy={copy} finance={data.finance} />
         </>
       ) : null}
