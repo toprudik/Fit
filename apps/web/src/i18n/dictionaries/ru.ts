@@ -4156,8 +4156,8 @@ export const ru = {
     /** К8: a session was taken for a no-show or a late cancellation; К9: the trainer forgave one. */
     chargeNoShow: "Занятие {when} с тренером {name} отмечено как неявка. Списано 1 занятие из «{pass}», осталось {remaining}.",
     chargeLateCancel: "Занятие {when} отменено позже срока. Списано 1 занятие из «{pass}», осталось {remaining}.",
-    chargeNoShowDebt: "Занятие {when} с тренером {name} отмечено как неявка. Абонемента не было, занятие ушло в долг: {debt}.",
-    chargeLateCancelDebt: "Занятие {when} отменено позже срока. Абонемента не было, занятие ушло в долг: {debt}.",
+    chargeNoShowDebt: "Занятие {when} с тренером {name} отмечено как неявка. Абонемента не было, поэтому занятие ушло в долг. Всего в долге: {debt}.",
+    chargeLateCancelDebt: "Занятие {when} отменено позже срока. Абонемента не было, поэтому занятие ушло в долг. Всего в долге: {debt}.",
     chargeWaived: "Тренер {name}: списание за занятие {when} прощено. Занятие вернулось в «{pass}», осталось {remaining}.",
     chargeWaivedDebt: "Тренер {name}: долг за занятие {when} прощён. Ещё в долге: {debt}.",
     chargeWaivedNoDebt: "Тренер {name}: долг за занятие {when} прощён. Долга больше нет.",

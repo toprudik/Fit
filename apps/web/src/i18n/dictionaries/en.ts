@@ -110,7 +110,7 @@ export const en: Dictionary = {
   profile: {
     title: "Profile",
     signedOutText: "Sign in with Telegram to see your name and photo here.",
-    signIn: "Log in with Telegram",
+    signIn: "Sign in with Telegram",
     feedback: "Feedback",
     settings: "Settings",
     signOut: "Log out",
@@ -473,8 +473,8 @@ export const en: Dictionary = {
     codeHint: "12 letters and digits, dashes and spaces are optional",
     codeEmpty: "Enter the code from your invite",
     check: "Check code",
-    signedOutText: "Log in with Telegram to become a trainer. The code will still be here.",
-    signIn: "Log in with Telegram",
+    signedOutText: "Sign in with Telegram to become a trainer. The code will still be here.",
+    signIn: "Sign in with Telegram",
     become: "Become a trainer",
     otherCode: "Enter another code",
     openTrainer: "Open the trainer zone",
@@ -2604,8 +2604,8 @@ export const en: Dictionary = {
   /** "My plan" and the locked-feature state (PRD wave-1 §2.14, screens.md /settings/plan). */
   plans: {
     title: "My plan",
-    signedOutText: "Log in with Telegram to see your plan.",
-    signIn: "Log in with Telegram",
+    signedOutText: "Sign in with Telegram to see your plan.",
+    signIn: "Sign in with Telegram",
     names: {
       trainer_free: "Free",
       trainer_pro: "Pro",
@@ -2678,8 +2678,8 @@ export const en: Dictionary = {
     emptyWeekTitle: "The week is empty so far",
     emptyWeekText: "Fill in your week template and free slots will appear on their own.",
     emptyWeekAction: "Create a week template",
-    signedOutText: "Log in with Telegram to keep your schedule.",
-    signIn: "Log in with Telegram",
+    signedOutText: "Sign in with Telegram to keep your schedule.",
+    signIn: "Sign in with Telegram",
     weekdays: {
       "1": "Monday",
       "2": "Tuesday",
@@ -3334,8 +3334,8 @@ export const en: Dictionary = {
   /** /settings/notifications (screens.md, PRD wave-1 §2.9). */
   notificationSettings: {
     title: "Notifications",
-    signedOutText: "Log in with Telegram to set up notifications.",
-    signIn: "Log in with Telegram",
+    signedOutText: "Sign in with Telegram to set up notifications.",
+    signIn: "Sign in with Telegram",
     clientHeader: "Session reminders",
     clientFooter: "Set separately for each trainer, up to three.",
     noTrainers: "You can set reminders once you have a trainer.",
@@ -3391,8 +3391,8 @@ export const en: Dictionary = {
   calendar: {
     title: "Calendar",
     intro: "Add your DaFit sessions to Google, Apple or Outlook Calendar. They show up next to everything else and update on their own.",
-    signedOutText: "Log in with Telegram to connect a calendar.",
-    signIn: "Log in with Telegram",
+    signedOutText: "Sign in with Telegram to connect a calendar.",
+    signIn: "Sign in with Telegram",
     zones: { trainer: "Sessions with clients", client: "My sessions" },
     zoneHints: {
       trainer: "All your sessions as a trainer.",
@@ -4017,8 +4017,8 @@ export const en: Dictionary = {
   },
   telegram: {
     signInFailed: "Couldn't log you in. Reopen the app.",
-    signInExpired: "The login data from Telegram has expired or never arrived. Close the app and open it again.",
-    cookiesBlocked: "This browser won't let us keep you logged in. Open DaFit in the Telegram app on your phone or computer.",
+    signInExpired: "The sign-in data from Telegram has expired or never arrived. Close the app and open it again.",
+    cookiesBlocked: "This browser won't let us keep you signed in. Open DaFit in the Telegram app on your phone or computer.",
     accountBlocked: "Your DaFit account is blocked.",
   },
   notFound: {
@@ -4125,8 +4125,8 @@ export const en: Dictionary = {
     /** К8: a session was taken for a no-show or a late cancellation; К9: the trainer forgave one. */
     chargeNoShow: "{name} marked you absent on {when}. One session was taken from {pass}, {remaining} left.",
     chargeLateCancel: "Your session on {when} was cancelled too late. One session was taken from {pass}, {remaining} left.",
-    chargeNoShowDebt: "{name} marked you absent on {when}. There was no pass, so the session went into debt: {debt}.",
-    chargeLateCancelDebt: "Your session on {when} was cancelled too late. There was no pass, so the session went into debt: {debt}.",
+    chargeNoShowDebt: "{name} marked you absent on {when}. There was no pass, so the session went into debt. You now owe {debt} in total.",
+    chargeLateCancelDebt: "Your session on {when} was cancelled too late. There was no pass, so the session went into debt. You now owe {debt} in total.",
     chargeWaived: "{name} forgave the session on {when}. It went back to {pass}, {remaining} left.",
     chargeWaivedDebt: "{name} forgave the debt for the session on {when}. Still owed: {debt}.",
     chargeWaivedNoDebt: "{name} forgave the session on {when}. You owe nothing now.",
