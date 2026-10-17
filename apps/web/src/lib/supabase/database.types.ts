@@ -191,6 +191,20 @@ isOneToOne: true
       referencedColumns: ["id"]
     }
                   ]
+                },"badges": {
+                  Row: {
+                    "code": string,"family": string,"position": number,"threshold": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "code": string,"family": string,"position": number,"threshold": number
+                  }
+                  Update: {
+                    "code"?: string,"family"?: string,"position"?: number,"threshold"?: number
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"body_profiles": {
                   Row: {
                     "activity_level": Database["public"]['Enums']["activity_level"] | null,"birth_date": string | null,"calc_sex": Database["public"]['Enums']["calc_sex"] | null,"height_cm": number | null,"preferred_target_coaching_id": string | null,"updated_at": string,"user_id": string
@@ -2933,6 +2947,38 @@ isOneToOne: false
       referencedColumns: ["user_id"]
     }
                   ]
+                },"user_badges": {
+                  Row: {
+                    "awarded_at": string,"badge_code": string,"seen_at": string | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "awarded_at"?: string,"badge_code": string,"seen_at"?: string | null,"user_id": string
+                  }
+                  Update: {
+                    "awarded_at"?: string,"badge_code"?: string,"seen_at"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "user_badges_badge_code_fkey"
+      columns: ["badge_code"]
+isOneToOne: false
+      referencedRelation: "badges"
+      referencedColumns: ["code"]
+    },{
+      foreignKeyName: "user_badges_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "user_badges_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"user_roles": {
                   Row: {
                     "granted_at": string,"granted_by": string | null,"role": Database["public"]['Enums']["app_role"],"user_id": string
@@ -3278,6 +3324,44 @@ isOneToOne: false
     },{
       foreignKeyName: "workout_templates_owner_id_fkey"
       columns: ["owner_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"workout_week_goals": {
+                  Row: {
+                    "client_id": string,"per_week": number,"set_by": string | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "client_id": string,"per_week": number,"set_by"?: string | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "client_id"?: string,"per_week"?: number,"set_by"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "workout_week_goals_client_id_fkey"
+      columns: ["client_id"]
+isOneToOne: true
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "workout_week_goals_client_id_fkey"
+      columns: ["client_id"]
+isOneToOne: true
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "workout_week_goals_set_by_fkey"
+      columns: ["set_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "workout_week_goals_set_by_fkey"
+      columns: ["set_by"]
 isOneToOne: false
       referencedRelation: "public_profiles"
       referencedColumns: ["id"]
@@ -3831,6 +3915,9 @@ isOneToOne: false
 "mark_attendance":
 { Args: { "p_booking_id": string,"p_reason"?: string,"p_status": Database["public"]['Enums']["booking_status"] }; Returns: Database["public"]['Enums']["booking_status"]
                            },
+"mark_badges_seen":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
 "mark_homework_done":
 { Args: { "p_comment"?: string,"p_log"?: string,"p_occurrence": string }; Returns: string
                            },
@@ -3869,6 +3956,11 @@ isOneToOne: false
               "active_clients": number,"client_limit": number,"expires_at": string,"plan_code": string,"side": Database["public"]['Enums']["plan_side"]
             }[]
                            },
+"my_streaks":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "diary": number,"steps": number,"week_done": number,"week_goal": number,"workouts": number
+            }[]
+                           },
 "my_trainer_referral":
 { Args: Record<PropertyKey, never>; Returns: {
               "code": string,"trainers": Json
@@ -3886,6 +3978,11 @@ isOneToOne: false
                            },
 "pair_nutrition_state":
 { Args: { "p_coaching_id": string }; Returns: string
+                           },
+"pair_streaks":
+{ Args: { "p_coaching": string }; Returns: {
+              "diary": number,"steps": number,"week_done": number,"week_goal": number,"workouts": number
+            }[]
                            },
 "purge_account":
 { Args: { "p_user": string }; Returns: (string)[]
@@ -4072,6 +4169,9 @@ isOneToOne: false
                            },
 "set_progress_photo_angle":
 { Args: { "p_angle": Database["public"]['Enums']["photo_angle"],"p_photo_id": string }; Returns: undefined
+                           },
+"set_workout_week_goal":
+{ Args: { "p_client": string,"p_per_week": number }; Returns: undefined
                            },
 "stop_referral_offer":
 { Args: Record<PropertyKey, never>; Returns: undefined

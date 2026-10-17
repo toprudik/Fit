@@ -20,6 +20,7 @@ import { loadPairMoney } from "@/lib/passes/load";
 import { formatLocalDay, lastValidDay } from "@/lib/passes/present";
 import { TrainerNutrition } from "@/components/nutrition/sections";
 import { TrainerActivity } from "@/components/activity/sections";
+import { TrainerGamification } from "@/components/gamification/sections";
 import { TrainerProgress } from "@/components/progress/sections";
 import { TrainerHomework } from "@/components/homework/trainer-homework";
 import { LogListSection } from "@/components/workouts/log-screens";
@@ -119,6 +120,8 @@ function Overview({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: Pa
       </ListGroup>
 
       <PairMilestones t={t} locale={locale} pair={pair} />
+
+      {live && !pair.partner.isCard && !pair.partner.deleted ? <TrainerGamification coachingId={pair.coachingId} /> : null}
 
       {/* A card has no account to fill in an intake, and a deleted client's intake is gone. */}
       {pair.partner.isCard || pair.partner.deleted ? null : <TrainerIntakeRow coachingId={pair.coachingId} />}
