@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { feedbackInput, platformLabel, routeOf, screenshotPath, screenshotProblem } from "./input";
+import { readFileSync } from "node:fs";
+import { feedbackInput } from "./schema";
+import { platformLabel, routeOf, screenshotPath, screenshotProblem } from "./input";
 
 describe("feedback input", () => {
   it("accepts PNG, JPG and WebP screenshots up to 5 MB (FDBK-3)", () => {
@@ -40,5 +42,9 @@ describe("feedback input", () => {
     expect(feedbackInput.safeParse(base).success).toBe(true);
     expect(feedbackInput.safeParse({ ...base, body: "   " }).success).toBe(false);
     expect(feedbackInput.safeParse({ ...base, screenshots: ["a", "b", "c", "d"] }).success).toBe(false);
+  });
+
+  it("keeps zod out of the module the form imports", () => {
+    expect(readFileSync(new URL("./input.ts", import.meta.url), "utf8")).not.toMatch(/from "zod"/);
   });
 });
