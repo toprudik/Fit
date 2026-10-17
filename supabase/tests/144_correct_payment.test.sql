@@ -1,4 +1,4 @@
--- "Исправить оплату", migration 20261017120914_correct_payment.sql (PRD wave-1 §2.8 rule 13).
+-- "Исправить оплату", migration 20261017133641_correct_payment.sql (PRD wave-1 §2.8 rule 13).
 begin;
 \ir _helpers.psql
 select plan(9);

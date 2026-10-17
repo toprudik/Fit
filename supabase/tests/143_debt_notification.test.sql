@@ -1,4 +1,4 @@
--- "Возник долг", migration 20261017114237_debt_notification.sql (PRD wave-1 §2.8 MONEY-7, К11).
+-- "Возник долг", migration 20261017133523_debt_notification.sql (PRD wave-1 §2.8 MONEY-7, К11).
 begin;
 \ir _helpers.psql
 select plan(10);

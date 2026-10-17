@@ -1,4 +1,4 @@
--- "Абонемент заканчивается", migration 20261017113617_pass_ending.sql (PRD wave-1 §2.9-9, К10 and Т6).
+-- "Абонемент заканчивается", migration 20261017133417_pass_ending.sql (PRD wave-1 §2.9-9, К10 and Т6).
 begin;
 \ir _helpers.psql
 select plan(14);
