@@ -563,10 +563,16 @@ describe("plan messages", () => {
       expect(debt?.text).toMatch(/занятие уйдёт в долг\.$/);
       const requested = renderMessage({ ...row, kind: "booking_requested", locale: "en", payload: { ...base } }, options);
       expect(requested?.text).toMatch(/^Booking request: a client with no name, .*, Зал\. Confirm or decline it before the session starts\.$/);
-      expect(requested?.buttons[0]).toEqual({
-        text: "Answer the request",
-        web_app: { url: `https://fit.example/trainer/requests/${booking}?source=booking_requested` },
-      });
+      expect(requested?.buttons).toEqual([
+        { text: "Confirm", callback_data: `bky:${booking}` },
+        { text: "Decline", callback_data: `bkn:${booking}` },
+        { text: "Answer the request", web_app: { url: `https://fit.example/trainer/requests/${booking}?source=booking_requested` } },
+      ]);
+      // A tap in a group would act for whoever tapped: there only the link stays.
+      const inGroup = renderMessage({ ...row, kind: "booking_requested", payload: { ...base } }, { ...options, group: true });
+      expect(inGroup?.buttons).toEqual([
+        { text: "Ответить на запрос", url: `https://fit.example/trainer/requests/${booking}?source=booking_requested` },
+      ]);
       const trial = renderMessage({ ...row, kind: "booking_requested", payload: { ...client, ...base, trial: true } }, options);
       expect(trial?.text).toMatch(/^Запрос на пробное: Анна Смирнова, .*, Зал\. Подтверди или отклони его до начала занятия\.$/);
       const onSite = renderMessage({ ...row, kind: "booking_requested", payload: { ...client, ...base, on_site: true } }, options);
