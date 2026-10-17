@@ -3,7 +3,7 @@ import { SearchX } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { z } from "zod";
-import { foodSubtitle } from "@/components/nutrition/add-food";
+import { foodSubtitle } from "@/components/nutrition/food-subtitle";
 import { OWN_FOODS_PATH } from "@/components/nutrition/paths";
 import { ArchiveFoodButton, ProductForm } from "@/components/nutrition/product-form";
 import { Screen } from "@/components/shell/screen";
