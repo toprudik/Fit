@@ -37,6 +37,25 @@ describe("renderMessage", () => {
     expect(declined?.buttons[0]).toEqual({ text: "Открыть команду", web_app: { url: "https://fit.example/trainer/team?source=delegation" } });
   });
 
+  it("brings a trainer found by search the invite with a button to answer it (wave-3 §1 rule 1)", () => {
+    const base = { ...row, kind: "delegation" as const };
+    const token = "AbCdEfGhIjKlMnOpQrStUvWx";
+    const sub = renderMessage(
+      { ...base, payload: { event: "invited", kind: "substitute", owner_name: "Иван", starts_at: "2026-11-02T09:00:00Z", token } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(sub?.text).toMatch(/^Иван просит провести за него занятие пн, 2 ноября в 12:00\./);
+    expect(sub?.buttons).toEqual([
+      { text: "Посмотреть приглашение", web_app: { url: `https://fit.example/trainer/team/accept?token=${token}&source=delegation` } },
+    ]);
+    const assistant = renderMessage(
+      { ...base, payload: { event: "invited", kind: "assistant", owner_name: "Иван", token: "not a token" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(assistant?.text).toContain("Иван зовёт тебя помощником");
+    expect(assistant?.buttons[0]).toEqual({ text: "Открыть команду", web_app: { url: "https://fit.example/trainer/team?source=delegation" } });
+  });
+
   it("sends a trainer's broadcast as typed, escaped, under the trainer's name (wave-2 §6.9)", () => {
     const base = { ...row, kind: "trainer_broadcast" as const };
     const payload = { trainer_name: "Иван", body: "Завтра в <10>", button_kind: "deep_link" };
