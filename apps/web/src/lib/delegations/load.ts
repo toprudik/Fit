@@ -127,6 +127,7 @@ export type DelegatedSession = {
   title: string | null;
   startsAt: string;
   endsAt: string;
+  mode: Database["public"]["Enums"]["session_mode"];
   location: string | null;
   timeZone: string;
   participants: {
@@ -152,6 +153,7 @@ export async function loadDelegatedSession(sessionId: string): Promise<Delegated
     title: data.title,
     startsAt: data.starts_at,
     endsAt: data.ends_at,
+    mode: data.mode,
     location: data.location,
     timeZone: owner.timeZone,
     participants: participants.flatMap((row) =>
