@@ -2579,10 +2579,13 @@ export const en: Dictionary = {
     },
     features: {
       header: "What clients use",
-      footer: "Share of clients with a live pair in the period. The entries themselves are not shown here.",
+      footer: "Share of clients with a live pair in the period; the nutrition target as of today. The entries themselves are not shown here.",
       workouts: "Keep a workout diary",
       measurements: "Log measurements",
       photos: "Add progress photos",
+      diary: "Keep a food diary",
+      activity: "Log steps, water or sleep",
+      target: "Have a nutrition target",
     },
     trainers: {
       header: "Trainers",
@@ -2602,7 +2605,7 @@ export const en: Dictionary = {
       subtitle: "{pairs} pairs, {attended} attended",
       lastActive: "active {date}",
       never: "never signed in",
-      flags: { workouts: "workouts", measurements: "measurements", photos: "photos" },
+      flags: { workouts: "workouts", measurements: "measurements", photos: "photos", diary: "food", activity: "activity", target: "target" },
     },
     noName: "No name",
     trainer: {
