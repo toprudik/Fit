@@ -141,3 +141,25 @@ export function storyCardFrom(value: unknown): StoryCard | null {
 export function isCardId(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value);
 }
+
+const shareTargetSchema = z.array(
+  z.object({ coaching_id: z.string(), name: z.string().nullable(), shared_at: z.string().nullable() }),
+);
+
+/** A live pair the client can send the month to (§4 rule 3), and when it was sent, or null. */
+export type ShareTarget = { coachingId: string; name: string | null; sharedAt: string | null };
+
+/** The pairs public.my_monthly_report_shares() answered; nothing when the shape is unknown. */
+export function shareTargetsFrom(value: unknown): ShareTarget[] {
+  const parsed = shareTargetSchema.safeParse(value);
+  if (!parsed.success) return [];
+  return parsed.data.map((row) => ({ coachingId: row.coaching_id, name: row.name, sharedAt: row.shared_at }));
+}
+
+/** The copy a client sent to the trainer, as public.shared_monthly_report() answers it, or null. */
+export function sharedReportFrom(value: unknown): { report: MonthlyReport; sharedAt: string } | null {
+  const parsed = z.object({ report: z.unknown(), shared_at: z.string() }).safeParse(value);
+  if (!parsed.success) return null;
+  const report = reportFrom(parsed.data.report);
+  return report ? { report, sharedAt: parsed.data.shared_at } : null;
+}
