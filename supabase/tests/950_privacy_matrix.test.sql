@@ -114,10 +114,21 @@ begin
   values ('trainer', v_client, v_pair, 1800, current_date, v_trainer);
   insert into public.food_day_comments (client_id, coaching_id, author_id, local_date, body)
   values (v_client, v_pair, v_trainer, current_date, 'More protein');
+  insert into public.referral_codes (coaching_id, code) values (v_pair, left(md5(v_pair::text), 10));
 end $$;
 select tests.fill_pair('trainer_a', 'client_c');
 select tests.fill_pair('trainer_b', 'client_c');
 select tests.fill_pair('trainer_a', 'client_e');
+-- C brought E to A by a referral offer, and C got a bonus.
+insert into public.referral_offers (trainer_id, referrer_sessions) values (tests.user_id('trainer_a'), 1);
+with r as (
+  insert into public.referrals (offer_id, trainer_id, referrer_id, referee_id, coaching_id, referrer_coaching_id)
+  select o.id, o.trainer_id, tests.user_id('client_c'), tests.user_id('client_e'), tests.pair_id('trainer_a', 'client_e'),
+         tests.pair_id('trainer_a', 'client_c')
+  from public.referral_offers o where o.trainer_id = tests.user_id('trainer_a')
+  returning id
+)
+insert into public.bonuses (referral_id, beneficiary_id, kind, sessions) select r.id, tests.user_id('client_c'), 'sessions', 1 from r;
 
 -- Personal data of C and E: a self log with a set (which builds a personal record), a measurement, a photo, an
 -- intake; C also has an export, a calendar feed, notification preferences, a consent, feedback and an outbox row.

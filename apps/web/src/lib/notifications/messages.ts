@@ -421,6 +421,19 @@ const templates: Partial<Record<NotificationType, Template>> = {
       buttons: [{ text: t.openSessions, path: "/client/sessions" }],
     };
   },
+  // К-referral: payload { pass_id, sessions, side, friend, trainer } from private.grant_referral_bonus (PRD wave-3 §3.1-6);
+  // side is referrer (the client who shared the link) or referee (the friend), friend and trainer are names.
+  referral_bonus: ({ t, locale, payload }) => {
+    const passId = typeof payload.pass_id === "string" && isPairId(payload.pass_id) ? payload.pass_id : null;
+    return {
+      text: interpolateEscaped(payload.side === "referee" ? t.referralBonusReferee : t.referralBonusReferrer, {
+        friend: personName(nested(payload.friend)) || t.unnamedClient,
+        trainer: personName(nested(payload.trainer)) || t.unnamedTrainer,
+        sessions: plural(locale, Number(payload.sessions ?? 0), t.referralSessions),
+      }),
+      buttons: [{ text: t.openPass, path: passId ? `/client/passes/${passId}` : "/client/passes" }],
+    };
+  },
   // Т1: payload { booking_id, session_id, starts_at, mode, location, debt, first_name, last_name } from book_slot,
   // a booking confirmed at once by a pass or allowed debt (PRD 2.6.4-2).
   booking_created: ({ t, locale, timeZone, payload }) => ({
@@ -618,6 +631,11 @@ function chargeMessage({ t, locale, timeZone, payload }: TemplateContext, kind: 
     text: interpolateEscaped(template, values),
     buttons: [{ text: t.openPass, path: passId ? `/client/passes/${passId}` : "/client/passes" }],
   };
+}
+
+/** A nested object of the payload, such as a person from private.person_name; empty for anything else. */
+function nested(value: Json | undefined): TemplateContext["payload"] {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
 /** The person's name from the payload the RPC queued; empty when there is none. */

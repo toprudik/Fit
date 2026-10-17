@@ -779,6 +779,30 @@ describe("contact requests", () => {
   });
 });
 
+describe("referral bonus message", () => {
+  const options = { appUrl: "https://fit.example", group: false };
+  const PASS = "6f1c2a3b-4d5e-4f60-8a71-92b3c4d5e6f7";
+  const payload = {
+    pass_id: PASS,
+    sessions: 2,
+    friend: { first_name: "Фёдор", last_name: null },
+    trainer: { first_name: "Ирина", last_name: "Котова" },
+  };
+
+  it("tells the client who shared the link and opens the bonus pass", () => {
+    const message = renderMessage({ ...row, kind: "referral_bonus", payload: { ...payload, side: "referrer" } }, options);
+    expect(message?.text).toBe("Бонус за друга: Фёдор теперь занимается с тренером Ирина Котова, а у тебя +2 занятия.");
+    expect(message?.buttons).toEqual([
+      { text: "Открыть абонемент", web_app: { url: `https://fit.example/client/passes/${PASS}?source=referral_bonus` } },
+    ]);
+  });
+
+  it("tells the friend in their language", () => {
+    const message = renderMessage({ ...row, locale: "en", kind: "referral_bonus", payload: { ...payload, sessions: 1, side: "referee" } }, options);
+    expect(message?.text).toBe("Invitation bonus: you get +1 session with Ирина Котова.");
+  });
+});
+
 describe("homework messages (Д1, Д2)", () => {
   const HOMEWORK = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
   const app = { appUrl: "https://fit.example", group: false };
