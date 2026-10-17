@@ -2313,6 +2313,9 @@ export const ru = {
       cancelLateTitle: "Отменить со списанием?",
       cancelLateText: "Бесплатно отменить можно было до {date}. Сейчас при отмене спишется 1 занятие.",
       cancelLateTextNoDate: "Бесплатная отмена уже закончилась, при отмене спишется 1 занятие.",
+      chargePass: "Спишется из «{pass}», останется занятий: {count}.",
+      chargeDebt: "Подходящего абонемента нет, занятие уйдёт в долг: {amount}.",
+      chargeFree: "Это бесплатное пробное, при отмене ничего не спишется.",
       cancelReason: "Причина, если хочешь",
       cancelReasonHint: "Тренер увидит её в сообщении.",
       cancelConfirm: "Отменить",
@@ -2396,6 +2399,8 @@ export const ru = {
   /** Attendance marks of a trainer after the session start (PRD 2.6.6, /trainer/sessions/[sessionId]). */
   attendance: {
     title: "Посещение",
+    charges: "Списания",
+    waive: "Простить",
     hint: "«Был» и «Не пришёл» списывают занятие, «Не состоялось» ничего не списывает.",
     group: "Посещение: {name}",
     marks: { attended: "Был", no_show: "Не пришёл", cancelled: "Не состоялось" },
@@ -3059,6 +3064,7 @@ export const ru = {
     requestExpired: "Запрос к тренеру {name} на {when} остался без ответа, запись не состоялась.",
     answerRequest: "Ответить на запрос",
     openSchedule: "Открыть расписание",
+    waiveCharge: "Простить",
     openBooking: "Открыть запись",
     bookAgain: "Выбрать другое время",
   },
