@@ -1,4 +1,4 @@
--- Reviews, migration 20261017220335_reviews.sql (PRD wave-2 §11): three attended sessions, one review per pair with
+-- Reviews, migration 20261017234253_reviews.sql (PRD wave-2 §11): three attended sessions, one review per pair with
 -- its history, the trainer's answer and dispute, the admin's decision, who reads what.
 begin;
 \ir _helpers.psql
