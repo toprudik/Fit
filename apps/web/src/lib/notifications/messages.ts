@@ -229,6 +229,10 @@ const templates: Partial<Record<NotificationType, Template>> = {
   charge_posted: (context) => chargeMessage(context, "posted"),
   // К9: the same payload for the waiver, with the reason and start of the forgiven charge.
   charge_waived: (context) => chargeMessage(context, "waived"),
+  // К10 and Т6: payload { pass_id, coaching_id, title, condition, available, expires_at, first_name, last_name,
+  // username, payment_url? } from private.queue_pass_ending, the person being the other side of the pair.
+  pass_ending: (context) => passEndingMessage(context, "client"),
+  client_pass_ending: (context) => passEndingMessage(context, "trainer"),
   // К7: payload { booking_id, starts_at, kind, title, mode, location_name, location_address, first_name, last_name,
   // offset_min } from private.sync_booking_reminders. The meeting link stays in DaFit (SCHED-21).
   session_reminder: ({ t, locale, timeZone, payload }) => {
@@ -718,6 +722,43 @@ function chargeMessage({ t, locale, timeZone, payload }: TemplateContext, kind: 
     text: interpolateEscaped(template, values),
     buttons: [{ text: t.openPass, path: passId ? `/client/passes/${passId}` : "/client/passes" }],
   };
+}
+
+function passEndingMessage({ t, locale, timeZone, payload }: TemplateContext, recipient: "client" | "trainer") {
+  const client = recipient === "client";
+  const available = Number(payload.available ?? 0);
+  const values = {
+    name: personName(payload) || (client ? t.unnamedTrainer : t.unnamedClient),
+    pass: typeof payload.title === "string" ? payload.title : "",
+    left: plural(locale, available, t.passSessions),
+    date: typeof payload.expires_at === "string" ? formatPlanDate(locale, payload.expires_at, timeZone) : "",
+  };
+  const template =
+    payload.condition === "expiry"
+      ? client
+        ? t.passEndingExpiry
+        : t.clientPassEndingExpiry
+      : available > 0
+        ? client
+          ? t.passEndingLow
+          : t.clientPassEndingLow
+        : client
+          ? t.passEndingBooked
+          : t.clientPassEndingBooked;
+  const passId = typeof payload.pass_id === "string" && isPairId(payload.pass_id) ? payload.pass_id : null;
+  const username = typeof payload.username === "string" && TELEGRAM_USERNAME.test(payload.username) ? payload.username : null;
+  const buttons: TemplateButton[] = [];
+  if (client) {
+    // «Оплатить» opens the trainer's payment link; without one, the pass, where the client sees how to pay.
+    const url = typeof payload.payment_url === "string" && isButtonUrl(payload.payment_url) ? payload.payment_url : null;
+    buttons.push(url ? { text: t.pay, href: url } : { text: t.openPass, path: passId ? `/client/passes/${passId}` : "/client/passes" });
+    if (username) buttons.push({ text: t.writeToTrainer, href: `https://t.me/${username}` });
+  } else {
+    const pair = pairPath("/trainer/clients", payload);
+    buttons.push({ text: t.openClient, path: pair === "/trainer/clients" ? pair : `${pair}/passes` });
+    if (username) buttons.push({ text: t.writeToClient, href: `https://t.me/${username}` });
+  }
+  return { text: interpolateEscaped(template, values), buttons };
 }
 
 /** A nested object of the payload, such as a person from private.person_name; empty for anything else. */

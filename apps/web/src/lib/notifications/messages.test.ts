@@ -935,6 +935,37 @@ describe("badge messages (wave-3 §2.2-7)", () => {
   it("still congratulates on a badge it doesn't know", () => {
     expect(renderMessage({ ...row, kind: "badge", payload: { badge: "unknown" } }, app)?.text).toBe("У тебя новый значок.");
   });
+  it("tells the client a pass is running low, with the trainer's payment link and chat (К10)", () => {
+    const payload = {
+      pass_id: PAIR, coaching_id: PAIR, title: "10 занятий", condition: "low", available: 1, expires_at: null,
+      first_name: "Ира", last_name: "Тренер", username: "coach_ira_demo", payment_url: "https://pay.example/ira",
+    };
+    const message = renderMessage({ ...row, kind: "pass_ending", payload }, { appUrl: "https://fit.example", group: false });
+    expect(message?.text).toBe("Тренер Ира Тренер: в абонементе «10 занятий» осталось 1 занятие.");
+    expect(message?.buttons).toEqual([
+      { text: "Оплатить", url: "https://pay.example/ira" },
+      { text: "Написать тренеру", url: "https://t.me/coach_ira_demo" },
+    ]);
+    const booked = renderMessage(
+      { ...row, kind: "pass_ending", payload: { ...payload, available: 0, payment_url: "http://pay.example/ira", username: null } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(booked?.text).toBe("Тренер Ира Тренер: все занятия абонемента «10 занятий» уже расписаны по записям.");
+    expect(booked?.buttons).toEqual([{ text: "Открыть абонемент", web_app: { url: `https://fit.example/client/passes/${PAIR}?source=pass_ending` } }]);
+  });
+
+  it("tells the trainer a client's pass ends soon, with the date in the trainer's zone (Т6)", () => {
+    const payload = {
+      pass_id: PAIR, coaching_id: PAIR, title: "Month", condition: "expiry", available: 6, expires_at: "2026-11-20T20:59:00Z",
+      first_name: "Anna", last_name: null, username: "anna_client_demo",
+    };
+    const message = renderMessage({ ...row, locale: "en", kind: "client_pass_ending", payload }, { appUrl: "https://fit.example", group: false });
+    expect(message?.text).toBe("Anna: their pass “Month” ends on November 20, 2026.");
+    expect(message?.buttons).toEqual([
+      { text: "Open client", web_app: { url: `https://fit.example/trainer/clients/${PAIR}/passes?source=client_pass_ending` } },
+      { text: "Message the client", url: "https://t.me/anna_client_demo" },
+    ]);
+  });
 });
 
 describe("challenge invitations (wave-3 §2.3-11)", () => {
