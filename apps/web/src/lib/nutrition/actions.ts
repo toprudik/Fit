@@ -32,7 +32,20 @@ function failed(what: string, error: { code: string }): { ok: false; reason: "fa
   return { ok: false, reason: "failed" };
 }
 
-export type CalcInput = { goal: Goal; sex: CalcSex; birthDate: string; heightCm: number; activity: ActivityLevel; weightKg: number };
+/**
+ * Picks the client's goal on its own, without the calculator (wave-2 §1.1). The target stays as it is: a calculator
+ * target waits for "Рассчитать" and confirmation (§1.3), and trainers with their own target hear from the database.
+ */
+export async function setNutritionGoal(goal: Goal): Promise<NutritionActionResult> {
+  if (!isGoal(goal)) return { ok: false, reason: "invalid" };
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("set_client_goal", { p_goal: goal });
+  if (error) return error.code === "42501" ? { ok: false, reason: "invalid" } : failed("saving the goal", error);
+  refresh();
+  return { ok: true };
+}
+
+export type CalcInput ={ goal: Goal; sex: CalcSex; birthDate: string; heightCm: number; activity: ActivityLevel; weightKg: number };
 
 /**
  * "Рассчитать": saves the goal and the calculator inputs, then runs the calculator (wave-2 §1–2). Nothing becomes

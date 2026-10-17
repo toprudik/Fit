@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeBarcode, parseOffProduct } from "./off-parse";
+import { normalizeBarcode, parseOffDraft, parseOffProduct } from "./off-parse";
 
 describe("parseOffProduct", () => {
   it("reads the search hit in the interface language", () => {
@@ -58,5 +58,21 @@ describe("normalizeBarcode", () => {
     expect(normalizeBarcode("1234-5678")).toBe("12345678");
     expect(normalizeBarcode("1234567")).toBeNull();
     expect(normalizeBarcode("12345678a")).toBeNull();
+  });
+});
+
+describe("parseOffDraft", () => {
+  const bare = { code: "4600000000017", product_name: "Хлебцы", product_name_ru: "Хлебцы ржаные", brands: "Пекарня, Другая", nutriments: { proteins_100g: 9 } };
+
+  it("keeps a named product without kcal as a draft for an own product", () => {
+    expect(parseOffProduct(bare, "ru")).toBeNull();
+    expect(parseOffDraft(bare, "ru")).toEqual({ code: "4600000000017", name: "Хлебцы ржаные", brand: "Пекарня" });
+  });
+
+  it("leaves out products with kcal, without a name, and with kcal out of range", () => {
+    expect(parseOffDraft({ ...bare, nutriments: { "energy-kj_100g": 1000 } }, "ru")).toBeNull();
+    expect(parseOffDraft({ ...bare, nutriments: { "energy-kcal_100g": 5000 } }, "ru")).toBeNull();
+    expect(parseOffDraft({ code: "4600000000017", nutriments: {} }, "ru")).toBeNull();
+    expect(parseOffDraft(null, "ru")).toBeNull();
   });
 });

@@ -57,6 +57,65 @@ function merge(...lists: Row[][]): Row[] {
   return [...seen.values()];
 }
 
+/** A name as the app shows it, and nothing else about that person. */
+const nameOnly = ({ id, first_name, last_name, display_name, username }: Row): Row => ({ id, first_name, last_name, display_name, username });
+
+/**
+ * Referrals the user took part in (wave-3 §3), as the user sees them: the user's role, the status and dates. The
+ * other people's ids and the friend's qualifying payment stay out; the pair is in `pairs` when it is the user's.
+ */
+export function referralRows(rows: Row[], userId: string): Row[] {
+  return rows.map((row) => ({
+    id: row.id,
+    kind: row.kind,
+    my_role: row.referrer_id === userId ? "referrer" : row.referee_id === userId ? "referee" : "trainer",
+    coaching_id: row.referee_id === userId || row.trainer_id === userId ? row.coaching_id : null,
+    status: row.status,
+    qualified_at: row.qualified_at,
+    voided_at: row.voided_at,
+    void_reason: row.void_reason,
+    created_at: row.created_at,
+  }));
+}
+
+/**
+ * Delegations the user gave or took (wave-3 §1): the user's role, the other trainer's name as the app shows it,
+ * scopes and dates. The invite hash is a secret and the other trainer's id stays out.
+ */
+export function delegationRows(rows: Row[], userId: string, names: Map<unknown, Row>): Row[] {
+  return rows.map((row) => {
+    const owner = row.owner_trainer_id === userId;
+    const other = names.get(owner ? row.delegate_trainer_id : row.owner_trainer_id);
+    return {
+      id: row.id,
+      my_role: owner ? "owner" : "delegate",
+      other_trainer: other ? { first_name: other.first_name, last_name: other.last_name, display_name: other.display_name } : null,
+      kind: row.kind,
+      session_id: row.session_id,
+      scopes: row.scopes,
+      all_clients: row.all_clients,
+      starts_at: row.starts_at,
+      ends_at: row.ends_at,
+      status: row.status,
+      accepted_at: row.accepted_at,
+      revoked_at: row.revoked_at,
+      created_at: row.created_at,
+    };
+  });
+}
+
+/** A bonus of the user's, without the beneficiary column: that is the user. */
+function withoutBeneficiary(row: Row): Row {
+  const copy = { ...row };
+  delete copy.beneficiary_id;
+  return copy;
+}
+
+/** Check-ins (wave-3 §5) without who recorded them, which may be a substitute trainer: only whether it was the user. */
+export function checkInRows(rows: Row[], userId: string): Row[] {
+  return rows.map(({ recorded_by, ...row }) => ({ ...row, recorded_by_me: recorded_by === userId }));
+}
+
 /** The user's tables, by file name. Secrets (calendar feed tokens) and delivery logs stay out. */
 export async function collectExport(admin: Admin, userId: string): Promise<Record<string, Row[]>> {
   const db = admin as unknown as Db;
@@ -105,6 +164,23 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
     mine("workout_week_goals", "client_id"),
     mine("challenge_participants", "user_id"),
   ]);
+  // Wave 3: referrals and bonuses (§3), delegations (§1), story cards (§4; the monthly report itself is worked out on
+  // read), QR check-ins (§5). Rows are cut to what the user sees in the app: no other people's ids or contacts.
+  const [referrals, bonuses, referralOffers, trainerReferralCode, delegations, storyCards, checkIns] = await Promise.all([
+    all(db, "referrals", (query) => query.or(`referrer_id.eq.${userId},referee_id.eq.${userId},trainer_id.eq.${userId}`)),
+    mine("bonuses", "beneficiary_id").then((rows) => rows.map(withoutBeneficiary)),
+    mine("referral_offers", "trainer_id"),
+    mine("trainer_referral_codes", "trainer_id"),
+    either("delegations", "owner_trainer_id", "delegate_trainer_id"),
+    mine("story_cards", "user_id"),
+    either("check_ins", "client_id", "trainer_id"),
+  ]);
+  const delegationTrainers = await byIds(
+    db,
+    "profiles",
+    "id",
+    delegations.flatMap((row) => [row.owner_trainer_id, row.delegate_trainer_id]).filter((id): id is string => typeof id === "string" && id !== userId),
+  );
 
   const [pairs, bookings, trainerSessions, passes, payments, ledger, moneyEvents] = await Promise.all([
     either("coachings", "client_id", "trainer_id"),
@@ -130,6 +206,10 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
     clientNotes,
     trainerMeta,
     milestones,
+    homework,
+    referralCodes,
+    assistantBlocks,
+    delegationClients,
     logExercises,
     people,
     trainer,
@@ -154,11 +234,14 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
     byIds(db, "coaching_notes", "coaching_id", ids(asClient)).then((rows) => rows.filter((row) => row.visible_to_client === true)),
     byIds(db, "coaching_trainer_meta", "coaching_id", ids(asTrainer)),
     byIds(db, "milestones", "coaching_id", ids(pairs)),
+    // Home tasks (wave-2 §10) of every pair, set by the user as a trainer or given to the user as a client.
+    byIds(db, "homework", "coaching_id", ids(pairs)),
+    byIds(db, "referral_codes", "coaching_id", ids(asClient)),
+    byIds(db, "assistant_progress_blocks", "coaching_id", ids(asClient)),
+    byIds(db, "delegation_clients", "delegation_id", ids(delegations.filter((row) => row.owner_trainer_id === userId))),
     byIds(db, "workout_log_exercises", "log_id", ids(logs)),
     // Names of the other side of each pair, as the app shows them; nothing else about them.
-    byIds(db, "profiles", "id", partners).then((rows) =>
-      rows.map(({ id, first_name, last_name, display_name, username }) => ({ id, first_name, last_name, display_name, username })),
-    ),
+    byIds(db, "profiles", "id", partners).then((rows) => rows.map(nameOnly)),
     mine("trainer_profiles", "user_id"),
     mine("trainer_certificates", "trainer_id"),
     mine("trainer_verifications", "trainer_id"),
@@ -174,10 +257,12 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
     mine("exercises", "owner_id"),
   ]);
 
-  const [sets, weekItems, templateItems] = await Promise.all([
+  const [sets, weekItems, templateItems, homeworkOccurrences, homeworkExercises] = await Promise.all([
     byIds(db, "workout_sets", "log_exercise_id", ids(logExercises)),
     byIds(db, "week_template_items", "template_id", ids(weekTemplates)),
     byIds(db, "workout_template_items", "template_id", ids(templates)),
+    byIds(db, "homework_occurrences", "homework_id", ids(homework)),
+    byIds(db, "homework_exercises", "homework_id", ids(homework)),
   ]);
 
   return {
@@ -202,6 +287,19 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
     activity,
     badges,
     workout_week_goal: weekGoal,
+    homework,
+    homework_occurrences: homeworkOccurrences,
+    homework_exercises: homeworkExercises,
+    referral_codes: referralCodes,
+    referrals: referralRows(referrals, userId),
+    bonuses,
+    referral_offers: referralOffers,
+    trainer_referral_code: trainerReferralCode,
+    delegations: delegationRows(delegations, userId, new Map(delegationTrainers.map((row) => [row.id, row]))),
+    delegation_clients: delegationClients,
+    assistant_progress_blocks: assistantBlocks,
+    story_cards: storyCards,
+    check_ins: checkInRows(checkIns, userId),
     challenges,
     personal_records: records,
     workout_logs: logs,

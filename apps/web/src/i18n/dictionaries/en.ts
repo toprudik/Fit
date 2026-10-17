@@ -1474,6 +1474,13 @@ export const en: Dictionary = {
     goalLabel: "Goal",
     goals: { lose: "Lose weight", maintain: "Keep weight", gain: "Gain mass" },
     goalNone: "No goal yet",
+    goalPicker: {
+      text: "Your target is worked out for it. You can change it any time.",
+      saved: "Goal saved",
+      failed: "Couldn't save the goal. Please try again.",
+      recalculate: "Your goal changed. Work out the target again below, and the new one applies once you save it.",
+      trainerKeeps: "Your trainer {name} set the target, so it stays. They'll hear about the new goal.",
+    },
     target: {
       title: "Daily target",
       kcal: "{value} kcal",
@@ -1516,7 +1523,7 @@ export const en: Dictionary = {
       tooLow: "The formula gives less than {min} kcal a day. Eating that little without supervision is not a good idea, talk it over with your trainer or a doctor.",
       failed: "That didn't work, try again",
       errors: {
-        goal: "Pick a goal",
+        goal: "Pick a goal above first",
         sex: "Pick the sex for the formula",
         birthDate: "Enter your date of birth",
         height: "Enter your height as a number, for example 170",
@@ -1593,7 +1600,8 @@ export const en: Dictionary = {
       setTarget: "Work out a target",
       otherTrainer: "Another trainer's target is active; only the client sees its numbers",
       macros: "P {protein} g, F {fat} g, C {carbs} g",
-      macrosOf: "P {protein} of {proteinTarget} g, F {fat} of {fatTarget} g, C {carbs} of {carbsTarget} g",
+      macroNames: { protein: "Protein", fat: "Fat", carbs: "Carbs" },
+      macroOf: "{value} of {target} g",
     },
     meals: { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack" },
     mealKcal: "{value} kcal",
@@ -1654,6 +1662,12 @@ export const en: Dictionary = {
       favorite: "Add to favorites",
       unfavorite: "Remove from favorites",
       added: "Added to {meal}",
+      noFacts: {
+        header: "No calories in the catalog",
+        row: "No calories, type them from the label",
+        brandRow: "{brand}, no calories",
+        footer: "Open the food and copy the calories from the label. It's saved to your foods.",
+      },
     },
     barcode: {
       scan: "Scan with the camera",
@@ -1666,6 +1680,8 @@ export const en: Dictionary = {
       create: "Create food",
       invalid: "8 to 14 digits",
       catalogDown: "The catalog is unavailable right now. Try later or create the food yourself.",
+      noFacts: "{name} is in the catalog, but without calories. Copy them from the label and the food is saved for you.",
+      typeKcal: "Add calories",
     },
     quick: {
       text: "When you'd rather not look the food up: just calories, the rest if you like.",
@@ -1702,6 +1718,7 @@ export const en: Dictionary = {
     },
     product: {
       text: "Calories and macros per 100 g, as on the label.",
+      draftText: "The catalog has no calories for this food. Copy them from the label; macros are optional.",
       name: "Name",
       brand: "Brand",
       optional: "Optional",
