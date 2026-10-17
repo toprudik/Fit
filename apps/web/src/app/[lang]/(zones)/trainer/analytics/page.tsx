@@ -99,14 +99,23 @@ function Cancels({ copy, data }: { copy: Copy; data: Data }) {
   );
 }
 
-function Money({ copy, locale, rows }: { copy: Copy; locale: Locale; rows: FinanceRow[] }) {
+/** The change against the previous period, shown only for a single currency: currencies are never added (§7 rule 4). */
+function moneyVersus(copy: Copy, rows: FinanceRow[], before: FinanceRow[], key: "earned_minor" | "received_minor"): string | undefined {
+  const used = new Set([...rows, ...before].filter((row) => row[key] !== 0).map((row) => row.currency));
+  if (used.size !== 1) return undefined;
+  const [currency] = used;
+  const sum = (list: FinanceRow[]) => list.filter((row) => row.currency === currency).reduce((total, row) => total + row[key], 0);
+  return versus(copy, sum(rows), sum(before));
+}
+
+function Money({ copy, locale, rows, before }: { copy: Copy; locale: Locale; rows: FinanceRow[]; before: FinanceRow[] }) {
   const earned = rows.map((row) => ({ currency: row.currency, minor: row.earned_minor }));
   const received = rows.map((row) => ({ currency: row.currency, minor: row.received_minor }));
   const average = rows.filter((row) => row.charges > 0).map((row) => ({ currency: row.currency, minor: Math.round(row.earned_minor / row.charges) }));
   return (
     <ListGroup header={copy.money.header} footer={copy.money.footer} headingLevel={2}>
-      <ListRow title={copy.money.earned} value={amounts(locale, earned, copy.money.none)} />
-      <ListRow title={copy.money.received} value={amounts(locale, received, copy.money.none)} />
+      <ListRow title={copy.money.earned} subtitle={moneyVersus(copy, rows, before, "earned_minor")} value={amounts(locale, earned, copy.money.none)} />
+      <ListRow title={copy.money.received} subtitle={moneyVersus(copy, rows, before, "received_minor")} value={amounts(locale, received, copy.money.none)} />
       <ListRow title={copy.money.average} value={amounts(locale, average, copy.money.none)} />
     </ListGroup>
   );
@@ -288,7 +297,7 @@ async function Analytics({ searchParams }: { searchParams: PageProps<"/[lang]/tr
       <Attendance copy={copy} data={data} />
       <Cancels copy={copy} data={data} />
       {data.finance ? (
-        <Money copy={copy} locale={locale} rows={data.finance.current} />
+        <Money copy={copy} locale={locale} rows={data.finance.current} before={data.finance.before} />
       ) : (
         <TierLock plan="trainer_pro" title={copy.money.lockTitle} description={copy.money.lockText} feature="trainer.finance" requested={access.requested} />
       )}
