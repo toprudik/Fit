@@ -11,6 +11,7 @@ import { reportPayment, withdrawReport } from "@/lib/passes/actions";
 import type { ClientPass } from "@/lib/passes/load";
 import { hapticSuccess, openExternalLink } from "@/lib/telegram/mini-app";
 import { cn } from "@/lib/utils";
+import { MoneyChanges } from "./money-changes";
 import { PassHistory, PassSummary } from "./pass-card";
 import { PaymentFields, type PaymentValues } from "./payment-fields";
 import { PaymentItem } from "./trainer-payments";
@@ -179,6 +180,7 @@ export function ClientPassDetail({ data }: { data: ClientPass }) {
       </section>
 
       <PassHistory entries={pass.history} timeZone={data.timeZone} headingLevel={2} />
+      <MoneyChanges changes={pass.changes} timeZone={data.timeZone} headingLevel={2} />
 
       <Sheet open={reporting} onOpenChange={setReporting} title={copy.reportTitle}>
         {reporting ? <ReportForm data={data} onDone={() => setReporting(false)} /> : null}

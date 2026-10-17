@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CalendarX } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { CheckInQr } from "@/components/check-in/check-in-qr";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { AttendanceMarks } from "@/components/team/team";
@@ -55,6 +56,8 @@ async function DelegatedSession({ params }: { params: PageProps<"/[lang]/trainer
     timeZone: session.timeZone,
   }).format(new Date(session.startsAt));
   const started = Date.parse(session.startsAt) <= requestTime();
+  // Check-in opens 30 minutes before the start (PRD wave-3 §5 rule 3); the page itself is gone once the session ends.
+  const checkInOpen = session.mode === "offline" && Date.parse(session.startsAt) - 30 * 60_000 <= requestTime();
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1 px-1">
@@ -62,6 +65,7 @@ async function DelegatedSession({ params }: { params: PageProps<"/[lang]/trainer
         {session.title ? <p className="text-callout">{when}</p> : null}
         <p className="text-callout text-ink-2">{[interpolate(copy.owner, { name: session.ownerName ?? "" }), session.location].filter(Boolean).join(", ")}</p>
       </div>
+      {checkInOpen ? <CheckInQr sessionId={session.id} timeZone={session.timeZone} /> : null}
       <ListGroup header={copy.participants} footer={started ? copy.chargeNote : copy.notStarted} headingLevel={2}>
         {session.participants.length === 0 ? <ListRow title={copy.empty} /> : null}
         {session.participants.map((person) => (
@@ -77,7 +81,10 @@ async function DelegatedSession({ params }: { params: PageProps<"/[lang]/trainer
   );
 }
 
-/** A session the caller runs as a substitute (PRD wave-3 §1): participants and attendance, until it ends (1.5). */
+/**
+ * A session the caller runs as a substitute (PRD wave-3 §1): the check-in QR (§5), participants and attendance,
+ * until it ends (1.5).
+ */
 export default async function DelegatedSessionPage(props: PageProps<"/[lang]/trainer/team/sessions/[sessionId]">) {
   const t = await getDictionary();
   return (
