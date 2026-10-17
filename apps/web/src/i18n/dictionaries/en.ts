@@ -2073,6 +2073,13 @@ export const en: Dictionary = {
       title: "Invite link",
       text: "Send the link to a trainer. Access starts once they accept it. The link works once.",
       shareText: "An invite to a DaFit team",
+      searchLabel: "Or find a trainer on DaFit",
+      searchHint: "Name or @username. You'll find verified trainers with a public page and the ones you've worked with on a team.",
+      noResults: "Nobody found",
+      invite: "Invite",
+      invited: "Invite sent to {name}. The link above no longer works.",
+      inviteExpired: "This invite was already accepted or has expired.",
+      unnamed: "Unnamed trainer",
     },
     substitute: {
       header: "Substitute",
@@ -4457,6 +4464,9 @@ export const en: Dictionary = {
     delegationAssistantAccepted: "{delegate} now helps you with your clients.",
     delegationDeclined: "The invite was declined. You can send a new link to another trainer.",
     delegationPending: "Nobody has taken the session {when} yet.",
+    delegationInviteSubstitute: "{owner} asks you to run their session {when}. See what they hand over, then accept or decline.",
+    delegationInviteAssistant: "{owner} invites you to their DaFit team as an assistant. See what you'd get access to, then accept or decline.",
+    openInvite: "View invite",
     openTeam: "Open team",
     openAccess: "Set up access",
     /** Wave-2 §3.12: payload { day, body, first_name, last_name, display_name } from add_food_comment. */
