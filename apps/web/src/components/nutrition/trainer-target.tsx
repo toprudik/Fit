@@ -1,18 +1,34 @@
 "use client";
 
 import { Pencil, Plus } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
 import { clearPairTarget, setPairTarget } from "@/lib/nutrition/actions";
-import { KCAL_MAX, KCAL_MIN, kcalOfMacros, macrosDisagree, minKcal, type CalcSex, type Macros } from "@/lib/nutrition/target";
+import {
+  KCAL_MAX,
+  KCAL_MIN,
+  gramsOfPercent,
+  kcalOfMacros,
+  macrosDisagree,
+  minKcal,
+  percentOfGrams,
+  type CalcSex,
+  type Macro,
+  type Macros,
+} from "@/lib/nutrition/target";
 import { formatValue } from "@/lib/progress/measurements";
 
-type Field = "kcal" | "protein" | "fat" | "carbs";
+type Field = "kcal" | Macro;
+type Unit = "g" | "pct";
+const MACROS = ["protein", "fat", "carbs"] as const satisfies readonly Macro[];
+const GRAMS_MAX: Record<Macro, number> = { protein: 1000, fat: 1000, carbs: 2000 };
+const gramsOf = (macros: Macros | null, macro: Macro) => macros?.[`${macro}G`] ?? null;
 
 const whole = (text: string, max: number): number | null | "invalid" => {
   const trimmed = text.trim();
@@ -23,8 +39,9 @@ const whole = (text: string, max: number): number | null | "invalid" => {
 };
 
 /**
- * "Задать норму" / "Изменить норму" on the client's "Питание" tab (wave-2 §2.11–2.12): kcal, optional macros with
- * a note when they disagree with the kcal by more than 5%, and a confirmation under 1200/1500 kcal.
+ * "Задать норму" / "Изменить норму" on the client's "Питание" tab (wave-2 §2.11–2.12): kcal, optional macros in
+ * grams or in % of the kcal with a note when they disagree with the kcal by more than 5%, and a confirmation under
+ * 1200/1500 kcal. Shares are saved as the grams they give.
  */
 export function TrainerTargetForm({ coachingId, current, sex }: { coachingId: string; current: Macros | null; sex: CalcSex | null }) {
   const { t, locale } = useI18n();
@@ -33,6 +50,10 @@ export function TrainerTargetForm({ coachingId, current, sex }: { coachingId: st
   const [low, setLow] = useState<Omit<Parameters<typeof setPairTarget>[0], "confirmLow"> | null>(null);
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [draft, setDraft] = useState<Macros | null>(current);
+  const [unit, setUnit] = useState<Unit>("g");
+  /** What the macro fields start from: refilled when the unit switches, so the numbers carry over. */
+  const [seed, setSeed] = useState<Record<Macro, number | null> | null>(null);
+  const form = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
 
   function send(input: Omit<Parameters<typeof setPairTarget>[0], "confirmLow">, confirmLow: boolean) {
@@ -52,20 +73,52 @@ export function TrainerTargetForm({ coachingId, current, sex }: { coachingId: st
     });
   }
 
-  function read(formData: FormData) {
-    const values = {
-      kcal: whole(String(formData.get("kcal") ?? ""), KCAL_MAX),
-      protein: whole(String(formData.get("protein") ?? ""), 1000),
-      fat: whole(String(formData.get("fat") ?? ""), 1000),
-      carbs: whole(String(formData.get("carbs") ?? ""), 2000),
+  /** The macro fields as grams: typed grams, or the grams the typed shares give for this kcal. */
+  function gramsFrom(formData: FormData, kcal: number | null, inUnit: Unit) {
+    const typed = Object.fromEntries(
+      MACROS.map((macro) => [macro, whole(String(formData.get(macro) ?? ""), inUnit === "pct" ? 100 : GRAMS_MAX[macro])]),
+    ) as Record<Macro, number | null | "invalid">;
+    const grams = (macro: Macro) => {
+      const value = typed[macro];
+      if (typeof value !== "number") return null;
+      return inUnit === "g" ? value : kcal ? gramsOfPercent(kcal, macro, value) : null;
     };
+    return { typed, proteinG: grams("protein"), fatG: grams("fat"), carbsG: grams("carbs") };
+  }
+
+  function read(formData: FormData) {
+    const kcal = whole(String(formData.get("kcal") ?? ""), KCAL_MAX);
+    const { typed, ...macros } = gramsFrom(formData, typeof kcal === "number" ? kcal : null, unit);
     const next: Partial<Record<Field, string>> = {};
-    if (typeof values.kcal !== "number" || values.kcal < KCAL_MIN) next.kcal = copy.errors.kcal;
-    for (const field of ["protein", "fat", "carbs"] as const) if (values[field] === "invalid") next[field] = copy.errors.grams;
+    if (typeof kcal !== "number" || kcal < KCAL_MIN) next.kcal = copy.errors.kcal;
+    for (const macro of MACROS) if (typed[macro] === "invalid") next[macro] = unit === "pct" ? copy.errors.percent : copy.errors.grams;
+    const shares = MACROS.reduce((sum, macro) => sum + (typeof typed[macro] === "number" ? typed[macro] : 0), 0);
+    if (unit === "pct" && !next.protein && !next.fat && !next.carbs && shares > 100) next.carbs = copy.errors.percentSum;
     setErrors(next);
-    if (Object.keys(next).length || typeof values.kcal !== "number") return null;
-    const grams = (value: number | null | "invalid") => (typeof value === "number" ? value : null);
-    return { kcal: values.kcal, proteinG: grams(values.protein), fatG: grams(values.fat), carbsG: grams(values.carbs) };
+    if (Object.keys(next).length || typeof kcal !== "number") return null;
+    return { kcal, ...macros };
+  }
+
+  /** Switches the macro fields between grams and %, carrying the typed numbers over at the current kcal. */
+  function switchUnit(next: Unit) {
+    const formData = form.current ? new FormData(form.current) : null;
+    if (formData) {
+      const kcal = whole(String(formData.get("kcal") ?? ""), KCAL_MAX);
+      const known = typeof kcal === "number" && kcal > 0 ? kcal : null;
+      const { typed, ...grams } = gramsFrom(formData, known, unit);
+      setSeed(
+        Object.fromEntries(
+          MACROS.map((macro) => {
+            const value = grams[`${macro}G`];
+            if (next === unit) return [macro, typeof typed[macro] === "number" ? typed[macro] : null];
+            if (next === "g") return [macro, value];
+            return [macro, value !== null && known !== null ? percentOfGrams(known, macro, value) : null];
+          }),
+        ) as Record<Macro, number | null>,
+      );
+    }
+    setErrors((errors) => ({ kcal: errors.kcal }));
+    setUnit(next);
   }
 
   function submit(formData: FormData) {
@@ -80,17 +133,29 @@ export function TrainerTargetForm({ coachingId, current, sex }: { coachingId: st
   }
 
   const mismatch = draft && macrosDisagree(draft) ? kcalOfMacros(draft.proteinG, draft.fatG, draft.carbsG) : null;
-  const field = (name: Field, label: string, unit: string, value: number | null | undefined) => (
+  const field = (name: Field, label: string, suffix: string, value: number | null | undefined, hint?: string) => (
     <TextField
+      key={`${name}-${name === "kcal" ? "" : unit}`}
       name={name}
       label={label}
-      suffix={unit}
+      suffix={suffix}
       inputMode="numeric"
       autoComplete="off"
       defaultValue={value == null ? undefined : String(value)}
+      hint={hint}
       error={errors[name]}
     />
   );
+  const macroField = (macro: Macro) => {
+    const grams = gramsOf(draft, macro);
+    return field(
+      macro,
+      copy[macro],
+      unit === "pct" ? "%" : copy.units.g,
+      seed ? seed[macro] : gramsOf(current, macro),
+      unit === "pct" && grams !== null ? interpolate(copy.gramsHint, { value: formatValue(locale, grams) }) : undefined,
+    );
+  };
 
   return (
     <>
@@ -100,6 +165,8 @@ export function TrainerTargetForm({ coachingId, current, sex }: { coachingId: st
         onClick={() => {
           setErrors({});
           setDraft(current);
+          setUnit("g");
+          setSeed(null);
           setOpen(true);
         }}
       >
@@ -107,6 +174,7 @@ export function TrainerTargetForm({ coachingId, current, sex }: { coachingId: st
       </Button>
       <Sheet open={open} onOpenChange={(next) => !pending && setOpen(next)} title={copy.formTitle} description={copy.formText}>
         <form
+          ref={form}
           onSubmit={(event) => {
             event.preventDefault();
             submit(new FormData(event.currentTarget));
@@ -114,20 +182,24 @@ export function TrainerTargetForm({ coachingId, current, sex }: { coachingId: st
           noValidate
           className="flex flex-col gap-4"
           onChange={(event) => {
-            const form = new FormData(event.currentTarget);
-            const number = (name: string) => {
-              const value = whole(String(form.get(name) ?? ""), 10000);
-              return typeof value === "number" ? value : null;
-            };
-            setDraft({ kcal: number("kcal") ?? 0, proteinG: number("protein"), fatG: number("fat"), carbsG: number("carbs") });
+            const formData = new FormData(event.currentTarget);
+            const kcal = whole(String(formData.get("kcal") ?? ""), KCAL_MAX);
+            const known = typeof kcal === "number" ? kcal : 0;
+            const { proteinG, fatG, carbsG } = gramsFrom(formData, known, unit);
+            setDraft({ kcal: known, proteinG, fatG, carbsG });
           }}
         >
           {field("kcal", copy.kcal, copy.units.kcal, current?.kcal)}
-          <div className="grid grid-cols-3 gap-3">
-            {field("protein", copy.protein, copy.units.g, current?.proteinG)}
-            {field("fat", copy.fat, copy.units.g, current?.fatG)}
-            {field("carbs", copy.carbs, copy.units.g, current?.carbsG)}
-          </div>
+          <SegmentedControl
+            label={copy.macrosIn}
+            value={unit}
+            onValueChange={switchUnit}
+            options={[
+              { value: "g", label: copy.inGrams },
+              { value: "pct", label: copy.inPercent },
+            ]}
+          />
+          <div className="grid grid-cols-3 gap-3">{MACROS.map(macroField)}</div>
           {mismatch !== null ? (
             <p role="status" className="px-1 text-footnote text-ink-2">
               {interpolate(copy.mismatch, { kcal: formatValue(locale, mismatch) })}

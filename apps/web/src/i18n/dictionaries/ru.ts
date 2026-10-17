@@ -1014,6 +1014,16 @@ export const ru = {
       voidReason: "Причина: {reason}",
       confirm: "Подтвердить",
       void: "Аннулировать",
+      correct: "Исправить",
+      corrected: "Оплата исправлена",
+      /** "Исправить" a confirmed payment: the old one is voided with the reason, the new one takes its place. */
+      correctForm: {
+        title: "Исправить оплату",
+        text: "Старая запись останется в истории с причиной, вместо неё появится новая.",
+        reason: "Что исправили",
+        reasonError: "Напиши, что исправили",
+        submit: "Сохранить",
+      },
       confirmed: "Оплата подтверждена",
       voided: "Оплата аннулирована",
       changed: "Клиент изменил сообщение об оплате. Проверь сумму ещё раз.",
@@ -1564,6 +1574,10 @@ export const ru = {
       fat: "Жиры",
       carbs: "Углеводы",
       units: { kcal: "ккал", g: "г" },
+      macrosIn: "Единицы БЖУ",
+      inGrams: "Граммы",
+      inPercent: "Проценты",
+      gramsHint: "{value} г",
       mismatch: "По БЖУ выходит {kcal} ккал, это расходится с нормой больше чем на 5%.",
       lowTitle: "Норма ниже {min} ккал",
       lowText: "Такую норму держат только под наблюдением. Точно сохранить?",
@@ -1571,7 +1585,7 @@ export const ru = {
       save: "Сохранить",
       saved: "Норма сохранена",
       failed: "Не получилось, попробуй ещё раз",
-      errors: { kcal: "Целое число от 500 до 10 000", grams: "Целое число граммов" },
+      errors: { kcal: "Целое число от 500 до 10 000", grams: "Целое число граммов", percent: "Целое число от 0 до 100", percentSum: "Вместе больше 100%" },
     },
   },
   /** Nutrition adherence (wave-2 §5): the trainer's «Питание» list and the card on the pair's tab. */
@@ -3428,6 +3442,9 @@ export const ru = {
         homework_done: "Клиент выполнил задание",
         badge: "Достижения",
         challenge: "Челленджи",
+        pass_ending: "Абонемент заканчивается",
+        debt: "Занятие ушло в долг",
+        client_pass_ending: "Абонемент клиента заканчивается",
       },
     },
     saved: "Сохранено",
@@ -4235,6 +4252,13 @@ export const ru = {
     text: "Возможно, ссылка устарела.",
     action: "Открыть главный экран",
   },
+  /** The error boundaries: app/[lang]/error.tsx and app/global-error.tsx (PRD wave-1 §2.13 rule 1). */
+  errorPage: {
+    title: "Что-то пошло не так",
+    text: "Попробуй ещё раз. Если ошибка повторится, напиши нам, и мы разберёмся.",
+    retry: "Попробовать ещё раз",
+    feedback: "Обратная связь",
+  },
   /** Bot messages from the notification outbox, in the recipient's DaFit language (ADR 0006, Q66). */
   botMessages: {
     open: "Открыть DaFit",
@@ -4347,7 +4371,22 @@ export const ru = {
     chargeWaived: "Тренер {name}: списание за занятие {when} прощено. Занятие вернулось в «{pass}», осталось {remaining}.",
     chargeWaivedDebt: "Тренер {name}: долг за занятие {when} прощён. Ещё в долге: {debt}.",
     chargeWaivedNoDebt: "Тренер {name}: долг за занятие {when} прощён. Долга больше нет.",
+    /** К10 to the client and Т6 to the trainer: payload { pass_id, coaching_id, title, condition, available, expires_at } from private.queue_pass_ending. */
+    passEndingLow: "Тренер {name}: в абонементе «{pass}» осталось {left}.",
+    passEndingBooked: "Тренер {name}: все занятия абонемента «{pass}» уже расписаны по записям.",
+    passEndingExpiry: "Тренер {name}: абонемент «{pass}» заканчивается {date}.",
+    clientPassEndingLow: "Клиент {name}: в абонементе «{pass}» осталось {left}.",
+    clientPassEndingBooked: "Клиент {name}: все занятия абонемента «{pass}» уже расписаны по записям.",
+    clientPassEndingExpiry: "Клиент {name}: абонемент «{pass}» заканчивается {date}.",
+    passSessions: { one: "{count} занятие", few: "{count} занятия", many: "{count} занятий", other: "{count} занятия" } as PluralForms,
+    pay: "Оплатить",
+    writeToTrainer: "Написать тренеру",
+    writeToClient: "Написать клиенту",
     openPass: "Открыть абонемент",
+    /** К11: payload { coaching_id, charge_id, starts_at, amount_minor, currency, debt_sessions, debt_amounts, username, payment_url?, first_name, last_name } from private.notify_debt. */
+    debt: "Тренер {name}: занятие {when} прошло без абонемента и ушло в долг. Всего в долге: {debt}.",
+    debtWithAmount: "Тренер {name}: занятие {when} прошло без абонемента и ушло в долг. Всего в долге: {debt}, это {amount}.",
+    openPasses: "Открыть абонементы",
     /** Т8: the first intake of a client, to the trainers it is shown to. */
     intakeSubmitted: "Новая анкета: {name}.",
     intakeSubmittedFlagged: "Новая анкета: {name}. В PAR-Q есть ответ «да», посмотри анкету до тренировки.",
