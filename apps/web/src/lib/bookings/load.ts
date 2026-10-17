@@ -163,6 +163,10 @@ export type ClientBooking = {
   id: string;
   status: BookingStatus;
   sessionStatus: "scheduled" | "completed" | "cancelled";
+  /** Personal, group or trial: only a personal booking can be moved (PRD 2.6.5). */
+  kind: "personal" | "group" | "trial";
+  /** How the booking was made; a trial booking cannot be moved. */
+  source: string;
   startsAt: string;
   endsAt: string;
   mode: "offline" | "online";
@@ -180,7 +184,7 @@ export async function loadClientBookings(owner: ScheduleOwner, bookingId?: strin
   const { supabase, userId } = owner;
   let query = supabase
     .from("bookings")
-    .select("id, status, session_id, trainer_id, cancel_reason")
+    .select("id, status, source, session_id, trainer_id, cancel_reason")
     .eq("client_id", userId)
     .order("created_at", { ascending: false })
     .limit(300);
@@ -192,7 +196,7 @@ export async function loadClientBookings(owner: ScheduleOwner, bookingId?: strin
   const [sessions, people] = await Promise.all([
     supabase
       .from("sessions")
-      .select("id, status, starts_at, ends_at, mode, title, location_id, cancel_reason")
+      .select("id, status, kind, starts_at, ends_at, mode, title, location_id, cancel_reason")
       .in("id", [...new Set(bookings.map((booking) => booking.session_id))]),
     trainerPeople(
       supabase,
@@ -211,6 +215,8 @@ export async function loadClientBookings(owner: ScheduleOwner, bookingId?: strin
           id: booking.id,
           status: booking.status,
           sessionStatus: session.status,
+          kind: session.kind,
+          source: booking.source,
           startsAt: session.starts_at,
           endsAt: session.ends_at,
           mode: session.mode,

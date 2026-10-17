@@ -2495,6 +2495,9 @@ isOneToOne: false
 "calendar_feed":
 { Args: { "p_token": string }; Returns: Json
                            },
+"cancel_my_booking":
+{ Args: { "p_booking_id": string,"p_late"?: boolean,"p_reason"?: string }; Returns: Database["public"]['Enums']["booking_status"]
+                           },
 "cancel_pass":
 { Args: { "p_pass_id": string,"p_reason": string }; Returns: undefined
                            },
@@ -2652,6 +2655,16 @@ isOneToOne: false
 "request_access":
 { Args: { "p_feature"?: string,"p_plan_code": string }; Returns: string
                            },
+"reschedule_my_booking":
+{ Args: { "p_booking_id": string,"p_slot_id": string }; Returns: {
+              "booking_id": string,"status": Database["public"]['Enums']["booking_status"]
+            }[]
+                           },
+"reschedule_preview":
+{ Args: { "p_booking_id": string,"p_slot_id": string }; Returns: {
+              "confirmed": boolean,"pass_title": string,"sessions_left": number
+            }[]
+                           },
 "resolve_client_invite":
 { Args: { "p_code"?: string,"p_token"?: string }; Returns: {
               "coaching_id": string,"first_name": string,"headline": string,"last_name": string,"photo_url": string,"specialties": (string)[],"status": string,"trainer_id": string,"verified": boolean,"works_offline": boolean,"works_online": boolean
@@ -2668,6 +2681,9 @@ isOneToOne: false
                            },
 "save_workout_log":
 { Args: { "p_log": Json }; Returns: string
+                           },
+"save_workout_template":
+{ Args: { "p_template": Json }; Returns: string
                            },
 "search_exercises":
 { Args: { "p_category"?: string,"p_limit"?: number,"p_locale"?: Database["public"]['Enums']["app_locale"],"p_offset"?: number,"p_own_only"?: boolean,"p_query"?: string }; Returns: {

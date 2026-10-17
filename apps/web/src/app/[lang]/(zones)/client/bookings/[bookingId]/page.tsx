@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { CalendarX, Clock, Link2, MapPin, MessageCircle, UserRound } from "lucide-react";
+import { CalendarClock, CalendarX, Clock, Link2, MapPin, MessageCircle, UserRound } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { CancelBooking } from "@/components/bookings/cancel-booking";
 import { WithdrawRequest } from "@/components/bookings/withdraw-request";
 import { ScheduleSignIn } from "@/components/schedule/sign-in-state";
 import { Screen } from "@/components/shell/screen";
@@ -64,7 +65,13 @@ async function BookingDetails({ params }: { params: PageProps<"/[lang]/client/bo
     minute: "2-digit",
     timeZone: owner.timeZone,
   });
-  const ahead = booking.startsAt > now();
+  const at = now();
+  const ahead = booking.startsAt > at;
+  const live = booking.status === "confirmed" && ahead;
+  const free = live && booking.freeCancelUntil !== null && booking.freeCancelUntil >= at;
+  const deadlineText = booking.freeCancelUntil ? deadline.format(new Date(booking.freeCancelUntil)) : null;
+  // A trial or group booking is cancelled, not moved (PRD 2.6.5).
+  const movable = free && booking.kind === "personal" && booking.source !== "trial";
   const place = t.schedule.sessionPage;
 
   return (
@@ -114,14 +121,21 @@ async function BookingDetails({ params }: { params: PageProps<"/[lang]/client/bo
         </ListGroup>
       ) : null}
 
-      {booking.freeCancelUntil && ahead ? (
-        <p className="px-1 text-subhead text-ink-2">
-          {interpolate(copy.deadline, { date: deadline.format(new Date(booking.freeCancelUntil)) })}
-        </p>
+      {live && deadlineText ? (
+        <p className="px-1 text-subhead text-ink-2">{free ? interpolate(copy.deadline, { date: deadlineText }) : copy.lateText}</p>
       ) : null}
 
       <div className="flex flex-col gap-2">
         {booking.status === "requested" && ahead ? <WithdrawRequest bookingId={booking.id} /> : null}
+        {movable ? (
+          <Button asChild variant="secondary" block>
+            <Link href={`/client/bookings/${booking.id}/reschedule`}>
+              <CalendarClock aria-hidden size={18} />
+              {copy.reschedule}
+            </Link>
+          </Button>
+        ) : null}
+        {live ? <CancelBooking bookingId={booking.id} late={!free} deadline={deadlineText} /> : null}
         {booking.trainerUsername ? (
           <Button asChild variant="secondary" block>
             <a href={`https://t.me/${booking.trainerUsername}`} target="_blank" rel="noreferrer">
@@ -135,7 +149,10 @@ async function BookingDetails({ params }: { params: PageProps<"/[lang]/client/bo
   );
 }
 
-/** "Запись" (screens.md /client/bookings/[bookingId]): when, where, with whom; a request can be taken back. */
+/**
+ * "Запись" (screens.md /client/bookings/[bookingId]): when, where, with whom; a request can be taken back, a confirmed
+ * booking moved or cancelled (PRD 2.6.5).
+ */
 export default async function BookingPage(props: PageProps<"/[lang]/client/bookings/[bookingId]">) {
   const t = await getDictionary();
   return (
