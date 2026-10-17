@@ -71,7 +71,7 @@ def test_startup_registers_the_webhook(settings: Settings) -> None:
     (call,) = session.of(SetWebhook)
     assert call.url == "https://bot.example/telegram/webhook"
     assert call.secret_token == webhook_secret()
-    assert call.allowed_updates == ["message"]
+    assert call.allowed_updates == ["callback_query", "message"]
     assert call.max_connections == 10
     assert call.drop_pending_updates is False
     assert "SetMyName" in session.names()

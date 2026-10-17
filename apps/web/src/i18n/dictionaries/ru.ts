@@ -4291,6 +4291,16 @@ export const ru = {
     feedback: "Обратная связь",
   },
   /** Bot messages from the notification outbox, in the recipient's DaFit language (ADR 0006, Q66). */
+  botActions: {
+    bookingConfirmed: "Запись подтверждена. Клиенту придёт сообщение.",
+    bookingConfirmedLine: "Подтверждено.",
+    bookingDeclined: "Запрос отклонён. Клиенту придёт сообщение.",
+    bookingDeclinedLine: "Отклонено.",
+    requestClosed: "Этот запрос уже не ждёт ответа.",
+    requestClosedLine: "Запрос уже закрыт.",
+    noAccount: "Войди в DaFit, чтобы отвечать на запросы.",
+    failed: "Не получилось. Ответь на запрос в приложении.",
+  },
   botMessages: {
     open: "Открыть DaFit",
     /** AUTH-7: the test message after the user allows the bot to write. */
@@ -4515,6 +4525,8 @@ export const ru = {
     requestDeclinedReason: "Запрос к тренеру {name} на {when} отклонён. Причина: «{reason}».",
     requestExpired: "Запрос к тренеру {name} на {when} остался без ответа, запись не состоялась.",
     answerRequest: "Ответить на запрос",
+    confirmRequest: "Подтвердить",
+    declineRequest: "Отклонить",
     openSchedule: "Открыть расписание",
     waiveCharge: "Простить",
     openBooking: "Открыть запись",
