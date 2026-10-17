@@ -1,4 +1,4 @@
--- Monthly report, migration 20261017091347_monthly_reports.sql (PRD wave-3 §4): the client's finished month in
+-- Monthly report, migration 20261017101247_monthly_reports.sql (PRD wave-3 §4): the client's finished month in
 -- numbers, the story cards and the message on the 1st.
 begin;
 \ir _helpers.psql
