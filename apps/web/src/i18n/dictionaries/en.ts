@@ -1586,6 +1586,18 @@ export const en: Dictionary = {
       saved: "Target saved",
       failed: "That didn't work, try again",
       errors: { kcal: "A whole number from 500 to 10,000", grams: "A whole number of grams", percent: "A whole number from 0 to 100", percentSum: "Adds up to more than 100%" },
+      /** Water and steps goals of the client (wave-2 §4 rules 5 and 7). */
+      activity: {
+        water: "Water a day",
+        steps: "Steps a day",
+        ml: "ml",
+        stepsUnit: "steps",
+        waterHint: "If empty, 30 ml per kg of weight",
+        stepsHint: "If empty, 8,000",
+        waterLine: "Water: {value} ml a day",
+        stepsLine: "{value} steps a day",
+        errors: { water: "A whole number up to 10,000", steps: "A whole number up to 100,000" },
+      },
     },
   },
   /** Nutrition adherence (wave-2 §5): the trainer's «Питание» list and the card on the pair's tab. */

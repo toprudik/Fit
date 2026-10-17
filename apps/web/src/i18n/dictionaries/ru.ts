@@ -1595,6 +1595,18 @@ export const ru = {
       saved: "Норма сохранена",
       failed: "Не получилось, попробуй ещё раз",
       errors: { kcal: "Целое число от 500 до 10 000", grams: "Целое число граммов", percent: "Целое число от 0 до 100", percentSum: "Вместе больше 100%" },
+      /** Water and steps goals of the client (wave-2 §4 rules 5 and 7). */
+      activity: {
+        water: "Вода в день",
+        steps: "Шаги в день",
+        ml: "мл",
+        stepsUnit: "шагов",
+        waterHint: "Если пусто, 30 мл на кг веса",
+        stepsHint: "Если пусто, 8000",
+        waterLine: "Вода {value} мл в день",
+        stepsLine: "{value} шагов в день",
+        errors: { water: "Целое число до 10 000", steps: "Целое число до 100 000" },
+      },
     },
   },
   /** Nutrition adherence (wave-2 §5): the trainer's «Питание» list and the card on the pair's tab. */
