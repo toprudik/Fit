@@ -88,6 +88,15 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
     either("nutrition_targets", "client_id", "set_by"),
   ]);
 
+  // Food diary (wave-2 §3): own products and dishes, favorites, entries, and day comments to or by the user.
+  const [ownFoods, foodFavorites, foodEntries, foodComments] = await Promise.all([
+    mine("foods", "owner_id"),
+    mine("food_favorites", "user_id"),
+    mine("food_diary_entries", "client_id"),
+    either("food_day_comments", "client_id", "author_id"),
+  ]);
+  const dishItems = await byIds(db, "food_dish_items", "dish_id", ids(ownFoods.filter((food) => food.kind === "dish")));
+
   const [pairs, bookings, trainerSessions, passes, payments, ledger, moneyEvents] = await Promise.all([
     either("coachings", "client_id", "trainer_id"),
     either("bookings", "client_id", "trainer_id"),
@@ -176,6 +185,11 @@ export async function collectExport(admin: Admin, userId: string): Promise<Recor
     goals,
     body_profile: bodyProfile,
     nutrition_targets: targets,
+    foods: ownFoods,
+    food_dish_items: dishItems,
+    food_favorites: foodFavorites,
+    food_diary: foodEntries,
+    food_day_comments: foodComments,
     personal_records: records,
     workout_logs: logs,
     workout_log_exercises: logExercises,

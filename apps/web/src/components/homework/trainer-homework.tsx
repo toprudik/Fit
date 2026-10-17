@@ -21,7 +21,8 @@ export const STATE_TONE: Record<OccurrenceState, "success" | "danger" | "neutral
  * that is not archived, the state of each one's current deadline and the share done over 30 days (10-6).
  */
 export async function TrainerHomework({ coachingId }: { coachingId: string }) {
-  const [t, locale, pair, loaded] = await Promise.all([getDictionary(), getLocale(), loadHomeworkPair(coachingId), loadPairHomework(coachingId)]);
+  const [t, locale] = await Promise.all([getDictionary(), getLocale()]);
+  const [pair, loaded] = await Promise.all([loadHomeworkPair(coachingId), loadPairHomework(coachingId, locale)]);
   if (!pair?.viewerIsTrainer || !loaded) return null;
   const copy = t.homework;
   const active = loaded.homework.filter((h) => !h.archived);

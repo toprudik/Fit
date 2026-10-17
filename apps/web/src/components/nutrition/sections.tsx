@@ -8,9 +8,11 @@ import { formatChange, formatValue } from "@/lib/progress/measurements";
 import { NutritionCalculator } from "./calculator";
 import { TargetCard } from "./target-card";
 import { TargetChoice } from "./target-choice";
+import { TARGET_PATH } from "./paths";
+import { TrainerFoodDay } from "./trainer-food-day";
 import { ClearTargetButton, TrainerTargetForm } from "./trainer-target";
 
-export const TARGET_PATH = "/client/diary/food/target";
+export { TARGET_PATH } from "./paths";
 
 /** A new weight this far from the one of the calculation suggests working the target out again (§2.9). */
 const WEIGHT_DRIFT_KG = 2;
@@ -74,8 +76,8 @@ export async function ClientNutritionEntry() {
   );
 }
 
-/** "Питание" on the trainer's client card: the client's goal, the trainer's own target and whose is active. */
-export async function TrainerNutrition({ coachingId }: { coachingId: string }) {
+/** "Питание" on the trainer's client card: the goal, the trainer's own target, whose is active, and the diary. */
+export async function TrainerNutrition({ coachingId, day }: { coachingId: string; day?: string }) {
   const [t, locale, nutrition] = await Promise.all([getDictionary(), getLocale(), loadPairNutrition(coachingId)]);
   const copy = t.nutrition.trainer;
   if (!nutrition || nutrition.state === "closed") {
@@ -103,6 +105,7 @@ export async function TrainerNutrition({ coachingId }: { coachingId: string }) {
       {nutrition.calculator ? (
         <TargetCard t={t} locale={locale} macros={nutrition.calculator} heading={copy.calculator} />
       ) : null}
+      <TrainerFoodDay coachingId={coachingId} day={day} />
     </div>
   );
 }

@@ -11,7 +11,8 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 async function PairFromParams({ params, tab, searchParams }: { params: Promise<{ coachingId: string }>; tab: PairTab; searchParams?: SearchParams }) {
   const [{ coachingId }, search] = await Promise.all([params, searchParams]);
   const action = typeof search?.action === "string" ? search.action : undefined;
-  return <TrainerPair coachingId={coachingId} tab={tab} action={action} />;
+  const day = typeof search?.day === "string" ? search.day : undefined;
+  return <TrainerPair coachingId={coachingId} tab={tab} action={action} day={day} />;
 }
 
 async function ListFromParams({ params }: { params: Promise<{ coachingId: string }> }) {
@@ -30,7 +31,7 @@ export async function TrainerPairPage({
 }: {
   params: Promise<{ coachingId: string }>;
   tab: PairTab;
-  /** "?action=new" opens "Отметить оплату" on the payments tab (the t_pay_ link). */
+  /** "?action=new" opens "Отметить оплату" on the payments tab (the t_pay_ link); "?day=" picks the food diary day. */
   searchParams?: SearchParams;
 }) {
   const t = await getDictionary();

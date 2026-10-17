@@ -597,6 +597,19 @@ describe("goal_changed", () => {
   });
 });
 
+describe("trainer_comment", () => {
+  it("quotes the comment and opens that day of the food diary (wave-2 §3.12)", () => {
+    const message = renderMessage(
+      { ...row, kind: "trainer_comment", payload: { day: "2026-10-17", body: "Добавь <белка>", first_name: "Анна", last_name: "Тренер" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe("Комментарий тренера Анна Тренер к твоему питанию за 17 октября: «Добавь &lt;белка&gt;»");
+    expect(message?.buttons).toEqual([
+      { text: "Открыть день", web_app: { url: "https://fit.example/client/diary/food?day=2026-10-17&source=trainer_comment" } },
+    ]);
+  });
+});
+
 describe("account messages", () => {
   const app = { appUrl: "https://fit.example", group: false };
 

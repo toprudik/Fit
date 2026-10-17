@@ -372,6 +372,20 @@ const templates: Partial<Record<NotificationType, Template>> = {
           : [];
     return { text: `${heading}\n${escapeHtml(String(payload.body ?? ""))}`, buttons };
   },
+  // Wave-2 §3.12: payload { comment_id, day, body, first_name, last_name, display_name } from add_food_comment;
+  // the button opens that day of the client's food diary (§3.7 acceptance).
+  trainer_comment: ({ t, locale, payload }) => {
+    const day = typeof payload.day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(payload.day) ? payload.day : null;
+    const name = (typeof payload.display_name === "string" && payload.display_name.trim()) || personName(payload) || t.unnamedTrainer;
+    return {
+      text: interpolateEscaped(t.trainerComment, {
+        name,
+        date: day ? diaryDay(locale, day) : "",
+        body: typeof payload.body === "string" ? payload.body : "",
+      }),
+      buttons: [{ text: t.openFoodDay, path: day ? `/client/diary/food?day=${day}` : "/client/diary/food" }],
+    };
+  },
   // Т8: payload { coaching_id, first_name, last_name, parq_flagged } from the intakes trigger.
   intake_submitted: ({ t, payload }) => ({
     text: interpolateEscaped(payload.parq_flagged === true ? t.intakeSubmittedFlagged : t.intakeSubmitted, {
@@ -580,6 +594,11 @@ function sessionTime(locale: Locale, value: Json | undefined, timeZone: string |
 /** A date like "16 ноября 2026" in the recipient's zone; empty when the payload has none. */
 function planDate(locale: Locale, value: Json | undefined, timeZone: string | null): string {
   return typeof value === "string" ? formatPlanDate(locale, value, timeZone) : "";
+}
+
+/** "17 октября": a diary day (YYYY-MM-DD) is a calendar date, so no time zone moves it. */
+function diaryDay(locale: Locale, day: string): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${day}T00:00:00Z`));
 }
 
 /** Where a session happens: the trainer's place by name, or in person or online. */

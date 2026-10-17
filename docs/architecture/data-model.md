@@ -220,7 +220,7 @@ create type public.share_category as enum ('nutrition', 'measurements', 'photos'
 | R57 | Индекс `access_requests` | Один открытый запрос на пользователя и тариф | старый индекс с приведением даты не компилировался |
 | R58 | `has_entitlement` | Публичная обёртка не отвечает о чужих пользователях (кроме админа); наследование требует клиента пары, живую пару и платный тариф тренера; `nutrition_advanced` наследуется с волны 2. Живая пара включает `trial`, как и везде ([Q63](../decisions.md#12-решения-по-поручению-владельца)) | старая версия позволяла узнать чужой тариф |
 | R59 | Админ и выдачи тарифов | `plan_grants` читают сам пользователь и админ | админке нужна история |
-| R60 | Столбцы поздних волн | Не созданы: `coachings.broadcasts_muted`, `primary_nutrition_group_id`, `churn_hidden_until`, `user_settings.leaderboard_opt_in`, `trainer_profiles.referred_by_trainer_id`, `locations.club_id`, `sessions.conducted_by`, `notification_outbox.broadcast_id`, `workout_logs.homework_occurrence_id` | nullable-столбец добавляется мгновенно |
+| R60 | Столбцы поздних волн | Не созданы: `coachings.broadcasts_muted`, `primary_nutrition_group_id`, `churn_hidden_until`, `user_settings.leaderboard_opt_in`, `trainer_profiles.referred_by_trainer_id`, `locations.club_id`, `sessions.conducted_by`, `notification_outbox.broadcast_id` | nullable-столбец добавляется мгновенно |
 | R61 | Свои упражнения ушедшего тренера | `owner_id on delete set null`; такое упражнение видно только через записи клиента | каскад блокировал удаление аккаунта |
 | R62 | Свои тренировки | `coaching_id is null and created_by = client_id`; записи удалённой пары видит только клиент | иначе записи старой пары видны другим тренерам |
 | R63 | Блокировка админом | `profiles.blocked_at`, `blocked_reason`, не выданы пользователям | ADM-7 |
@@ -1345,7 +1345,6 @@ create table public.workout_logs (
   client_id        uuid not null references public.profiles(id) on delete cascade,
   coaching_id      uuid,                       -- null = самостоятельная тренировка или пара удалена; FK (coaching_id, client_id) on delete set null
   booking_id       uuid unique,                -- FK (booking_id, coaching_id) к записи этой пары, on delete set null
-  -- W2: homework_occurrence_id uuid (FK на homework_occurrences) добавится вместе с домашними заданиями (R60).
   template_id      uuid references public.workout_templates(id) on delete set null,
   title            text check (char_length(title) <= 200),
   performed_at     timestamptz not null,
@@ -1920,9 +1919,9 @@ create index on public.homework (coaching_id);
 
 create table public.homework_exercises (
   homework_id  uuid references public.homework(id) on delete cascade,
-  position     smallint,
+  position     smallint check (position between 1 and 30),
   exercise_id  uuid not null references public.exercises(id),
-  prescription text,                            -- «3×12, 20 кг»
+  prescription text check (char_length(prescription) <= 200),   -- «3×12, 20 кг»
   primary key (homework_id, position)
 );
 
@@ -1932,10 +1931,9 @@ create table public.homework_occurrences (       -- каждая отметка;
   due_on         date not null,
   done_at        timestamptz,
   comment        text check (char_length(comment) <= 1000),
-  workout_log_id uuid references public.workout_logs(id) on delete set null,
+  workout_log_id uuid references public.workout_logs(id) on delete set null,   -- свой лог клиента с подходами (10.2)
   unique (homework_id, due_on)
 );
-alter table public.workout_logs add column homework_occurrence_id uuid references public.homework_occurrences(id) on delete set null;   -- R60
 
 create type public.review_status as enum ('published', 'disputed', 'hidden');
 create table public.reviews (
@@ -2518,7 +2516,7 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `broadcasts` | T; C: получатель (через outbox payload, не таблицу) | S-RPC `send_broadcast` (T) | T: `deleted_at` | никто |
 | `waitlist_entries` | C (свои + позиция через RPC); T; D[schedule] | S-RPC `join_waitlist` | S-RPC (`leave`, `accept`, `decline`, офферы cron) | никто |
 | `homework`, `homework_exercises` | C; T; D[homework] | T через S-RPC `save_homework` (живая пара, не карточка); D[homework] (В3) | T: S-RPC `save_homework`, `archive_homework`; триггер архивирует при завершении пары | никто (архив) |
-| `homework_occurrences` | C; T; D[homework] | S (развёртка повтора в `save_homework`) | C: S-RPC `mark_homework_done` (`done_at`, `comment`), `unmark_homework_done` (≤ 24 ч) | S (`save_homework` раскладывает открытые сроки заново) |
+| `homework_occurrences` | C; T; D[homework] | S (развёртка повтора в `save_homework`) | C: S-RPC `mark_homework_done` (`done_at`, `comment`, `workout_log_id` — только свой самостоятельный лог), `unmark_homework_done` (≤ 24 ч, лог остаётся) | S (`save_homework` раскладывает открытые сроки заново) |
 | `reviews` | автор; тренер; A (W4: публично только `published` и `publish_consent = true`, Q53) | C при `attended_count ≥ 3` (`with check`) | C: `rating`, `body`, `deleted_at`, `publish_consent`; T: `trainer_reply*`; A: `status`, `hidden_reason` через RPC | никто (soft) |
 | `review_revisions` | A | S (триггер) | никто | никто |
 | `churn_flags` | T | S (cron) | S | S |

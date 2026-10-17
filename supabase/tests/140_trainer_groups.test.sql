@@ -1,9 +1,9 @@
--- Trainer groups and broadcasts of migration 20261017041310_trainer_groups.sql (PRD wave-2 §6, 6.1-6.7): plan
+-- Trainer groups and broadcasts of migration 20261017082611_trainer_groups.sql (PRD wave-2 §6, 6.1-6.7): plan
 -- gates, the group template as a target source, the primary nutrition group, the goal warning, broadcasts with
 -- their stats, the daily limit, muting, and what other trainers and clients see.
 begin;
 \ir _helpers.psql
-select plan(34);
+select plan(36);
 
 select tests.create_trainer('trainer_a');
 select tests.create_trainer('trainer_b');
@@ -16,6 +16,8 @@ select tests.create_user('client_g');
 select tests.create_user('client_h');
 select tests.create_pair('trainer_a', c) from unnest(array['client_c', 'client_d', 'client_e', 'client_f', 'client_g']) c;
 select tests.create_pair('trainer_b', 'client_h');
+select tests.create_pair('trainer_b', 'client_d');
+select tests.set_share('trainer_b', 'client_d', 'nutrition', true);
 select tests.create_pair('trainer_free', 'client_h');
 select tests.set_share('trainer_a', c, 'nutrition', true) from unnest(array['client_c', 'client_d', 'client_e', 'client_f', 'client_g']) c;
 select tests.grant_plan('trainer_a', 'trainer_pro');
@@ -98,6 +100,13 @@ select throws_ok(format($$ select public.add_group_member(%L, %L) $$, :'group_lo
 select tests.authenticate_as('trainer_a');
 select throws_ok(format($$ select public.add_group_member(%L, %L) $$, :'group_lose', :'pair_bh'), 'P0001', 'pair_not_found',
   'trainer A cannot add a client of another trainer');
+-- A diary day (§3.9): the group template's numbers reach its own trainer only.
+select results_eq(format($$ select source::text, kcal, other_trainer from public.nutrition_target_on(%L, current_date) $$, tests.user_id('client_d')),
+  $$ values ('group', 1600, false) $$, 'trainer A sees the numbers of A''s group template on d''s day');
+select tests.authenticate_as('trainer_b');
+select results_eq(format($$ select source::text, kcal, other_trainer from public.nutrition_target_on(%L, current_date) $$, tests.user_id('client_d')),
+  $$ values ('group', null::integer, true) $$, 'trainer B gets only that another trainer''s group template is active');
+select tests.authenticate_as('trainer_a');
 select tests.authenticate_as('client_c');
 select is((select count(*)::int from public.group_members), 2, 'a client reads only own membership rows');
 select results_eq($$ select name from public.my_groups() order by name $$, $$ values ('Марафон'), ('Сброс веса') $$,
