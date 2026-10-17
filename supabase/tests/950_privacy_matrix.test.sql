@@ -121,6 +121,10 @@ begin
   insert into public.food_day_comments (client_id, coaching_id, author_id, local_date, body)
   values (v_client, v_pair, v_trainer, current_date, 'More protein');
   insert into public.referral_codes (coaching_id, code) values (v_pair, left(md5(v_pair::text), 10));
+  insert into public.delegations (owner_trainer_id, kind, scopes) values (v_trainer, 'assistant', '{workouts}')
+  returning id into v_group;
+  insert into public.delegation_clients (delegation_id, coaching_id) values (v_group, v_pair);
+  insert into public.assistant_progress_blocks (coaching_id) values (v_pair);
 end $$;
 select tests.fill_pair('trainer_a', 'client_c');
 select tests.fill_pair('trainer_b', 'client_c');
