@@ -1,4 +1,4 @@
--- Homework for delegates (migration 20261017125130_homework_delegates.sql, PRD wave-3 §1): an assistant with the
+-- Homework for delegates (migration 20261017140500_homework_delegates.sql, PRD wave-3 §1): an assistant with the
 -- 'homework' scope gives homework with the owner's exercises and archives it; without the scope, or as another
 -- trainer, save and archive answer not_found.
 begin;
