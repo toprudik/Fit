@@ -7,6 +7,7 @@ import { isPairId } from "@/lib/pairs/clients";
 import { formatSessionTime } from "@/lib/pairs/format";
 import { DEFAULT_TIME_ZONE, formatPlanDate, isPlanCode } from "@/lib/plans/plans";
 import { isButtonUrl } from "@/lib/groups/rules";
+import { isBadgeCode } from "@/lib/gamification/gamification";
 import { formatOffset } from "@/lib/reminders/offsets";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import type { InlineButton } from "./telegram";
@@ -108,6 +109,16 @@ const templates: Partial<Record<NotificationType, Template>> = {
     const link =
       typeof id === "number" && Number.isSafeInteger(id) ? `<a href="tg://user?id=${id}">${escapeHtml(name)}</a>` : escapeHtml(name);
     return { text: interpolate(escapeHtml(t.contactShared), { name: link, phone: escapeHtml(phone) }), buttons: [button] };
+  },
+  // Wave-3 §2.2-7: payload { badge } from private.award_badges, the code of the new badge. Its title and text
+  // come from the recipient's dictionary.
+  badge: ({ t, locale, payload }) => {
+    const items = dictionaries[locale].gamification.badges.items;
+    const item = isBadgeCode(payload.badge) ? items[payload.badge] : null;
+    return {
+      text: item ? interpolateEscaped(t.badge, { title: item.title, text: item.text }) : escapeHtml(t.badgeUnknown),
+      buttons: [{ text: t.openBadges, path: "/client/progress/badges" }],
+    };
   },
   // Д1: payload { coaching_id, homework_id, title, first_name, last_name } from queue_homework_reminders, the
   // trainer's name.
