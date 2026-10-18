@@ -15,6 +15,7 @@ import { interpolate } from "@/i18n/format";
 import { useHydrated } from "@/lib/use-hydrated";
 import { saveWizardStep, type WizardState, type WizardValues } from "@/lib/trainer-wizard/actions";
 import {
+  BOOKING_NOTICE_HOURS,
   CANCELLATION_HOURS,
   CURRENCIES,
   PAYMENT_LINK_KINDS,
@@ -305,27 +306,48 @@ function RegionFields({
   );
 }
 
-export function CancellationForm({ hours, edit }: { hours: number } & EditProp) {
+/** The offered option nearest to a saved value, so a setting made elsewhere still shows something close. */
+function nearest(options: readonly number[], saved: number): number {
+  return options.reduce((best, option) => (Math.abs(option - saved) < Math.abs(best - saved) ? option : best));
+}
+
+export function CancellationForm({ hours, noticeMinutes, edit }: { hours: number; noticeMinutes: number } & EditProp) {
   const { t } = useI18n();
   const copy = t.trainerWizard.steps.cancellation;
   const initial = (CANCELLATION_HOURS as readonly number[]).includes(hours) ? hours : 24;
   const [selected, setSelected] = useState(String(initial));
+  const [notice, setNotice] = useState(String(nearest(BOOKING_NOTICE_HOURS, noticeMinutes / 60)));
   return (
     <StepForm step="cancellation" edit={edit}>
       {() => (
-        <div className="flex flex-col gap-1.5">
-          <span aria-hidden className="px-1 text-footnote text-ink-2">
-            {copy.label}
-          </span>
-          <input type="hidden" name="hours" value={selected} />
-          <SegmentedControl
-            label={copy.label}
-            options={CANCELLATION_HOURS.map((option) => ({ value: String(option), label: interpolate(copy.hours, { hours: option }) }))}
-            value={selected}
-            onValueChange={setSelected}
-          />
-          <p className="px-1 text-footnote text-ink-2">{copy.hint}</p>
-        </div>
+        <>
+          <div className="flex flex-col gap-1.5">
+            <span aria-hidden className="px-1 text-footnote text-ink-2">
+              {copy.label}
+            </span>
+            <input type="hidden" name="hours" value={selected} />
+            <SegmentedControl
+              label={copy.label}
+              options={CANCELLATION_HOURS.map((option) => ({ value: String(option), label: interpolate(copy.hours, { hours: option }) }))}
+              value={selected}
+              onValueChange={setSelected}
+            />
+            <p className="px-1 text-footnote text-ink-2">{copy.hint}</p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span aria-hidden className="px-1 text-footnote text-ink-2">
+              {copy.noticeLabel}
+            </span>
+            <input type="hidden" name="notice" value={notice} />
+            <SegmentedControl
+              label={copy.noticeLabel}
+              options={BOOKING_NOTICE_HOURS.map((option) => ({ value: String(option), label: interpolate(copy.hours, { hours: option }) }))}
+              value={notice}
+              onValueChange={setNotice}
+            />
+            <p className="px-1 text-footnote text-ink-2">{copy.noticeHint}</p>
+          </div>
+        </>
       )}
     </StepForm>
   );
