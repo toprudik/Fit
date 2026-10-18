@@ -4711,16 +4711,16 @@ export const en: Dictionary = {
       title: "What DaFit takes off your plate",
       items: {
         passes: { title: "Passes count themselves", text: "Mark a session and the balance updates. Debts show up right away." },
-        reminders: { title: "Reminders without your messages", text: "Clients get session reminders on their own, with quiet hours." },
+        reminders: { title: "Reminders go out on their own", text: "Clients get session reminders on their own, with quiet hours." },
         cancellations: { title: "Cancellations by your rules", text: "Set cancellation and charge rules once. Forgive a charge in one tap." },
-        money: { title: "Money and clients at risk", text: "Income by week, month and year, and a list of clients who might leave." },
-        progress: { title: "Clients keep coming", text: "Streaks, badges, milestones at 10, 25, 50 and 100 sessions and a monthly report." },
+        money: { title: "Income and clients who might leave", text: "Income by week, month and year, and a list of clients who might leave." },
+        progress: { title: "Clients see their progress", text: "Streaks, badges, milestones at 10, 25, 50 and 100 sessions and a monthly report." },
         growth: { title: "New clients", text: "A showcase with a QR code and a trial session link, plus a refer-a-friend offer." },
       },
     },
     steps: {
       title: "How to start",
-      items: ["Fill in your profile and pass prices.", "Invite clients with a link or QR code.", "Mark sessions, DaFit counts the rest."],
+      items: ["Set up your profile and pass prices.", "Invite clients with a link or QR code.", "Mark sessions, DaFit counts the rest."],
       clients: "Clients don't need to install anything: bookings, pass balance and progress open in Telegram or in the browser.",
     },
     waitlist: {
@@ -4738,7 +4738,7 @@ export const en: Dictionary = {
       clients: "How many clients you have",
       clientCounts: { up_to_5: "Up to 5", "6_15": "6–15", "16_40": "16–40", over_40: "Over 40" },
       consent:
-        "I agree to the processing of my name and contact so DaFit can get in touch about access. I can withdraw consent by replying to your message.",
+        "I agree to the processing of my name and contact so DaFit can get in touch about access. I can withdraw consent by replying to our message.",
       website: "Website",
       submit: "Join",
       errors: {
