@@ -4928,6 +4928,7 @@ export const ru = {
     cancelDeletion: "Отменить удаление",
     /** Wave-2 §1.3: payload { coaching_id, goal, previous_goal, first_name, last_name } from set_client_goal. */
     goalChanged: "У клиента {name} новая цель: «{goal}». Твоя норма осталась прежней, проверь, подходит ли она.",
+    goalChangedGroup: "У клиента {name} новая цель: «{goal}». Норма группы «{group}» осталась прежней, проверь, подходит ли она.",
     openNutrition: "Открыть питание",
     goalNames: { lose: "снизить вес", maintain: "держать вес", gain: "набрать массу" },
     /** Wave-2 §6.9: a trainer's broadcast to a group, with the trainer's name above the text. */
