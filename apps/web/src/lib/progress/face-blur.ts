@@ -4,14 +4,16 @@ import { MAX_PHOTO_SIDE, type PhotoType } from "./photos";
  * On-device face hiding for progress photos (PRD wave-1 §2.11-4, PROG-3). Everything here runs in the browser:
  * the original is decoded into a canvas, faces are found by MediaPipe's face detector, and the faces and any
  * brushed areas are pixelated beyond recovery. Only the pixelated canvas is ever encoded for upload, and
- * re-encoding drops the camera's EXIF (location included). The detector's code and model come from public CDNs;
- * the photo itself never leaves the device. When the detector cannot load, the editor falls back to the brush
+ * re-encoding drops the camera's EXIF (location included). The detector's WASM and model are served from
+ * DaFit's own domain (public/mediapipe), so opening the editor sends nothing to a third party; the photo itself
+ * never leaves the device. When the detector cannot load, the editor falls back to the brush
  * and the "no face" confirmation.
  */
 
-/** Pinned to the installed @mediapipe/tasks-vision, whose JS must match its WASM. */
-const WASM_BASE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
-const MODEL = "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite";
+/** Copied from the installed @mediapipe/tasks-vision before dev and build (scripts/copy-mediapipe.mjs), so it matches its JS. */
+export const WASM_BASE = "/mediapipe/wasm";
+/** BlazeFace short range, float16 (Apache 2.0), from MediaPipe's model storage; see public/mediapipe/README.md. */
+export const MODEL = "/mediapipe/blaze_face_short_range.tflite";
 
 export type Box = { x: number; y: number; width: number; height: number };
 

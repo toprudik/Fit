@@ -26,13 +26,15 @@ export type RouteDecision =
 
 /** Files in apps/web/public. Any other path is a page, so a mistyped URL still gets the app's 404. */
 export const PUBLIC_FILES: readonly string[] = ["/favicon.ico", "/icon.svg", "/apple-icon.png", "/robots.txt"];
+/** Folders in apps/web/public, served as they are: /mediapipe/ holds the face detector (lib/progress/face-blur.ts). */
+export const PUBLIC_DIRS: readonly string[] = ["/mediapipe/"];
 
 /** Route handlers, framework internals and public files are not pages: no locale rewrite for them. */
 function isPagePath(pathname: string): boolean {
   if (pathname.startsWith("/api/") || pathname.startsWith("/auth/") || pathname.startsWith("/_next/") || pathname.startsWith("/__")) {
     return false;
   }
-  return !PUBLIC_FILES.includes(pathname);
+  return !PUBLIC_FILES.includes(pathname) && !PUBLIC_DIRS.some((dir) => pathname.startsWith(dir));
 }
 
 /**
