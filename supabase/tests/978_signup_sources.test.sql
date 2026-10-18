@@ -1,4 +1,4 @@
--- Signup sources of migration 20261018134617_signup_sources.sql: users cannot read or write the table, only
+-- Signup sources of migration 20261018192613_signup_sources.sql: users cannot read or write the table, only
 -- plain labels go in, one row per account, and admins see accounts by label with trainers and clients.
 begin;
 \ir _helpers.psql

@@ -3952,6 +3952,11 @@ isOneToOne: false
 "admin_set_trainer_referral_bonus":
 { Args: { "p_discount_percent"?: number,"p_kind": Database["public"]['Enums']["bonus_kind"] }; Returns: undefined
                            },
+"admin_trainer_referrers":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "active": number,"bonuses_granted": number,"bonuses_pending": number,"first_name": string,"invited": number,"last_name": string,"trainer_id": string,"username": string
+            }[]
+                           },
 "admin_unblock_user":
 { Args: { "p_reason": string,"p_user_id": string }; Returns: undefined
                            },
@@ -4397,6 +4402,9 @@ isOneToOne: false
                            },
 "purge_account":
 { Args: { "p_user": string }; Returns: (string)[]
+                           },
+"rate_limit_hit":
+{ Args: { "p_bucket": string,"p_limit": number,"p_subject": string,"p_window_seconds": number }; Returns: boolean
                            },
 "record_app_open":
 { Args: { "p_source"?: string }; Returns: undefined
