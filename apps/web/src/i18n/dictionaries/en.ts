@@ -1949,6 +1949,7 @@ export const en: Dictionary = {
       hiddenCount: "Show hidden: {count}",
       hidden: "Comment hidden",
       shown: "Comment shown again",
+      reply: "Reply",
     },
     addScreen: {
       title: "Add food",

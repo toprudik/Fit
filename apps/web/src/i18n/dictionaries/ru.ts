@@ -1974,6 +1974,7 @@ export const ru = {
       hiddenCount: "Показать скрытые: {count}",
       hidden: "Комментарий скрыт",
       shown: "Комментарий снова виден",
+      reply: "Ответить",
     },
     addScreen: {
       title: "Добавить еду",
