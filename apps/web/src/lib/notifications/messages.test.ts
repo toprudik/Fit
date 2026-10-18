@@ -921,7 +921,7 @@ describe("contact requests", () => {
     const url = `https://fit.example/contact/${REQUEST}?source=contact_request`;
     expect(message?.buttons).toEqual([
       { text: "Поделиться контактом", web_app: { url } },
-      { text: "Отказаться", web_app: { url } },
+      { text: "Отказаться", callback_data: `ctn:${REQUEST}` },
     ]);
   });
 

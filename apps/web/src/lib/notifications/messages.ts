@@ -8,7 +8,7 @@ import { formatSessionTime } from "@/lib/pairs/format";
 import { DEFAULT_TIME_ZONE, formatPlanDate, isPlanCode } from "@/lib/plans/plans";
 import { isButtonUrl } from "@/lib/groups/rules";
 import { isBadgeCode } from "@/lib/gamification/gamification";
-import { bookingDecisionData, claimAnswerData } from "@/lib/bot-actions/callback-data";
+import { bookingDecisionData, claimAnswerData, contactDeclineData } from "@/lib/bot-actions/callback-data";
 import { isChallengeMetric } from "@/lib/challenges/challenges";
 import { invitePath, isInviteToken } from "@/lib/delegations/rules";
 import { formatOffset } from "@/lib/reminders/offsets";
@@ -106,17 +106,19 @@ const templates: Partial<Record<NotificationType, Template>> = {
         : [{ text: t.openClients, path: "/trainer/clients" }],
   }),
   // С1: payload { request_id, coaching_id, side, first_name, last_name } from request_contact, side being the
-  // requester's. Both buttons open the answer screen, where sharing goes through Telegram's own popup (PRIV-2).
+  // requester's. "Поделиться контактом" opens the answer screen, where sharing goes through Telegram's own popup
+  // (PRIV-2); "Отказаться" answers right in the bot (lib/bot-actions).
   contact_request: ({ t, payload }) => {
     const trainer = payload.side === "trainer";
     const path = idPath("/contact", payload.request_id, "/");
+    const requestId = typeof payload.request_id === "string" && isPairId(payload.request_id) ? payload.request_id : null;
     return {
       text: interpolateEscaped(trainer ? t.contactRequestTrainer : t.contactRequestClient, {
         name: personName(payload) || (trainer ? t.unnamedTrainer : t.unnamedClient),
       }),
       buttons: [
         { text: t.shareContact, path },
-        { text: t.declineContact, path },
+        requestId ? { text: t.declineContact, action: contactDeclineData(requestId) } : { text: t.declineContact, path },
       ],
     };
   },

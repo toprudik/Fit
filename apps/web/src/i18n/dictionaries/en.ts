@@ -4634,6 +4634,9 @@ export const en: Dictionary = {
     claimNoCards: "You have no cards without an account. Use the new client button.",
     claimSeveralCards: "You have several cards without an account. Pick the right one in the app.",
     claimLimitFull: "On the Free plan the new pair would close. Answer in the app.",
+    contactDeclined: "OK, your number won't be shared. They will know you said no.",
+    contactDeclinedLine: "Contact not shared.",
+    contactAlreadyShared: "Your contact is already shared.",
     failed: "That didn't work. Answer the request in the app.",
   },
   botMessages: {
