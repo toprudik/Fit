@@ -662,7 +662,7 @@ export const en: Dictionary = {
       signedOutText: "Sign in with Telegram to change your trainer profile.",
       notSet: "Not set",
       noLocations: "None yet",
-      cancellation: "At least {hours} h before",
+      cancellation: "Cancel {hours} h before, book {notice} h before",
       locations: {
         add: "Add a location",
         edit: "Edit",
@@ -722,6 +722,8 @@ export const en: Dictionary = {
         label: "Free cancellation up to",
         hours: "{hours} h",
         hint: "Most trainers use 24 hours. You can change it later in your trainer profile.",
+        noticeLabel: "Clients can book no later than",
+        noticeHint: "Closer to the start, clients can't book themselves. You can still schedule the session yourself.",
       },
       payment: {
         title: "Payment link",
@@ -1056,6 +1058,12 @@ export const en: Dictionary = {
         submit: "Freeze",
         done: "Pass frozen",
         overlap: "These days are already frozen.",
+        bookings: {
+          one: "The client has {count} confirmed session on these days. The booking stays, but this pass won't pay for it: another pass will, or it goes on debt.",
+          few: "The client has {count} confirmed sessions on these days. The bookings stay, but this pass won't pay for them: another pass will, or they go on debt.",
+          many: "The client has {count} confirmed sessions on these days. The bookings stay, but this pass won't pay for them: another pass will, or they go on debt.",
+          other: "The client has {count} confirmed sessions on these days. The bookings stay, but this pass won't pay for them: another pass will, or they go on debt.",
+        },
       },
       freezes: {
         title: "Freezes",
@@ -2280,6 +2288,8 @@ export const en: Dictionary = {
     journalFooter: "What assistants and substitutes did on your behalf",
     journalEntry: "{action}: {client}",
     journalBy: "{name}, {when}",
+    pairJournal: "What your helpers did",
+    pairJournalFooter: "What assistants and substitutes did on your behalf with this client",
     journalActions: {
       "session:created": "New session",
       "session:cancelled": "Session cancelled",
@@ -3587,6 +3597,8 @@ export const en: Dictionary = {
       chargeFree: "This is a free trial, cancelling charges nothing.",
       cancelReason: "Reason, if you like",
       cancelReasonHint: "Your trainer sees it in the message.",
+      cancelReasons: ["I'm ill", "Work", "Can't make it", "Plans changed"],
+      cancelReasonOwn: "Or in your own words",
       cancelConfirm: "Cancel booking",
       cancelLateConfirm: "Cancel and charge",
       keepBooking: "Keep booking",
@@ -4415,6 +4427,7 @@ export const en: Dictionary = {
         records_1: { title: "First record", text: "Your first personal record in an exercise" },
         records_10: { title: "10 records", text: "10 personal records" },
         homework_10: { title: "10 homework tasks", text: "10 homework tasks done" },
+        challenge_joined: { title: "Challenge finisher", text: "Finished a challenge with points on the board" },
         challenge_done: { title: "Challenge done", text: "Reached the goal of a challenge" },
         challenge_winner: { title: "Top three", text: "Among the top three on a challenge leaderboard" },
       },

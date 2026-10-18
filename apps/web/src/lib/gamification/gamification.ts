@@ -20,6 +20,7 @@ export const BADGE_CODES = [
   "records_1",
   "records_10",
   "homework_10",
+  "challenge_joined",
   "challenge_done",
   "challenge_winner",
 ] as const;

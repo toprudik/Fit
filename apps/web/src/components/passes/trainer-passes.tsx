@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarClock, History, Plus, Snowflake, SlidersHorizontal, Trash2, XCircle } from "lucide-react";
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Sheet } from "@/components/ui/sheet";
@@ -10,6 +10,7 @@ import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate, plural } from "@/i18n/format";
 import { addFreeze, cancelPass, changeExpiry, deletePass, endFreeze, removeFreeze } from "@/lib/passes/actions";
+import { freezeOverlap } from "@/lib/passes/freeze-overlap";
 import type { PairMoney, PassView } from "@/lib/passes/load";
 import { formatLocalDay, freezeState, type Freeze } from "@/lib/passes/present";
 import { AdjustForm, DebtCharges, PastSessionForm, WaiveForm, type WaiveTarget } from "./charge-forms";
@@ -63,12 +64,28 @@ function FreezeRow({ freeze, today, live }: { freeze: Freeze; today: string; liv
 }
 
 function FreezeForm({ pass, today, onDone }: { pass: PassView; today: string; onDone: () => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const copy = t.money.passes.freezeForm;
   const report = useReport();
   const [values, setValues] = useState({ from: today, to: today, reason: "" });
   const [errors, setErrors] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
+  // Confirmed sessions on the chosen days: they stay booked, but this pass will not pay for them (§2.8).
+  const [overlap, setOverlap] = useState(0);
+  useEffect(() => {
+    let current = true;
+    if (values.to < values.from) return;
+    freezeOverlap({ passId: pass.id, from: values.from, to: values.to })
+      .then((count) => {
+        if (current) setOverlap(count);
+      })
+      .catch(() => {
+        if (current) setOverlap(0);
+      });
+    return () => {
+      current = false;
+    };
+  }, [pass.id, values.from, values.to]);
   return (
     <form
       noValidate
@@ -92,6 +109,11 @@ function FreezeForm({ pass, today, onDone }: { pass: PassView; today: string; on
         onChange={(event) => setValues({ ...values, to: event.target.value })}
         error={errors.includes("to") ? copy.toError : undefined}
       />
+      {overlap > 0 && values.to >= values.from ? (
+        <p role="status" className="rounded-sm bg-warning-soft p-3 text-subhead text-ink">
+          {plural(locale, overlap, copy.bookings)}
+        </p>
+      ) : null}
       <TextField
         label={copy.reason}
         hint={copy.reasonHint}

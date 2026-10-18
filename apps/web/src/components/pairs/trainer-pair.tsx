@@ -27,6 +27,8 @@ import { LogListSection } from "@/components/workouts/log-screens";
 import { AskContactButton } from "./ask-contact";
 import { PairMilestones } from "./milestones";
 import { NoteComposer, NoteItem, NoteVisibility } from "./notes";
+import { PairDelegateJournal } from "@/components/team/pair-journal";
+import { Suspense } from "react";
 import { PairTabs } from "./pair-tabs";
 import { ArchiveRow, DebtBookingSwitch, EndPairRow } from "./pair-controls";
 
@@ -255,7 +257,12 @@ export async function TrainerPair({ coachingId, tab, action, day }: { coachingId
             <TrainerActivity coachingId={pair.coachingId} />
           </>
         ) : tab === "notes" ? (
-          <Notes t={t} locale={locale} pair={pair} />
+          <>
+            <Notes t={t} locale={locale} pair={pair} />
+            <Suspense>
+              <PairDelegateJournal coachingId={pair.coachingId} />
+            </Suspense>
+          </>
         ) : tab === "intake" ? (
           <TrainerIntake coachingId={pair.coachingId} />
         ) : money && tab === "passes" ? (
