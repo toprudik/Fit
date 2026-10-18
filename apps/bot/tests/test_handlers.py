@@ -58,13 +58,21 @@ def test_start_without_language_is_ru(settings: Settings) -> None:
     assert session.requests[0].text == CATALOG["ru"].start
 
 
-def test_start_payload_is_ignored(settings: Settings) -> None:
+def test_start_payload_goes_to_the_app_button(settings: Settings) -> None:
     _, session = feed(settings, make_update("/start ti_abc"))
     assert session.names() == ["SendMessage", "SetChatMenuButton"]
     sent = session.requests[0]
     assert sent.text == CATALOG["ru"].start
-    assert "ti_abc" not in repr(sent)
+    assert button_url(sent) == "https://app.example/?source=bot_start&tgWebAppStartParam=ti_abc"
     assert "ti_abc" not in repr(session.requests[1])
+
+
+@pytest.mark.parametrize("payload", ["bad payload", "a/b", "ok&source=x", "x" * 513])
+def test_start_invalid_payload_is_dropped(settings: Settings, payload: str) -> None:
+    _, session = feed(settings, make_update(f"/start {payload}"))
+    sent = session.requests[0]
+    assert sent.text == CATALOG["ru"].start
+    assert button_url(sent) == "https://app.example/?source=bot_start"
 
 
 @pytest.mark.parametrize(("code", "locale"), [("ru", "ru"), ("en-US", "en")])
