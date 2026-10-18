@@ -13,7 +13,9 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_vercel_json() -> None:
     config = json.loads((ROOT / "vercel.json").read_text())
     assert config["framework"] == "python"
-    assert "ignoreCommand" not in config
+    # No deployments from git: Bot setup calls the Deploy Hook, and the hook's build must not be skipped.
+    assert config["git"]["deploymentEnabled"] is False
+    assert config["ignoreCommand"] == "exit 1"
     assert "regions" not in config
     for path, function in config["functions"].items():
         assert (ROOT / path).is_file(), path
