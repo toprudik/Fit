@@ -18,10 +18,13 @@ import {
   todayStart,
 } from "./support/schedule";
 
-/** Every screen passes axe once its transitions have finished (a tab fading in is not yet its final colour). */
+/**
+ * Every screen passes axe once its transitions have finished. Right after a client-side navigation axe can
+ * catch the tab bar between two colours, so a violation must still be there a moment later to count.
+ */
 async function expectAccessible(page: Page) {
   await settle(page);
-  await axe(page);
+  await expect(() => axe(page)).toPass({ timeout: 5_000 });
 }
 
 /*

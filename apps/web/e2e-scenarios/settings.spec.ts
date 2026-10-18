@@ -22,7 +22,7 @@ test.describe("account settings", () => {
     const errors = collectErrors(page);
     await page.goto("/profile");
     await expect(page.getByRole("heading", { level: 1, name: "Профиль" })).toBeVisible();
-    await expect(page.getByText("Анна Клиентова").first()).toBeVisible();
+    await expect(page.getByRole("main").getByText("Анна Клиентова").first()).toBeVisible();
     await expect(page.getByRole("main").getByRole("link", { name: "Настройки" })).toHaveAttribute("href", "/settings");
     await expect(page.getByRole("main").getByRole("link", { name: "Мой тариф" })).toHaveAttribute("href", "/settings/plan");
     await expect(page.getByRole("main").getByRole("link", { name: "Обратная связь" })).toHaveAttribute("href", /\/feedback/);
@@ -91,16 +91,20 @@ test.describe("account settings", () => {
     await saved(page, () => monthly.click());
     await expect(monthly).not.toBeChecked();
 
+    // Quiet hours start on for a new account; turning them off hides the times, turning them on shows them.
     const quiet = page.getByRole("switch", { name: "Тихие часы" });
-    await expect(quiet).not.toBeChecked();
-    await saved(page, () => quiet.click());
+    await expect(quiet).toBeChecked();
     await expect(page.getByLabel("С", { exact: true })).toBeVisible();
-    await expect(page.getByLabel("До", { exact: true })).toBeVisible();
+    await saved(page, () => quiet.click());
+    await expect(quiet).not.toBeChecked();
+    await expect(page.getByLabel("С", { exact: true })).toHaveCount(0);
     await expectAccessible(page);
 
     await page.reload();
     await expect(page.getByRole("switch", { name: "Итоги месяца" })).not.toBeChecked();
-    await expect(page.getByRole("switch", { name: "Тихие часы" })).toBeChecked();
+    await expect(page.getByRole("switch", { name: "Тихие часы" })).not.toBeChecked();
+    await saved(page, () => page.getByRole("switch", { name: "Тихие часы" }).click());
+    await expect(page.getByLabel("До", { exact: true })).toBeVisible();
     await saved(page, () => page.getByRole("switch", { name: "Итоги месяца" }).click());
     await page.reload();
     await expect(page.getByRole("switch", { name: "Итоги месяца" })).toBeChecked();
@@ -138,7 +142,7 @@ test.describe("account settings", () => {
     expect(ics).toContain("DaFit: мои занятия");
 
     await page.reload();
-    await expect(page.getByText("Фид подключён")).toBeVisible();
+    await expect(page.getByText("Фид подключён").first()).toBeVisible();
     await expect(link).toHaveCount(0);
     await page.getByRole("button", { name: "Перевыпустить ссылку" }).click();
     const sheet = page.getByRole("dialog", { name: "Перевыпустить ссылку?" });
