@@ -17,6 +17,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.trainerInvite.title };
 }
 
+/** "Связаться с DaFit": the feedback form, which brings the user back to this screen. */
+const CONTACT_HREF = `/feedback?from=${encodeURIComponent("/onboarding/trainer")}`;
+
 /** What trainer_invite_status answers, with already_trainer renamed for the catalog. */
 type InviteStatus = keyof Dictionary["trainerInvite"]["status"];
 
@@ -128,10 +131,14 @@ async function InviteStep({ searchParams }: { searchParams: PageProps<"/[lang]/o
       </div>
     );
   }
+  // Invalid, used, expired or revoked: another code, or a word with DaFit when there is none to ask for (§2.2).
   return (
     <div className="flex flex-col gap-6">
       <StatusText t={t} status={status} />
       <CodeForm t={t} />
+      <Button asChild variant="ghost" size="lg" block>
+        <Link href={CONTACT_HREF}>{t.trainerInvite.contactDafit}</Link>
+      </Button>
     </div>
   );
 }
