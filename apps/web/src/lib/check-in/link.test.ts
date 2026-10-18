@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkInPath, checkInPathFromScan, checkInTelegram, parseCheckInStartParam, placeCheckInTelegram } from "./link";
+import { checkInPath, checkInPathFromScan, checkInTelegram, parseCheckInStartParam, placeCheckInTelegram, sessionMarks } from "./link";
 
 const SESSION = "0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f";
 const CODE = "aB3_-xY9zQ";
@@ -24,5 +24,15 @@ describe("check-in links", () => {
     expect(parseCheckInStartParam(`ci_${SESSION}_${CODE}`)).toBeNull();
     expect(checkInPathFromScan(`https://example.com/?startapp=ck_${SESSION}_${CODE}`)).toBeNull();
     expect(checkInPathFromScan("not a link")).toBeNull();
+  });
+});
+
+describe("sessionMarks", () => {
+  it("does not depend on the order the bookings were read in", () => {
+    const a = { bookingId: "11111111-1111-4111-8111-111111111111", status: "confirmed" };
+    const b = { bookingId: "22222222-2222-4222-8222-222222222222", status: "attended" };
+    expect(sessionMarks([a, b])).toBe(sessionMarks([b, a]));
+    expect(sessionMarks([a, b])).not.toBe(sessionMarks([{ ...a, status: "attended" }, b]));
+    expect(sessionMarks([])).toBe("");
   });
 });

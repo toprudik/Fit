@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { BookingHistory } from "@/components/bookings/booking-history";
 import { CheckInQr } from "@/components/check-in/check-in-qr";
+import { CheckInWatch } from "@/components/check-in/check-in-watch";
 import { AttendanceMarks } from "@/components/passes/attendance-marks";
 import { SessionWaivers } from "@/components/passes/session-waivers";
 import { CancelParticipant } from "@/components/schedule/cancel-participant";
@@ -24,6 +25,7 @@ import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { loadBookingHistory } from "@/lib/bookings/history";
 import { loadSlotWaitlist } from "@/lib/bookings/slot-waitlist";
+import { sessionMarks } from "@/lib/check-in/link";
 import { loadSessionDelegation } from "@/lib/delegations/load";
 import { isPairId } from "@/lib/pairs/clients";
 import { loadBookingCharges } from "@/lib/passes/session-charges";
@@ -207,7 +209,10 @@ async function SessionDetails({
       session.mode === "offline" &&
       Date.parse(now()) >= Date.parse(session.startsAt) - 30 * 60_000 &&
       Date.parse(now()) <= Date.parse(session.endsAt) + 15 * 60_000 ? (
-        <CheckInQr sessionId={session.id} timeZone={owner.timeZone} />
+        <>
+          <CheckInQr sessionId={session.id} timeZone={owner.timeZone} />
+          <CheckInWatch sessionId={session.id} marks={sessionMarks(session.clients)} />
+        </>
       ) : null}
 
       {session.status !== "cancelled" && session.startsAt <= now() ? (
