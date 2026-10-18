@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.login.title };
 }
 
-const ERROR_KEYS = ["expired", "denied", "state", "failed"] as const;
+const ERROR_KEYS = ["expired", "denied", "state", "failed", "blocked"] as const;
 type ErrorKey = (typeof ERROR_KEYS)[number];
 const isErrorKey = (value: unknown): value is ErrorKey => typeof value === "string" && (ERROR_KEYS as readonly string[]).includes(value);
 

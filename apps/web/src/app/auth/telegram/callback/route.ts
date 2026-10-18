@@ -10,8 +10,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { botIdFromToken, type TelegramIdentity } from "@/lib/telegram/identity";
 import { exchangeCodeForIdToken, verifyIdToken } from "@/lib/telegram/oidc";
 
-const sameString = (a: string, b: string) =>
-  a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+/** Compares bytes, not UTF-16 units: timingSafeEqual throws on buffers of different byte lengths. */
+function sameString(a: string, b: string): boolean {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  return left.length === right.length && timingSafeEqual(left, right);
+}
 
 /** Completes Telegram OIDC: checks state, exchanges the code (PKCE), verifies the id_token, signs in. */
 export async function GET(request: NextRequest) {
