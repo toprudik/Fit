@@ -1,6 +1,7 @@
-import { ClipboardCheck, Ruler, ShieldOff, Users } from "lucide-react";
+import { CalendarDays, ClipboardCheck, Ruler, ShieldOff, Users, Video } from "lucide-react";
 import { STATE_TONE } from "@/components/homework/trainer-homework";
 import { NoteComposer, NoteItem } from "@/components/pairs/notes";
+import { AttendanceMarks } from "@/components/team/team";
 import { MeasurementChart } from "@/components/progress/measurement-chart";
 import { MeasurementHistory } from "@/components/progress/measurement-history";
 import { Screen } from "@/components/shell/screen";
@@ -19,12 +20,16 @@ import {
   loadAssistedNotes,
   loadAssistedOwners,
   loadAssistedPair,
+  loadAssistedSessions,
+  loadOwnerLocations,
   type AssistedPair,
+  type AssistedSession,
   type Scope,
 } from "@/lib/delegations/assistant";
 import { homeworkSchedule } from "@/lib/homework/format";
 import { occurrenceState } from "@/lib/homework/homework";
 import { formatNoteTime } from "@/lib/pairs/format";
+import { NewAssistedSession } from "./assisted-session";
 
 export const DELEGATED_HREF = "/trainer/clients/delegated";
 
@@ -84,6 +89,78 @@ export async function DelegatedList({ selectedId }: { selectedId?: string }) {
         </ListGroup>
       ))}
     </div>
+  );
+}
+
+function sessionWhen(locale: Locale, timeZone: string) {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone,
+  });
+}
+
+function SessionRow({ t, session, when, marks }: { t: Dictionary; session: AssistedSession; when: Intl.DateTimeFormat; marks?: React.ReactNode }) {
+  const statuses = t.team.session.statuses;
+  const status = session.status in statuses ? statuses[session.status as keyof typeof statuses] : undefined;
+  const line = [session.title ? when.format(new Date(session.startsAt)) : null, session.mode === "online" ? t.delegatedZone.online : session.place, marks ? null : status]
+    .filter(Boolean)
+    .join(", ");
+  return (
+    <ListRow
+      icon={session.mode === "online" ? Video : CalendarDays}
+      title={session.title ?? when.format(new Date(session.startsAt))}
+      // The marks go under the date: two buttons beside it leave no room for the date on a phone.
+      subtitle={
+        marks ? (
+          <span className="flex flex-col gap-2 pt-1">
+            {line ? <span>{line}</span> : null}
+            <span>{marks}</span>
+          </span>
+        ) : (
+          line || undefined
+        )
+      }
+    />
+  );
+}
+
+/** The client's sessions with the owner: what is coming, and the last two weeks with attendance marks. */
+async function Sessions({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: AssistedPair }) {
+  const copy = t.delegatedZone;
+  const canSchedule = pair.scopes.includes("schedule");
+  const canMark = pair.scopes.includes("attendance");
+  const [{ upcoming, past }, locations] = await Promise.all([loadAssistedSessions(pair), canSchedule ? loadOwnerLocations(pair) : []]);
+  const when = sessionWhen(locale, pair.timeZone);
+  const name = pair.clientName || copy.noName;
+  return (
+    <section className="flex flex-col gap-4" aria-labelledby="assisted-sessions">
+      <h2 id="assisted-sessions" className="px-1 text-headline">
+        {copy.sessions}
+      </h2>
+      <ListGroup header={copy.upcoming} headingLevel={3}>
+        {upcoming.length === 0 ? <ListRow title={copy.upcomingEmpty} /> : null}
+        {upcoming.map((session) => (
+          <SessionRow key={session.bookingId} t={t} session={session} when={when} />
+        ))}
+      </ListGroup>
+      {canSchedule ? <NewAssistedSession coachingId={pair.coachingId} ownerName={pair.ownerName} locations={locations} /> : null}
+      <ListGroup header={copy.past} headingLevel={3} footer={canMark && past.length ? t.team.session.chargeNote : undefined}>
+        {past.length === 0 ? <ListRow title={copy.pastEmpty} /> : null}
+        {past.map((session) => (
+          <SessionRow
+            key={session.bookingId}
+            t={t}
+            session={session}
+            when={when}
+            marks={canMark ? <AttendanceMarks bookingId={session.bookingId} name={name} status={session.status} /> : undefined}
+          />
+        ))}
+      </ListGroup>
+    </section>
   );
 }
 
@@ -181,9 +258,10 @@ export async function AssistedCard({ coachingId }: { coachingId: string }) {
     >
       <div className="flex w-full max-w-2xl flex-col gap-8 pt-3 md:pt-0">
         <p className="px-1 text-footnote text-ink-2">{accessLine(t, pair.scopes)}</p>
-        {!has("progress") && !has("homework") && !has("notes") ? (
+        {!has("schedule") && !has("attendance") && !has("progress") && !has("homework") && !has("notes") ? (
           <EmptyState icon={ShieldOff} title={copy.nothingTitle} description={copy.nothingText} />
         ) : null}
+        {has("schedule") || has("attendance") ? <Sessions t={t} locale={locale} pair={pair} /> : null}
         {has("progress") ? <Progress t={t} pair={pair} /> : null}
         {has("homework") ? <Homework t={t} locale={locale} pair={pair} /> : null}
         {has("notes") ? <Notes t={t} locale={locale} pair={pair} /> : null}

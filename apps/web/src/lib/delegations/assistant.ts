@@ -127,6 +127,7 @@ export async function loadAssistedOwners(): Promise<AssistedOwner[] | null> {
 export type AssistedPair = {
   coachingId: string;
   clientId: string;
+  ownerId: string;
   clientName: string;
   ownerName: string;
   /** Every scope the caller's live delegations give for this pair. */
@@ -161,6 +162,7 @@ export async function loadAssistedPair(coachingId: string): Promise<AssistedPair
   return {
     coachingId,
     clientId: row.client_id,
+    ownerId: row.trainer_id,
     clientName: client.get(coachingId) ?? "",
     ownerName: owner.get(row.trainer_id) ?? "",
     scopes: [...new Set(covering.flatMap((item) => item.scopes))],
@@ -253,4 +255,69 @@ export async function loadAssistedHomework(pair: AssistedPair): Promise<{ today:
       };
     }),
   };
+}
+
+export type AssistedSession = {
+  bookingId: string;
+  sessionId: string;
+  startsAt: string;
+  endsAt: string;
+  mode: "offline" | "online";
+  title: string | null;
+  /** The place of an in-person session; the call link is the pair's own (sessions hides meeting_url). */
+  place: string | null;
+  /** The client's booking: confirmed until the session is marked. */
+  status: Database["public"]["Enums"]["booking_status"];
+};
+
+const PAST_DAYS = 14;
+const AHEAD_DAYS = 60;
+
+/**
+ * The client's personal sessions with the owner, for an assistant with the schedule or attendance scope (RLS):
+ * the coming ones and those of the last two weeks, where attendance is marked. Cancelled ones are left out.
+ */
+export async function loadAssistedSessions(pair: AssistedPair): Promise<{ upcoming: AssistedSession[]; past: AssistedSession[] }> {
+  const me = await loadScheduleOwner();
+  if (!me) return { upcoming: [], past: [] };
+  const now = Date.now();
+  const { data, error } = await me.supabase
+    .from("bookings")
+    .select("id, status, sessions!inner(id, starts_at, ends_at, mode, title, status, locations(name))")
+    .eq("coaching_id", pair.coachingId)
+    .in("status", ["confirmed", "attended", "no_show"])
+    .neq("sessions.status", "cancelled")
+    .gte("sessions.starts_at", new Date(now - PAST_DAYS * 86_400_000).toISOString())
+    .lte("sessions.starts_at", new Date(now + AHEAD_DAYS * 86_400_000).toISOString());
+  if (error) fail("sessions", error);
+  const sessions = data
+    .map((row) => ({
+      bookingId: row.id,
+      sessionId: row.sessions.id,
+      startsAt: row.sessions.starts_at,
+      endsAt: row.sessions.ends_at,
+      mode: row.sessions.mode,
+      title: row.sessions.title,
+      place: row.sessions.mode === "online" ? null : (row.sessions.locations?.name ?? null),
+      status: row.status,
+    }))
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  return {
+    upcoming: sessions.filter((s) => Date.parse(s.startsAt) > now),
+    past: sessions.filter((s) => Date.parse(s.startsAt) <= now).reverse(),
+  };
+}
+
+/** The owner's places for a new session; RLS shows them to an assistant for all clients, else none. */
+export async function loadOwnerLocations(pair: AssistedPair): Promise<{ id: string; name: string }[]> {
+  const me = await loadScheduleOwner();
+  if (!me) return [];
+  const { data, error } = await me.supabase
+    .from("locations")
+    .select("id, name")
+    .eq("trainer_id", pair.ownerId)
+    .is("archived_at", null)
+    .order("name");
+  if (error) fail("places", error);
+  return data;
 }
