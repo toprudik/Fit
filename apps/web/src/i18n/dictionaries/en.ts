@@ -4725,6 +4725,7 @@ export const en: Dictionary = {
     /** Account deletion: payload { stage, scheduled_for? } from request_account_deletion and cancel_account_deletion. */
     deletionRequested: "Your DaFit account will be deleted on {date}. Upcoming bookings are cancelled with no charge. If you change your mind, open DaFit and cancel before then.",
     deletionCancelled: "Account deletion cancelled, everything stays as it was.",
+    deletionDone: "Your DaFit account is deleted. If you want to come back, just open DaFit again.",
     cancelDeletion: "Cancel deletion",
     /** Wave-2 §1.3: payload { coaching_id, goal, previous_goal, first_name, last_name } from set_client_goal. */
     goalChanged: "Your client {name} has a new goal: “{goal}”. Your target stayed the same, check that it still fits.",

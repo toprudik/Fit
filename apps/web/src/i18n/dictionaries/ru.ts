@@ -4805,6 +4805,7 @@ export const ru = {
     /** А-удаление: payload { stage, scheduled_for? } from request_account_deletion and cancel_account_deletion. */
     deletionRequested: "Аккаунт DaFit будет удалён {date}. Будущие записи отменены без списаний. Если передумаешь, открой DaFit и отмени удаление до этого дня.",
     deletionCancelled: "Удаление аккаунта отменено, всё осталось на месте.",
+    deletionDone: "Аккаунт DaFit удалён. Если захочешь вернуться, просто открой DaFit снова.",
     cancelDeletion: "Отменить удаление",
     /** Wave-2 §1.3: payload { coaching_id, goal, previous_goal, first_name, last_name } from set_client_goal. */
     goalChanged: "У клиента {name} новая цель: «{goal}». Твоя норма осталась прежней, проверь, подходит ли она.",

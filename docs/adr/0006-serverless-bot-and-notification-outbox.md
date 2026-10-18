@@ -28,6 +28,7 @@ Quiet hours: non-urgent messages wait until quiet hours end; session reminders a
 - Delivery is at least once. Telegram has no idempotency key, so if a run dies between a send and its record, the row goes out again after its 5-minute lease.
 - Texts live in `botMessages` of the web dictionaries, in the recipient's DaFit language. Each type gets its template together with the feature that queues it; a row without a template fails with `no_template`. Buttons are `web_app` buttons to the app route with `?source=<type>`, and plain links in the team group, where Telegram does not allow `web_app`.
 - Buttons that act right in the bot (PRD §3 Т2, Т7a, С1) are not part of this; see "Action buttons" below.
+- One message skips the outbox: С5 "the account is deleted". An outbox row belongs to its user, and this one is sent after the user is gone, so the privacy route sends it once, right after the Auth user is deleted, to the chat it read before the purge. A failure is only logged.
 
 ## Action buttons (2026-10-17)
 
