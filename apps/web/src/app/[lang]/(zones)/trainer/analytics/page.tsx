@@ -6,7 +6,7 @@ import { TierLock } from "@/components/plans/tier-lock";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { DismissChurn } from "@/components/trainer-analytics/dismiss-churn";
-import { PriceSimulator } from "@/components/trainer-analytics/price-simulator";
+import { PriceSimulatorSection } from "@/components/trainer-analytics/price-simulator-section";
 import { Chip, ChipRow } from "@/components/ui/chip";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { SkeletonRows } from "@/components/ui/skeleton";
@@ -15,6 +15,7 @@ import type { Dictionary } from "@/i18n/dictionaries";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { formatMoney } from "@/lib/money/format";
+import { formatValue, fromMetric, unitOf, unitSystem } from "@/lib/progress/measurements";
 import { loadNutritionClients } from "@/lib/nutrition/adherence-load";
 import { addDays } from "@/lib/schedule/time";
 import { EXPORT_KINDS } from "@/lib/trainer-analytics/csv";
@@ -164,6 +165,30 @@ function Churn({ copy, data }: { copy: Copy; data: Data }) {
   );
 }
 
+/** «Прогресс» (§7): weight and girths per client over the period, for clients who share measurements. */
+function Progress({ copy, units, kinds, locale, data }: { copy: Copy; units: Dictionary["progress"]["measurements"]["units"]; kinds: Dictionary["progress"]["measurements"]["kinds"]; locale: Locale; data: Data }) {
+  const system = unitSystem(locale);
+  const change = (kind: Data["progress"][number]["changes"][number]["kind"], first: number, last: number) => {
+    const unit = unitOf(kind, system);
+    const delta = Math.round((fromMetric(last, unit) - fromMetric(first, unit)) * 10) / 10;
+    const value = `${delta > 0 ? "+" : delta < 0 ? "−" : ""}${formatValue(locale, Math.abs(delta))} ${units[unit]}`;
+    return interpolate(copy.progress.change, { kind: kinds[kind], value });
+  };
+  return (
+    <ListGroup header={copy.progress.header} footer={copy.progress.footer} headingLevel={2}>
+      {data.progress.length === 0 ? <ListRow title={copy.progress.empty} /> : null}
+      {data.progress.map((client) => (
+        <ListRow
+          key={client.coachingId}
+          title={client.name}
+          subtitle={<span className="whitespace-normal">{client.changes.map((row) => change(row.kind, row.first, row.last)).join(", ")}</span>}
+          href={`/trainer/clients/${client.coachingId}`}
+        />
+      ))}
+    </ListGroup>
+  );
+}
+
 /** How many lowest-adherence clients the block names. */
 const LOWEST_SHOWN = 3;
 
@@ -270,10 +295,11 @@ async function Analytics({ searchParams }: { searchParams: PageProps<"/[lang]/tr
       <Debts copy={copy} locale={locale} data={data} />
       <Ending copy={copy} locale={locale} timeZone={analytics.timeZone} data={data} />
       <Churn copy={copy} data={data} />
+      <Progress copy={copy} units={t.progress.measurements.units} kinds={t.progress.measurements.kinds} locale={locale} data={data} />
       <Nutrition copy={copy} />
       {data.finance ? (
         <>
-          <PriceSimulator base={base} />
+          <PriceSimulatorSection base={base} />
           <Hints copy={copy} finance={data.finance} />
         </>
       ) : null}

@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { formatMonth, formatSleep, monthFromParam, monthParam, previousMonth, reportFrom, storyCardFrom, storyOptions, weightChange } from "./report";
+import {
+  formatMonth,
+  formatSleep,
+  monthFromParam,
+  monthParam,
+  previousMonth,
+  reportFrom,
+  sharedReportFrom,
+  shareTargetsFrom,
+  storyCardFrom,
+  storyOptions,
+  weightChange,
+} from "./report";
 
 const report = {
   month: "2026-09-01",
@@ -76,5 +88,21 @@ describe("monthly report", () => {
     expect(storyCardFrom(null)).toBeNull();
     expect(storyCardFrom({ kind: "trainer", month: "2026-09-01", data: { count: 2, name: "Ира", slug: "ira-fit" } })?.data.slug).toBe("ira-fit");
     expect(storyCardFrom({ kind: "trainer", month: "2026-09-01", data: { count: 2, slug: "../admin" } })).toBeNull();
+  });
+});
+
+describe("sending the month to a trainer (§4 rule 3)", () => {
+  it("reads the pairs to send to", () => {
+    expect(shareTargetsFrom([{ coaching_id: "c1", name: "Ира", shared_at: null }, { coaching_id: "c2", name: null, shared_at: "2026-10-02T09:00:00Z" }])).toEqual([
+      { coachingId: "c1", name: "Ира", sharedAt: null },
+      { coachingId: "c2", name: null, sharedAt: "2026-10-02T09:00:00Z" },
+    ]);
+    expect(shareTargetsFrom(null)).toEqual([]);
+  });
+
+  it("reads the copy the trainer gets", () => {
+    expect(sharedReportFrom({ report, shared_at: "2026-10-02T09:00:00Z" })?.report.month).toBe("2026-09-01");
+    expect(sharedReportFrom({ report: { month: "september" }, shared_at: "2026-10-02T09:00:00Z" })).toBeNull();
+    expect(sharedReportFrom(null)).toBeNull();
   });
 });

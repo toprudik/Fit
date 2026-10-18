@@ -10,16 +10,20 @@ import { ListGroup, ListRow } from "@/components/ui/list";
 import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
 import { INTL_LOCALE } from "@/i18n/config";
+import { interpolate } from "@/i18n/format";
 import { useI18n } from "@/i18n/client";
 import { bookTrial, type BookingError } from "@/lib/bookings/actions";
 import { groupByDay } from "@/lib/bookings/book";
 import type { BookableSlot } from "@/lib/bookings/load";
 import { localToUtc } from "@/lib/schedule/time";
+import { trainerClock } from "@/lib/schedule/trainer-clock";
 import { hapticSuccess } from "@/lib/telegram/mini-app";
 
 type TrialPickerProps = {
   token: string;
   timeZone: string;
+  /** The trainer's time zone: when their clock differs, times add the trainer's time (SCHED-19). */
+  trainerTimeZone?: string | null;
   slots: BookableSlot[];
   /** Without a session, a picked time asks to sign in first and comes back here. */
   signIn: { telegramHref: string; loginHref: string } | null;
@@ -29,7 +33,7 @@ type TrialPickerProps = {
  * "Выбор слота" on the trial landing (screens.md §3.1, PRD wave-1 §2.3-5): days with free trial time, the times
  * of the chosen day, and a sheet that sends the trial request. The trainer always answers it.
  */
-export function TrialPicker({ token, timeZone, slots, signIn }: TrialPickerProps) {
+export function TrialPicker({ token, timeZone, trainerTimeZone, slots, signIn }: TrialPickerProps) {
   const { t, locale } = useI18n();
   const copy = t.schedule.trialBooking;
   const router = useRouter();
@@ -45,6 +49,10 @@ export function TrialPicker({ token, timeZone, slots, signIn }: TrialPickerProps
   const dayFormat = new Intl.DateTimeFormat(intl, { weekday: "long", day: "numeric", month: "long", timeZone });
   const timeFormat = new Intl.DateTimeFormat(intl, { hour: "2-digit", minute: "2-digit", timeZone });
   const range = (item: BookableSlot) => `${timeFormat.format(new Date(item.startsAt))}–${timeFormat.format(new Date(item.endsAt))}`;
+  const trainerTime = (item: BookableSlot) => {
+    const clock = trainerClock(item, timeZone, trainerTimeZone, intl);
+    return clock ? `, ${interpolate(t.schedule.trainerTime, { time: clock })}` : "";
+  };
   const where = (item: BookableSlot) => (item.mode === "online" ? t.schedule.book.online : (item.place ?? t.schedule.book.offline));
 
   const send = () => {
@@ -82,7 +90,7 @@ export function TrialPicker({ token, timeZone, slots, signIn }: TrialPickerProps
               key={item.id}
               icon={Clock}
               title={<span className="tabular-nums">{range(item)}</span>}
-              subtitle={where(item)}
+              subtitle={`${where(item)}${trainerTime(item)}`}
               onClick={() => {
                 setError(null);
                 setSlot(item);
@@ -101,7 +109,7 @@ export function TrialPicker({ token, timeZone, slots, signIn }: TrialPickerProps
         open={slot !== null}
         onOpenChange={(next) => (next ? null : setSlot(null))}
         title={copy.confirmTitle}
-        description={slot ? `${dayFormat.format(new Date(slot.startsAt))}, ${range(slot)}, ${where(slot)}` : undefined}
+        description={slot ? `${dayFormat.format(new Date(slot.startsAt))}, ${range(slot)}${trainerTime(slot)}, ${where(slot)}` : undefined}
         actions={
           signIn ? (
             <SignedOutActions telegramHref={signIn.telegramHref} loginHref={signIn.loginHref} />

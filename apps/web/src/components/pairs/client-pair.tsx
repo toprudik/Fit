@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Screen } from "@/components/shell/screen";
 import { ClientIntakeRows } from "@/components/intake/intake-rows";
 import { ClientReferralRow } from "@/components/referrals/client-referral-row";
+import { ClientReview } from "@/components/reviews/client-review";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { interpolate, plural } from "@/i18n/format";
@@ -68,6 +69,8 @@ export async function ClientPair({ coachingId }: { coachingId: string }) {
         </ListGroup>
 
         <PairMilestones t={t} locale={locale} pair={pair} />
+
+        <ClientReview coachingId={pair.coachingId} />
 
         {live ? <ClientReferralRow coachingId={pair.coachingId} /> : null}
 
