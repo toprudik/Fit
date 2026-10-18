@@ -1,4 +1,5 @@
 import { CONSENT_PATH } from "@/lib/consent/beta-terms";
+import { isLegalPath } from "@/lib/legal/documents";
 
 /**
  * Account deletion (PRD wave-1 §2.12-7, PRIV-7; data-model §1.6). For 30 days after the request the user may
@@ -14,8 +15,9 @@ export const EXPORT_PATH = "/settings/export";
 export const DELETION_DAYS = 30;
 
 /**
- * Screens open during the 30 days: the deletion screen, the export and the login screen, and the beta terms,
- * which come before any screen and would otherwise bounce back and forth with the deletion screen.
+ * Screens open during the 30 days: the deletion screen, the export and the login screen, the beta terms,
+ * which come before any screen and would otherwise bounce back and forth with the deletion screen, and
+ * the legal documents.
  */
 const WHILE_DELETING: readonly string[] = [DELETION_PATH, EXPORT_PATH, "/login", CONSENT_PATH];
 
@@ -27,5 +29,5 @@ export function isDeletionPending(claims: { app_metadata?: unknown } | null | un
 
 /** Where the proxy sends a user whose account is being deleted: the deletion screen. Null for the open screens. */
 export function deletionRedirect(pathname: string): string | null {
-  return WHILE_DELETING.includes(pathname) ? null : DELETION_PATH;
+  return WHILE_DELETING.includes(pathname) || isLegalPath(pathname) ? null : DELETION_PATH;
 }

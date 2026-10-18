@@ -4190,6 +4190,13 @@ export const ru = {
       label: "Язык",
     },
   },
+  /** Legal documents at /legal: list, draft note, links from settings and the beta terms. */
+  legal: {
+    title: "Документы",
+    intro: "Как устроены DaFit, твои данные и права. Это черновики: их ещё проверяет юрист, и до этого действуют условия закрытой беты.",
+    all: "Все документы",
+    table: "Таблица, прокручивается вбок",
+  },
   /** Reminder lead times: "за 1 день", "через 3 часа" (PRD wave-1 §2.9-2). Forms are accusative. */
   reminders: {
     units: {
