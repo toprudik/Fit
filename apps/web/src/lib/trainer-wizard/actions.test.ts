@@ -11,18 +11,43 @@ const next = vi.hoisted(() => ({
 vi.mock("next/cache", () => ({ refresh: next.refresh }));
 vi.mock("next/navigation", () => ({ redirect: next.redirect }));
 
-type Write = { table: string; op: "update" | "insert"; values: Record<string, unknown> | Record<string, unknown>[]; filter?: [string, unknown] };
+type Write = {
+  table: string;
+  op: "update" | "insert";
+  values: Record<string, unknown> | Record<string, unknown>[];
+  filter?: [string, unknown];
+  only?: [string, unknown];
+};
 
-/** Writes made as the signed-in user; `fail` makes the next write answer with an error. */
+/** Writes made as the signed-in user; `fail` makes the next write answer with an error, `rows` is what a write returns. */
 const db = vi.hoisted(() => ({
   user: "trainer-1" as string | null,
   writes: [] as Write[],
   fail: false,
+  rows: [{ id: "row-1" }] as { id: string }[],
 }));
 
-function result(data: unknown) {
+function result() {
   const error = db.fail ? { code: "23514", message: "check" } : null;
-  return { data: error ? null : data, error };
+  return { data: error ? null : db.rows, error };
+}
+
+/** A write that can be awaited as it is or narrowed with eq/is and select first, like the client's builder. */
+function written(write: Write) {
+  db.writes.push(write);
+  const query = {
+    eq: (column: string, value: unknown) => {
+      write.filter = [column, value];
+      return query;
+    },
+    is: (column: string, value: unknown) => {
+      write.only = [column, value];
+      return query;
+    },
+    select: () => query,
+    then: (resolve: (value: ReturnType<typeof result>) => unknown) => resolve(result()),
+  };
+  return query;
 }
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -30,21 +55,13 @@ vi.mock("@/lib/supabase/server", () => ({
     auth: { getClaims: async () => ({ data: db.user ? { claims: { sub: db.user } } : null }) },
     from: (table: string) => ({
       select: () => ({ eq: () => ({ single: async () => ({ data: { default_currency: "RUB" }, error: null }) }) }),
-      update: (values: Record<string, unknown>) => ({
-        eq: async (column: string, value: unknown) => {
-          db.writes.push({ table, op: "update", values, filter: [column, value] });
-          return result(null);
-        },
-      }),
-      insert: async (values: Record<string, unknown> | Record<string, unknown>[]) => {
-        db.writes.push({ table, op: "insert", values });
-        return result(null);
-      },
+      update: (values: Record<string, unknown>) => written({ table, op: "update", values }),
+      insert: (values: Record<string, unknown> | Record<string, unknown>[]) => written({ table, op: "insert", values }),
     }),
   }),
 }));
 
-const { saveWizardStep } = await import("./actions");
+const { archiveLocation, saveLocation, saveWizardStep } = await import("./actions");
 
 const IDLE = { status: "idle" } as const;
 
@@ -61,6 +78,7 @@ beforeEach(() => {
   db.user = "trainer-1";
   db.writes = [];
   db.fail = false;
+  db.rows = [{ id: "row-1" }];
 });
 
 describe("saveWizardStep", () => {
@@ -192,5 +210,76 @@ describe("saveWizardStep", () => {
 
   it("refuses an unknown step", async () => {
     expect(await saveWizardStep(IDLE, form({ step: "price-grid" }))).toEqual({ status: "failed", values: {} });
+  });
+});
+
+describe("editing the profile after the wizard", () => {
+  it("goes back to the trainer profile after saving a section", async () => {
+    await expect(saveWizardStep(IDLE, form({ step: "cancellation", mode: "edit", hours: "12" }))).rejects.toThrow("redirect /trainer/profile");
+    expect(db.writes).toEqual([
+      { table: "trainer_profiles", op: "update", values: { cancellation_deadline_hours: 12 }, filter: ["user_id", "trainer-1"] },
+    ]);
+  });
+
+  it("keeps the wizard order for steps the profile screen doesn't edit", async () => {
+    await expect(saveWizardStep(IDLE, form({ step: "payment", mode: "edit", title: "", url: "" }))).rejects.toThrow(
+      "redirect /onboarding/trainer/prices",
+    );
+  });
+
+  it("does not pass the mode back to the form as a field", async () => {
+    const state = await saveWizardStep(IDLE, form({ step: "profile", mode: "edit", name: "", headline: "", bio: "" }));
+    expect(state).toEqual({ status: "invalid", fields: ["name"], values: { name: "", headline: "", bio: "" } });
+  });
+});
+
+describe("saveLocation", () => {
+  const ID = "6f1c2b9e-3d4a-4b5c-8d7e-9f0a1b2c3d4e";
+
+  it("adds a new place for the signed-in trainer", async () => {
+    expect(await saveLocation({ status: "idle" }, form({ name: " Зал на Ленина ", address: "" }))).toEqual({ status: "saved" });
+    expect(db.writes).toEqual([{ table: "locations", op: "insert", values: { trainer_id: "trainer-1", name: "Зал на Ленина", address: null } }]);
+    expect(next.refresh).toHaveBeenCalled();
+  });
+
+  it("changes a place that is still in use", async () => {
+    expect(await saveLocation({ status: "idle" }, form({ id: ID, name: "Студия", address: "Невский, 1" }))).toEqual({ status: "saved" });
+    expect(db.writes).toEqual([
+      { table: "locations", op: "update", values: { name: "Студия", address: "Невский, 1" }, filter: ["id", ID], only: ["archived_at", null] },
+    ]);
+  });
+
+  it("asks for a name and keeps what was typed", async () => {
+    expect(await saveLocation({ status: "idle" }, form({ id: ID, name: " ", address: "Невский, 1" }))).toEqual({
+      status: "invalid",
+      fields: ["name"],
+      values: { name: " ", address: "Невский, 1" },
+    });
+    expect(db.writes).toEqual([]);
+  });
+
+  it("refuses an id that is not a uuid, a signed-out user and a place it could not change", async () => {
+    const values = { name: "Студия", address: "" };
+    expect(await saveLocation({ status: "idle" }, form({ id: "nope", ...values }))).toEqual({ status: "failed", values });
+    db.user = null;
+    expect(await saveLocation({ status: "idle" }, form(values))).toEqual({ status: "failed", values });
+    db.user = "trainer-1";
+    db.rows = [];
+    expect(await saveLocation({ status: "idle" }, form({ id: ID, ...values }))).toEqual({ status: "failed", values });
+  });
+});
+
+describe("archiveLocation", () => {
+  it("archives the place instead of deleting it", async () => {
+    expect(await archiveLocation("6f1c2b9e-3d4a-4b5c-8d7e-9f0a1b2c3d4e")).toEqual({ failed: false });
+    expect(db.writes).toHaveLength(1);
+    expect(db.writes[0]).toMatchObject({ table: "locations", op: "update", filter: ["id", "6f1c2b9e-3d4a-4b5c-8d7e-9f0a1b2c3d4e"], only: ["archived_at", null] });
+    expect(typeof (db.writes[0].values as Record<string, unknown>).archived_at).toBe("string");
+  });
+
+  it("fails on a bad id or when nothing was archived", async () => {
+    expect(await archiveLocation("nope")).toEqual({ failed: true });
+    db.rows = [];
+    expect(await archiveLocation("6f1c2b9e-3d4a-4b5c-8d7e-9f0a1b2c3d4e")).toEqual({ failed: true });
   });
 });
