@@ -3191,6 +3191,32 @@ isOneToOne: false
       referencedColumns: ["user_id"]
     }
                   ]
+                },"trainer_waitlist": {
+                  Row: {
+                    "clients": string | null,"consent_version": string,"consented_at": string,"contact": string | null,"created_at": string,"id": string,"locale": string,"name": string,"source": string | null,"user_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "clients"?: string | null,"consent_version": string,"consented_at"?: string,"contact"?: string | null,"created_at"?: string,"id"?: string,"locale": string,"name": string,"source"?: string | null,"user_id"?: string | null
+                  }
+                  Update: {
+                    "clients"?: string | null,"consent_version"?: string,"consented_at"?: string,"contact"?: string | null,"created_at"?: string,"id"?: string,"locale"?: string,"name"?: string,"source"?: string | null,"user_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "trainer_waitlist_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "trainer_waitlist_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"trial_links": {
                   Row: {
                     "archived_at": string | null,"created_at": string,"currency": string,"description": string | null,"duration_min": number,"expires_at": string | null,"id": string,"is_enabled": boolean,"location_id": string | null,"max_uses": number | null,"mode": Database["public"]['Enums']["session_mode"] | null,"on_showcase": boolean,"price_minor": number,"title": string,"token": string,"trainer_id": string,"uses_count": number
@@ -4253,6 +4279,9 @@ isOneToOne: false
 { Args: { "p_slot_id": string }; Returns: {
               "entry_id": string,"place": number
             }[]
+                           },
+"join_trainer_waitlist":
+{ Args: { "p_clients"?: string,"p_consent_version": string,"p_contact"?: string,"p_locale": string,"p_name": string,"p_source"?: string }; Returns: undefined
                            },
 "join_waitlist":
 { Args: { "p_session_id": string }; Returns: {
