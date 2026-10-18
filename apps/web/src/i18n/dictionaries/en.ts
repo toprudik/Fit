@@ -5009,6 +5009,9 @@ export const en: Dictionary = {
     rescheduleRequested: "Request to move: {name}, from {from} to {when}, {place}. Confirm or decline it before the session starts.",
     /** К2–К4: the trainer confirmed or declined a request, or it was left unanswered. */
     requestConfirmed: "Your booking with {name} on {when} is confirmed.",
+    requestConfirmedPass: "Your booking with {name} on {when} is confirmed. It comes off your pass “{pass}”.",
+    requestConfirmedSingle: "Your booking with {name} on {when} is confirmed. It's a single session.",
+    requestConfirmedDebt: "Your booking with {name} on {when} is confirmed. Your pass has no sessions left, so this one goes on debt.",
     requestDeclined: "Your request to {name} for {when} was declined.",
     requestDeclinedReason: "Your request to {name} for {when} was declined. Reason: “{reason}”.",
     requestExpired: "Your request to {name} for {when} got no answer, so the booking did not happen.",

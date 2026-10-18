@@ -684,12 +684,23 @@ const templates: Partial<Record<NotificationType, Template>> = {
     }),
     buttons: [{ text: t.openSession, path: idPath("/trainer/sessions", payload.session_id, "/trainer/schedule") }],
   }),
-  // К2, К3: payload { booking_id, session_id, starts_at, reason, first_name, last_name } from decide_booking.
+  // К2, К3: payload { booking_id, session_id, starts_at, reason, first_name, last_name } from decide_booking; a confirmed
+  // request also says how it is paid: pay = "pass" (with pass_title), "single" or "debt", none for a trial.
   booking_confirmed: ({ t, locale, timeZone, payload }) => ({
-    text: interpolateEscaped(t.requestConfirmed, {
-      name: personName(payload) || t.sessionTrainer,
-      when: sessionTime(locale, payload.starts_at, timeZone),
-    }),
+    text: interpolateEscaped(
+      payload.pay === "pass" && typeof payload.pass_title === "string"
+        ? t.requestConfirmedPass
+        : payload.pay === "single"
+          ? t.requestConfirmedSingle
+          : payload.pay === "debt"
+            ? t.requestConfirmedDebt
+            : t.requestConfirmed,
+      {
+        name: personName(payload) || t.sessionTrainer,
+        when: sessionTime(locale, payload.starts_at, timeZone),
+        pass: typeof payload.pass_title === "string" ? payload.pass_title : "",
+      },
+    ),
     buttons: [{ text: t.openBooking, path: idPath("/client/bookings", payload.booking_id, "/client/sessions") }],
   }),
   booking_declined: ({ t, locale, timeZone, payload }) => ({
