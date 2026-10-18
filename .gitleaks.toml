@@ -11,4 +11,6 @@ paths = [
   # Fake tokens used only in unit tests
   '''apps/web/src/lib/telegram/.*\.test\.ts''',
   '''apps/bot/tests/.*\.py''',
+  '''apps/web/src/lib/auth/bearer\.test\.ts''',
+  '''apps/web/src/app/api/calendar/\[token\]/route(\.security)?\.test\.ts''',
 ]

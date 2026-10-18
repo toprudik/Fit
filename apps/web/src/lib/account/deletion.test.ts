@@ -22,6 +22,11 @@ describe("deletionRedirect", () => {
     expect(deletionRedirect("/onboarding/consent")).toBeNull();
   });
 
+  it("keeps the legal documents open", () => {
+    expect(deletionRedirect("/legal")).toBeNull();
+    expect(deletionRedirect("/legal/terms")).toBeNull();
+  });
+
   it("sends every other screen to the deletion screen", () => {
     expect(deletionRedirect("/client")).toBe(DELETION_PATH);
     expect(deletionRedirect("/settings")).toBe(DELETION_PATH);

@@ -1,3 +1,4 @@
+import { splitStartParam } from "@/lib/attribution/source";
 import { checkInPath, parseCheckInStartParam, parsePlaceCheckInStartParam } from "@/lib/check-in/link";
 import { CLIENT_LINK_START_PREFIX, clientLinkPath, isClientLinkToken } from "@/lib/client-links/link";
 import { CONTACT_START_PREFIX, contactRequestPath, isContactRequestId } from "@/lib/contact/request";
@@ -20,6 +21,13 @@ const START_PARAM = /^[A-Za-z0-9_-]{1,512}$/;
  */
 export function startParamPath(param: string | null | undefined): string | null {
   if (!param || !START_PARAM.test(param)) return null;
+  // A channel label (`ch_<label>`, or the suffix `__s_<label>`) only says where the person came from; the
+  // screen is the one the rest names. A token that happens to contain the suffix still opens as it is.
+  const { param: rest, label } = splitStartParam(param);
+  return (label ? screenPath(rest) : null) ?? screenPath(param);
+}
+
+function screenPath(param: string): string | null {
   if (param.startsWith(INVITE_START_PREFIX)) return redeemPath(param.slice(INVITE_START_PREFIX.length));
   if (param.startsWith(CLIENT_LINK_START_PREFIX)) {
     const token = param.slice(CLIENT_LINK_START_PREFIX.length);
