@@ -2279,6 +2279,8 @@ export const en: Dictionary = {
     journalFooter: "What assistants and substitutes did on your behalf",
     journalEntry: "{action}: {client}",
     journalBy: "{name}, {when}",
+    pairJournal: "What your helpers did",
+    pairJournalFooter: "What assistants and substitutes did on your behalf with this client",
     journalActions: {
       "session:created": "New session",
       "session:cancelled": "Session cancelled",
