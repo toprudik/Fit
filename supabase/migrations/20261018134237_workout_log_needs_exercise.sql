@@ -1,11 +1,12 @@
 -- save_workout_log promised 1 to 30 exercises but only checked the upper bound, so an empty log could be saved
 -- through the RPC (the editor refuses it, lib/workouts/log.ts). Same body as 20261016234700_workout_log_save.sql
 -- with the lower bound added.
-CREATE OR REPLACE FUNCTION public.save_workout_log(p_log jsonb)
- RETURNS uuid
- LANGUAGE plpgsql
- SET search_path TO ''
-AS $function$
+create or replace function public.save_workout_log(p_log jsonb)
+returns uuid
+language plpgsql
+security invoker
+set search_path = ''
+as $$
 declare
   v_id uuid := nullif(p_log ->> 'id', '')::uuid;
   v_exercise jsonb;
@@ -67,6 +68,5 @@ begin
     end loop;
   end loop;
   return v_id;
-end $function$
+end $$;
 
-;
