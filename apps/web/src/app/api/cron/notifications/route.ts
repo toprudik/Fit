@@ -1,7 +1,7 @@
-import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { clientEnv } from "@/env/client";
 import { serverEnv } from "@/env/server";
+import { hasBearer } from "@/lib/auth/bearer";
 import { dispatchOutbox, type RecordedResult } from "@/lib/notifications/dispatch";
 import { renderMessage } from "@/lib/notifications/messages";
 import { sendTelegramMessage } from "@/lib/notifications/telegram";
@@ -11,12 +11,6 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 export const maxDuration = 60;
 const BUDGET_MS = 40_000;
 
-/** Constant-time check of "Authorization: Bearer <CRON_SECRET>". Hashing first makes the lengths equal. */
-function isAuthorized(header: string | null, secret: string): boolean {
-  const digest = (value: string) => createHash("sha256").update(value).digest();
-  return timingSafeEqual(digest(header ?? ""), digest(`Bearer ${secret}`));
-}
-
 /**
  * Notification dispatcher (ADR 0006). Supabase pg_cron calls it every minute through pg_net when outbox rows
  * are due; the URL and the secret live in Supabase Vault. It claims due rows, sends them through the Bot API
@@ -25,7 +19,7 @@ function isAuthorized(header: string | null, secret: string): boolean {
 export async function POST(request: Request) {
   const env = serverEnv();
   if (!env.CRON_SECRET) return NextResponse.json({ error: "not_configured" }, { status: 503 });
-  if (!isAuthorized(request.headers.get("authorization"), env.CRON_SECRET)) {
+  if (!hasBearer(request.headers.get("authorization"), env.CRON_SECRET)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
