@@ -1,4 +1,4 @@
--- Who runs a session for the client, migration 20261018052847_client_session_substitutes.sql (PRD wave-3 §1):
+-- Who runs a session for the client, migration 20261018071247_client_session_substitutes.sql (PRD wave-3 §1):
 -- the client of a booked session sees its substitute's name, nobody else does.
 begin;
 \ir _helpers.psql
