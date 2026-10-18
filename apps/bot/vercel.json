@@ -8,9 +8,7 @@
     }
   },
   "git": {
-    "deploymentEnabled": {
-      "**": false,
-      "main": true
-    }
-  }
+    "deploymentEnabled": false
+  },
+  "ignoreCommand": "exit 1"
 }
