@@ -73,7 +73,15 @@ export async function dispatchOutbox(deps: DispatchDeps): Promise<DispatchSummar
         await record(row, { outcome: "failed", error: group ? "admin_chat_not_configured" : "no_chat" });
         continue;
       }
-      const message = deps.render(row, { group });
+      let message: ReturnType<DispatchDeps["render"]>;
+      try {
+        message = deps.render(row, { group });
+      } catch (error) {
+        // A payload a template can't read (a malformed date) fails this row alone, not the run and the rows after it.
+        console.error("outbox: rendering failed", row.outbox_id, error instanceof Error ? error.name : "unknown");
+        await record(row, { outcome: "failed", error: "render_failed" });
+        continue;
+      }
       if (!message) {
         await record(row, { outcome: "failed", error: "no_template" });
         continue;
