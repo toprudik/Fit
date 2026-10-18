@@ -1,4 +1,4 @@
--- Forwarding a monthly report to the trainer, migration 20261017232413_monthly_report_shares.sql (PRD wave-3 §4
+-- Forwarding a monthly report to the trainer, migration 20261018001353_monthly_report_shares.sql (PRD wave-3 §4
 -- rule 3): a copy of the month for one live pair, without the other pairs, and one message to the trainer.
 begin;
 \ir _helpers.psql
