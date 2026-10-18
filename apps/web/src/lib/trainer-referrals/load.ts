@@ -11,6 +11,9 @@ export type InvitedTrainer = {
   firstName: string;
   createdAt: string;
   status: TrainerReferralStatus;
+  /** 3+ held sessions in the last 7 days. */
+  active: boolean;
+  bonusPending: boolean;
 };
 
 function bonus(kind: unknown, percent: unknown): TrainerReferralBonus | null {
@@ -25,7 +28,14 @@ function invited(item: unknown): InvitedTrainer | null {
   const status = row.status;
   if (typeof row.id !== "string" || typeof row.created_at !== "string") return null;
   if (status !== "pending" && status !== "qualified" && status !== "void") return null;
-  return { id: row.id, firstName: typeof row.first_name === "string" ? row.first_name.trim() : "", createdAt: row.created_at, status };
+  return {
+    id: row.id,
+    firstName: typeof row.first_name === "string" ? row.first_name.trim() : "",
+    createdAt: row.created_at,
+    status,
+    active: row.active === true,
+    bonusPending: row.bonus_status === "pending",
+  };
 }
 
 /**
@@ -68,4 +78,31 @@ export async function loadTrainerReferralBonus(): Promise<TrainerReferralBonus |
   const { data, error } = await supabase.rpc("trainer_referral_terms");
   if (error) throw new Error(`loading the trainer referral bonus failed: ${error.code}`);
   return bonus(data?.[0]?.bonus_kind, data?.[0]?.discount_percent);
+}
+
+export type TrainerReferrer = {
+  trainerId: string;
+  name: string | null;
+  invited: number;
+  active: number;
+  bonusesPending: number;
+  bonusesGranted: number;
+};
+
+/** Every trainer who invited trainers, with the numbers they see on their own screen, for /admin/invites. */
+export async function loadTrainerReferrers(): Promise<TrainerReferrer[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("admin_trainer_referrers");
+  if (error) throw new Error(`loading trainer referrers failed: ${error.code}`);
+  return data.map((row) => {
+    const fullName = [row.first_name, row.last_name].map((part) => part?.trim()).filter(Boolean).join(" ");
+    return {
+      trainerId: row.trainer_id,
+      name: fullName || (row.username ? `@${row.username}` : null),
+      invited: row.invited,
+      active: row.active,
+      bonusesPending: row.bonuses_pending,
+      bonusesGranted: row.bonuses_granted,
+    };
+  });
 }
