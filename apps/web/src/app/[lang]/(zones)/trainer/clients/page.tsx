@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { Users } from "lucide-react";
 import { Suspense } from "react";
+import { ClientsSwitch } from "@/components/delegations/assisted";
 import { AddClientButton, ClientList } from "@/components/pairs/client-list";
 import { DetailPlaceholder, MasterDetail, Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { SkeletonRows } from "@/components/ui/skeleton";
+import type { Dictionary } from "@/i18n/dictionaries";
 import { getDictionary } from "@/i18n/server";
+import { hasAssistance } from "@/lib/delegations/assistant";
 import { parseClientFilter } from "@/lib/pairs/clients";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -19,6 +22,11 @@ async function ClientsFromParams({ searchParams }: { searchParams: PageProps<"/[
   return <ClientList filter={parseClientFilter(params.filter)} query={query} />;
 }
 
+/** «Мои клиенты» / «Делегировано мне», only for a trainer who assists someone (PRD wave-3 §1 rule 10). */
+async function AssistantSwitch({ t }: { t: Dictionary }) {
+  return (await hasAssistance()) ? <ClientsSwitch t={t} current="mine" /> : null;
+}
+
 /** The trainer's clients: search, filters and the list; a client opens as a pushed card (screens.md §3.2). */
 export default async function TrainerClientsPage(props: PageProps<"/[lang]/trainer/clients">) {
   const t = await getDictionary();
@@ -26,6 +34,10 @@ export default async function TrainerClientsPage(props: PageProps<"/[lang]/train
     <MasterDetail
       list={
         <Screen header={<ScreenHeader title={t.tabs.trainer.clients} actions={<AddClientButton label={t.pairs.cards.add} />} />}>
+          {/* Its own boundary, so switching back and forth does not flash it with the list. */}
+          <Suspense fallback={null}>
+            <AssistantSwitch t={t} />
+          </Suspense>
           <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
             <ClientsFromParams searchParams={props.searchParams} />
           </Suspense>

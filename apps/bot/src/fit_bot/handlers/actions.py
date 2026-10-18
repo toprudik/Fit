@@ -1,4 +1,4 @@
-"""Buttons that act right in the bot (PRD §3 Т2, Т7a, ADR 0006 "Action buttons").
+"""Buttons that act right in the bot (PRD §3 Т2, Т7a, С1, ADR 0006 "Action buttons").
 
 The bot does not touch the database, so it passes the tap on: the callback data and the tapping user's Telegram id
 go to the web route ACTIONS_PATH with a secret derived from the token. The web acts as that user and says what to
@@ -23,8 +23,9 @@ from fit_bot.texts import texts_for
 log = logging.getLogger("fit_bot.handlers")
 
 #: The prefixes of lib/bot-actions/callback-data.ts: bky/bkn confirm or decline a booking request (Т2), mcy/mcn
-#: answer whether the person who came by link is the trainer's card or a new client (Т7a).
-ACTION_DATA: Final = re.compile(r"(bk|mc)[yn]:")
+#: answer whether the person who came by link is the trainer's card or a new client (Т7a), ctn declines a contact
+#: request (С1).
+ACTION_DATA: Final = re.compile(r"((bk|mc)[yn]|ctn):")
 #: Telegram shows the spinner on the button until the answer; keep the round trip well inside its limit.
 WEB_TIMEOUT: Final = 8.0
 NOTICE_LIMIT: Final = 200

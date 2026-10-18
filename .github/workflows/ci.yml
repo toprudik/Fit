@@ -51,12 +51,24 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - uses: actions/cache@v4
+        with:
+          path: apps/web/.next/cache
+          key: next-${{ hashFiles('apps/web/package-lock.json') }}-${{ hashFiles('apps/web/src/**', 'apps/web/public/**', 'apps/web/next.config.*') }}
+          restore-keys: next-${{ hashFiles('apps/web/package-lock.json') }}-
       - run: npm run build
       - name: First-load JS budget (docs/prd/quality.md)
         run: node scripts/perf-budget.mjs
 
-  web-e2e:
+  # 500 browser tests take six minutes on one runner and decide how long CI takes, so they run in
+  # three parallel shards. `web-e2e` keeps the check's name and passes only if every shard passed.
+  web-e2e-shard:
+    name: web-e2e (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     defaults:
       run:
         working-directory: apps/web
@@ -74,17 +86,30 @@ jobs:
           cache-dependency-path: apps/web/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - uses: actions/cache@v4
+        with:
+          path: apps/web/.next/cache
+          key: next-${{ hashFiles('apps/web/package-lock.json') }}-${{ hashFiles('apps/web/src/**', 'apps/web/public/**', 'apps/web/next.config.*') }}
+          restore-keys: next-${{ hashFiles('apps/web/package-lock.json') }}-
       - run: npm run build
       # Every screen at 390 and 1280 px in both themes: axe (WCAG 2.2 AA), tabs, language, theme.
-      - run: npm run e2e
+      - run: npm run e2e -- --shard=${{ matrix.shard }}/3
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: e2e-screenshots
+          name: e2e-screenshots-${{ matrix.shard }}
           path: |
             apps/web/e2e/screenshots
             apps/web/playwright-report
           retention-days: 7
+
+  web-e2e:
+    runs-on: ubuntu-latest
+    needs: web-e2e-shard
+    if: always()
+    steps:
+      - name: Every e2e shard passed
+        run: test "${{ needs.web-e2e-shard.result }}" = success
 
   bot:
     runs-on: ubuntu-latest
@@ -135,9 +160,9 @@ jobs:
             exit 1
           fi
 
+  # Runs alongside the other jobs instead of after web and bot: waiting added three minutes to every run.
   docker:
     runs-on: ubuntu-latest
-    needs: [web, bot]
     env:
       # build-push-action uploads a build record artifact per image by default (kept 90 days); nobody reads them.
       DOCKER_BUILD_RECORD_UPLOAD: false
