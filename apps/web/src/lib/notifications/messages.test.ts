@@ -1000,6 +1000,20 @@ describe("monthly report message (wave-3 §4)", () => {
     const message = renderMessage({ ...row, kind: "monthly_report", payload: { month: "2026-09-02" } }, app);
     expect(message?.buttons).toEqual([{ text: "Открыть итоги", web_app: { url: "https://fit.example/client/progress?source=monthly_report" } }]);
   });
+
+  it("tells the trainer a client sent their month and opens it", () => {
+    const pair = "4f1c2d3e-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
+    const message = renderMessage(
+      { ...row, kind: "monthly_report_shared", payload: { coaching_id: pair, month: "2026-09-01", name: "Аня <К>" } },
+      app,
+    );
+    expect(message).toEqual({
+      text: "Аня &lt;К&gt; делится с тобой итогами за сентябрь 2026.",
+      buttons: [
+        { text: "Открыть итоги", web_app: { url: `https://fit.example/trainer/clients/${pair}/reports/2026-09?source=monthly_report_shared` } },
+      ],
+    });
+  });
 });
 
 describe("homework messages (Д1, Д2)", () => {

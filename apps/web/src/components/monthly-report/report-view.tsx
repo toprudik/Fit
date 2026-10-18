@@ -1,42 +1,56 @@
 import { Award, CalendarCheck, CalendarDays, ClipboardCheck, Dumbbell, Flame, Footprints, Moon, Ruler, Trophy, Utensils } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/components/ui/list";
+import type { Locale } from "@/i18n/config";
+import type { Dictionary } from "@/i18n/dictionaries";
 import { formatNumber, interpolate, plural } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { isBadgeCode } from "@/lib/gamification/gamification";
-import { loadMonthlyReport } from "@/lib/monthly-report/load";
-import { formatMonth, formatSleep, monthParam, storyOptions } from "@/lib/monthly-report/report";
+import { loadMonthlyReport, loadShareTargets } from "@/lib/monthly-report/load";
+import { formatMonth, formatSleep, monthParam, storyOptions, type MonthlyReport } from "@/lib/monthly-report/report";
 import { formatMeasurement, type MeasurementKind } from "@/lib/progress/measurements";
 import { formatRecord } from "@/lib/workouts/present";
 import { weightUnit } from "@/lib/workouts/units";
+import { ForwardToTrainer } from "./forward";
 import { StoryCards } from "./story-cards";
 
 const MINUS = "−";
 
-/** The client's finished month (PRD wave-3 §4-2): only the sections that had data, then the story cards. */
+/** The client's finished month (PRD wave-3 §4-2): only the sections that had data, then sending and story cards. */
 export async function MonthlyReportView({ month }: { month: string }) {
   const [t, locale, report] = await Promise.all([getDictionary(), getLocale(), loadMonthlyReport(month)]);
   const copy = t.monthlyReport;
   if (report === "signed-out") return <EmptyState icon={CalendarDays} title={copy.title} description={copy.signedOutText} />;
   if (!report) return <EmptyState icon={CalendarDays} title={copy.emptyTitle} description={copy.emptyText} />;
+  const targets = await loadShareTargets(month);
 
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-1 px-4">
+        <h2 className="text-title-3 font-semibold first-letter:uppercase">{formatMonth(locale, report.month)}</h2>
+        <p className="text-footnote text-ink-2">{copy.private}</p>
+      </div>
+      <ReportSections report={report} t={t} locale={locale} />
+      <ForwardToTrainer month={monthParam(report.month)} targets={targets} />
+      <StoryCards month={monthParam(report.month)} options={storyOptions(report)} />
+    </div>
+  );
+}
+
+/** The report's sections, for the client and for the trainer it was sent to (§4 rule 3). */
+export function ReportSections({ report, t, locale }: { report: MonthlyReport; t: Dictionary; locale: Locale }) {
+  const copy = t.monthlyReport;
   const units = t.progress.measurements.units;
   const streakNames = t.gamification.streaks;
   const badgeItems = t.gamification.badges.items;
   const badges = (report.badges ?? []).filter(isBadgeCode);
-  const monthName = formatMonth(locale, report.month);
   const signed = (kind: MeasurementKind, change: number) => {
     const text = formatMeasurement(locale, kind, Math.abs(change), units);
     return change === 0 ? text : `${change < 0 ? MINUS : "+"}${text}`;
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1 px-4">
-        <h2 className="text-title-3 font-semibold first-letter:uppercase">{monthName}</h2>
-        <p className="text-footnote text-ink-2">{copy.private}</p>
-      </div>
-
+    <>
       {report.sessions || report.workouts ? (
         <ListGroup header={copy.sessions.header}>
           {report.sessions && report.sessions.trainers.length > 1 ? (
@@ -152,8 +166,6 @@ export async function MonthlyReportView({ month }: { month: string }) {
           />
         </ListGroup>
       ) : null}
-
-      <StoryCards month={monthParam(report.month)} options={storyOptions(report)} />
-    </div>
+    </>
   );
 }

@@ -1465,7 +1465,7 @@ export const ru = {
   monthlyReport: {
     title: "Итоги месяца",
     entryText: "{month}: занятия, рекорды и замеры",
-    private: "Итоги видишь только ты, тренеру они не приходят.",
+    private: "Итоги видишь только ты. Тренеру они придут, только если ты сам их отправишь.",
     signedOutText: "Войди через Telegram, чтобы увидеть итоги месяца.",
     signIn: "Войти через Telegram",
     emptyTitle: "За этот месяц итогов нет",
@@ -1498,6 +1498,22 @@ export const ru = {
       units: { h: "ч", min: "мин" },
     },
     homework: { header: "Домашние задания", done: "Выполнено", ofTotal: "{done} из {total}" },
+    /** Sending the month to a trainer (§4 rule 3). */
+    forward: {
+      header: "Отправить тренеру",
+      footer: "Тренер увидит итоги без занятий с другими тренерами и без домашних заданий. Если отправить ещё раз, у тренера будут свежие цифры.",
+      send: "Отправить",
+      sent: "Отправлено",
+      done: "Итоги у тренера",
+      failed: "Не получилось отправить, попробуй ещё раз.",
+    },
+    /** The month a client sent, on the trainer's side. */
+    shared: {
+      title: "Итоги клиента",
+      sentAt: "Клиент отправил их {date}.",
+      emptyTitle: "Итогов нет",
+      emptyText: "Клиент не отправлял итоги за этот месяц, или он больше у тебя не занимается.",
+    },
     stories: {
       header: "Карточки для сторис",
       footer: "На карточках нет веса, замеров и питания. Вес появится, только если ты сам выберешь такую карточку.",
@@ -4646,6 +4662,8 @@ export const ru = {
     openHomework: "Открыть задание",
     monthlyReport: "Готовы итоги за {month}: занятия, рекорды и замеры. Там же можно сделать карточку для сторис.",
     openMonthlyReport: "Открыть итоги",
+    /** To the trainer: payload { coaching_id, month, name } from share_monthly_report. */
+    monthlyReportShared: "{name} делится с тобой итогами за {month}.",
     /** К7: a session reminder to the client (PRD §3); never the meeting link, it opens in DaFit (SCHED-21). */
     sessionReminder: "Через {lead} занятие с тренером {name}, {time}.",
     sessionReminderGroup: "Через {lead} групповое занятие «{title}» с тренером {name}, {time}.",

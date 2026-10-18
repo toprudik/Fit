@@ -1456,7 +1456,7 @@ export const en: Dictionary = {
   monthlyReport: {
     title: "Month in review",
     entryText: "{month}: sessions, records and measurements",
-    private: "Only you see this review. Your trainer doesn't get it.",
+    private: "Only you see this review. Your trainer gets it only if you send it.",
     signedOutText: "Sign in with Telegram to see your month in review.",
     signIn: "Sign in with Telegram",
     emptyTitle: "Nothing to review for this month",
@@ -1489,6 +1489,22 @@ export const en: Dictionary = {
       units: { h: "h", min: "min" },
     },
     homework: { header: "Homework", done: "Done", ofTotal: "{done} of {total}" },
+    /** Sending the month to a trainer (§4 rule 3). */
+    forward: {
+      header: "Send to your trainer",
+      footer: "Your trainer sees the review without sessions with other trainers and without homework. Send it again and they see the latest numbers.",
+      send: "Send",
+      sent: "Sent",
+      done: "Your trainer has the review",
+      failed: "Couldn't send it. Please try again.",
+    },
+    /** The month a client sent, on the trainer's side. */
+    shared: {
+      title: "Client's month",
+      sentAt: "The client sent it on {date}.",
+      emptyTitle: "No review here",
+      emptyText: "The client hasn't sent the review for this month, or they no longer train with you.",
+    },
     stories: {
       header: "Story cards",
       footer: "Cards show no weight, measurements or nutrition. Weight appears only if you pick that card yourself.",
@@ -4583,6 +4599,8 @@ export const en: Dictionary = {
     openHomework: "Open homework",
     monthlyReport: "Your review of {month} is ready: sessions, records and measurements. You can make a story card there too.",
     openMonthlyReport: "Open review",
+    /** To the trainer: payload { coaching_id, month, name } from share_monthly_report. */
+    monthlyReportShared: "{name} shared their review of {month} with you.",
     /** К7: a session reminder to the client (PRD §3); never the meeting link, it opens in DaFit (SCHED-21). */
     sessionReminder: "Your session with {name} starts in {lead}, {time}.",
     sessionReminderGroup: "The group session \u201c{title}\u201d with {name} starts in {lead}, {time}.",
