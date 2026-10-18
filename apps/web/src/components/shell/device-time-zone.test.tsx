@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resetAccountStoreForTests, setAccount } from "@/components/account/account-store";
 import { DeviceTimeZone, TIME_ZONE_ENDPOINT } from "./device-time-zone";
 
 const router = { refresh: vi.fn() };
@@ -9,7 +10,11 @@ vi.mock("next/navigation", () => ({ useRouter: () => router }));
 const fetchMock = vi.fn();
 const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
+const CLIENT = { status: "signed-in", name: "Аня", photoUrl: null, isTrainer: false, isAdmin: false, botBlocked: false, botUrl: "https://t.me/example_bot" } as const;
+
 beforeEach(() => {
+  resetAccountStoreForTests();
+  setAccount(CLIENT);
   sessionStorage.clear();
   router.refresh.mockReset();
   fetchMock.mockReset();
@@ -42,6 +47,16 @@ describe("DeviceTimeZone", () => {
     render(<DeviceTimeZone />);
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(router.refresh).not.toHaveBeenCalled();
+  });
+
+  it("sends nothing for a trainer or a signed-out visitor", () => {
+    setAccount({ ...CLIENT, isTrainer: true });
+    render(<DeviceTimeZone />);
+    cleanup();
+    setAccount({ status: "signed-out" });
+    render(<DeviceTimeZone />);
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("tries again on the next screen after a failed request", async () => {

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useAccount } from "@/components/account/account-store";
 
 export const TIME_ZONE_ENDPOINT = "/api/settings/time-zone";
 
@@ -9,14 +10,18 @@ export const TIME_ZONE_ENDPOINT = "/api/settings/time-zone";
 const SENT_KEY = "dafit-time-zone-sent";
 
 /**
- * Mounted in the zones shell. Sends the device's time zone to the account once per tab and zone
- * (PRD 2.6.7 rule 4), and re-renders the screen when the account's zone changed, so times on it
- * follow the device. Failures are silent: the account keeps its previous zone.
+ * Mounted in the zones shell. Once a client is signed in, sends the device's time zone to the account
+ * once per tab and zone (PRD 2.6.7 rule 4), and re-renders the screen when the account's zone changed,
+ * so times on it follow the device. A trainer's zone is their own (rule 1), so nothing is sent for
+ * them. Failures are silent: the account keeps its previous zone.
  */
 export function DeviceTimeZone() {
   const router = useRouter();
+  const account = useAccount();
+  const isClient = account.status === "signed-in" && !account.isTrainer;
 
   useEffect(() => {
+    if (!isClient) return;
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (!timeZone) return;
     try {
@@ -46,7 +51,7 @@ export function DeviceTimeZone() {
       }
     })();
     return () => controller.abort();
-  }, [router]);
+  }, [isClient, router]);
 
   return null;
 }
