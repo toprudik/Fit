@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { dictionaries } from "@/i18n/dictionaries";
-import { growth, growthText, lastFullWeeks, moneyCell, ownerCsv, ownerWeeks, retentionShares, type OwnerSummary, type OwnerWeek } from "./metrics";
+import {
+  SUCCESS_GOALS,
+  growth,
+  growthText,
+  lastFullWeeks,
+  moneyCell,
+  ownerCsv,
+  ownerWeeks,
+  retentionShares,
+  successSignal,
+  type OwnerSummary,
+  type OwnerWeek,
+} from "./metrics";
 
 function week(week_start: string, values: Partial<OwnerWeek> = {}): OwnerWeek {
   return {
@@ -81,11 +93,19 @@ describe("owner metrics", () => {
     expect(moneyCell({}, "en")).toBe("0");
   });
 
-  it("puts the summary, the weeks and the cohorts in one CSV", () => {
+  it("measures the beta goals against their targets", () => {
+    expect(successSignal(3, 10, SUCCESS_GOALS.streak)).toEqual({ share: 30, reached: true });
+    expect(successSignal(2, 10, SUCCESS_GOALS.streak)).toEqual({ share: 20, reached: false });
+    expect(successSignal(3, 5, SUCCESS_GOALS.offers)).toEqual({ share: 60, reached: true });
+    expect(successSignal(0, 0, SUCCESS_GOALS.offers)).toEqual({ share: null, reached: false });
+  });
+
+  it("puts the summary, the beta goals, the weeks and the cohorts in one CSV", () => {
     const copy = dictionaries.ru.ownerStats;
     const csv = ownerCsv(
       {
         summary,
+        success: { clients: 10, clients_with_streak: 4, trainers: 5, trainers_offer_live: 2, trainers_offer_ever: 3 },
         weekly: [week("2026-10-05", { new_users: 6, turnover: { RUB: 100_000 } })],
         cohorts: [{ cohort_week: "2026-10-05", size: 4, retained: [4, 2] }],
       },
@@ -97,6 +117,10 @@ describe("owner metrics", () => {
     expect(lines).toContain("Аккаунтов;120");
     expect(lines).toContain("Оборот за всё время;123450,00 RUB");
     expect(lines).toContain('Как клиенты пришли к тренерам;"Ссылка или QR тренера: 60; Код тренера: 20"');
+    expect(lines).toContain("Цели беты");
+    expect(lines).toContain("Клиентов с недельной серией;4");
+    expect(lines).toContain("Доля клиентов с недельной серией;40%");
+    expect(lines).toContain("Доля тренеров с действующей акцией;40%");
     expect(lines.find((line) => line.startsWith("2026-10-05;6;"))).toContain("1000,00 RUB");
     expect(lines).toContain("Неделя;Людей;Неделя 0;Неделя 1");
     expect(lines).toContain("2026-10-05;4;100%;50%");

@@ -8,6 +8,19 @@ type Functions = Database["public"]["Functions"];
 export type OwnerSummary = Functions["admin_owner_summary"]["Returns"][number];
 export type OwnerWeek = Functions["admin_owner_weekly"]["Returns"][number];
 export type OwnerCohort = Functions["admin_owner_cohorts"]["Returns"][number];
+export type OwnerSuccess = Functions["admin_owner_success"]["Returns"][number];
+
+/**
+ * The wave-3 success signals (PRD wave-3): 30% of clients with a weekly streak, a referral offer at 3 of 5
+ * trainers. Whole percents of clients and of trainers.
+ */
+export const SUCCESS_GOALS = { streak: 30, offers: 60 } as const;
+
+/** The share of a signal in whole percent, and whether it reached its goal; null share when nobody counts yet. */
+export function successSignal(part: number, total: number, goal: number): { share: number | null; reached: boolean } {
+  const value = share(part, total);
+  return { share: value, reached: value !== null && value >= goal };
+}
 
 /** How many weeks the statistics show (?weeks=); the database takes 4 to 52. */
 export const OWNER_WEEKS = [8, 12, 26] as const;
@@ -56,7 +69,8 @@ export function moneyCell(value: Json, locale: Locale): string {
 }
 
 export type OwnerCsvCopy = {
-  sections: { summary: string; weekly: string; cohorts: string };
+  sections: { summary: string; success: string; weekly: string; cohorts: string };
+  success: Record<keyof OwnerSuccess | "streak_share" | "offer_share", string>;
   metric: string;
   value: string;
   week: string;
@@ -123,12 +137,29 @@ function summaryValue(summary: OwnerSummary, key: keyof OwnerSummary, copy: Owne
   return value as number;
 }
 
+function percentCell(part: number, total: number): Cell {
+  const value = share(part, total);
+  return value === null ? null : `${value}%`;
+}
+
+function successRows(success: OwnerSuccess, copy: OwnerCsvCopy): Cell[][] {
+  return [
+    [copy.success.clients, success.clients],
+    [copy.success.clients_with_streak, success.clients_with_streak],
+    [copy.success.streak_share, percentCell(success.clients_with_streak, success.clients)],
+    [copy.success.trainers, success.trainers],
+    [copy.success.trainers_offer_live, success.trainers_offer_live],
+    [copy.success.trainers_offer_ever, success.trainers_offer_ever],
+    [copy.success.offer_share, percentCell(success.trainers_offer_live, success.trainers)],
+  ];
+}
+
 /**
- * The whole page as one CSV for a deck: the summary as metric/value pairs, then the weeks as columns of a
+ * The whole page as one CSV for a deck: the summary and the beta goals as metric/value pairs, then the weeks as columns of a
  * table, then the cohorts with retention in percent. Sections are separated by an empty line.
  */
 export function ownerCsv(
-  data: { summary: OwnerSummary; weekly: OwnerWeek[]; cohorts: OwnerCohort[] },
+  data: { summary: OwnerSummary; success: OwnerSuccess; weekly: OwnerWeek[]; cohorts: OwnerCohort[] },
   copy: OwnerCsvCopy,
   locale: Locale,
 ): string {
@@ -137,6 +168,10 @@ export function ownerCsv(
     [copy.sections.summary],
     [copy.metric, copy.value],
     ...SUMMARY_ORDER.map((key) => [copy.summary[key], summaryValue(data.summary, key, copy, locale)]),
+    [],
+    [copy.sections.success],
+    [copy.metric, copy.value],
+    ...successRows(data.success, copy),
     [],
     [copy.sections.weekly],
     [copy.week, ...WEEKLY_ORDER.map((key) => copy.weekly[key])],

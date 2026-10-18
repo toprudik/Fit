@@ -8,9 +8,13 @@ import { toast } from "@/components/ui/sonner";
 import { TextArea } from "@/components/ui/text-area";
 import { useI18n } from "@/i18n/client";
 import { decideRequest, type BookingError } from "@/lib/bookings/actions";
+import { confirmRequestSingle } from "@/lib/bookings/single";
 
-/** "Подтвердить" and "Отклонить" with an optional reason on /trainer/requests/[id] (PRD 2.6.4). */
-export function DecideRequest({ bookingId }: { bookingId: string }) {
+/**
+ * "Подтвердить" and "Отклонить" with an optional reason on /trainer/requests/[id] (PRD 2.6.4); with `single`, when
+ * no pass covers the request, also "Подтвердить как разовое" (2.6.4-6, 2.8-12).
+ */
+export function DecideRequest({ bookingId, single = false }: { bookingId: string; single?: boolean }) {
   const { t } = useI18n();
   const copy = t.schedule.requests;
   const router = useRouter();
@@ -18,7 +22,7 @@ export function DecideRequest({ bookingId }: { bookingId: string }) {
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const [action, setAction] = useState<"accept" | "decline" | null>(null);
+  const [action, setAction] = useState<"accept" | "single" | "decline" | null>(null);
 
   const explain = (code: BookingError) => copy.errors[code === "request_not_found" || code === "invalid_reason" ? code : "failed"];
 
@@ -37,11 +41,32 @@ export function DecideRequest({ bookingId }: { bookingId: string }) {
     });
   };
 
+  const confirmSingle = () => {
+    setAction("single");
+    startTransition(async () => {
+      const result = await confirmRequestSingle({ bookingId, title: t.schedule.sessionForm.singleTitle });
+      if (result.status === "error") {
+        toast.error(explain(result.error));
+        return;
+      }
+      toast.success(copy.confirmedSingle);
+      router.push("/trainer/requests");
+    });
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <Button type="button" block loading={pending && action === "accept"} onClick={() => decide(true)}>
         {copy.confirm}
       </Button>
+      {single ? (
+        <>
+          <Button type="button" variant="secondary" block loading={pending && action === "single"} onClick={confirmSingle}>
+            {copy.confirmSingle}
+          </Button>
+          <p className="px-1 text-footnote text-ink-2">{copy.confirmSingleHint}</p>
+        </>
+      ) : null}
       <Button type="button" variant="secondary" block onClick={() => setOpen(true)}>
         {copy.decline}
       </Button>
