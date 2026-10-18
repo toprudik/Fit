@@ -41,7 +41,13 @@ export const en: Dictionary = {
     trainer: {
       today: {
         emptyTitle: "No sessions today",
-        emptyText: "Today's sessions, booking requests, and clients whose passes are running out will show up here.",
+        emptyText: "Open free time in your schedule and clients can book it.",
+        emptyAction: "Open schedule",
+        sessions: "Today's sessions",
+        attention: "Needs attention",
+        requests: "Booking requests",
+        debts: "Client debts",
+        ending: "Passes running out",
         milestones: {
           upcoming: "Their next session will be the {sessions}th",
         },
