@@ -815,6 +815,7 @@ export const en: Dictionary = {
       joinedText: "You already train with this trainer.",
       prices: "Prices",
       openTrainers: "My trainers",
+      trial: "Book a trial session",
     },
     editor: {
       title: "Showcase",
@@ -1324,6 +1325,10 @@ export const en: Dictionary = {
       copyFailed: "Couldn't copy",
       enable: "Turn on",
       disable: "Turn off",
+      onShowcase: "On your showcase",
+      showOnShowcase: "Show on showcase",
+      hideFromShowcase: "Remove from showcase",
+      showcaseHint: "One link can be on your showcase: the “Book a trial session” button opens it.",
       remove: "Delete",
       removeTitle: "Delete this link?",
       removeText: "The link and its QR stop working for good. Clients who came through it stay.",

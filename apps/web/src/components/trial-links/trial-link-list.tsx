@@ -1,7 +1,7 @@
 "use client";
 
 import { shareURL } from "@tma.js/sdk-react";
-import { Copy, Power, PowerOff, Share2, Trash2 } from "lucide-react";
+import { Copy, Power, PowerOff, Share2, Store, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
-import { archiveTrialLink, setTrialLinkEnabled } from "@/lib/trial-links/actions";
+import { archiveTrialLink, setTrialLinkEnabled, setTrialLinkOnShowcase } from "@/lib/trial-links/actions";
 import { safely, useInTelegram } from "@/lib/telegram/mini-app";
 
 export type TrialLinkItem = {
@@ -19,6 +19,8 @@ export type TrialLinkItem = {
   terms: string;
   url: string;
   enabled: boolean;
+  /** Behind "Записаться на пробное" on the trainer's showcase. */
+  onShowcase: boolean;
   uses: number;
 };
 
@@ -66,9 +68,10 @@ function TrialLinkRow({ link }: { link: TrialLinkItem }) {
           <h3 className="text-headline break-words">{link.title}</h3>
           <p className="text-subhead text-ink-2">{link.terms}</p>
         </div>
-        <Badge tone={link.enabled ? "success" : "neutral"} className="shrink-0">
-          {link.enabled ? copy.on : copy.off}
-        </Badge>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <Badge tone={link.enabled ? "success" : "neutral"}>{link.enabled ? copy.on : copy.off}</Badge>
+          {link.onShowcase ? <Badge tone="accent">{copy.onShowcase}</Badge> : null}
+        </div>
       </div>
       <p className="text-footnote break-all text-ink-2 select-all">{link.url}</p>
       <p className="text-footnote text-ink-2 tabular-nums">{interpolate(copy.uses, { count: link.uses })}</p>
@@ -91,6 +94,15 @@ function TrialLinkRow({ link }: { link: TrialLinkItem }) {
           onClick={() => run(() => setTrialLinkEnabled(link.id, !link.enabled))}
         >
           {link.enabled ? copy.disable : copy.enable}
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={Store}
+          disabled={pending}
+          onClick={() => run(() => setTrialLinkOnShowcase(link.id, !link.onShowcase))}
+        >
+          {link.onShowcase ? copy.hideFromShowcase : copy.showOnShowcase}
         </Button>
         <Button size="sm" variant="ghost" icon={Trash2} onClick={() => setRemoveOpen(true)}>
           {copy.remove}
@@ -123,13 +135,17 @@ function TrialLinkRow({ link }: { link: TrialLinkItem }) {
   );
 }
 
-/** The trainer's trial links on /trainer/links: share, copy, switch off and on, delete. */
+/** The trainer's trial links on /trainer/links: share, copy, switch off and on, put on the showcase, delete. */
 export function TrialLinkList({ links }: { links: TrialLinkItem[] }) {
+  const { t } = useI18n();
   return (
-    <ul className="flex flex-col gap-3">
-      {links.map((link) => (
-        <TrialLinkRow key={link.id} link={link} />
-      ))}
-    </ul>
+    <div className="flex flex-col gap-2">
+      <ul className="flex flex-col gap-3">
+        {links.map((link) => (
+          <TrialLinkRow key={link.id} link={link} />
+        ))}
+      </ul>
+      <p className="px-1 text-footnote text-ink-2">{t.trialLinks.trainer.showcaseHint}</p>
+    </div>
   );
 }
