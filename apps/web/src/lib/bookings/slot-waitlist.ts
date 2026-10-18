@@ -58,3 +58,40 @@ export async function loadSlotWaitlist(owner: ScheduleOwner, sessionId: string):
   }));
   return [...entries.filter((entry) => entry.status === "offered"), ...entries.filter((entry) => entry.status === "waiting")];
 }
+
+/**
+ * The queues of the trainer's free slots (PRD wave-2 §9-7): a slot that opened again goes to its first in line on
+ * its own; here the trainer sees who still waits and can offer the slot out of turn when nobody holds it.
+ */
+export async function loadOpenSlotQueues(owner: ScheduleOwner, slotIds: string[]): Promise<Map<string, SessionWaitlistEntry[]>> {
+  const queues = new Map<string, SessionWaitlistEntry[]>();
+  if (slotIds.length === 0) return queues;
+  const { supabase } = owner;
+  const { data, error } = await supabase
+    .from("waitlist_entries")
+    .select("id, slot_id, coaching_id, status, offer_expires_at")
+    .in("slot_id", slotIds)
+    .in("status", ["waiting", "offered"])
+    .order("joined_at")
+    .order("id");
+  if (error) throw new Error(`loading slot queues failed: ${error.code}`);
+  const names = await clientNames(
+    supabase,
+    data.map((row) => row.coaching_id),
+  );
+  for (const slotId of slotIds) {
+    const rows = data.filter((row) => row.slot_id === slotId);
+    if (rows.length === 0) continue;
+    let place = 0;
+    const entries = rows.map((row) => ({
+      id: row.id,
+      coachingId: row.coaching_id,
+      name: names.get(row.coaching_id) ?? "",
+      status: row.status as "waiting" | "offered",
+      place: row.status === "waiting" ? ++place : null,
+      offerExpiresAt: row.offer_expires_at,
+    }));
+    queues.set(slotId, [...entries.filter((entry) => entry.status === "offered"), ...entries.filter((entry) => entry.status === "waiting")]);
+  }
+  return queues;
+}
