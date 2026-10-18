@@ -118,7 +118,7 @@ export function FeedbackForm({ from, backHref }: { from: string | null; backHref
         screenshots: prepared.uploads.map((upload) => upload.path),
       });
       if (result.status !== "sent") {
-        setErrors({ form: copy.failed });
+        setErrors({ form: result.status === "rate-limited" ? copy.tooMany : copy.failed });
         return;
       }
       hapticSuccess();

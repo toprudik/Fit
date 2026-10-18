@@ -2,6 +2,7 @@
 
 import { refresh } from "next/cache";
 import { z } from "zod";
+import { parseMajor } from "@/lib/money/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { TRIAL_DURATIONS, TRIAL_MAX_PRICE } from "./link";
 
@@ -25,12 +26,13 @@ const input = z.object({
     .number()
     .int()
     .refine((value) => (TRIAL_DURATIONS as readonly number[]).includes(value)),
-  // Typed in major units with a comma or a dot; stored in minor units.
+  // Typed in major units with a comma or a dot, at most two decimals, as every other price field (parseMajor);
+  // Number() also took "0x10", "1e3" and "12.345". Minor units from here on.
   price: z
     .string()
     .trim()
-    .transform((value) => Number((value || "0").replace(/\s/g, "").replace(",", ".")))
-    .refine((value) => Number.isFinite(value) && value >= 0 && value <= TRIAL_MAX_PRICE),
+    .transform((value) => parseMajor(value || "0"))
+    .refine((minor): minor is number => minor !== null && minor <= TRIAL_MAX_PRICE * 100),
   mode: z.enum(["offline", "online"]),
   location: z
     .string()
@@ -68,7 +70,7 @@ export async function createTrialLink(_previous: CreateTrialLinkState, formData:
     title: link.title,
     description: link.description,
     duration_min: link.duration,
-    price_minor: Math.round(link.price * 100),
+    price_minor: link.price,
     currency: trainer.default_currency,
     // An online trial has no place.
     location_id: link.mode === "online" ? null : link.location,

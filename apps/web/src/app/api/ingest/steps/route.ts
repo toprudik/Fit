@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dictionaries } from "@/i18n/dictionaries";
 import { interpolate } from "@/i18n/format";
 import { shortcutSteps } from "@/lib/activity/activity";
+import { parseDay } from "@/lib/schedule/time";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type Refusal = "bad_token" | "rate_limited" | "too_many_steps" | "bad_steps" | "bad_day" | "bad_request";
@@ -15,7 +16,6 @@ const STATUS: Record<Refusal, number> = {
   bad_request: 400,
 };
 
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** The shortcut's own language: a Russian iPhone asks in Russian, everything else gets English. */
 function copyFor(request: Request) {
@@ -48,7 +48,8 @@ export async function POST(request: Request) {
   const steps = shortcutSteps(input.steps);
   const date = typeof input.date === "string" && input.date.trim() ? input.date.trim().slice(0, 10) : undefined;
   if (steps === null) return answer(request, 422, copy.bad_steps);
-  if (date !== undefined && !DAY.test(date)) return answer(request, 422, copy.bad_day);
+  // parseDay also refuses a day that does not exist (2026-02-31), which the database cast would fail on.
+  if (date !== undefined && parseDay(date) === null) return answer(request, 422, copy.bad_day);
 
   const { data, error } = await createSupabaseAdminClient().rpc("ingest_steps", {
     p_token: token.slice(0, 200),

@@ -141,6 +141,12 @@ describe("consentRedirect", () => {
     expect(consentRedirect("/onboarding/consent", "?next=%2Fclient")).toBeNull();
     expect(consentRedirect("/login", "?next=%2Fclient")).toBeNull();
   });
+
+  it("leaves the legal documents open, but not a look-alike path", () => {
+    expect(consentRedirect("/legal", "")).toBeNull();
+    expect(consentRedirect("/legal/privacy", "")).toBeNull();
+    expect(consentRedirect("/legalese", "")).toBe("/onboarding/consent?next=%2Flegalese");
+  });
 });
 
 describe("trainerZoneRedirect", () => {
