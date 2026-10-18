@@ -1058,6 +1058,12 @@ export const en: Dictionary = {
         submit: "Freeze",
         done: "Pass frozen",
         overlap: "These days are already frozen.",
+        bookings: {
+          one: "The client has {count} confirmed session on these days. The booking stays, but this pass won't pay for it: another pass will, or it goes on debt.",
+          few: "The client has {count} confirmed sessions on these days. The bookings stay, but this pass won't pay for them: another pass will, or they go on debt.",
+          many: "The client has {count} confirmed sessions on these days. The bookings stay, but this pass won't pay for them: another pass will, or they go on debt.",
+          other: "The client has {count} confirmed sessions on these days. The bookings stay, but this pass won't pay for them: another pass will, or they go on debt.",
+        },
       },
       freezes: {
         title: "Freezes",
