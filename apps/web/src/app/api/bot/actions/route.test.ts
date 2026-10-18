@@ -174,4 +174,40 @@ describe("POST /api/bot/actions", () => {
       expect(await tap(`mcy:${CLAIM}`)).toEqual({ notice: "Этот запрос уже не ждёт ответа.", resolved: true, line: "Запрос уже закрыт." });
     });
   });
+
+  describe("contact requests (С1)", () => {
+    const REQUEST = "6a7b8c9d-0e1f-4a2b-8c3d-4e5f6a7b8c9d";
+    const tap = async (data: string) => (await call({ telegram_id: 7, data })).json();
+    const decline = (data: unknown, error: null | { message: string; code: string } = null) => {
+      user.results.decline_contact_request = { data, error };
+    };
+
+    it("declines as the tapping user", async () => {
+      decline("declined");
+      expect(await tap(`ctn:${REQUEST}`)).toEqual({
+        notice: "Хорошо, номер не отправим. Собеседник узнает об отказе.",
+        resolved: true,
+        line: "Контакт не отправлен.",
+      });
+      expect(user.calls).toEqual([{ telegramId: 7, fn: "decline_contact_request", args: { p_request_id: REQUEST } }]);
+    });
+
+    it("says the contact is already shared", async () => {
+      decline("accepted");
+      expect(await tap(`ctn:${REQUEST}`)).toEqual({ notice: "Контакт уже отправлен.", resolved: true, line: "Контакт уже отправлен." });
+    });
+
+    it.each([
+      ["expired", ["expired", null]],
+      ["not addressed to this user", [null, { message: "request_not_found", code: "P0001" }]],
+    ] as const)("closes a request that is %s", async (_name, [data, error]) => {
+      decline(data, error);
+      expect(await tap(`ctn:${REQUEST}`)).toEqual({ notice: "Этот запрос уже не ждёт ответа.", resolved: true, line: "Запрос уже закрыт." });
+    });
+
+    it("keeps the button when declining failed", async () => {
+      decline(null, { message: "boom", code: "XX000" });
+      expect(await tap(`ctn:${REQUEST}`)).toEqual({ notice: "Не получилось. Ответь на запрос в приложении.", resolved: false });
+    });
+  });
 });

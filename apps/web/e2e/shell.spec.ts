@@ -43,6 +43,8 @@ const SCREENS: readonly Screen[] = [
   { slug: "trainer-request", path: "/trainer/requests/0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f", title: "Запрос на запись" },
   { slug: "trainer-clients", path: "/trainer/clients", title: "Клиенты" },
   { slug: "trainer-new-card", path: "/trainer/clients/new", title: "Добавить клиента вручную" },
+  // Signed out, nobody has handed over clients: the empty state of «Делегировано мне».
+  { slug: "trainer-delegated", path: "/trainer/clients/delegated", title: "Делегировано мне" },
   { slug: "trainer-money", path: "/trainer/money", title: "Деньги" },
   { slug: "trainer-more", path: "/trainer/more", title: "Ещё" },
   { slug: "trainer-checkin-qr", path: "/trainer/checkin-qr", title: "QR для зала" },
@@ -127,6 +129,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "admin-audit-denied", path: "/admin/audit", title: "Такой страницы нет", documentTitle: false, status: 404 },
   { slug: "admin-plans-denied", path: "/admin/plans", title: "Такой страницы нет", documentTitle: false, status: 404 },
   { slug: "admin-feedback-denied", path: "/admin/feedback", title: "Такой страницы нет", documentTitle: false, status: 404 },
+  { slug: "admin-reviews-denied", path: "/admin/reviews", title: "Такой страницы нет", documentTitle: false, status: 404 },
   { slug: "admin-stats-denied", path: "/admin/stats", title: "Такой страницы нет", documentTitle: false, status: 404 },
 ];
 
@@ -307,6 +310,11 @@ test.describe("pairs", () => {
       await expect(page.getByRole("heading", { name: "Такой страницы нет" })).toBeVisible();
     });
   }
+
+  test("a delegated client no delegation covers shows a quiet empty state", async ({ page }) => {
+    await page.goto("/trainer/clients/delegated/not-a-pair");
+    await expect(page.getByRole("heading", { name: "Клиент больше не передан тебе" })).toBeVisible();
+  });
 
   test("signed out, the client list offers the QR and link screen", async ({ page }) => {
     await page.goto("/trainer/clients?filter=debt&q=anna");

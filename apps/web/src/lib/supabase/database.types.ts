@@ -1057,14 +1057,14 @@ isOneToOne: false
                   ]
                 },"delegations": {
                   Row: {
-                    "accepted_at": string | null,"all_clients": boolean,"created_at": string,"delegate_trainer_id": string | null,"ends_at": string | null,"id": string,"invite_hash": string | null,"invited_trainer_id": string | null,"kind": Database["public"]['Enums']["delegation_kind"],"owner_trainer_id": string,"reminded_at": string | null,"revoked_at": string | null,"scopes": (Database["public"]['Enums']["delegation_scope"])[],"session_id": string | null,"starts_at": string,"status": Database["public"]['Enums']["delegation_status"]
+                    "accepted_at": string | null,"all_clients": boolean,"created_at": string,"delegate_trainer_id": string | null,"ends_at": string | null,"id": string,"invite_hash": string | null,"invited_trainer_id": string | null,"kind": Database["public"]['Enums']["delegation_kind"],"lead_id": string | null,"owner_trainer_id": string,"reminded_at": string | null,"revoked_at": string | null,"scopes": (Database["public"]['Enums']["delegation_scope"])[],"session_id": string | null,"starts_at": string,"status": Database["public"]['Enums']["delegation_status"]
                   }
                   ComputedFields: never
                   Insert: {
-                    "accepted_at"?: string | null,"all_clients"?: boolean,"created_at"?: string,"delegate_trainer_id"?: string | null,"ends_at"?: string | null,"id"?: string,"invite_hash"?: string | null,"invited_trainer_id"?: string | null,"kind": Database["public"]['Enums']["delegation_kind"],"owner_trainer_id": string,"reminded_at"?: string | null,"revoked_at"?: string | null,"scopes": (Database["public"]['Enums']["delegation_scope"])[],"session_id"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["delegation_status"]
+                    "accepted_at"?: string | null,"all_clients"?: boolean,"created_at"?: string,"delegate_trainer_id"?: string | null,"ends_at"?: string | null,"id"?: string,"invite_hash"?: string | null,"invited_trainer_id"?: string | null,"kind": Database["public"]['Enums']["delegation_kind"],"lead_id"?: string | null,"owner_trainer_id": string,"reminded_at"?: string | null,"revoked_at"?: string | null,"scopes": (Database["public"]['Enums']["delegation_scope"])[],"session_id"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["delegation_status"]
                   }
                   Update: {
-                    "accepted_at"?: string | null,"all_clients"?: boolean,"created_at"?: string,"delegate_trainer_id"?: string | null,"ends_at"?: string | null,"id"?: string,"invite_hash"?: string | null,"invited_trainer_id"?: string | null,"kind"?: Database["public"]['Enums']["delegation_kind"],"owner_trainer_id"?: string,"reminded_at"?: string | null,"revoked_at"?: string | null,"scopes"?: (Database["public"]['Enums']["delegation_scope"])[],"session_id"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["delegation_status"]
+                    "accepted_at"?: string | null,"all_clients"?: boolean,"created_at"?: string,"delegate_trainer_id"?: string | null,"ends_at"?: string | null,"id"?: string,"invite_hash"?: string | null,"invited_trainer_id"?: string | null,"kind"?: Database["public"]['Enums']["delegation_kind"],"lead_id"?: string | null,"owner_trainer_id"?: string,"reminded_at"?: string | null,"revoked_at"?: string | null,"scopes"?: (Database["public"]['Enums']["delegation_scope"])[],"session_id"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["delegation_status"]
                   }
                   Relationships: [
                     {
@@ -1079,6 +1079,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "trainer_profiles"
       referencedColumns: ["user_id"]
+    },{
+      foreignKeyName: "delegations_lead_id_fkey"
+      columns: ["lead_id"]
+isOneToOne: false
+      referencedRelation: "delegations"
+      referencedColumns: ["id"]
     },{
       foreignKeyName: "delegations_owner_trainer_id_fkey"
       columns: ["owner_trainer_id"]
@@ -4076,6 +4082,11 @@ isOneToOne: false
 "create_story_card":
 { Args: { "p_coaching"?: string,"p_confirm"?: boolean,"p_kind": string,"p_month": string }; Returns: string
                            },
+"create_substitutions":
+{ Args: { "p_session_ids": (string)[] }; Returns: {
+              "delegation_id": string,"token": string
+            }[]
+                           },
 "decide_booking":
 { Args: { "p_accept": boolean,"p_booking_id": string,"p_reason"?: string }; Returns: Database["public"]['Enums']["booking_status"]
                            },
@@ -4100,7 +4111,7 @@ isOneToOne: false
                            },
 "delegation_invite":
 { Args: { "p_token": string }; Returns: {
-              "all_clients": boolean,"clients": number,"ends_at": string,"kind": Database["public"]['Enums']["delegation_kind"],"owner_name": string,"scopes": (Database["public"]['Enums']["delegation_scope"])[],"session_starts_at": string
+              "all_clients": boolean,"clients": number,"ends_at": string,"kind": Database["public"]['Enums']["delegation_kind"],"owner_name": string,"scopes": (Database["public"]['Enums']["delegation_scope"])[],"session_starts_at": string,"sessions_starts_at": (string)[]
             }[]
                            },
 "delete_food_comment":
