@@ -607,6 +607,7 @@ export const en: Dictionary = {
     become: "Become a trainer",
     otherCode: "Enter another code",
     openTrainer: "Open the trainer zone",
+    contactDafit: "Contact DaFit",
     failed: "That didn't work, try again.",
     status: {
       valid: {
