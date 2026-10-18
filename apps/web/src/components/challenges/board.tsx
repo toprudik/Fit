@@ -7,7 +7,7 @@ import type { BoardRow, ChallengeMetric } from "@/lib/challenges/challenges";
 import { challengeScore } from "@/lib/challenges/present";
 
 /**
- * The leaderboard of a challenge (wave-3 §2.4-17): place, name or alias, the score. The trainer's rows also say
+ * The leaderboard of a challenge (wave-3 §2.4-17): place, avatar, name or alias, the score. The trainer's rows also say
  * who is not shown to the others and whose score is on hold because the client closed the metric.
  */
 export function ChallengeBoard({
@@ -43,7 +43,7 @@ export function ChallengeBoard({
         return (
           <ListRow
             key={`${row.place}-${row.name}-${row.isMe}`}
-            avatar={{ name: row.name }}
+            avatar={{ name: row.name, src: row.photoUrl }}
             title={`${row.place}. ${row.name}`}
             subtitle={
               notes.length ? (

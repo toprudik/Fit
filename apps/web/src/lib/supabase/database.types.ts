@@ -3193,14 +3193,14 @@ isOneToOne: false
                   ]
                 },"trial_links": {
                   Row: {
-                    "archived_at": string | null,"created_at": string,"currency": string,"description": string | null,"duration_min": number,"expires_at": string | null,"id": string,"is_enabled": boolean,"location_id": string | null,"max_uses": number | null,"mode": Database["public"]['Enums']["session_mode"] | null,"price_minor": number,"title": string,"token": string,"trainer_id": string,"uses_count": number
+                    "archived_at": string | null,"created_at": string,"currency": string,"description": string | null,"duration_min": number,"expires_at": string | null,"id": string,"is_enabled": boolean,"location_id": string | null,"max_uses": number | null,"mode": Database["public"]['Enums']["session_mode"] | null,"on_showcase": boolean,"price_minor": number,"title": string,"token": string,"trainer_id": string,"uses_count": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "archived_at"?: string | null,"created_at"?: string,"currency": string,"description"?: string | null,"duration_min"?: number,"expires_at"?: string | null,"id"?: string,"is_enabled"?: boolean,"location_id"?: string | null,"max_uses"?: number | null,"mode"?: Database["public"]['Enums']["session_mode"] | null,"price_minor"?: number,"title": string,"token"?: string,"trainer_id": string,"uses_count"?: number
+                    "archived_at"?: string | null,"created_at"?: string,"currency": string,"description"?: string | null,"duration_min"?: number,"expires_at"?: string | null,"id"?: string,"is_enabled"?: boolean,"location_id"?: string | null,"max_uses"?: number | null,"mode"?: Database["public"]['Enums']["session_mode"] | null,"on_showcase"?: boolean,"price_minor"?: number,"title": string,"token"?: string,"trainer_id": string,"uses_count"?: number
                   }
                   Update: {
-                    "archived_at"?: string | null,"created_at"?: string,"currency"?: string,"description"?: string | null,"duration_min"?: number,"expires_at"?: string | null,"id"?: string,"is_enabled"?: boolean,"location_id"?: string | null,"max_uses"?: number | null,"mode"?: Database["public"]['Enums']["session_mode"] | null,"price_minor"?: number,"title"?: string,"token"?: string,"trainer_id"?: string,"uses_count"?: number
+                    "archived_at"?: string | null,"created_at"?: string,"currency"?: string,"description"?: string | null,"duration_min"?: number,"expires_at"?: string | null,"id"?: string,"is_enabled"?: boolean,"location_id"?: string | null,"max_uses"?: number | null,"mode"?: Database["public"]['Enums']["session_mode"] | null,"on_showcase"?: boolean,"price_minor"?: number,"title"?: string,"token"?: string,"trainer_id"?: string,"uses_count"?: number
                   }
                   Relationships: [
                     {
@@ -3822,6 +3822,9 @@ isOneToOne: false
 "add_group_participant":
 { Args: { "p_coaching_id": string,"p_session_id": string }; Returns: string
                            },
+"add_group_participant_extra":
+{ Args: { "p_coaching_id": string,"p_session_id": string }; Returns: string
+                           },
 "add_water":
 { Args: { "p_day": string,"p_ml": number }; Returns: string
                            },
@@ -4004,7 +4007,7 @@ isOneToOne: false
                            },
 "challenge_board":
 { Args: { "p_challenge_id": string }; Returns: {
-              "alias": string,"hidden": boolean,"is_me": boolean,"name": string,"place": number,"score": number,"shown": boolean
+              "alias": string,"hidden": boolean,"is_me": boolean,"name": string,"photo_url": string,"place": number,"score": number,"shown": boolean
             }[]
                            },
 "change_pass_expiry":
@@ -4174,6 +4177,9 @@ isOneToOne: false
 "get_managed_client_claim":
 { Args: { "p_claim_id": string }; Returns: Json
                            },
+"get_showcase_trial":
+{ Args: { "p_slug": string }; Returns: string
+                           },
 "get_trainer_showcase":
 { Args: { "p_slug": string }; Returns: {
               "bio": string,"city": string,"coaching_id": string,"headline": string,"is_own": boolean,"locations": Json,"name": string,"photo_url": string,"slug": string,"specialties": (string)[],"status": string,"verified": boolean,"works_offline": boolean,"works_online": boolean
@@ -4320,6 +4326,11 @@ isOneToOne: false
 "my_plan":
 { Args: Record<PropertyKey, never>; Returns: {
               "active_clients": number,"client_limit": number,"expires_at": string,"plan_code": string,"side": Database["public"]['Enums']["plan_side"]
+            }[]
+                           },
+"my_session_substitutes":
+{ Args: { "p_session_ids": (string)[] }; Returns: {
+              "name": string,"session_id": string
             }[]
                            },
 "my_streaks":
