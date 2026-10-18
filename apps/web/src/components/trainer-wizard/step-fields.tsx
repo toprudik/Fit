@@ -49,7 +49,7 @@ export function StepFields({ step, data, locale, edit = false }: StepFieldsProps
     case "region":
       return <RegionForm timeZone={data.timeZone} currency={trainer.default_currency} zones={zoneOptions()} edit={edit} />;
     case "cancellation":
-      return <CancellationForm hours={trainer.cancellation_deadline_hours} edit={edit} />;
+      return <CancellationForm hours={trainer.cancellation_deadline_hours} noticeMinutes={trainer.min_booking_notice_minutes} edit={edit} />;
     case "payment":
       return <PaymentForm links={data.paymentLinks} />;
     case "prices":

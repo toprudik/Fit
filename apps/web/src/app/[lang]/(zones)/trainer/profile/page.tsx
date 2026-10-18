@@ -70,7 +70,10 @@ async function Sections() {
       <ListRow
         icon={Clock}
         title={steps.cancellation.title}
-        subtitle={interpolate(copy.cancellation, { hours: data.trainer.cancellation_deadline_hours })}
+        subtitle={interpolate(copy.cancellation, {
+          hours: data.trainer.cancellation_deadline_hours,
+          notice: Math.round(data.trainer.min_booking_notice_minutes / 60),
+        })}
         href={editPath("cancellation")}
       />
     </ListGroup>

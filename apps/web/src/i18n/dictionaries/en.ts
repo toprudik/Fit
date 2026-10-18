@@ -662,7 +662,7 @@ export const en: Dictionary = {
       signedOutText: "Sign in with Telegram to change your trainer profile.",
       notSet: "Not set",
       noLocations: "None yet",
-      cancellation: "At least {hours} h before",
+      cancellation: "Cancel {hours} h before, book {notice} h before",
       locations: {
         add: "Add a location",
         edit: "Edit",
@@ -722,6 +722,8 @@ export const en: Dictionary = {
         label: "Free cancellation up to",
         hours: "{hours} h",
         hint: "Most trainers use 24 hours. You can change it later in your trainer profile.",
+        noticeLabel: "Clients can book no later than",
+        noticeHint: "Closer to the start, clients can't book themselves. You can still schedule the session yourself.",
       },
       payment: {
         title: "Payment link",
