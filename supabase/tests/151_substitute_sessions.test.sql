@@ -1,4 +1,4 @@
--- A substitute for several sessions at once, migration 20261017234317_substitute_sessions.sql (PRD wave-3 §1):
+-- A substitute for several sessions at once, migration 20261018010817_substitute_sessions.sql (PRD wave-3 §1):
 -- one invite covers the chosen sessions, accepting answers for each one still ahead, and revoking or declining
 -- keeps the rest consistent.
 begin;
