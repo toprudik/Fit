@@ -1,4 +1,4 @@
--- Review messages, migration 20261017235837_review_prompt.sql (PRD wave-2 §11 rules 4 and 7): the third attended
+-- Review messages, migration 20261018012237_review_prompt.sql (PRD wave-2 §11 rules 4 and 7): the third attended
 -- session offers the client a review once, and the admin's decision on a dispute reaches both sides.
 begin;
 \ir _helpers.psql
