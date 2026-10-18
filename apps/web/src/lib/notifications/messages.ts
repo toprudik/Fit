@@ -8,7 +8,7 @@ import { formatSessionTime } from "@/lib/pairs/format";
 import { DEFAULT_TIME_ZONE, formatPlanDate, isPlanCode } from "@/lib/plans/plans";
 import { isButtonUrl } from "@/lib/groups/rules";
 import { isBadgeCode } from "@/lib/gamification/gamification";
-import { bookingDecisionData, claimAnswerData } from "@/lib/bot-actions/callback-data";
+import { bookingDecisionData, claimAnswerData, contactDeclineData } from "@/lib/bot-actions/callback-data";
 import { isChallengeMetric } from "@/lib/challenges/challenges";
 import { invitePath, isInviteToken } from "@/lib/delegations/rules";
 import { formatOffset } from "@/lib/reminders/offsets";
@@ -106,17 +106,19 @@ const templates: Partial<Record<NotificationType, Template>> = {
         : [{ text: t.openClients, path: "/trainer/clients" }],
   }),
   // С1: payload { request_id, coaching_id, side, first_name, last_name } from request_contact, side being the
-  // requester's. Both buttons open the answer screen, where sharing goes through Telegram's own popup (PRIV-2).
+  // requester's. "Поделиться контактом" opens the answer screen, where sharing goes through Telegram's own popup
+  // (PRIV-2); "Отказаться" answers right in the bot (lib/bot-actions).
   contact_request: ({ t, payload }) => {
     const trainer = payload.side === "trainer";
     const path = idPath("/contact", payload.request_id, "/");
+    const requestId = typeof payload.request_id === "string" && isPairId(payload.request_id) ? payload.request_id : null;
     return {
       text: interpolateEscaped(trainer ? t.contactRequestTrainer : t.contactRequestClient, {
         name: personName(payload) || (trainer ? t.unnamedTrainer : t.unnamedClient),
       }),
       buttons: [
         { text: t.shareContact, path },
-        { text: t.declineContact, path },
+        requestId ? { text: t.declineContact, action: contactDeclineData(requestId) } : { text: t.declineContact, path },
       ],
     };
   },
@@ -733,6 +735,29 @@ const templates: Partial<Record<NotificationType, Template>> = {
         when: sessionTime(locale, payload.starts_at, timeZone),
       }),
       buttons: [{ text: t.bookAgain, path: "/client/book" }],
+    };
+  },
+  // payload { coaching_id, first_name, last_name } from private.offer_review_on_booking: the third attended session
+  // of the pair (PRD wave-2 §11 rule 4).
+  review_prompt: ({ t, payload }) => ({
+    text: interpolateEscaped(t.reviewPrompt, { name: personName(payload) || t.sessionTrainer }),
+    buttons: [{ text: t.leaveReview, path: pairPath("/client/trainers", payload) }],
+  }),
+  // payload { target_type: review, review_id, coaching_id, hidden, role: author | trainer, reason? } from
+  // admin_decide_review_dispute (§11 rule 7); the author also gets the reason a hidden review shows.
+  report_resolution: ({ t, payload }) => {
+    const hidden = payload.hidden === true;
+    if (payload.role === "author") {
+      return {
+        text: hidden
+          ? interpolateEscaped(t.reviewHiddenAuthor, { reason: typeof payload.reason === "string" ? payload.reason : "" })
+          : escapeHtml(t.reviewKeptAuthor),
+        buttons: [{ text: t.openTrainer, path: pairPath("/client/trainers", payload) }],
+      };
+    }
+    return {
+      text: escapeHtml(hidden ? t.reviewHiddenTrainer : t.reviewKeptTrainer),
+      buttons: [{ text: t.openReviews, path: "/trainer/reviews" }],
     };
   },
 };

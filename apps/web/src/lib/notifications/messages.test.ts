@@ -191,7 +191,7 @@ describe("renderMessage", () => {
   });
 
   it("returns null for a type without a template yet", () => {
-    expect(renderMessage({ ...row, kind: "review_prompt" }, { appUrl: "https://fit.example", group: false })).toBeNull();
+    expect(renderMessage({ ...row, kind: "review_reply" }, { appUrl: "https://fit.example", group: false })).toBeNull();
   });
 });
 
@@ -932,7 +932,7 @@ describe("contact requests", () => {
     const url = `https://fit.example/contact/${REQUEST}?source=contact_request`;
     expect(message?.buttons).toEqual([
       { text: "Поделиться контактом", web_app: { url } },
-      { text: "Отказаться", web_app: { url } },
+      { text: "Отказаться", callback_data: `ctn:${REQUEST}` },
     ]);
   });
 
@@ -1182,5 +1182,45 @@ describe("challenge invitations (wave-3 §2.3-11)", () => {
 
   it("escapes the title the trainer typed", () => {
     expect(renderMessage({ ...row, kind: "challenge", payload: { ...payload, title: "<b>Шаг</b>" } }, app)?.text).toContain("«&lt;b&gt;Шаг&lt;/b&gt;»");
+  });
+});
+
+describe("review_prompt and report_resolution (wave-2 §11)", () => {
+  const options = { appUrl: "https://fit.example", group: false };
+
+  it("offers the client a review with a button to the trainer's card", () => {
+    const message = renderMessage(
+      { ...row, kind: "review_prompt", payload: { coaching_id: PAIR, first_name: "Анна", last_name: "<Смирнова>" } },
+      options,
+    );
+    expect(message?.text).toBe("Позади три занятия с тренером Анна &lt;Смирнова&gt;. Как тебе? Оставь отзыв, его увидят тренер и команда DaFit.");
+    expect(message?.buttons).toEqual([
+      { text: "Оставить отзыв", web_app: { url: `https://fit.example/client/trainers/${PAIR}?source=review_prompt` } },
+    ]);
+  });
+
+  it("tells the author a hidden review's reason, escaped", () => {
+    const payload = { target_type: "review", coaching_id: PAIR, hidden: true, role: "author", reason: "Грубо <b>" };
+    const message = renderMessage({ ...row, kind: "report_resolution", payload }, options);
+    expect(message?.text).toBe("Мы посмотрели твой отзыв о тренере и скрыли его. Причина: «Грубо &lt;b&gt;».");
+    expect(message?.buttons[0]).toEqual({
+      text: "Открыть тренера",
+      web_app: { url: `https://fit.example/client/trainers/${PAIR}?source=report_resolution` },
+    });
+    expect(renderMessage({ ...row, kind: "report_resolution", payload: { ...payload, hidden: false } }, options)?.text).toMatch(
+      /оставили как есть/,
+    );
+  });
+
+  it("tells the trainer the decision, with a button to their reviews", () => {
+    const payload = { target_type: "review", coaching_id: PAIR, hidden: false, role: "trainer" };
+    const message = renderMessage({ ...row, kind: "report_resolution", payload }, options);
+    expect(message?.text).toBe("Мы посмотрели спорный отзыв и оставили его: правила он не нарушает.");
+    expect(message?.buttons).toEqual([
+      { text: "Открыть отзывы", web_app: { url: "https://fit.example/trainer/reviews?source=report_resolution" } },
+    ]);
+    expect(renderMessage({ ...row, kind: "report_resolution", payload: { ...payload, hidden: true } }, options)?.text).toBe(
+      "Мы посмотрели спорный отзыв и скрыли его.",
+    );
   });
 });

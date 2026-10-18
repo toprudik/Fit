@@ -8,9 +8,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /**
  * Т2: confirm (bky) or decline (bkn) a booking request. Т7a: the person who came by link is the trainer's card
- * (mcy) or a new client (mcn).
+ * (mcy) or a new client (mcn). С1: decline a contact request (ctn); sharing the number stays in the Mini App, where
+ * Telegram signs it for this very request.
  */
-export type BotAction = { kind: "booking"; accept: boolean; bookingId: string } | { kind: "claim"; merge: boolean; claimId: string };
+export type BotAction =
+  | { kind: "booking"; accept: boolean; bookingId: string }
+  | { kind: "claim"; merge: boolean; claimId: string }
+  | { kind: "contact"; requestId: string };
 
 export function bookingDecisionData(bookingId: string, accept: boolean): string {
   return `${accept ? "bky" : "bkn"}:${bookingId}`;
@@ -20,10 +24,15 @@ export function claimAnswerData(claimId: string, merge: boolean): string {
   return `${merge ? "mcy" : "mcn"}:${claimId}`;
 }
 
+export function contactDeclineData(requestId: string): string {
+  return `ctn:${requestId}`;
+}
+
 export function parseBotAction(data: string): BotAction | null {
   const [action, id, ...rest] = data.split(":");
   if (rest.length > 0 || !id || !UUID.test(id)) return null;
   if (action === "bky" || action === "bkn") return { kind: "booking", accept: action === "bky", bookingId: id };
   if (action === "mcy" || action === "mcn") return { kind: "claim", merge: action === "mcy", claimId: id };
+  if (action === "ctn") return { kind: "contact", requestId: id };
   return null;
 }
