@@ -3372,6 +3372,11 @@ export const ru = {
       noSeats: "мест нет",
       seatsLeft: "свободно {count} из {capacity}",
       confirmTitle: "Записаться на «{title}»?",
+      removeLabel: "Убрать с занятия: {name}",
+      removeTitle: "Убрать {name} с занятия?",
+      removeText: "Запись отменится без списания, клиенту придёт сообщение с причиной. Остальные участники остаются.",
+      remove: "Убрать с занятия",
+      removed: "Запись отменена, место свободно",
       errors: {
         already_booked: "Этот клиент уже в списке",
         session_full: "Все места заняты",
@@ -4962,6 +4967,7 @@ export const ru = {
     /** К5: the trainer cancelled sessions, with the reason and no charge. */
     sessionCancelled: "Занятие с тренером {name} отменено: {dates}. Причина: «{reason}». Списаний не будет.",
     sessionsCancelled: "Занятия с тренером {name} отменены: {dates}. Причина: «{reason}». Списаний не будет.",
+    bookingCancelledByTrainer: "Тренер {name} отменил твою запись на занятие {dates}. Причина: «{reason}». Списаний не будет.",
     /** Stands in for the name of a trainer without one in К1, К5 and К6. */
     sessionTrainer: "без имени",
     moreDates: "и ещё {count}",

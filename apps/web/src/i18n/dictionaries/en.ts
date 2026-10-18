@@ -3344,6 +3344,11 @@ export const en: Dictionary = {
       noSeats: "no seats left",
       seatsLeft: "{count} of {capacity} seats free",
       confirmTitle: "Book “{title}”?",
+      removeLabel: "Take off the session: {name}",
+      removeTitle: "Take {name} off the session?",
+      removeText: "The booking is cancelled with no charge, and the client gets a message with the reason. Everyone else stays.",
+      remove: "Take off the session",
+      removed: "Booking cancelled, the seat is free",
       errors: {
         already_booked: "This client is already on the list",
         session_full: "All seats are taken",
@@ -4879,6 +4884,7 @@ export const en: Dictionary = {
     /** К5: the trainer cancelled sessions, with the reason and no charge. */
     sessionCancelled: "Your session with {name} is cancelled: {dates}. Reason: “{reason}”. Nothing is charged.",
     sessionsCancelled: "Your sessions with {name} are cancelled: {dates}. Reason: “{reason}”. Nothing is charged.",
+    bookingCancelledByTrainer: "{name} cancelled your booking for the session {dates}. Reason: “{reason}”. Nothing is charged.",
     /** Stands in for the name of a trainer without one in К1, К5 and К6. */
     sessionTrainer: "your trainer",
     moreDates: "and {count} more",
