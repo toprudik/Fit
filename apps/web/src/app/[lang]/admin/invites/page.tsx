@@ -7,6 +7,7 @@ import { ScreenHeader } from "@/components/shell/screen-header";
 import { CreateInviteForm } from "@/components/trainer-invites/create-invite-form";
 import { RevokeInviteButton } from "@/components/trainer-invites/revoke-invite-button";
 import { TrainerReferralBonusForm } from "@/components/trainer-referrals/bonus-form";
+import { TrainerReferrers } from "@/components/trainer-referrals/referrers";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ListGroup } from "@/components/ui/list";
@@ -146,6 +147,9 @@ export default async function AdminInvitesPage() {
         </section>
         <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
           <InviteList />
+        </Suspense>
+        <Suspense fallback={<SkeletonRows rows={2} label={t.common.loading} />}>
+          <TrainerReferrers />
         </Suspense>
         <section aria-labelledby="trainer-referral-bonus" className="flex flex-col gap-3">
           <h2 id="trainer-referral-bonus" className="px-4 text-footnote text-ink-2">
