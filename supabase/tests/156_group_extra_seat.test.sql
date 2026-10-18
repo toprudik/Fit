@@ -1,4 +1,4 @@
--- Out of turn into a full group, migration 20261018053317_group_extra_seat.sql (PRD wave-2 §9-7): the trainer
+-- Out of turn into a full group, migration 20261018072617_group_extra_seat.sql (PRD wave-2 §9-7): the trainer
 -- adds a client to a full group session, it grows by one seat, and the client's queue entry is accepted.
 begin;
 \ir _helpers.psql
