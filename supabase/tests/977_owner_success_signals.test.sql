@@ -1,4 +1,4 @@
--- Wave-3 success signals of migration 20261018062147_owner_success_signals.sql: only admins call it, a client
+-- Wave-3 success signals of migration 20261018130913_owner_success_signals.sql: only admins call it, a client
 -- counts with a weekly streak of one week or more, cards and ended pairs stay out, and a trainer counts with a
 -- live offer now or with any offer ever.
 begin;
