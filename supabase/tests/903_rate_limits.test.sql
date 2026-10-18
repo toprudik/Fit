@@ -1,4 +1,4 @@
--- Rate limits of migration 20261018135217_rate_limits.sql: feedback past 5 in 10 minutes per author is refused in
+-- Rate limits of migration 20261018140317_rate_limits.sql: feedback past 5 in 10 minutes per author is refused in
 -- the database, other authors are not affected, refusals don't count, and only the server calls rate_limit_hit.
 begin;
 \ir _helpers.psql

@@ -71,7 +71,7 @@ export async function sendFeedback(input: FeedbackInput): Promise<SendFeedbackRe
     attachment_paths: data.screenshots,
   });
   if (error) {
-    // The database allows 5 messages in 10 minutes and 20 a day per author (20261018135217_rate_limits.sql).
+    // The database allows 5 messages in 10 minutes and 20 a day per author (20261018140317_rate_limits.sql).
     if (error.message === "rate_limited") return { status: "rate-limited" };
     console.error("saving feedback failed", error.code);
     return { status: "failed" };

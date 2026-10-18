@@ -3,7 +3,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Limits of the endpoints that act before there is a user session to hang a database limit on (migration
- * 20261018135217_rate_limits.sql). Each fresh Mini App sign-in and each bot tap mints a Supabase session with the
+ * 20261018140317_rate_limits.sql). Each fresh Mini App sign-in and each bot tap mints a Supabase session with the
  * secret key; Supabase Auth limits those per server IP, so one person repeating them could lock everyone out.
  * Writes users make themselves (feedback) are limited by the database's own triggers instead.
  */
