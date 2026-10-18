@@ -575,6 +575,7 @@ export const ru = {
     become: "Стать тренером",
     otherCode: "Ввести другой код",
     openTrainer: "Открыть зону тренера",
+    contactDafit: "Связаться с DaFit",
     failed: "Не получилось, попробуй ещё раз.",
     status: {
       valid: {
