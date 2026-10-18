@@ -31,9 +31,20 @@ const LIVE = new Set(["active", "frozen"]);
 
 /**
  * The client's "Главная" (screens.md §3.1): the next session, requests still waiting, and what is left on the
- * passes and owed, each opening its screen.
+ * passes and owed, each opening its screen. Today's goals come in as `children`.
  */
-export function ClientHomeView({ t, locale, home }: { t: Dictionary; locale: Locale; home: ClientHome }) {
+export function ClientHomeView({
+  t,
+  locale,
+  home,
+  children,
+}: {
+  t: Dictionary;
+  locale: Locale;
+  home: ClientHome;
+  /** Today's goals, streamed in after the bookings and passes. */
+  children?: React.ReactNode;
+}) {
   const copy = t.screens.client.home;
   const format = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     weekday: "short",
@@ -99,6 +110,7 @@ export function ClientHomeView({ t, locale, home }: { t: Dictionary; locale: Loc
           ))}
         </ListGroup>
       ) : null}
+      {children}
     </div>
   );
 }
