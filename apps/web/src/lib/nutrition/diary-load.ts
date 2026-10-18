@@ -58,16 +58,26 @@ async function entriesOn(supabase: Supabase, clientId: string, day: string): Pro
   return (data ?? []).map(toEntry);
 }
 
-type Person = { id: string; first_name: string | null; last_name: string | null; display_name: string | null };
+type Person = { id: string; first_name: string | null; last_name: string | null; display_name: string | null; username: string | null };
 const nameOf = (person: Person | undefined) =>
   person?.display_name?.trim() || [person?.first_name, person?.last_name].map((part) => part?.trim()).filter(Boolean).join(" ");
 
-export type DayComment = { id: string; body: string; authorName: string; authorId: string | null; hidden: boolean; createdAt: string };
+export type DayComment = {
+  id: string;
+  coachingId: string;
+  body: string;
+  authorName: string;
+  authorId: string | null;
+  /** The author's Telegram username, for "Ответить" (§3.13, Q39); null without one. */
+  authorUsername: string | null;
+  hidden: boolean;
+  createdAt: string;
+};
 
 async function commentsOn(supabase: Supabase, clientId: string, day: string, coachingId?: string): Promise<DayComment[]> {
   let query = supabase
     .from("food_day_comments")
-    .select("id, body, author_id, hidden_by_client_at, created_at")
+    .select("id, coaching_id, body, author_id, hidden_by_client_at, created_at")
     .eq("client_id", clientId)
     .eq("local_date", day)
     .order("created_at");
@@ -77,14 +87,16 @@ async function commentsOn(supabase: Supabase, clientId: string, day: string, coa
   const authorIds = [...new Set((data ?? []).map((row) => row.author_id).filter((id): id is string => Boolean(id)))];
   const people = new Map<string, Person>();
   if (authorIds.length) {
-    const { data: rows } = await supabase.from("profiles").select("id, first_name, last_name, display_name").in("id", authorIds);
+    const { data: rows } = await supabase.from("profiles").select("id, first_name, last_name, display_name, username").in("id", authorIds);
     for (const row of rows ?? []) people.set(row.id, row);
   }
   return (data ?? []).map((row) => ({
     id: row.id,
+    coachingId: row.coaching_id,
     body: row.body,
     authorId: row.author_id,
     authorName: row.author_id ? nameOf(people.get(row.author_id)) : "",
+    authorUsername: (row.author_id && people.get(row.author_id)?.username) || null,
     hidden: row.hidden_by_client_at !== null,
     createdAt: row.created_at,
   }));
