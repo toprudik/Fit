@@ -822,6 +822,7 @@ export const ru = {
       joinedText: "Ты уже занимаешься у этого тренера.",
       prices: "Цены",
       openTrainers: "Мои тренеры",
+      trial: "Записаться на пробное",
     },
     editor: {
       title: "Витрина",
@@ -1333,6 +1334,10 @@ export const ru = {
       copyFailed: "Не получилось скопировать",
       enable: "Включить",
       disable: "Выключить",
+      onShowcase: "На витрине",
+      showOnShowcase: "Показать на витрине",
+      hideFromShowcase: "Убрать с витрины",
+      showcaseHint: "На витрине может быть одна ссылка: по ней работает кнопка «Записаться на пробное».",
       remove: "Удалить",
       removeTitle: "Удалить ссылку?",
       removeText: "Ссылка и её QR перестанут работать навсегда. Клиенты, которые пришли по ней, останутся.",
@@ -3986,6 +3991,9 @@ export const ru = {
         challenge: "Челленджи",
         pass_ending: "Абонемент заканчивается",
         debt: "Занятие ушло в долг",
+        trainer_comment: "Комментарии тренера к питанию",
+        trainer_broadcast: "Рассылки тренера в группах",
+        waitlist_closed: "Очередь на занятие закрылась",
         client_pass_ending: "Абонемент клиента заканчивается",
       },
     },
@@ -4930,6 +4938,7 @@ export const ru = {
     cancelDeletion: "Отменить удаление",
     /** Wave-2 §1.3: payload { coaching_id, goal, previous_goal, first_name, last_name } from set_client_goal. */
     goalChanged: "У клиента {name} новая цель: «{goal}». Твоя норма осталась прежней, проверь, подходит ли она.",
+    goalChangedGroup: "У клиента {name} новая цель: «{goal}». Норма группы «{group}» осталась прежней, проверь, подходит ли она.",
     openNutrition: "Открыть питание",
     goalNames: { lose: "снизить вес", maintain: "держать вес", gain: "набрать массу" },
     /** Wave-2 §6.9: a trainer's broadcast to a group, with the trainer's name above the text. */

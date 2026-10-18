@@ -815,6 +815,7 @@ export const en: Dictionary = {
       joinedText: "You already train with this trainer.",
       prices: "Prices",
       openTrainers: "My trainers",
+      trial: "Book a trial session",
     },
     editor: {
       title: "Showcase",
@@ -1324,6 +1325,10 @@ export const en: Dictionary = {
       copyFailed: "Couldn't copy",
       enable: "Turn on",
       disable: "Turn off",
+      onShowcase: "On your showcase",
+      showOnShowcase: "Show on showcase",
+      hideFromShowcase: "Remove from showcase",
+      showcaseHint: "One link can be on your showcase: the “Book a trial session” button opens it.",
       remove: "Delete",
       removeTitle: "Delete this link?",
       removeText: "The link and its QR stop working for good. Clients who came through it stay.",
@@ -3957,6 +3962,9 @@ export const en: Dictionary = {
         challenge: "Challenges",
         pass_ending: "Pass running out",
         debt: "Session went into debt",
+        trainer_comment: "Trainer comments on your food",
+        trainer_broadcast: "Trainer messages to groups",
+        waitlist_closed: "Waitlist closed",
         client_pass_ending: "Client's pass running out",
       },
     },
@@ -4849,6 +4857,7 @@ export const en: Dictionary = {
     cancelDeletion: "Cancel deletion",
     /** Wave-2 §1.3: payload { coaching_id, goal, previous_goal, first_name, last_name } from set_client_goal. */
     goalChanged: "Your client {name} has a new goal: “{goal}”. Your target stayed the same, check that it still fits.",
+    goalChangedGroup: "Your client {name} has a new goal: “{goal}”. The target of the group “{group}” stayed the same, check that it still fits.",
     openNutrition: "Open nutrition",
     goalNames: { lose: "lose weight", maintain: "keep weight", gain: "gain mass" },
     /** Wave-2 §6.9: a trainer's broadcast to a group, with the trainer's name above the text. */
