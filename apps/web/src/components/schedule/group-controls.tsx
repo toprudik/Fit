@@ -35,6 +35,9 @@ export function GroupControls({ sessionId, capacity, taken, openForBooking, cand
   const [pending, startTransition] = useTransition();
 
   const errorText = (key: GroupError) => copy.errors[key];
+  const full = taken >= capacity;
+  /** A full session takes one more client out of turn and grows by a seat, up to 100. */
+  const canAdd = candidates.length > 0 && (!full || capacity < 100);
   const show = (next: "add" | "seats") => {
     setError(null);
     setCoachingId(candidates.length === 1 ? candidates[0].coachingId : "");
@@ -46,7 +49,7 @@ export function GroupControls({ sessionId, capacity, taken, openForBooking, cand
   const add = () => {
     if (!coachingId) return setError(t.schedule.sessionForm.chooseClient);
     startTransition(async () => {
-      const result = await addGroupParticipant({ sessionId, coachingId });
+      const result = await addGroupParticipant({ sessionId, coachingId, extra: full });
       if (result.status === "error") return setError(errorText(result.error));
       hapticSuccess();
       toast.success(copy.added);
@@ -66,15 +69,15 @@ export function GroupControls({ sessionId, capacity, taken, openForBooking, cand
     });
   };
 
-  const full = taken >= capacity;
-
   return (
     <>
       <div className="flex flex-col gap-2">
-        <Button type="button" variant="secondary" block disabled={full || candidates.length === 0} onClick={() => show("add")}>
+        <Button type="button" variant="secondary" block disabled={!canAdd} onClick={() => show("add")}>
           {copy.addParticipant}
         </Button>
-        {full || candidates.length === 0 ? <p className="px-1 text-footnote text-ink-2">{full ? copy.fullHint : copy.everyoneIn}</p> : null}
+        {full || candidates.length === 0 ? (
+          <p className="px-1 text-footnote text-ink-2">{candidates.length === 0 ? copy.everyoneIn : capacity < 100 ? copy.fullHint : copy.fullMax}</p>
+        ) : null}
         <Button type="button" variant="secondary" block onClick={() => show("seats")}>
           {copy.seats}
         </Button>
@@ -83,8 +86,8 @@ export function GroupControls({ sessionId, capacity, taken, openForBooking, cand
       <Sheet
         open={sheet === "add"}
         onOpenChange={(next) => (next ? null : setSheet(null))}
-        title={copy.addTitle}
-        description={copy.addText}
+        title={full ? copy.addExtraTitle : copy.addTitle}
+        description={full ? copy.addExtraText : copy.addText}
         actions={
           <>
             <Button type="button" block loading={pending} onClick={add}>
