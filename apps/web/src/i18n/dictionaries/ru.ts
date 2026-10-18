@@ -612,6 +612,7 @@ export const ru = {
     become: "Стать тренером",
     otherCode: "Ввести другой код",
     openTrainer: "Открыть зону тренера",
+    contactDafit: "Связаться с DaFit",
     failed: "Не получилось, попробуй ещё раз.",
     status: {
       valid: {
@@ -668,7 +669,7 @@ export const ru = {
       signedOutText: "Чтобы поменять профиль тренера, войди через Telegram.",
       notSet: "Не указано",
       noLocations: "Пока ни одного",
-      cancellation: "Не позже чем за {hours} ч",
+      cancellation: "Отмена за {hours} ч, запись за {notice} ч",
       locations: {
         add: "Добавить место",
         edit: "Изменить",
@@ -728,6 +729,8 @@ export const ru = {
         label: "Бесплатная отмена не позже чем за",
         hours: "{hours} ч",
         hint: "Обычно ставят 24 часа. Поменять можно потом в профиле тренера.",
+        noticeLabel: "Записаться можно не позже чем за",
+        noticeHint: "Ближе к началу клиент не запишется сам, но ты можешь поставить занятие вручную.",
       },
       payment: {
         title: "Ссылка на оплату",
@@ -3617,6 +3620,8 @@ export const ru = {
       chargeFree: "Это бесплатное пробное, при отмене ничего не спишется.",
       cancelReason: "Причина, если хочешь",
       cancelReasonHint: "Тренер увидит её в сообщении.",
+      cancelReasons: ["Болею", "Работа", "Не успеваю", "Планы изменились"],
+      cancelReasonOwn: "Или своими словами",
       cancelConfirm: "Отменить",
       cancelLateConfirm: "Отменить и списать",
       keepBooking: "Оставить запись",
@@ -4457,6 +4462,7 @@ export const ru = {
         records_1: { title: "Первый рекорд", text: "Первый личный рекорд в упражнении" },
         records_10: { title: "10 рекордов", text: "10 личных рекордов" },
         homework_10: { title: "10 домашних заданий", text: "Выполнено 10 домашних заданий" },
+        challenge_joined: { title: "Участник челленджа", text: "Челлендж завершён с очками на счету" },
         challenge_done: { title: "Челлендж пройден", text: "Цель челленджа достигнута" },
         challenge_winner: { title: "Призёр", text: "Первая тройка в лидерборде челленджа" },
       },

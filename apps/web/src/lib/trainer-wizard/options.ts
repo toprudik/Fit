@@ -31,6 +31,12 @@ export type Currency = (typeof CURRENCIES)[number];
 /** Hours before a session after which a client's cancel is charged (PRD 2.6.5); 24 is the default. */
 export const CANCELLATION_HOURS = [6, 12, 24, 48] as const;
 
+/**
+ * Hours before a session a client can still book it themselves (PRD 2.6.1 rule 6, stored as
+ * min_booking_notice_minutes); 2 is the default.
+ */
+export const BOOKING_NOTICE_HOURS = [1, 2, 4, 12, 24] as const;
+
 /** public.payment_link_kind. */
 export const PAYMENT_LINK_KINDS = ["sbp", "self_employed", "bank", "other"] as const;
 

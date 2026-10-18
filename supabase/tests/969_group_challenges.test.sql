@@ -145,9 +145,9 @@ select is((select score from public.challenge_participants where challenge_id = 
   'its score counts the days of the challenge only');
 select results_eq(
   $$ select badge_code from public.user_badges where user_id = tests.user_id('client_c') and badge_code like 'challenge%' order by 1 $$,
-  $$ values ('challenge_done'), ('challenge_winner') $$,
-  '2.3-13: the goal reached and a place in the top three award their badges');
-select is((select count(*)::int from public.notification_outbox where type = 'badge' and payload ->> 'badge' like 'challenge%'), 2,
+  $$ values ('challenge_done'), ('challenge_joined'), ('challenge_winner') $$,
+  '2.2-5, 2.3-13: taking part, the goal reached and a place in the top three award their badges');
+select is((select count(*)::int from public.notification_outbox where type = 'badge' and payload ->> 'badge' like 'challenge%'), 3,
   'each badge queues a bot message');
 select is(private.finish_challenges(), 0, 'a finished challenge is not finished again');
 
@@ -174,7 +174,7 @@ select tests.clear_authentication();
 update public.coachings set status = 'ended', ended_at = now() where id = :'pair_c';
 select is((select count(*)::int from public.challenge_participants where challenge_id = :'ch2'), 0,
   'an ended pair leaves the trainer''s running challenges');
-select is((select count(*)::int from public.user_badges where user_id = tests.user_id('client_c') and badge_code like 'challenge%'), 2,
+select is((select count(*)::int from public.user_badges where user_id = tests.user_id('client_c') and badge_code like 'challenge%'), 3,
   'the badges stay with the client');
 
 select tests.authenticate_as('client_x');
