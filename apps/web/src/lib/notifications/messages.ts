@@ -181,6 +181,19 @@ const templates: Partial<Record<NotificationType, Template>> = {
       buttons: [{ text: t.openMonthlyReport, path: month ? `/client/progress/reports/${monthParam(month)}` : "/client/progress" }],
     };
   },
+  // Итоги месяца to the trainer (wave-3 §4 rule 3): payload { coaching_id, month, name } from share_monthly_report,
+  // name being the client as the trainer calls them.
+  monthly_report_shared: ({ t, locale, payload }) => {
+    const month = typeof payload.month === "string" && /^\d{4}-\d{2}-01$/.test(payload.month) ? payload.month : null;
+    const pair = pairPath("/trainer/clients", payload);
+    return {
+      text: interpolateEscaped(t.monthlyReportShared, {
+        name: String(payload.name ?? "") || t.unnamedClient,
+        month: month ? formatMonth(locale, month) : "",
+      }),
+      buttons: [{ text: t.openMonthlyReport, path: month && pair !== "/trainer/clients" ? `${pair}/reports/${monthParam(month)}` : pair }],
+    };
+  },
   // Д2: payload { coaching_id, homework_id, title, name, comment? } from mark_homework_done, name being the
   // client as the trainer calls them.
   homework_done: ({ t, payload }) => {
@@ -441,6 +454,8 @@ const templates: Partial<Record<NotificationType, Template>> = {
     const owner = typeof payload.owner_name === "string" && payload.owner_name.trim() ? payload.owner_name.trim() : t.unnamedTrainer;
     const when = sessionTime(locale, payload.starts_at, timeZone);
     const team = [{ text: t.openTeam, path: "/trainer/team" }];
+    // One invite can cover several sessions (create_substitutions): then the text says how many, from the first.
+    const sessions = typeof payload.sessions === "number" && payload.sessions > 1 ? plural(locale, payload.sessions, t.delegationSessions) : null;
     switch (payload.event) {
       case "substitute":
         return { text: interpolateEscaped(t.delegationSubstitute, { delegate, when }), buttons: [{ text: t.openSessions, path: "/client/sessions" }] };
@@ -453,7 +468,12 @@ const templates: Partial<Record<NotificationType, Template>> = {
       }
       case "accepted":
         return {
-          text: payload.kind === "assistant" ? interpolateEscaped(t.delegationAssistantAccepted, { delegate }) : interpolateEscaped(t.delegationAccepted, { delegate, when }),
+          text:
+            payload.kind === "assistant"
+              ? interpolateEscaped(t.delegationAssistantAccepted, { delegate })
+              : sessions
+                ? interpolateEscaped(t.delegationAcceptedMany, { delegate, sessions, when })
+                : interpolateEscaped(t.delegationAccepted, { delegate, when }),
           buttons: team,
         };
       case "pending":
@@ -462,9 +482,11 @@ const templates: Partial<Record<NotificationType, Template>> = {
       case "invited":
         return {
           text:
-            payload.kind === "substitute"
-              ? interpolateEscaped(t.delegationInviteSubstitute, { owner, when })
-              : interpolateEscaped(t.delegationInviteAssistant, { owner }),
+            payload.kind !== "substitute"
+              ? interpolateEscaped(t.delegationInviteAssistant, { owner })
+              : sessions
+                ? interpolateEscaped(t.delegationInviteSubstitutes, { owner, sessions, when })
+                : interpolateEscaped(t.delegationInviteSubstitute, { owner, when }),
           buttons: isInviteToken(payload.token) ? [{ text: t.openInvite, path: invitePath(payload.token) }] : team,
         };
       default:

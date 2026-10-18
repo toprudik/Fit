@@ -1,7 +1,7 @@
 "use client";
 
 import { downloadFile, shareStory } from "@tma.js/sdk-react";
-import { CalendarCheck, Download, Scale, Share2, Trophy, Users } from "lucide-react";
+import { Award, CalendarCheck, Download, Flame, Scale, Share2, Trophy, Users } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ListGroup, ListRow } from "@/components/ui/list";
@@ -13,7 +13,16 @@ import type { StoryKind, StoryOption } from "@/lib/monthly-report/report";
 import { useTheme } from "@/lib/theme/store";
 import { safely, safelyAsync, useInTelegram } from "@/lib/telegram/mini-app";
 
-const ICONS = { sessions: CalendarCheck, trainer: Users, records: Trophy, weight: Scale } as const;
+const ICONS = {
+  sessions: CalendarCheck,
+  trainer: Users,
+  records: Trophy,
+  streak_workouts: Flame,
+  streak_diary: Flame,
+  streak_steps: Flame,
+  badges: Award,
+  weight: Scale,
+} as const;
 const FILE_NAME = "dafit-story.png";
 
 /**

@@ -7,8 +7,13 @@ import { ScreenHeader } from "@/components/shell/screen-header";
 import { TodayDate } from "@/components/shell/today-date";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ClientHomeView } from "@/components/today/client-home";
 import { SkeletonRows } from "@/components/ui/skeleton";
-import { getDictionary } from "@/i18n/server";
+import { getDictionary, getLocale } from "@/i18n/server";
+import { segmentBookings } from "@/lib/bookings/book";
+import { loadClientBookings } from "@/lib/bookings/load";
+import { loadClientPasses } from "@/lib/passes/load";
+import { loadScheduleOwner } from "@/lib/schedule/load";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -31,12 +36,17 @@ async function hasTrainer(): Promise<boolean | null> {
   return (count ?? 0) > 0;
 }
 
+/** Request time, outside the component so rendering stays pure. */
+function now(): Date {
+  return new Date();
+}
+
 /**
- * The client zone's first screen. Someone who trains with no one yet, a trainer opening the client zone
- * included, gets the way to a trainer: their code on /join (screens.md §1.6).
+ * The client zone's first screen: the next session and the passes (screens.md §3.1). Someone who trains with no
+ * one yet, a trainer opening the client zone included, gets the way to a trainer: their code on /join (screens.md §1.6).
  */
 async function HomeContent() {
-  const [t, trains] = await Promise.all([getDictionary(), hasTrainer()]);
+  const [t, locale, trains] = await Promise.all([getDictionary(), getLocale(), hasTrainer()]);
   const copy = t.screens.client.home;
   if (trains === false) {
     return (
@@ -52,7 +62,17 @@ async function HomeContent() {
       />
     );
   }
-  return <EmptyState icon={CalendarClock} title={copy.emptyTitle} description={copy.emptyText} />;
+  const owner = await loadScheduleOwner();
+  if (!owner) return <EmptyState icon={CalendarClock} title={copy.emptyTitle} description={copy.emptyText} />;
+  const [bookings, money] = await Promise.all([loadClientBookings(owner), loadClientPasses()]);
+  const { upcoming, requests } = segmentBookings(bookings, now());
+  return (
+    <ClientHomeView
+      t={t}
+      locale={locale}
+      home={{ timeZone: owner.timeZone, next: upcoming[0] ?? null, requests: requests.length, money: money ?? [] }}
+    />
+  );
 }
 
 export default async function ClientHomePage() {

@@ -56,6 +56,26 @@ describe("renderMessage", () => {
     expect(assistant?.buttons[0]).toEqual({ text: "Открыть команду", web_app: { url: "https://fit.example/trainer/team?source=delegation" } });
   });
 
+  it("says how many sessions one invite covers, from the first (wave-3 §1)", () => {
+    const base = { ...row, kind: "delegation" as const };
+    const token = "AbCdEfGhIjKlMnOpQrStUvWx";
+    const invited = renderMessage(
+      { ...base, payload: { event: "invited", kind: "substitute", owner_name: "Иван", starts_at: "2026-11-02T09:00:00Z", sessions: 3, token } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(invited?.text).toMatch(/^Иван просит провести за него 3 занятия, начиная с пн, 2 ноября в 12:00\./);
+    const accepted = renderMessage(
+      { ...base, payload: { event: "accepted", kind: "substitute", delegate_name: "Анна", starts_at: "2026-11-02T09:00:00Z", sessions: 5 } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(accepted?.text).toMatch(/^Анна проведёт 5 занятий, начиная с пн, 2 ноября в 12:00\./);
+    const one = renderMessage(
+      { ...base, payload: { event: "accepted", kind: "substitute", delegate_name: "Анна", starts_at: "2026-11-02T09:00:00Z", sessions: 1 } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(one?.text).toMatch(/^Анна проведёт занятие пн, 2 ноября в 12:00\./);
+  });
+
   it("sends a trainer's broadcast as typed, escaped, under the trainer's name (wave-2 §6.9)", () => {
     const base = { ...row, kind: "trainer_broadcast" as const };
     const payload = { trainer_name: "Иван", body: "Завтра в <10>", button_kind: "deep_link" };
@@ -999,6 +1019,20 @@ describe("monthly report message (wave-3 §4)", () => {
   it("opens Progress when the month is broken", () => {
     const message = renderMessage({ ...row, kind: "monthly_report", payload: { month: "2026-09-02" } }, app);
     expect(message?.buttons).toEqual([{ text: "Открыть итоги", web_app: { url: "https://fit.example/client/progress?source=monthly_report" } }]);
+  });
+
+  it("tells the trainer a client sent their month and opens it", () => {
+    const pair = "4f1c2d3e-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
+    const message = renderMessage(
+      { ...row, kind: "monthly_report_shared", payload: { coaching_id: pair, month: "2026-09-01", name: "Аня <К>" } },
+      app,
+    );
+    expect(message).toEqual({
+      text: "Аня &lt;К&gt; делится с тобой итогами за сентябрь 2026.",
+      buttons: [
+        { text: "Открыть итоги", web_app: { url: `https://fit.example/trainer/clients/${pair}/reports/2026-09?source=monthly_report_shared` } },
+      ],
+    });
   });
 });
 
