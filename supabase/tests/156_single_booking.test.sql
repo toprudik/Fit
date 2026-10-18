@@ -2,7 +2,7 @@
 -- own drop-in pass at the drop-in price for that day, reserved for it, and the charge comes off it.
 begin;
 \ir _helpers.psql
-select plan(10);
+select plan(14);
 
 select tests.create_trainer('trainer_a');
 select tests.create_user('client_a');
@@ -57,6 +57,20 @@ update public.bookings set status = 'attended', attendance_marked_at = now() whe
 select private.post_charge(tests.id('booking'), 'attended');
 select is((select pass_id from public.ledger_entries where booking_id = tests.id('booking') and entry_type = 'charge'),
   tests.id('single'), 'the charge comes off the single pass, not the five-session one');
+
+-- "Подтвердить как разовое": decide_booking with p_single makes the request single before К2 goes out.
+select tests.authenticate_as('trainer_a');
+select is(public.decide_booking(tests.id('request'), true, p_single => true, p_single_title => 'Разовое занятие'),
+  'confirmed'::public.booking_status, 'a request is confirmed as a single session');
+select tests.clear_authentication();
+select is((select p.is_drop_in from public.bookings b join public.passes p on p.id = b.reserved_pass_id
+           where b.id = tests.id('request')), true, 'its own drop-in pass is reserved, not the five-session one');
+select is((select pg_catalog.concat_ws(' / ', o.payload->>'pay', o.payload->>'pass_title') from public.notification_outbox o
+           where o.type = 'booking_confirmed' and o.booking_id = tests.id('request')),
+  'single / Разовое занятие', 'and «Запрос подтверждён» says it is a single session');
+select is((select array_agg(e.to_status::text || coalesce(':' || (e.payload->>'single'), '') order by e.id)
+           from public.booking_events e where e.booking_id = tests.id('request')),
+  array['confirmed', 'confirmed:true'], 'the history has the confirmation, then the single session');
 
 select * from finish();
 rollback;

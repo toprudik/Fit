@@ -4091,7 +4091,7 @@ isOneToOne: false
             }[]
                            },
 "decide_booking":
-{ Args: { "p_accept": boolean,"p_booking_id": string,"p_reason"?: string }; Returns: Database["public"]['Enums']["booking_status"]
+{ Args: { "p_accept": boolean,"p_booking_id": string,"p_reason"?: string,"p_single"?: boolean,"p_single_title"?: string }; Returns: Database["public"]['Enums']["booking_status"]
                            },
 "decline_contact_request":
 { Args: { "p_request_id": string }; Returns: Database["public"]['Enums']["contact_request_status"]

@@ -3642,7 +3642,6 @@ export const en: Dictionary = {
       confirmSingle: "Confirm as a single session",
       confirmSingleHint: "No pass and no debt: you mark the payment for this session separately.",
       confirmedSingle: "Confirmed as a single session",
-      singleFailed: "The booking is confirmed, but it couldn't be made a single session. It will come off a pass or go to debt.",
       confirmed: "Booking confirmed",
       declined: "Request declined",
       notFoundTitle: "Request not found",

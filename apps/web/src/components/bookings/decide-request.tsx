@@ -45,12 +45,11 @@ export function DecideRequest({ bookingId, single = false }: { bookingId: string
     setAction("single");
     startTransition(async () => {
       const result = await confirmRequestSingle({ bookingId, title: t.schedule.sessionForm.singleTitle });
-      if (result.status === "error" && result.error !== "single_failed") {
+      if (result.status === "error") {
         toast.error(explain(result.error));
         return;
       }
-      if (result.status === "done") toast.success(copy.confirmedSingle);
-      else toast.error(copy.singleFailed);
+      toast.success(copy.confirmedSingle);
       router.push("/trainer/requests");
     });
   };
