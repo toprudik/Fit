@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 import { serverEnv } from "@/env/server";
 import { personName } from "@/lib/client-links/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { checkInTelegram, isCheckInCode, isPlaceCheckInToken, isSessionId, placeCheckInTelegram } from "./link";
+import { checkInTelegram, isCheckInCode, isPlaceCheckInToken, isSessionId, placeCheckInTelegram, sessionMarks } from "./link";
 
 export type CheckInOutcome = "checked_in" | "already" | "requested" | "too_early" | "closed" | "expired" | "no_booking";
 
@@ -101,4 +101,20 @@ export async function loadCheckInQr(sessionId: string): Promise<CheckInQr> {
       })
     : [];
   return { status: "open", qrSvg: svg, refreshAt: row.refresh_at, opensAt: row.opens_at, checkedIn };
+}
+
+/**
+ * The attendance of a session as sessionMarks builds it (§5 crit. 5.1): the trainer's session page compares it with
+ * the one it was rendered with and re-renders when a client checked in, with or without the QR sheet open. Null when
+ * the session cannot be read.
+ */
+export async function loadSessionMarks(sessionId: string): Promise<string | null> {
+  if (!isSessionId(sessionId)) return null;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.from("bookings").select("id, status").eq("session_id", sessionId).order("created_at");
+  if (error) {
+    console.error("loading the session marks failed", error.code);
+    return null;
+  }
+  return sessionMarks(data.map((row) => ({ bookingId: row.id, status: row.status })));
 }

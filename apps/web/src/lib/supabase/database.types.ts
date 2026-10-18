@@ -3889,6 +3889,11 @@ isOneToOne: false
               "cohort_week": string,"retained": (number)[],"size": number
             }[]
                            },
+"admin_owner_success":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "clients": number,"clients_with_streak": number,"trainers": number,"trainers_offer_ever": number,"trainers_offer_live": number
+            }[]
+                           },
 "admin_owner_summary":
 { Args: Record<PropertyKey, never>; Returns: {
               "attended": number,"bookings": number,"cards": number,"client_referrals": number,"client_referrals_qualified": number,"clients": number,"clients_active_30": number,"clients_active_7": number,"dau": number,"held_sessions": number,"joins_by_source": Json,"mau": number,"pairs": number,"passes_sold": number,"trainer_invites_created": number,"trainer_invites_redeemed": number,"trainer_referrals": number,"trainers": number,"trainers_active_30": number,"trainers_active_7": number,"trainers_verified": number,"turnover": Json,"turnover_30": Json,"users": number,"wau": number
@@ -4094,7 +4099,7 @@ isOneToOne: false
             }[]
                            },
 "decide_booking":
-{ Args: { "p_accept": boolean,"p_booking_id": string,"p_reason"?: string }; Returns: Database["public"]['Enums']["booking_status"]
+{ Args: { "p_accept": boolean,"p_booking_id": string,"p_reason"?: string,"p_single"?: boolean,"p_single_title"?: string }; Returns: Database["public"]['Enums']["booking_status"]
                            },
 "decline_contact_request":
 { Args: { "p_request_id": string }; Returns: Database["public"]['Enums']["contact_request_status"]
@@ -4267,6 +4272,9 @@ isOneToOne: false
                            },
 "location_check_in_token":
 { Args: { "p_location_id": string,"p_renew"?: boolean }; Returns: string
+                           },
+"make_booking_single":
+{ Args: { "p_booking_id": string,"p_title": string }; Returns: string
                            },
 "mark_attendance":
 { Args: { "p_booking_id": string,"p_reason"?: string,"p_status": Database["public"]['Enums']["booking_status"] }; Returns: Database["public"]['Enums']["booking_status"]

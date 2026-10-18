@@ -15,7 +15,17 @@ import { moneyByCurrency, share } from "@/lib/admin/analytics-format";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { formatMoney } from "@/lib/money/format";
 import { loadOwnerMetrics } from "@/lib/owner-metrics/load";
-import { OWNER_WEEKS, growth, growthText, lastFullWeeks, ownerWeeks, retentionShares, type OwnerWeeks } from "@/lib/owner-metrics/metrics";
+import {
+  OWNER_WEEKS,
+  SUCCESS_GOALS,
+  growth,
+  growthText,
+  lastFullWeeks,
+  ownerWeeks,
+  retentionShares,
+  successSignal,
+  type OwnerWeeks,
+} from "@/lib/owner-metrics/metrics";
 import type { Json } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
 
@@ -49,7 +59,8 @@ function Table({ caption, head, rows, footer }: { caption: string; head: string[
   return (
     <section className="flex flex-col gap-1.5">
       <h2 className="px-4 text-footnote text-ink-2">{caption}</h2>
-      <div className="overflow-x-auto rounded-lg bg-surface-1 px-4">
+      {/* Scrolls sideways on a phone, so it takes focus for the keyboard (axe scrollable-region-focusable). */}
+      <div role="region" aria-label={caption} tabIndex={0} className="overflow-x-auto rounded-lg bg-surface-1 px-4">
         <table className="w-full border-collapse text-subhead">
           <thead>
             <tr className="border-b border-line text-footnote text-ink-2">
@@ -90,7 +101,7 @@ async function Stats({ searchParams }: { searchParams: SearchParams }) {
   const [t, locale, params, { supabase }] = await Promise.all([getDictionary(), getLocale(), searchParams, requireAdmin()]);
   const copy = t.ownerStats;
   const weeks = ownerWeeks(params.weeks);
-  const { summary, weekly, cohorts } = await loadOwnerMetrics(supabase, weeks);
+  const { summary, success, weekly, cohorts } = await loadOwnerMetrics(supabase, weeks);
   const n = (value: number) => formatNumber(locale, value);
   const percent = (part: number, total: number) => {
     const value = share(part, total);
@@ -105,6 +116,10 @@ async function Stats({ searchParams }: { searchParams: SearchParams }) {
   const day = (iso: string) => date.format(new Date(`${iso}T00:00:00Z`));
   const longest = Math.max(0, ...cohorts.map((cohort) => cohort.retained.length));
   const joins = sources(copy, summary.joins_by_source);
+  const ofTotal = (part: number, total: number) =>
+    [interpolate(copy.success.ofTotal, { part: n(part), total: n(total) }), percent(part, total)].filter(Boolean).join(", ");
+  const goalLine = (part: number, total: number, goal: number) =>
+    interpolate(successSignal(part, total, goal).reached ? copy.success.reached : copy.success.goal, { value: `${goal}%` });
 
   return (
     <div className="flex flex-col gap-8">
@@ -137,6 +152,20 @@ async function Stats({ searchParams }: { searchParams: SearchParams }) {
           <Tile label={copy.highlights.turnover30} value={money(locale, summary.turnover_30)} />
         </div>
       </section>
+
+      <ListGroup header={copy.success.header} footer={copy.success.footer} headingLevel={2}>
+        <ListRow
+          title={copy.success.streak}
+          subtitle={goalLine(success.clients_with_streak, success.clients, SUCCESS_GOALS.streak)}
+          value={ofTotal(success.clients_with_streak, success.clients)}
+        />
+        <ListRow
+          title={copy.success.offerLive}
+          subtitle={goalLine(success.trainers_offer_live, success.trainers, SUCCESS_GOALS.offers)}
+          value={ofTotal(success.trainers_offer_live, success.trainers)}
+        />
+        <ListRow title={copy.success.offerEver} value={ofTotal(success.trainers_offer_ever, success.trainers)} />
+      </ListGroup>
 
       <ListGroup header={copy.audience.header} headingLevel={2}>
         <ListRow title={copy.audience.users} value={n(summary.users)} />

@@ -68,6 +68,7 @@ export function SessionForm(props: Props) {
   const [capacity, setCapacity] = useState("8");
   const [openForBooking, setOpenForBooking] = useState(true);
   const [repeat, setRepeat] = useState<"none" | "weekly">("none");
+  const [single, setSingle] = useState(false);
   const [weekdays, setWeekdays] = useState<number[]>(() => [isoWeekday(props.initial.day)]);
   const [end, setEnd] = useState<"until" | "count">("count");
   const [until, setUntil] = useState(() => addDays(props.initial.day, 27));
@@ -90,7 +91,8 @@ export function SessionForm(props: Props) {
       toast.success(result.count > 1 ? interpolate(groupCopy.createdMany, { count: result.count }) : groupCopy.created);
       router.push(`/trainer/sessions/${result.sessionId}`);
     } else if (props.kind === "create") {
-      toast.success(result.count > 1 ? interpolate(copy.assignedMany, { count: result.count }) : copy.assigned);
+      if (result.singleFailed) toast.error(copy.singleFailed);
+      else toast.success(result.count > 1 ? interpolate(copy.assignedMany, { count: result.count }) : copy.assigned);
       router.push(`/trainer/schedule?date=${values.day}`);
     } else {
       toast.success(group ? groupCopy.saved : copy.saved);
@@ -129,7 +131,12 @@ export function SessionForm(props: Props) {
                 openForBooking,
                 repeat: repeatInput,
               })
-            : await createSession({ ...common, coachingId: values.coachingId, repeat: repeatInput });
+            : await createSession({
+                ...common,
+                coachingId: values.coachingId,
+                repeat: repeatInput,
+                singleTitle: single && !repeatInput ? copy.singleTitle : null,
+              });
       if (result.status === "done") return done(result);
       if (result.status === "conflict") return setConflicts(result.conflicts);
       setConflicts([]);
@@ -351,6 +358,9 @@ export function SessionForm(props: Props) {
               ]}
             />
           </div>
+          {!group && repeat === "none" ? (
+            <Switch checked={single} onCheckedChange={setSingle} label={copy.single} hint={copy.singleHint} showLabel />
+          ) : null}
           {repeat === "weekly" ? (
             <>
               <fieldset className="flex flex-col gap-1.5">

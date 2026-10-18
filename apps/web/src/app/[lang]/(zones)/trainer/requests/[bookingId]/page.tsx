@@ -102,7 +102,7 @@ async function RequestDetails({ params }: { params: PageProps<"/[lang]/trainer/r
 
       <BookingHistory items={await loadBookingHistory(owner, [request.id])} timeZone={owner.timeZone} />
 
-      <DecideRequest bookingId={request.id} />
+      <DecideRequest bookingId={request.id} single={!request.trial && request.availableSessions === 0} />
     </div>
   );
 }
