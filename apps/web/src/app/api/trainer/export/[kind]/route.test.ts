@@ -35,7 +35,7 @@ vi.mock("@/lib/supabase/server", () => ({
         maybeSingle: async () => (table === "user_settings" ? { data: db.timeZone ? { time_zone: db.timeZone } : null, error: null } : result()),
         then: (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) => Promise.resolve(result()).then(resolve, reject),
       };
-      for (const method of ["select", "eq", "lt", "gte", "or", "order", "in"]) {
+      for (const method of ["select", "eq", "lt", "gte", "or", "order", "in", "range"]) {
         builder[method] = (...args: unknown[]) => {
           query.calls.push([method, ...args]);
           return builder;
