@@ -15,17 +15,17 @@ for (const scheme of SCHEMES) {
   test.describe(`${scheme} theme`, () => {
     test.use({ colorScheme: scheme });
 
-    for (const document of DOCUMENTS) {
-      test(`${document.path} renders, passes axe and fits the width`, async ({ page }, testInfo) => {
+    for (const entry of DOCUMENTS) {
+      test(`${entry.path} renders, passes axe and fits the width`, async ({ page }, testInfo) => {
         const errors = collectErrors(page);
-        const response = await page.goto(document.path, { waitUntil: "networkidle" });
+        const response = await page.goto(entry.path, { waitUntil: "networkidle" });
         expect(response?.status()).toBe(200);
-        await expect(page.getByRole("heading", { level: 1, name: document.title })).toBeVisible();
+        await expect(page.getByRole("heading", { level: 1, name: entry.title })).toBeVisible();
         await settle(page);
         await expectAccessible(page);
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         expect(overflow).toBeLessThanOrEqual(0);
-        await page.screenshot({ path: screenshotPath(testInfo, scheme, `legal${document.path.slice("/legal".length).replaceAll("/", "-")}`), fullPage: true });
+        await page.screenshot({ path: screenshotPath(testInfo, scheme, `legal${entry.path.slice("/legal".length).replaceAll("/", "-")}`), fullPage: true });
         expect(errors()).toEqual([]);
       });
     }

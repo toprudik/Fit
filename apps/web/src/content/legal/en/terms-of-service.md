@@ -50,7 +50,7 @@ These words mean the same in all DaFit legal documents. In running text we write
 
 3.2. You must be able to enter into a binding contract where you live, and you must not be barred from using the Service under the law that applies to you.
 
-3.3. If we learn that a user is under 18, we will close the account and delete its data in line with privacy-policy.md.
+3.3. If we learn that a user is under 18, we will close the account and delete its data in line with the [Privacy Policy](privacy-policy.md).
 
 > Team: not in the product yet, see product-changes. There is no 18+ confirmation at sign-up; only the nutrition target calculator refuses users under 18.
 
@@ -58,7 +58,7 @@ These words mean the same in all DaFit legal documents. In running text we write
 
 ## 4. Your account and Telegram
 
-4.1. You sign in to DaFit only with your Telegram account, either inside the Telegram Mini App or with Telegram login on the web. We do not use passwords. We receive from Telegram your Telegram ID, name, username, profile photo link and language, and we update them each time you sign in. Details are in privacy-policy.md.
+4.1. You sign in to DaFit only with your Telegram account, either inside the Telegram Mini App or with Telegram login on the web. We do not use passwords. We receive from Telegram your Telegram ID, name, username, profile photo link and language, and we update them each time you sign in. Details are in the [Privacy Policy](privacy-policy.md).
 
 4.2. You are responsible for keeping your Telegram account and your devices secure. Anything done through your signed-in account is treated as done by you, unless you show that someone else got access without your fault. Tell us at [CONTACT EMAIL] as soon as you suspect misuse.
 
@@ -76,7 +76,7 @@ These words mean the same in all DaFit legal documents. In running text we write
 
 5.4. **DaFit does not check every trainer.** We may verify a trainer's documents, and a verified trainer shows a badge. Verification means only that our team looked at the documents the trainer sent at the time of the check. It is not a guarantee of the trainer's skill, conduct or results. An unverified trainer can still use DaFit and invite clients.
 
-5.5. **DaFit is not a medical service.** See section 14 and health-disclaimer.md.
+5.5. **DaFit is not a medical service.** See section 14 and the [Health Disclaimer](health-disclaimer.md).
 
 > Counsel: check whether, in any target market, the "I paid" flow or payment links on the showcase could make DaFit a payment intermediary or commercial agent. On the current code they do not: no funds touch DaFit.
 
@@ -104,7 +104,7 @@ If you use DaFit as a trainer, you agree that:
 
 7.5. You follow safe practice. You screen clients appropriately, for example by reading their questionnaire if they chose to show it to you, and you refer them to a doctor when their answers or symptoms call for it. A flag on PAR-Q answers in DaFit is a prompt, not an assessment.
 
-7.6. **Client data.** You may enter data about clients into DaFit only if you have a lawful basis to do so and have told the client how you use it. This applies especially to managed clients, who have no DaFit account and have not accepted our terms, and to your private notes about any client. For that data you are the controller and DaFit processes it on your behalf under data-processing-addendum.md, which you accept by using the trainer features. You will not enter health data about a managed client unless the law allows you to, for example with their explicit consent.
+7.6. **Client data.** You may enter data about clients into DaFit only if you have a lawful basis to do so and have told the client how you use it. This applies especially to managed clients, who have no DaFit account and have not accepted our terms, and to your private notes about any client. For that data you are the controller and DaFit processes it on your behalf under the [Data Processing Addendum](data-processing-addendum.md), which you accept by using the trainer features. You will not enter health data about a managed client unless the law allows you to, for example with their explicit consent.
 
 7.7. You use the data clients share with you only to coach them. You do not copy it out of DaFit for unrelated purposes, sell it, or share it with others without the client's permission. When a client hides a category in "What your trainer sees" or ends the pair, you lose access to that data in DaFit; you will not try to get around that.
 
@@ -112,7 +112,7 @@ If you use DaFit as a trainer, you agree that:
 
 7.9. Your showcase, prices and descriptions are accurate and lawful, and you have the rights to the photos and texts you publish.
 
-7.10. When you invite clients, share links or run challenges, you do not spam, mislead, or offer rewards in exchange for positive reviews (see community-guidelines.md).
+7.10. When you invite clients, share links or run challenges, you do not spam, mislead, or offer rewards in exchange for positive reviews (see the [Community Guidelines](community-guidelines.md)).
 
 > Counsel: trainers acting for business purposes may be "business users" under Regulation (EU) 2019/1150 (P2B). If so, sections 22 and 24 must meet its notice rules (15 days for changes, 30 days before termination with a statement of reasons, except in the cases the Regulation lists). The draft builds this in for trainers. The internal complaint system and mediator duties do not apply to small enterprises (Art. 11(5) and Art. 12(7)); confirm the operator's size.
 
@@ -128,7 +128,7 @@ If you use DaFit as a client, you agree that:
 
 8.4. You only mark a payment as made when you have actually paid.
 
-8.5. You follow health-disclaimer.md: you stop exercising and get help if something feels wrong.
+8.5. You follow the [Health Disclaimer](health-disclaimer.md): you stop exercising and get help if something feels wrong.
 
 ## 9. Acceptable use
 
@@ -136,7 +136,7 @@ You must not:
 
 9.1. break the law, or help anyone else do so, through DaFit;
 
-9.2. upload content that is illegal or that breaks community-guidelines.md, including content that harasses, threatens or sexualises anyone, or shows another person without their permission;
+9.2. upload content that is illegal or that breaks the [Community Guidelines](community-guidelines.md), including content that harasses, threatens or sexualises anyone, or shows another person without their permission;
 
 9.3. upload progress photos of anyone other than yourself, unless you are a trainer acting with the client's consent where the product allows it;
 
@@ -166,7 +166,7 @@ You must not:
 
 10.4. You confirm that you have the rights to the content you upload and that it does not infringe anyone's rights.
 
-10.5. We may remove or restrict content that breaks these terms or community-guidelines.md, or that we must remove by law. Section 22 and community-guidelines.md explain how we do this and how you can appeal.
+10.5. We may remove or restrict content that breaks these terms or the [Community Guidelines](community-guidelines.md), or that we must remove by law. Section 22 and the [Community Guidelines](community-guidelines.md) explain how we do this and how you can appeal.
 
 ## 11. Public content
 
@@ -187,11 +187,11 @@ You must not:
 
 12.3. Today reviews are visible only to the author, the trainer and the DaFit team. We will not show a review publicly unless its author has agreed to that.
 
-12.4. All review rules, including the ban on fake and incentivised reviews and how disputes work, are in community-guidelines.md.
+12.4. All review rules, including the ban on fake and incentivised reviews and how disputes work, are in the [Community Guidelines](community-guidelines.md).
 
 ## 13. Privacy and data
 
-13.1. privacy-policy.md explains what data we collect, why, where it is stored (our providers are in the United States), how long we keep it, and your rights. If you live in a US state with a consumer health data law, consumer-health-data-privacy-policy.md also applies.
+13.1. The [Privacy Policy](privacy-policy.md) explains what data we collect, why, where it is stored (our providers are in the United States), how long we keep it, and your rights. If you live in a US state with a consumer health data law, the [Consumer Health Data Privacy Policy](consumer-health-data-privacy-policy.md) also applies.
 
 13.2. A client controls what a trainer sees. In a new pair, nutrition, measurements, steps and workouts are visible to the trainer by default; progress photos and the questionnaire are hidden until the client chooses to show them. The client can change this at any time in "What your trainer sees" or end the pair.
 
@@ -203,15 +203,15 @@ You must not:
 
 14.1. DaFit does not give medical advice, diagnosis or treatment. Nutrition targets in DaFit are estimates calculated from a formula. Trainers are not doctors unless they say so and are qualified as such.
 
-14.2. Read health-disclaimer.md before you train. If you have a medical condition, are pregnant, or are unsure whether exercise is safe for you, talk to a doctor first.
+14.2. Read the [Health Disclaimer](health-disclaimer.md) before you train. If you have a medical condition, are pregnant, or are unsure whether exercise is safe for you, talk to a doctor first.
 
 ## 15. Paid plans
 
 15.1. DaFit has free and paid plans. Trainers on Free can work with up to 3 clients; Pro removes that limit and adds features. Clients on Free get everything needed to work with their trainer; Premium adds features. Clients of a trainer on Pro get the Premium features in their work with that trainer, at no cost to the client.
 
-15.2. During the beta there is no way to buy a plan. When payments start, subscription-terms.md will apply, and we will tell you before anything is charged.
+15.2. During the beta there is no way to buy a plan. When payments start, the [Subscription Terms](subscription-terms.md) will apply, and we will tell you before anything is charged.
 
-15.3. Plan limits are part of the Service. If a paid plan ends, your data stays and some features lock; see subscription-terms.md.
+15.3. Plan limits are part of the Service. If a paid plan ends, your data stays and some features lock; see the [Subscription Terms](subscription-terms.md).
 
 ## 16. Our intellectual property and open data
 
@@ -233,7 +233,7 @@ DaFit works with other services that have their own terms: Telegram (sign-in, bo
 
 18.1. We work to keep DaFit available but cannot promise it will always be, especially during the beta. We may need to pause it for maintenance, security or reasons outside our control, including Telegram outages or changes.
 
-18.2. We may change, add or remove features. If a change takes away a significant feature of a paid plan you are paying for, subscription-terms.md says what you can do.
+18.2. We may change, add or remove features. If a change takes away a significant feature of a paid plan you are paying for, the [Subscription Terms](subscription-terms.md) says what you can do.
 
 ## 19. What we promise
 
@@ -273,7 +273,7 @@ If you use DaFit as a trainer for business purposes, you will compensate us for 
 22.1. We may remove or hide content, limit features, suspend or close an account if:
 
 - the law requires it, or a court or authority orders it;
-- the user seriously or repeatedly breaks these terms or community-guidelines.md;
+- the user seriously or repeatedly breaks these terms or the [Community Guidelines](community-guidelines.md);
 - the user puts other users, the Service or us at risk, for example through fraud, hacking or abuse;
 - the user is under 18;
 - a trainer's verification is rejected, in which case the showcase goes offline but the trainer keeps access and existing clients.
@@ -288,7 +288,7 @@ If you use DaFit as a trainer for business purposes, you will compensate us for 
 
 22.5. Before we close an account, we give the user a chance to export their data unless the law or a serious risk prevents it.
 
-22.6. How we handle reports of illegal content, and our repeat-infringer policy, are in community-guidelines.md.
+22.6. How we handle reports of illegal content, and our repeat-infringer policy, are in the [Community Guidelines](community-guidelines.md).
 
 ## 23. Ending the agreement and deleting your account
 
@@ -310,7 +310,7 @@ If you use DaFit as a trainer for business purposes, you will compensate us for 
 
 24.2. We tell you about a change through the bot or in the app before it takes effect: at least 15 days before for trainers using DaFit for business purposes, and at least [CONSUMER NOTICE DAYS] days before for everyone else, unless the change is required by law sooner or only fixes small mistakes.
 
-24.3. For a material change, we ask you to accept the new version in the app the next time you open DaFit. If you do not accept it, you can export your data and delete your account; if you have a paid plan, subscription-terms.md says how you can end it and what refund applies.
+24.3. For a material change, we ask you to accept the new version in the app the next time you open DaFit. If you do not accept it, you can export your data and delete your account; if you have a paid plan, the [Subscription Terms](subscription-terms.md) says how you can end it and what refund applies.
 
 24.4. The version you accepted applies to anything that happened before the new version took effect.
 
@@ -348,7 +348,7 @@ If you use DaFit as a trainer for business purposes, you will compensate us for 
 
 > Counsel: one address serves all contact points in this draft. Decide whether to publish separate addresses for DSA users, DSA authorities and security reports, and whether the GDPR Art. 27 representative also acts as the DSA Art. 13 legal representative.
 
-> Counsel: Art. 13 DSA requires a non-EU intermediary service offering services in the EU to appoint a legal representative in a Member State; there is no small-enterprise exemption for Art. 11 to 14. GDPR Art. 27 and UK GDPR Art. 27 representatives are handled in privacy-policy.md. Consider whether DaFit is a "user-to-user service" under the UK Online Safety Act 2023 (reviews, replies, challenge content and showcases are shared between users) and what illegal content and children's risk assessments that requires.
+> Counsel: Art. 13 DSA requires a non-EU intermediary service offering services in the EU to appoint a legal representative in a Member State; there is no small-enterprise exemption for Art. 11 to 14. GDPR Art. 27 and UK GDPR Art. 27 representatives are handled in the [Privacy Policy](privacy-policy.md). Consider whether DaFit is a "user-to-user service" under the UK Online Safety Act 2023 (reviews, replies, challenge content and showcases are shared between users) and what illegal content and children's risk assessments that requires.
 
 ## 27. General
 

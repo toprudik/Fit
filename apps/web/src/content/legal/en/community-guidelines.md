@@ -104,7 +104,7 @@ Do not post, upload or send:
 
 ## 6. How we moderate
 
-6.1. We do not check content before it appears. We act on reports, on disputes, and on what our team comes across while running the service.
+6.1. We do not check content before it appears. We act on reports, on disputes, and on what our team comes across while running the Service.
 
 6.2. Decisions are made by people on the DaFit team. We do not use automated tools to remove content or restrict accounts today. If that changes, we will say so here and in every statement of reasons.
 
@@ -114,7 +114,9 @@ Do not post, upload or send:
 
 ## 7. Reporting illegal or harmful content
 
-7.1. **Anyone can report**, with or without a DaFit account. Use "Report" on the content in the app, the report form at [DOMAIN]/report, or write to [DSA USER CONTACT EMAIL].
+7.1. **Anyone can report**, with or without a DaFit account. Use "Report" on the content in the app, the report form at [DOMAIN]/report, or write to [CONTACT EMAIL].
+
+> Team: not in the product yet, see product-changes. Today only trainers can dispute a review; there is no general "Report" button and no public report form, so [CONTACT EMAIL] is the only route for everyone else.
 
 7.2. A report should contain:
 
@@ -131,13 +133,15 @@ Do not post, upload or send:
 
 7.6. **Orders from authorities.** We act on valid orders from courts and authorities and tell the user concerned, unless the order or the law says we must not.
 
-> Counsel: this section implements Art. 16 (notice and action), Art. 17 (statement of reasons) and Art. 18 (notification of suspicions of criminal offences) of Regulation (EU) 2022/2065 (DSA), which apply to all hosting services, including micro and small enterprises. DSA Art. 20 to 23 (internal complaint system, out-of-court settlement information, trusted flaggers, misuse measures) do not bind micro and small enterprises (Art. 19), but this draft follows them voluntarily, because the cost is low. Today the product only has the trainer's "Dispute" for reviews; a general report button and a public report form are listed as product changes. Decide whether to register a DMCA agent (USD 6 fee) for the US safe harbour.
+> Counsel: this section implements Art. 16 (notice and action), Art. 17 (statement of reasons) and Art. 18 (notification of suspicions of criminal offences) of Regulation (EU) 2022/2065 (DSA), which apply to all hosting services, including micro and small enterprises. DSA Art. 20 to 23 (internal complaint system, out-of-court settlement information, trusted flaggers, misuse measures) do not bind micro and small enterprises (Art. 19), but this draft follows them voluntarily, because the cost is low. Today the product only has the trainer's "Dispute" for reviews; a general report button and a public report form are listed as product changes. Decide whether to register a DMCA agent (USD 6 fee) for the US safe harbour; [DMCA AGENT NAME, ADDRESS, EMAIL] stays a placeholder until then.
 
 ## 8. Statement of reasons and appeals
 
-8.1. When we remove, hide or restrict your content or account, we send you through the bot or in the app a statement of reasons with: what we did and its scope and duration; the facts behind it; whether we acted on a report or on our own initiative; the law or the rule in these guidelines or terms-of-service.md that we relied on; and how you can appeal.
+8.1. When we remove, hide or restrict your content or account, we send you through the bot or in the app a statement of reasons with: what we did and its scope and duration; the facts behind it; whether we acted on a report or on our own initiative; the law or the rule in these guidelines or the [Terms of Service](terms-of-service.md) that we relied on; and how you can appeal.
 
-8.2. **Appeal.** You, or the person who reported the content, can appeal within 6 months by replying to the bot message, using the appeal link in the statement, or writing to [DSA USER CONTACT EMAIL]. Someone who did not take the first decision reviews the appeal. We reverse our decision without delay if the appeal shows we were wrong.
+> Team: not in the product yet, see product-changes. The app does not yet send a statement of reasons. When a review is hidden, only the author sees the reason.
+
+8.2. **Appeal.** You, or the person who reported the content, can appeal within 6 months by writing to [CONTACT EMAIL]. Someone who did not take the first decision reviews the appeal. We reverse our decision without delay if the appeal shows we were wrong.
 
 8.3. If you live in the EU, you can also take the dispute to an out-of-court dispute settlement body certified under Article 21 of the DSA, or go to court. The European Commission publishes the list of certified bodies.
 
@@ -151,4 +155,4 @@ Do not post, upload or send:
 
 ## 10. Contact
 
-Questions about these guidelines: [CONTACT EMAIL]. Reports: [DSA USER CONTACT EMAIL] or [DOMAIN]/report.
+Questions about these guidelines and reports: [CONTACT EMAIL].

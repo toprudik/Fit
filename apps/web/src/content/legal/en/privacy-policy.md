@@ -17,7 +17,7 @@ Related documents: [Terms of Service](terms-of-service.md), [Subscription Terms]
 1.3. EU representative (GDPR Art. 27): [EU REPRESENTATIVE].
 UK representative (UK GDPR Art. 27): [UK REPRESENTATIVE].
 
-> Counsel: the operator appears to be established outside the EU and UK and offers the service to people there, so GDPR Art. 3(2) and UK GDPR Art. 3(2) apply. The Art. 27(2) exemption covers only occasional processing that does not include large-scale special-category data. DaFit processes health data continuously, so we recommend appointing both representatives before EU/UK users are admitted. Also assess whether a DPO is required (Art. 37(1)(c)) once processing of health data becomes large scale.
+> Counsel: the operator appears to be established outside the EU and UK and offers the Service to people there, so GDPR Art. 3(2) and UK GDPR Art. 3(2) apply. The Art. 27(2) exemption covers only occasional processing that does not include large-scale special-category data. DaFit processes health data continuously, so we recommend appointing both representatives before EU/UK users are admitted. Also assess whether a DPO is required (Art. 37(1)(c)) once processing of health data becomes large scale.
 
 ## 2. What DaFit is, and the roles involved
 
@@ -37,7 +37,7 @@ UK representative (UK GDPR Art. 27): [UK REPRESENTATIVE].
 2.3. Who is responsible for which data:
 - **We are the controller** for your account and for the data you enter about yourself (for example your food diary, measurements and photos).
 - **Your trainer becomes a separate controller** for the categories you allow them to see in "What your trainer sees". They use that data to coach you, under their own responsibility. Their agreement with you is between the two of you; DaFit is not a party to it.
-- **We act as a processor for the trainer** for client cards a trainer keeps for people who have no DaFit account, for the trainer's notes about clients, and for the trainer's records of sessions, passes and payments. For that data the trainer is the controller and the data-processing-addendum.md applies. If your trainer keeps such data about you, ask the trainer first; we will help them answer.
+- **We act as a processor for the trainer** for client cards a trainer keeps for people who have no DaFit account, for the trainer's notes about clients, and for the trainer's records of sessions, passes and payments. For that data the trainer is the controller and the [Data Processing Addendum](data-processing-addendum.md) applies. If your trainer keeps such data about you, ask the trainer first; we will help them answer.
 - **Telegram is a separate controller** for its own platform. When you use DaFit through Telegram, Telegram's privacy policy also applies.
 
 > Counsel: confirm the split for trainer records about clients who do have an account (sessions, bookings, passes, ledger, payments). We treat them as the trainer's records processed by us on the trainer's behalf, which is why they survive the client's account deletion in anonymised form (section 9).
@@ -97,7 +97,7 @@ This table gives the legal bases under the EU GDPR and the UK GDPR. United State
 | Story cards and calendar feeds you create | What you pick | Contract, at your request (Art. 6(1)(b)) |
 | Verify trainers | Certificates and documents | Legitimate interests in letting clients trust trainer profiles (Art. 6(1)(f)) |
 | Invitations and trial-session links | Tokens, who invited whom | Contract (Art. 6(1)(b)) |
-| Understand how DaFit is used and improve it (counts of app openings, which bot buttons people use) | App usage | Legitimate interests in improving the service (Art. 6(1)(f)). Aggregates only; our team does not read your health data for this |
+| Understand how DaFit is used and improve it (counts of app openings, which bot buttons people use) | App usage | Legitimate interests in improving the Service (Art. 6(1)(f)). Aggregates only; our team does not read your health data for this |
 | Support, feedback, bug fixing | Feedback, technical data, error reports | Legitimate interests (Art. 6(1)(f)) |
 | Security, abuse prevention, moderation, bans, audit log | Technical data, reports, audit log | Legitimate interests in a safe service (Art. 6(1)(f)); legal obligation where one applies (Art. 6(1)(c)) |
 | Emergency access by an admin (section 6.5) | Only the categories needed for the case | Legitimate interests (Art. 6(1)(f)); for health data, Art. 9(2)(f) (legal claims) or Art. 9(2)(c) (vital interests) where they apply |
@@ -132,7 +132,7 @@ This table gives the legal bases under the EU GDPR and the UK GDPR. United State
 
 6.7. **Calendar feed.** If you subscribe to your DaFit calendar in Google Calendar, Apple Calendar, Outlook or similar, that calendar provider fetches the feed and processes it under its own terms. Anyone with the secret link can see the feed, so keep it private; you can reissue the link in Settings, then Calendar, and the old link stops working at once.
 
-6.8. DaFit is not a medical service and trainers are not doctors. See health-disclaimer.md.
+6.8. DaFit is not a medical service and trainers are not doctors. See the [Health Disclaimer](health-disclaimer.md).
 
 ## 7. Who we share data with
 
@@ -149,7 +149,7 @@ We share personal data only as described here.
 | Your trainer | Independent controller | The categories you allow (section 6) | Wherever the trainer is |
 | Calendar apps you subscribe with | Independent controllers, chosen by you | Your calendar feed | Their own locations |
 | Authorities, courts, advisers | As required | What the law requires or our advisers need | As applicable |
-| A buyer or successor of DaFit | New controller | Data needed to continue the service, under this policy | As applicable |
+| A buyer or successor of DaFit | New controller | Data needed to continue the Service, under this policy | As applicable |
 
 7.1. The exercise library (wger) runs inside DaFit and receives nothing. We use our own fonts, not Google Fonts. We do not send email newsletters; all messages come through the Telegram bot.
 
@@ -257,7 +257,7 @@ We share personal data only as described here.
 
 14.2. Use the in-app tools in section 10 or write to [CONTACT EMAIL]. You can use an authorised agent; we may ask the agent for proof and ask you to confirm the request from your Telegram account. We will not treat you differently for using your rights.
 
-14.3. Residents of Washington, Nevada and Connecticut, and anyone whose consumer health data we collect in those states, have additional rights described in consumer-health-data-privacy-policy.md.
+14.3. Residents of Washington, Nevada and Connecticut, and anyone whose consumer health data we collect in those states, have additional rights described in the [Consumer Health Data Privacy Policy](consumer-health-data-privacy-policy.md).
 
 > Counsel: by October 2026 comprehensive state laws are in force in about 20 states. Most apply only above volume thresholds (for example 100,000 or 35,000 consumers), which DaFit is far below. Exceptions to check: Connecticut (from 1 July 2026 the CTDPA applies to any controller processing sensitive data, regardless of volume), Texas and Nebraska (no volume threshold, but small businesses under the SBA definition are exempt except that they must get consent before selling sensitive data), and Washington's and Nevada's consumer health data laws (no revenue or volume threshold for coverage).
 
