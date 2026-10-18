@@ -1,4 +1,4 @@
--- Waitlist of trainers from /for-trainers, migration 20261018134517_trainer_waitlist.sql (marketing backlog item
+-- Waitlist of trainers from /for-trainers, migration 20261018194917_trainer_waitlist.sql (marketing backlog item
 -- 10): signed out with a contact, signed in with the account, consent kept, read by admins and the trainer only.
 begin;
 \ir _helpers.psql
