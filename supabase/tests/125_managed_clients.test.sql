@@ -222,9 +222,9 @@ select results_eq(
   'merge: bookings, passes, the ledger, measurements and notes moved to the person'
 );
 select ok(
-  (select measurements and workouts and not photos and not intake and intake_decided_at is null
+  (select not (nutrition or measurements or photos or steps or intake or workouts) and intake_decided_at is null
    from public.data_shares where coaching_id = tests.id('anya_pair')),
-  'merge: data shares go back to the client''s defaults'
+  'merge: nothing is shared until the person answers the sharing step'
 );
 select tests.authenticate_as('client_c');
 select is(
