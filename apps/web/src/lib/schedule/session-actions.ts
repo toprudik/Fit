@@ -27,7 +27,7 @@ export type SessionError = (typeof KNOWN_ERRORS)[number] | "failed";
 export type SessionConflict = { id: string; startsAt: string; endsAt: string; name: string };
 
 export type SaveSessionResult =
-  | { status: "done"; sessionId: string; count: number }
+  | { status: "done"; sessionId: string; count: number; singleFailed?: boolean }
   | { status: "conflict"; conflicts: SessionConflict[] }
   | { status: "error"; error: SessionError };
 
@@ -49,6 +49,8 @@ const fields = {
 const createInput = z.object({
   ...fields,
   coachingId: z.uuid(),
+  /** A single session paid apart (PRD 2.8-12): the pass title for it, or null to charge by the usual rule. */
+  singleTitle: z.string().trim().min(1).max(120).nullable().optional(),
   repeat: z
     .object({
       weekdays: z.array(z.number().int().min(1).max(7)).min(1).max(7),
@@ -150,8 +152,19 @@ export async function createSession(raw: CreateSessionInput): Promise<SaveSessio
       : {}),
   });
   if (error) return rpcError(error, "creating a session");
+  const sessionId = data[0].session_id;
+  const singleFailed = input.singleTitle && !input.repeat ? !(await makeSingle(supabase, sessionId, input.singleTitle)) : undefined;
   refresh();
-  return { status: "done", sessionId: data[0].session_id, count: data[0].created };
+  return { status: "done", sessionId, count: data[0].created, ...(singleFailed ? { singleFailed } : {}) };
+}
+
+/** Makes the booking of a just assigned session a single session; false when that did not work. */
+async function makeSingle(supabase: Supabase, sessionId: string, title: string): Promise<boolean> {
+  const { data: booking } = await supabase.from("bookings").select("id").eq("session_id", sessionId).maybeSingle();
+  if (!booking) return false;
+  const { error } = await supabase.rpc("make_booking_single", { p_booking_id: booking.id, p_title: title });
+  if (error) console.error("making a booking single failed", error.code);
+  return !error;
 }
 
 /**

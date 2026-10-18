@@ -4262,6 +4262,9 @@ isOneToOne: false
 "location_check_in_token":
 { Args: { "p_location_id": string,"p_renew"?: boolean }; Returns: string
                            },
+"make_booking_single":
+{ Args: { "p_booking_id": string,"p_title": string }; Returns: string
+                           },
 "mark_attendance":
 { Args: { "p_booking_id": string,"p_reason"?: string,"p_status": Database["public"]['Enums']["booking_status"] }; Returns: Database["public"]['Enums']["booking_status"]
                            },
