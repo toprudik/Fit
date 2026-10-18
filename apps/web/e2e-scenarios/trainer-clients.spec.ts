@@ -85,10 +85,6 @@ test.describe("profile and showcase", () => {
   test("the profile name section keeps «Сохранить» clear of the tab bar", async ({
     trainer,
   }, testInfo) => {
-    test.fixme(
-      isPhone(testInfo),
-      "on a phone «Сохранить» of /trainer/profile/profile sits under the translucent tab bar at first paint: tab labels drop to 3.77:1 over the blue button",
-    );
     const { page } = trainer;
     await page.goto("/trainer/profile/profile");
     await expect(

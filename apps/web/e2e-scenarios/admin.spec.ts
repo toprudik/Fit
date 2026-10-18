@@ -447,7 +447,6 @@ test.describe("admin section", () => {
   });
 
   test("audit: the log passes axe with a person linked in an entry", async ({ persona }) => {
-    test.fixme(true, "«Кого:» link in /admin/audit is told from the text by color only (axe link-in-text-block)");
     const admin = await namedAdmin(persona);
     const someone = await persona({ firstName: "Нина", lastName: uniqueLastName("Журналова") });
     ok(await admin.db.rpc("admin_block_user", { p_user_id: someone.userId, p_reason: "Проверка журнала" }), "block");

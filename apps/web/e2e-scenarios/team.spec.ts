@@ -217,7 +217,6 @@ test.describe("team and delegation", () => {
   });
 
   test("the substitute link stays on screen until the owner closes the sheet", async ({ persona }) => {
-    test.fixme(true, "createSubstitute's refresh() swaps SubstituteButton for the pending row, unmounting the sheet with the one-time link");
     const { owner, coachingId } = await team(persona);
     const created = ok(
       await owner.db.rpc("create_session", { p_coaching_id: coachingId, p_starts_at: moscowAt(2, 12), p_duration_min: 60, p_mode: "online" }),

@@ -40,11 +40,6 @@ const at = (role: Role, route: string, path?: Route["path"], lands?: string, ext
 });
 
 /** The tab bar's material lets a light control scrolled under it wash out the inactive labels. */
-const TAB_BAR_CONTRAST = {
-  project: "phone",
-  text: "inactive tab bar labels fail color-contrast when a light segmented control sits under the translucent tab bar",
-} as const;
-
 const COMMON = (role: Role): Route[] => [
   at(role, "/profile"),
   at(role, "/settings"),
@@ -111,7 +106,6 @@ const ROUTES: Route[] = [
   at("trainer", "/trainer/schedule/template"),
   at("trainer", "/trainer/schedule/slots"),
   at("trainer", "/trainer/sessions/new", undefined, undefined, {
-    bug: TAB_BAR_CONTRAST,
   }),
   at("trainer", "/trainer/sessions/[sessionId]", (s) => `/trainer/sessions/${s.sessionIds[0]}`),
   at("trainer", "/trainer/sessions/[sessionId] (past)", (s) => `/trainer/sessions/${s.pastSessionId}`),
@@ -173,7 +167,7 @@ const ROUTES: Route[] = [
       `/trainer/profile/${section}`,
       () => `/trainer/profile/${section}`,
       undefined,
-      section === "profile" ? { bug: TAB_BAR_CONTRAST } : {},
+      {},
     ),
   ),
   at("trainer", "/trainer/referrals"),

@@ -103,7 +103,6 @@ test.describe("food diary", () => {
   });
 
   test("searching the diary finds the client's own food", async ({ persona }) => {
-    test.fixme(true, "findFoods calls getLocale() (next/root-params) inside a Server Action, which throws: every food search fails");
     const client = await persona({ firstName: "Вера" });
     const { page } = client;
     await ownFood(client, { name: "Гречка отварная", kcal: 110 });
@@ -116,7 +115,6 @@ test.describe("food diary", () => {
   });
 
   test("a typed barcode of an own product opens it, an unknown one offers to create a product", async ({ persona }) => {
-    test.fixme(true, "findBarcode calls getLocale() (next/root-params) inside a Server Action, which throws: every barcode lookup fails");
     const client = await persona({ firstName: "Вера" });
     const { page } = client;
     await ownFood(client, { name: "Кефир 1%", kcal: 40, barcode: "4600000000024" });
@@ -201,7 +199,6 @@ test.describe("food diary", () => {
   });
 
   test("«Добавить» of another meal opens a fresh add screen for that meal", async ({ persona }) => {
-    test.fixme(true, "the add screen keeps its old state on client navigation: the previous meal, tab and amount sheet come back");
     const client = await persona({ firstName: "Вера" });
     const { page } = client;
     await ownFood(client, { name: "Гречка отварная", kcal: 110 });
@@ -376,9 +373,7 @@ test.describe("nutrition target", () => {
     await expect(result).toContainText(/Белки \d+ г, жиры \d+ г, углеводы \d+ г/);
     // Not the target yet.
     await expect(page.getByRole("heading", { name: "Нормы пока нет" })).toBeVisible();
-    // Scrolled here, the result's text sits under the translucent tab bar and axe fails the tab labels on it
-    // (reported separately); check the screen from the top.
-    await page.evaluate(() => window.scrollTo(0, 0));
+    // Scrolled here, the result sits under the tab bar: its labels must stay readable over it.
     await checked(page);
     const kcal = (await result.locator("p").first().innerText()).trim();
     await result.getByRole("button", { name: "Сделать нормой" }).click();

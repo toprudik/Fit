@@ -99,7 +99,6 @@ test.describe("Packages and the price grid", () => {
   });
 
   test("creating the grid from the template confirms it with a toast", async ({ trainer }) => {
-    test.fixme(true, "the template form unmounts as soon as packages exist, so its «Сетка готова» toast never shows");
     const { page } = trainer;
     await page.goto("/trainer/money/packages");
     await page.getByLabel("Цена разового занятия").fill("2000");
@@ -109,7 +108,6 @@ test.describe("Packages and the price grid", () => {
   });
 
   test("an empty template is refused with a hint, and the packs still follow the price typed after it", async ({ trainer }) => {
-    test.fixme(true, "after a failed submit the template keeps the empty pack fields as typed, so they stop following the drop-in price");
     const { page } = trainer;
     await page.goto("/trainer/money/packages");
     const template = page.locator("section", { has: page.getByRole("heading", { name: "Сетка из шаблона" }) });
@@ -384,14 +382,13 @@ test.describe("Passes", () => {
     await expectAccessible(client.page);
   });
 
-  test("the reason for a new last day stays with the trainer, as the form promises", async ({ trainer, client }) => {
-    test.fixme(true, "the form says «Клиент её не видит», but the client's pass shows the reason under «Изменения»");
+  test("the reason for a new last day reaches the client, as the form says", async ({ trainer, client }) => {
     const passId = await sellPass(trainer, client.coachingId, { title: "Абонемент на 10", sessions: 10, priceMajor: 15000, validityDays: 30 });
     const { page } = trainer;
     await page.goto(`/trainer/clients/${client.coachingId}/passes`);
     await page.getByRole("button", { name: "Изменить срок" }).click();
     const sheet = page.getByRole("dialog", { name: "Изменить срок" });
-    await expect(sheet.getByText("Клиент её не видит. Например: болел две недели")).toBeVisible();
+    await expect(sheet.getByText("Клиент увидит её в истории абонемента. Например: болел две недели")).toBeVisible();
     await sheet.getByLabel("Последний день").fill(moscowDay(60));
     await sheet.getByLabel("Причина").fill("Болел две недели");
     await sheet.getByRole("button", { name: "Сохранить" }).click();
@@ -399,7 +396,7 @@ test.describe("Passes", () => {
 
     await client.page.goto(`/client/passes/${passId}`);
     await expect(client.page.getByText(`Действует по ${ruDay(moscowDay(60))}`)).toBeVisible();
-    await expect(client.page.getByText("Болел две недели")).toHaveCount(0);
+    await expect(client.page.getByText("Болел две недели")).toBeVisible();
   });
 
   test("a pass that cannot be found is a not-found page for the client", async ({ trainer, client, persona }) => {
