@@ -1,4 +1,4 @@
--- QA fixes of migration 20261018135317_qa_money_booking_fixes.sql, plus the pass choice rule (PRD 2.8-7) that no
+-- QA fixes of migration 20261018194617_qa_money_booking_fixes.sql, plus the pass choice rule (PRD 2.8-7) that no
 -- test pinned down before: each case below failed to catch a deliberate break of private.pick_pass or
 -- private.post_charge (docs/qa/production-readiness.md, "Мутационная проверка").
 begin;
