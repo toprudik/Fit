@@ -8,7 +8,7 @@ import { formLocale, formStrings, TEMPLATE_FIELDS, templateInput, templateRows }
 import { paymentLinkInput } from "@/lib/payment-links/input";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CANCELLATION_HOURS, CURRENCIES, isSpecialty, isTimeZone } from "./options";
-import { isWizardStep, nextPath, type WizardStep } from "./steps";
+import { isEditableStep, isWizardStep, nextPath, PROFILE_EDIT_PATH, type WizardStep } from "./steps";
 
 /** What was typed, so the form shows it again after React resets it on submit. */
 export type WizardValues = Record<string, string | string[]>;
@@ -76,7 +76,7 @@ function invalid(error: z.ZodError): SaveResult {
 function formValues(form: FormData): WizardValues {
   const values: WizardValues = {};
   for (const key of new Set(form.keys())) {
-    if (key === "step" || key === "intent" || key.startsWith("$")) continue;
+    if (key === "step" || key === "intent" || key === "mode" || key.startsWith("$")) continue;
     const all = form.getAll(key).map(String);
     values[key] = all.length > 1 || key === "specialties" ? all : all[0];
   }
@@ -93,7 +93,8 @@ async function userId(supabase: Supabase): Promise<string | null> {
  * Saves one step for the signed-in trainer and opens the next screen. Writes go through the user's
  * client, so RLS and the column grants decide what a trainer may change, and only in their own rows.
  * Locations and payment links are optional: "Далее" with an empty form just moves on, and
- * "Добавить ещё" (`intent=more`) saves and stays to add another.
+ * "Добавить ещё" (`intent=more`) saves and stays to add another. From "Профиль тренера" (`mode=edit`)
+ * "Сохранить" goes back to that screen instead of the next step.
  */
 export async function saveWizardStep(_previous: WizardState, form: FormData): Promise<WizardState> {
   const step = text(form, "step");
@@ -110,7 +111,7 @@ export async function saveWizardStep(_previous: WizardState, form: FormData): Pr
     refresh();
     return { status: "added" };
   }
-  redirect(nextPath(step));
+  redirect(text(form, "mode") === "edit" && isEditableStep(step) ? PROFILE_EDIT_PATH : nextPath(step));
 }
 
 type SaveResult = { status: "invalid"; fields: string[] } | { status: "failed" } | { status: "saved" } | { status: "skipped" };
@@ -195,4 +196,58 @@ function done(step: WizardStep, error: { code: string } | null): SaveResult {
   if (!error) return { status: "saved" };
   console.error(`saving the trainer wizard step ${step} failed`, error.code);
   return { status: "failed" };
+}
+
+export type LocationState =
+  | { status: "idle" }
+  | { status: "saved" }
+  | { status: "invalid"; fields: string[]; values: WizardValues }
+  | { status: "failed"; values: WizardValues };
+
+/**
+ * "Добавить место" and "Изменить" on the trainer's places: with an `id` the place is renamed or
+ * re-addressed, without one a new place is added. RLS keeps both to the signed-in trainer's own rows.
+ */
+export async function saveLocation(_previous: LocationState, form: FormData): Promise<LocationState> {
+  const values = { name: text(form, "name"), address: text(form, "address") };
+  const parsed = locationInput.safeParse(values);
+  if (!parsed.success) {
+    return { status: "invalid", fields: [...new Set(parsed.error.issues.map((issue) => String(issue.path[0] ?? "")))], values };
+  }
+  const id = text(form, "id");
+  if (id && !z.uuid().safeParse(id).success) return { status: "failed", values };
+
+  const supabase = await createSupabaseServerClient();
+  const user = await userId(supabase);
+  if (!user) return { status: "failed", values };
+  const { data, error } = id
+    ? await supabase.from("locations").update(parsed.data).eq("id", id).is("archived_at", null).select("id")
+    : await supabase.from("locations").insert({ trainer_id: user, ...parsed.data }).select("id");
+  if (error || data.length !== 1) {
+    console.error("saving a location failed", error?.code);
+    return { status: "failed", values };
+  }
+  refresh();
+  return { status: "saved" };
+}
+
+/**
+ * "Удалить" a place: archived, so it leaves the lists where sessions are created; sessions already
+ * held or booked there keep showing its name and address.
+ */
+export async function archiveLocation(id: string): Promise<{ failed: boolean }> {
+  if (!z.uuid().safeParse(id).success) return { failed: true };
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("locations")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("archived_at", null)
+    .select("id");
+  if (error || data.length !== 1) {
+    console.error("archiving a location failed", error?.code);
+    return { failed: true };
+  }
+  refresh();
+  return { failed: false };
 }
