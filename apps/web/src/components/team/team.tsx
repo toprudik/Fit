@@ -18,6 +18,7 @@ import {
   answerInvite,
   createAssistant,
   createSubstitute,
+  createSubstitutes,
   inviteDelegate,
   markDelegatedAttendance,
   revokeDelegation,
@@ -26,7 +27,7 @@ import {
   type DelegateCandidate,
   type DelegationInvite,
 } from "@/lib/delegations/actions";
-import { ASSISTANT_SCOPES, type AssistantScope } from "@/lib/delegations/rules";
+import { ASSISTANT_SCOPES, SUBSTITUTE_MAX, type AssistantScope } from "@/lib/delegations/rules";
 
 /** Trainers found by name or @username, each with «Пригласить» (rule 1). */
 function DelegateSearch({ delegationId, onInvited }: { delegationId: string; onInvited: () => void }) {
@@ -234,6 +235,79 @@ export function SubstituteButton({ sessionId }: { sessionId: string }) {
       >
         {copy.substitute.button}
       </Button>
+      <InviteSheet invite={invite} onClose={() => setInvite(null)} />
+    </>
+  );
+}
+
+/** «Подмена на несколько занятий» on «Команда»: pick sessions ahead, then one invite for all of them. */
+export function SubstituteSessionsButton({ sessions }: { sessions: { id: string; label: string }[] }) {
+  const { t } = useI18n();
+  const copy = t.team.substituteMany;
+  const [open, setOpen] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [error, setError] = useState<"none" | "many" | null>(null);
+  const [invite, setInvite] = useState<DelegationInvite | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function submit() {
+    if (picked.length === 0) return setError("none");
+    if (picked.length > SUBSTITUTE_MAX) return setError("many");
+    setError(null);
+    startTransition(async () => {
+      const result = await createSubstitutes(picked);
+      if (!result.ok) {
+        toast.error(result.reason === "taken" ? copy.taken : t.team.failed);
+        return;
+      }
+      setOpen(false);
+      setPicked([]);
+      setInvite(result.value);
+    });
+  }
+
+  return (
+    <>
+      <Button icon={Repeat} variant="secondary" onClick={() => setOpen(true)}>
+        {copy.button}
+      </Button>
+      <Sheet open={open} onOpenChange={(next) => !pending && setOpen(next)} title={copy.title} description={copy.text}>
+        <form
+          noValidate
+          className="flex flex-col gap-5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submit();
+          }}
+        >
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-2 px-1 text-footnote text-ink-2">{copy.sessions}</legend>
+            <div className="flex flex-wrap gap-2">
+              {sessions.map((session) => (
+                <ChipCheckbox
+                  key={session.id}
+                  checked={picked.includes(session.id)}
+                  onChange={() => setPicked((list) => (list.includes(session.id) ? list.filter((id) => id !== session.id) : [...list, session.id]))}
+                >
+                  {session.label}
+                </ChipCheckbox>
+              ))}
+            </div>
+            {error ? (
+              <p role="alert" className="px-1 text-footnote text-danger">
+                {error === "none" ? copy.errorNone : interpolate(copy.errorMany, { max: SUBSTITUTE_MAX })}
+              </p>
+            ) : (
+              <p aria-live="polite" className="px-1 text-footnote text-ink-2">
+                {interpolate(copy.picked, { count: picked.length })}
+              </p>
+            )}
+          </fieldset>
+          <Button type="submit" size="lg" block loading={pending}>
+            {t.team.form.create}
+          </Button>
+        </form>
+      </Sheet>
       <InviteSheet invite={invite} onClose={() => setInvite(null)} />
     </>
   );

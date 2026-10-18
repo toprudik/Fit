@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { TierLock } from "@/components/plans/tier-lock";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
-import { AddAssistantButton, RevokeButton } from "@/components/team/team";
+import { AddAssistantButton, RevokeButton, SubstituteSessionsButton } from "@/components/team/team";
 import { Badge } from "@/components/ui/badge";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { SkeletonRows } from "@/components/ui/skeleton";
@@ -40,9 +40,18 @@ function formatters(locale: Locale, timeZone: string) {
     minute: "2-digit",
     timeZone,
   });
+  const short = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone,
+  });
   return {
     day: (value: string) => day.format(new Date(value)),
     when: (value: string) => when.format(new Date(value)),
+    short: (value: string) => short.format(new Date(value)),
   };
 }
 
@@ -126,12 +135,24 @@ async function Team() {
               <AddAssistantButton clients={data.clients} />
             </div>
           </section>
-          <ListGroup header={copy.substitutes} footer={copy.substitute.text} headingLevel={2}>
-            {substitutes.length === 0 ? <ListRow title={copy.substitutesEmpty} /> : null}
-            {substitutes.map((row) => (
-              <Row key={row.id} copy={copy} row={row} format={format} />
-            ))}
-          </ListGroup>
+          <section className="flex flex-col gap-3">
+            <ListGroup header={copy.substitutes} footer={copy.substitute.text} headingLevel={2}>
+              {substitutes.length === 0 ? <ListRow title={copy.substitutesEmpty} /> : null}
+              {substitutes.map((row) => (
+                <Row key={row.id} copy={copy} row={row} format={format} />
+              ))}
+            </ListGroup>
+            {data.sessions.length > 0 ? (
+              <div>
+                <SubstituteSessionsButton
+                  sessions={data.sessions.map((session) => ({
+                    id: session.id,
+                    label: [format.short(session.startsAt), session.title].filter(Boolean).join(", "),
+                  }))}
+                />
+              </div>
+            ) : null}
+          </section>
           {mine.length > 0 || data.journal.length > 0 ? <Journal copy={copy} entries={data.journal} format={format} /> : null}
         </>
       ) : (

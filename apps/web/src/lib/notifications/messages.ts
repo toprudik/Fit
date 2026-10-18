@@ -454,6 +454,8 @@ const templates: Partial<Record<NotificationType, Template>> = {
     const owner = typeof payload.owner_name === "string" && payload.owner_name.trim() ? payload.owner_name.trim() : t.unnamedTrainer;
     const when = sessionTime(locale, payload.starts_at, timeZone);
     const team = [{ text: t.openTeam, path: "/trainer/team" }];
+    // One invite can cover several sessions (create_substitutions): then the text says how many, from the first.
+    const sessions = typeof payload.sessions === "number" && payload.sessions > 1 ? plural(locale, payload.sessions, t.delegationSessions) : null;
     switch (payload.event) {
       case "substitute":
         return { text: interpolateEscaped(t.delegationSubstitute, { delegate, when }), buttons: [{ text: t.openSessions, path: "/client/sessions" }] };
@@ -466,7 +468,12 @@ const templates: Partial<Record<NotificationType, Template>> = {
       }
       case "accepted":
         return {
-          text: payload.kind === "assistant" ? interpolateEscaped(t.delegationAssistantAccepted, { delegate }) : interpolateEscaped(t.delegationAccepted, { delegate, when }),
+          text:
+            payload.kind === "assistant"
+              ? interpolateEscaped(t.delegationAssistantAccepted, { delegate })
+              : sessions
+                ? interpolateEscaped(t.delegationAcceptedMany, { delegate, sessions, when })
+                : interpolateEscaped(t.delegationAccepted, { delegate, when }),
           buttons: team,
         };
       case "pending":
@@ -475,9 +482,11 @@ const templates: Partial<Record<NotificationType, Template>> = {
       case "invited":
         return {
           text:
-            payload.kind === "substitute"
-              ? interpolateEscaped(t.delegationInviteSubstitute, { owner, when })
-              : interpolateEscaped(t.delegationInviteAssistant, { owner }),
+            payload.kind !== "substitute"
+              ? interpolateEscaped(t.delegationInviteAssistant, { owner })
+              : sessions
+                ? interpolateEscaped(t.delegationInviteSubstitutes, { owner, sessions, when })
+                : interpolateEscaped(t.delegationInviteSubstitute, { owner, when }),
           buttons: isInviteToken(payload.token) ? [{ text: t.openInvite, path: invitePath(payload.token) }] : team,
         };
       default:

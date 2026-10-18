@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { INTL_LOCALE } from "@/i18n/config";
-import { interpolate } from "@/i18n/format";
+import { interpolate, plural } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { loadInvite } from "@/lib/delegations/load";
 import { isInviteToken } from "@/lib/delegations/rules";
@@ -48,21 +48,32 @@ async function Invite({ searchParams }: { searchParams: PageProps<"/[lang]/train
   if (invite === "not-found" || !token) return <EmptyState icon={UserPlus} title={copy.notFound} description={copy.notFoundText} action={back} />;
   if (invite === "expired") return <EmptyState icon={UserPlus} title={copy.expired} description={copy.expiredText} action={back} />;
 
-  const when = invite.sessionStartsAt
-    ? new Intl.DateTimeFormat(INTL_LOCALE[locale], {
-        day: "numeric",
-        month: "long",
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: invite.timeZone,
-      }).format(new Date(invite.sessionStartsAt))
-    : "";
+  const format = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: invite.timeZone,
+  });
+  const when = invite.sessionStartsAt ? format.format(new Date(invite.sessionStartsAt)) : "";
   const owner = invite.ownerName ?? "";
+  const several = invite.kind === "substitute" && invite.sessionsStartsAt.length > 1;
   return (
     <div className="flex flex-col gap-6">
       <p className="px-1 text-callout">
-        {invite.kind === "substitute" ? interpolate(copy.substituteText, { owner, when }) : interpolate(copy.assistantText, { owner })}
+        {several
+          ? interpolate(copy.substitutesText, { owner, sessions: plural(locale, invite.sessionsStartsAt.length, copy.sessions) })
+          : invite.kind === "substitute"
+            ? interpolate(copy.substituteText, { owner, when })
+            : interpolate(copy.assistantText, { owner })}
       </p>
+      {several ? (
+        <ListGroup header={copy.sessionsTitle}>
+          {invite.sessionsStartsAt.map((startsAt) => (
+            <ListRow key={startsAt} title={format.format(new Date(startsAt))} />
+          ))}
+        </ListGroup>
+      ) : null}
       <ListGroup header={copy.scopesTitle} footer={t.team.form.moneyNote}>
         {invite.kind === "substitute" ? (
           <ListRow title={<span className="whitespace-normal">{copy.substituteScopes}</span>} />
