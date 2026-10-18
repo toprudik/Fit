@@ -7,7 +7,7 @@ import { dictionaries } from "@/i18n/dictionaries";
 import { formLocale, formStrings, TEMPLATE_FIELDS, templateInput, templateRows } from "@/lib/packages/input";
 import { paymentLinkInput } from "@/lib/payment-links/input";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { CANCELLATION_HOURS, CURRENCIES, isSpecialty, isTimeZone } from "./options";
+import { BOOKING_NOTICE_HOURS, CANCELLATION_HOURS, CURRENCIES, isSpecialty, isTimeZone } from "./options";
 import { isEditableStep, isWizardStep, nextPath, PROFILE_EDIT_PATH, type WizardStep } from "./steps";
 
 /** What was typed, so the form shows it again after React resets it on submit. */
@@ -58,11 +58,16 @@ const regionInput = z.object({
   currency: z.enum(CURRENCIES),
 });
 
-const cancellationInput = z.object({
-  hours: z.coerce
+const offered = (options: readonly number[]) =>
+  z.coerce
     .number()
     .int()
-    .refine((value) => (CANCELLATION_HOURS as readonly number[]).includes(value)),
+    .refine((value) => options.includes(value));
+
+const cancellationInput = z.object({
+  hours: offered(CANCELLATION_HOURS),
+  /** Hours of booking notice; a form without the field leaves the trainer's setting as it is. */
+  notice: offered(BOOKING_NOTICE_HOURS).optional(),
 });
 
 const text = (form: FormData, name: string) => String(form.get(name) ?? "");
@@ -159,11 +164,12 @@ async function saveStep(supabase: Supabase, user: string, step: WizardStep, form
       return done(step, settings.error ?? trainer.error);
     }
     case "cancellation": {
-      const parsed = cancellationInput.safeParse({ hours: text(form, "hours") });
+      const parsed = cancellationInput.safeParse({ hours: text(form, "hours"), notice: form.has("notice") ? text(form, "notice") : undefined });
       if (!parsed.success) return invalid(parsed.error);
+      const { hours, notice } = parsed.data;
       const { error } = await supabase
         .from("trainer_profiles")
-        .update({ cancellation_deadline_hours: parsed.data.hours })
+        .update({ cancellation_deadline_hours: hours, ...(notice === undefined ? {} : { min_booking_notice_minutes: notice * 60 }) })
         .eq("user_id", user);
       return done(step, error);
     }

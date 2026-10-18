@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { ChipRadio } from "@/components/ui/chip";
 import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
 import { TextArea } from "@/components/ui/text-area";
@@ -100,8 +101,19 @@ export function CancelBooking({ bookingId, late: lateAtRender, deadline, default
         }
       >
         <div className="flex flex-col gap-3">
+          {/* PRD 2.6.5-4: a reason from the list or in the client's own words; a pick fills the text, which stays editable. */}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-2 px-1 text-footnote text-ink-2">{copy.cancelReason}</legend>
+            <div className="flex flex-wrap gap-2">
+              {copy.cancelReasons.map((preset) => (
+                <ChipRadio key={preset} name="cancel-reason" checked={reason === preset} onChange={() => setReason(preset)}>
+                  {preset}
+                </ChipRadio>
+              ))}
+            </div>
+          </fieldset>
           <TextArea
-            label={copy.cancelReason}
+            label={copy.cancelReasonOwn}
             hint={copy.cancelReasonHint}
             rows={3}
             maxLength={500}

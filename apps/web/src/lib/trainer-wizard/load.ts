@@ -21,7 +21,7 @@ async function read(supabase: Supabase, user: string) {
     supabase
       .from("trainer_profiles")
       .select(
-        "slug, headline, bio, specialties, city, works_offline, works_online, verification_status, default_currency, cancellation_deadline_hours",
+        "slug, headline, bio, specialties, city, works_offline, works_online, verification_status, default_currency, cancellation_deadline_hours, min_booking_notice_minutes",
       )
       .eq("user_id", user)
       .maybeSingle(),
