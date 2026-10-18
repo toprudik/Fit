@@ -438,14 +438,18 @@ const templates: Partial<Record<NotificationType, Template>> = {
     text: interpolateEscaped(t.exportReady, { date: planDate(locale, payload.expires_at, timeZone) }),
     buttons: [{ text: t.downloadExport, path: "/settings/export" }],
   }),
-  // Wave-2 §1.3: payload { coaching_id, goal, previous_goal, first_name, last_name } from set_client_goal, to a
-  // trainer whose own target is active; that target does not follow the goal.
+  // Wave-2 §1.3: payload { coaching_id, goal, previous_goal, first_name, last_name, group_id?, group_name? } from
+  // set_client_goal, to a trainer whose own or group target is active; that target does not follow the goal.
   goal_changed: ({ t, payload }) => {
     // The payload comes from the enum, so an unknown goal is not expected; it would show as is.
     const goal = payload.goal === "lose" || payload.goal === "maintain" || payload.goal === "gain" ? t.goalNames[payload.goal] : String(payload.goal ?? "");
     const pair = pairPath("/trainer/clients", payload);
     return {
-      text: interpolateEscaped(t.goalChanged, { name: personName(payload) || t.unnamedClient, goal }),
+      text: interpolateEscaped(typeof payload.group_name === "string" && payload.group_name.trim() ? t.goalChangedGroup : t.goalChanged, {
+        name: personName(payload) || t.unnamedClient,
+        goal,
+        group: typeof payload.group_name === "string" ? payload.group_name.trim() : "",
+      }),
       buttons: [{ text: t.openNutrition, path: pair === "/trainer/clients" ? pair : `${pair}/nutrition` }],
     };
   },

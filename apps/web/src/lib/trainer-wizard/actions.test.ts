@@ -214,6 +214,23 @@ describe("saveWizardStep", () => {
 });
 
 describe("editing the profile after the wizard", () => {
+  it("saves the booking notice in minutes next to the cancellation deadline", async () => {
+    await expect(saveWizardStep(IDLE, form({ step: "cancellation", mode: "edit", hours: "24", notice: "4" }))).rejects.toThrow("redirect /trainer/profile");
+    expect(db.writes).toEqual([
+      {
+        table: "trainer_profiles",
+        op: "update",
+        values: { cancellation_deadline_hours: 24, min_booking_notice_minutes: 240 },
+        filter: ["user_id", "trainer-1"],
+      },
+    ]);
+  });
+
+  it("takes only the offered booking notices", async () => {
+    expect(await saveWizardStep(IDLE, form({ step: "cancellation", hours: "24", notice: "3" }))).toMatchObject({ status: "invalid", fields: ["notice"] });
+    expect(db.writes).toEqual([]);
+  });
+
   it("goes back to the trainer profile after saving a section", async () => {
     await expect(saveWizardStep(IDLE, form({ step: "cancellation", mode: "edit", hours: "12" }))).rejects.toThrow("redirect /trainer/profile");
     expect(db.writes).toEqual([

@@ -662,7 +662,7 @@ export const en: Dictionary = {
       signedOutText: "Sign in with Telegram to change your trainer profile.",
       notSet: "Not set",
       noLocations: "None yet",
-      cancellation: "At least {hours} h before",
+      cancellation: "Cancel {hours} h before, book {notice} h before",
       locations: {
         add: "Add a location",
         edit: "Edit",
@@ -722,6 +722,8 @@ export const en: Dictionary = {
         label: "Free cancellation up to",
         hours: "{hours} h",
         hint: "Most trainers use 24 hours. You can change it later in your trainer profile.",
+        noticeLabel: "Clients can book no later than",
+        noticeHint: "Closer to the start, clients can't book themselves. You can still schedule the session yourself.",
       },
       payment: {
         title: "Payment link",
@@ -1056,6 +1058,12 @@ export const en: Dictionary = {
         submit: "Freeze",
         done: "Pass frozen",
         overlap: "These days are already frozen.",
+        bookings: {
+          one: "The client has {count} confirmed session on these days. The booking stays, but this pass won't pay for it: another pass will, or it goes on debt.",
+          few: "The client has {count} confirmed sessions on these days. The bookings stay, but this pass won't pay for them: another pass will, or they go on debt.",
+          many: "The client has {count} confirmed sessions on these days. The bookings stay, but this pass won't pay for them: another pass will, or they go on debt.",
+          other: "The client has {count} confirmed sessions on these days. The bookings stay, but this pass won't pay for them: another pass will, or they go on debt.",
+        },
       },
       freezes: {
         title: "Freezes",
@@ -2280,6 +2288,8 @@ export const en: Dictionary = {
     journalFooter: "What assistants and substitutes did on your behalf",
     journalEntry: "{action}: {client}",
     journalBy: "{name}, {when}",
+    pairJournal: "What your helpers did",
+    pairJournalFooter: "What assistants and substitutes did on your behalf with this client",
     journalActions: {
       "session:created": "New session",
       "session:cancelled": "Session cancelled",
@@ -4837,6 +4847,7 @@ export const en: Dictionary = {
     cancelDeletion: "Cancel deletion",
     /** Wave-2 §1.3: payload { coaching_id, goal, previous_goal, first_name, last_name } from set_client_goal. */
     goalChanged: "Your client {name} has a new goal: “{goal}”. Your target stayed the same, check that it still fits.",
+    goalChangedGroup: "Your client {name} has a new goal: “{goal}”. The target of the group “{group}” stayed the same, check that it still fits.",
     openNutrition: "Open nutrition",
     goalNames: { lose: "lose weight", maintain: "keep weight", gain: "gain mass" },
     /** Wave-2 §6.9: a trainer's broadcast to a group, with the trainer's name above the text. */
