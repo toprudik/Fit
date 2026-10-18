@@ -93,14 +93,14 @@ export function weightChange(report: MonthlyReport): number | null {
 }
 
 /** The kinds of story cards (§4-4); weight only after the client confirms it (§4-5). */
-export const STORY_KINDS = ["sessions", "trainer", "records", "weight"] as const;
+export const STORY_KINDS = ["sessions", "trainer", "records", "streak_workouts", "streak_diary", "streak_steps", "badges", "weight"] as const;
 export type StoryKind = (typeof STORY_KINDS)[number];
 
 export function isStoryKind(value: unknown): value is StoryKind {
   return (STORY_KINDS as readonly unknown[]).includes(value);
 }
 
-/** The cards this report can make: one per trainer, plus sessions, records and weight when there is data. */
+/** The cards this report can make: one per trainer and per running streak, plus sessions, records, badges and weight when there is data. */
 export type StoryOption = { kind: StoryKind; coachingId?: string; name?: string | null };
 
 export function storyOptions(report: MonthlyReport): StoryOption[] {
@@ -110,6 +110,10 @@ export function storyOptions(report: MonthlyReport): StoryOption[] {
     options.push({ kind: "trainer", coachingId: trainer.coaching_id, name: trainer.name });
   }
   if (report.records?.length) options.push({ kind: "records" });
+  if (report.streaks?.workouts) options.push({ kind: "streak_workouts" });
+  if (report.streaks?.diary) options.push({ kind: "streak_diary" });
+  if (report.streaks?.steps) options.push({ kind: "streak_steps" });
+  if (report.badges?.length) options.push({ kind: "badges" });
   if (weightChange(report) !== null) options.push({ kind: "weight" });
   return options;
 }
@@ -123,6 +127,8 @@ const cardSchema = z.object({
     type: z.enum(["max_weight", "max_reps", "max_duration"]).optional(),
     value: number.optional(),
     change: number.optional(),
+    /** The latest badge of the month on the badge card. */
+    code: z.string().optional(),
     /** The trainer's showcase address for the QR (§4-7): only while the trainer allows it and the showcase is open. */
     slug: z.string().refine(isShowcaseSlug).optional(),
   }),
@@ -140,4 +146,26 @@ export function storyCardFrom(value: unknown): StoryCard | null {
 /** A card id from the URL: a uuid, nothing else reaches the database. */
 export function isCardId(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value);
+}
+
+const shareTargetSchema = z.array(
+  z.object({ coaching_id: z.string(), name: z.string().nullable(), shared_at: z.string().nullable() }),
+);
+
+/** A live pair the client can send the month to (§4 rule 3), and when it was sent, or null. */
+export type ShareTarget = { coachingId: string; name: string | null; sharedAt: string | null };
+
+/** The pairs public.my_monthly_report_shares() answered; nothing when the shape is unknown. */
+export function shareTargetsFrom(value: unknown): ShareTarget[] {
+  const parsed = shareTargetSchema.safeParse(value);
+  if (!parsed.success) return [];
+  return parsed.data.map((row) => ({ coachingId: row.coaching_id, name: row.name, sharedAt: row.shared_at }));
+}
+
+/** The copy a client sent to the trainer, as public.shared_monthly_report() answers it, or null. */
+export function sharedReportFrom(value: unknown): { report: MonthlyReport; sharedAt: string } | null {
+  const parsed = z.object({ report: z.unknown(), shared_at: z.string() }).safeParse(value);
+  if (!parsed.success) return null;
+  const report = reportFrom(parsed.data.report);
+  return report ? { report, sharedAt: parsed.data.shared_at } : null;
 }

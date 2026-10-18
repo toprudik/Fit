@@ -20,7 +20,7 @@ function telegramLocale(languageCode: string | null): Locale {
   return languageCode?.toLowerCase().startsWith("en") ? "en" : "ru";
 }
 
-/** Handles a tap on an action button (PRD §3 Т2, Т7a). Answers in the user's DaFit language. */
+/** Handles a tap on an action button (PRD §3 Т2, Т7a, С1). Answers in the user's DaFit language. */
 export async function answerBotAction(input: { telegramId: number; data: string; languageCode: string | null }): Promise<BotActionAnswer> {
   const fallback = dictionaries[telegramLocale(input.languageCode)].botActions;
   const action = parseBotAction(input.data);
@@ -29,7 +29,9 @@ export async function answerBotAction(input: { telegramId: number; data: string;
   const answer = await asTelegramUser(input.telegramId, async (supabase, userId) => {
     const { data: settings } = await supabase.from("user_settings").select("locale").eq("user_id", userId).maybeSingle();
     const t = dictionaries[settings?.locale ?? telegramLocale(input.languageCode)].botActions;
-    return action.kind === "booking" ? decideBooking(supabase, t, action) : answerClaim(supabase, t, action);
+    if (action.kind === "booking") return decideBooking(supabase, t, action);
+    if (action.kind === "claim") return answerClaim(supabase, t, action);
+    return declineContact(supabase, t, action);
   });
   return answer ?? { notice: fallback.noAccount, resolved: false };
 }
@@ -89,6 +91,20 @@ async function answerClaim(
   if (resolved.error) return claimError(t, resolved.error);
   const name = typeof card.name === "string" ? card.name : "";
   return { notice: t.claimMerged, resolved: true, line: interpolate(t.claimMergedLine, { name }) };
+}
+
+/** "Отказаться" on a contact request (PRIV-2): the requester learns it from С2. */
+async function declineContact(
+  supabase: SupabaseClient<Database>,
+  t: Texts,
+  action: Extract<BotAction, { kind: "contact" }>,
+): Promise<BotActionAnswer> {
+  const { data, error } = await supabase.rpc("decline_contact_request", { p_request_id: action.requestId });
+  if (error?.message === "request_not_found") return closed(t);
+  if (error || !data) return failed(t, error?.code ?? "no_status");
+  if (data === "declined") return { notice: t.contactDeclined, resolved: true, line: t.contactDeclinedLine };
+  if (data === "accepted") return { notice: t.contactAlreadyShared, resolved: true, line: t.contactAlreadyShared };
+  return closed(t);
 }
 
 function claimError(t: Texts, error: { message: string; code: string }): BotActionAnswer {

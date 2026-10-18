@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { formatMonth, formatSleep, monthFromParam, monthParam, previousMonth, reportFrom, storyCardFrom, storyOptions, weightChange } from "./report";
+import {
+  formatMonth,
+  formatSleep,
+  monthFromParam,
+  monthParam,
+  previousMonth,
+  reportFrom,
+  sharedReportFrom,
+  shareTargetsFrom,
+  storyCardFrom,
+  storyOptions,
+  weightChange,
+} from "./report";
 
 const report = {
   month: "2026-09-01",
@@ -55,11 +67,42 @@ describe("monthly report", () => {
     expect(storyOptions(still).map((option) => option.kind)).not.toContain("weight");
   });
 
+  it("offers a card per running streak and one for the new badges", () => {
+    const parsed = reportFrom({ ...report, streaks: { workouts: 2, steps: 5 }, badges: ["sessions_1"] })!;
+    expect(storyOptions(parsed).map((option) => option.kind)).toEqual([
+      "sessions",
+      "trainer",
+      "trainer",
+      "records",
+      "streak_workouts",
+      "streak_steps",
+      "badges",
+      "weight",
+    ]);
+    expect(storyCardFrom({ kind: "badges", month: "2026-09-01", data: { count: 2, code: "diary_7" } })?.data.code).toBe("diary_7");
+  });
+
   it("reads a story card", () => {
     expect(storyCardFrom({ kind: "sessions", month: "2026-09-01", data: { count: 2 } })?.data.count).toBe(2);
     expect(storyCardFrom({ kind: "photo", month: "2026-09-01", data: {} })).toBeNull();
     expect(storyCardFrom(null)).toBeNull();
     expect(storyCardFrom({ kind: "trainer", month: "2026-09-01", data: { count: 2, name: "Ира", slug: "ira-fit" } })?.data.slug).toBe("ira-fit");
     expect(storyCardFrom({ kind: "trainer", month: "2026-09-01", data: { count: 2, slug: "../admin" } })).toBeNull();
+  });
+});
+
+describe("sending the month to a trainer (§4 rule 3)", () => {
+  it("reads the pairs to send to", () => {
+    expect(shareTargetsFrom([{ coaching_id: "c1", name: "Ира", shared_at: null }, { coaching_id: "c2", name: null, shared_at: "2026-10-02T09:00:00Z" }])).toEqual([
+      { coachingId: "c1", name: "Ира", sharedAt: null },
+      { coachingId: "c2", name: null, sharedAt: "2026-10-02T09:00:00Z" },
+    ]);
+    expect(shareTargetsFrom(null)).toEqual([]);
+  });
+
+  it("reads the copy the trainer gets", () => {
+    expect(sharedReportFrom({ report, shared_at: "2026-10-02T09:00:00Z" })?.report.month).toBe("2026-09-01");
+    expect(sharedReportFrom({ report: { month: "september" }, shared_at: "2026-10-02T09:00:00Z" })).toBeNull();
+    expect(sharedReportFrom(null)).toBeNull();
   });
 });

@@ -56,6 +56,26 @@ describe("renderMessage", () => {
     expect(assistant?.buttons[0]).toEqual({ text: "Открыть команду", web_app: { url: "https://fit.example/trainer/team?source=delegation" } });
   });
 
+  it("says how many sessions one invite covers, from the first (wave-3 §1)", () => {
+    const base = { ...row, kind: "delegation" as const };
+    const token = "AbCdEfGhIjKlMnOpQrStUvWx";
+    const invited = renderMessage(
+      { ...base, payload: { event: "invited", kind: "substitute", owner_name: "Иван", starts_at: "2026-11-02T09:00:00Z", sessions: 3, token } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(invited?.text).toMatch(/^Иван просит провести за него 3 занятия, начиная с пн, 2 ноября в 12:00\./);
+    const accepted = renderMessage(
+      { ...base, payload: { event: "accepted", kind: "substitute", delegate_name: "Анна", starts_at: "2026-11-02T09:00:00Z", sessions: 5 } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(accepted?.text).toMatch(/^Анна проведёт 5 занятий, начиная с пн, 2 ноября в 12:00\./);
+    const one = renderMessage(
+      { ...base, payload: { event: "accepted", kind: "substitute", delegate_name: "Анна", starts_at: "2026-11-02T09:00:00Z", sessions: 1 } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(one?.text).toMatch(/^Анна проведёт занятие пн, 2 ноября в 12:00\./);
+  });
+
   it("sends a trainer's broadcast as typed, escaped, under the trainer's name (wave-2 §6.9)", () => {
     const base = { ...row, kind: "trainer_broadcast" as const };
     const payload = { trainer_name: "Иван", body: "Завтра в <10>", button_kind: "deep_link" };
@@ -171,7 +191,7 @@ describe("renderMessage", () => {
   });
 
   it("returns null for a type without a template yet", () => {
-    expect(renderMessage({ ...row, kind: "review_prompt" }, { appUrl: "https://fit.example", group: false })).toBeNull();
+    expect(renderMessage({ ...row, kind: "review_reply" }, { appUrl: "https://fit.example", group: false })).toBeNull();
   });
 });
 
@@ -901,7 +921,7 @@ describe("contact requests", () => {
     const url = `https://fit.example/contact/${REQUEST}?source=contact_request`;
     expect(message?.buttons).toEqual([
       { text: "Поделиться контактом", web_app: { url } },
-      { text: "Отказаться", web_app: { url } },
+      { text: "Отказаться", callback_data: `ctn:${REQUEST}` },
     ]);
   });
 
@@ -999,6 +1019,20 @@ describe("monthly report message (wave-3 §4)", () => {
   it("opens Progress when the month is broken", () => {
     const message = renderMessage({ ...row, kind: "monthly_report", payload: { month: "2026-09-02" } }, app);
     expect(message?.buttons).toEqual([{ text: "Открыть итоги", web_app: { url: "https://fit.example/client/progress?source=monthly_report" } }]);
+  });
+
+  it("tells the trainer a client sent their month and opens it", () => {
+    const pair = "4f1c2d3e-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
+    const message = renderMessage(
+      { ...row, kind: "monthly_report_shared", payload: { coaching_id: pair, month: "2026-09-01", name: "Аня <К>" } },
+      app,
+    );
+    expect(message).toEqual({
+      text: "Аня &lt;К&gt; делится с тобой итогами за сентябрь 2026.",
+      buttons: [
+        { text: "Открыть итоги", web_app: { url: `https://fit.example/trainer/clients/${pair}/reports/2026-09?source=monthly_report_shared` } },
+      ],
+    });
   });
 });
 
@@ -1137,5 +1171,45 @@ describe("challenge invitations (wave-3 §2.3-11)", () => {
 
   it("escapes the title the trainer typed", () => {
     expect(renderMessage({ ...row, kind: "challenge", payload: { ...payload, title: "<b>Шаг</b>" } }, app)?.text).toContain("«&lt;b&gt;Шаг&lt;/b&gt;»");
+  });
+});
+
+describe("review_prompt and report_resolution (wave-2 §11)", () => {
+  const options = { appUrl: "https://fit.example", group: false };
+
+  it("offers the client a review with a button to the trainer's card", () => {
+    const message = renderMessage(
+      { ...row, kind: "review_prompt", payload: { coaching_id: PAIR, first_name: "Анна", last_name: "<Смирнова>" } },
+      options,
+    );
+    expect(message?.text).toBe("Позади три занятия с тренером Анна &lt;Смирнова&gt;. Как тебе? Оставь отзыв, его увидят тренер и команда DaFit.");
+    expect(message?.buttons).toEqual([
+      { text: "Оставить отзыв", web_app: { url: `https://fit.example/client/trainers/${PAIR}?source=review_prompt` } },
+    ]);
+  });
+
+  it("tells the author a hidden review's reason, escaped", () => {
+    const payload = { target_type: "review", coaching_id: PAIR, hidden: true, role: "author", reason: "Грубо <b>" };
+    const message = renderMessage({ ...row, kind: "report_resolution", payload }, options);
+    expect(message?.text).toBe("Мы посмотрели твой отзыв о тренере и скрыли его. Причина: «Грубо &lt;b&gt;».");
+    expect(message?.buttons[0]).toEqual({
+      text: "Открыть тренера",
+      web_app: { url: `https://fit.example/client/trainers/${PAIR}?source=report_resolution` },
+    });
+    expect(renderMessage({ ...row, kind: "report_resolution", payload: { ...payload, hidden: false } }, options)?.text).toMatch(
+      /оставили как есть/,
+    );
+  });
+
+  it("tells the trainer the decision, with a button to their reviews", () => {
+    const payload = { target_type: "review", coaching_id: PAIR, hidden: false, role: "trainer" };
+    const message = renderMessage({ ...row, kind: "report_resolution", payload }, options);
+    expect(message?.text).toBe("Мы посмотрели спорный отзыв и оставили его: правила он не нарушает.");
+    expect(message?.buttons).toEqual([
+      { text: "Открыть отзывы", web_app: { url: "https://fit.example/trainer/reviews?source=report_resolution" } },
+    ]);
+    expect(renderMessage({ ...row, kind: "report_resolution", payload: { ...payload, hidden: true } }, options)?.text).toBe(
+      "Мы посмотрели спорный отзыв и скрыли его.",
+    );
   });
 });
