@@ -29,7 +29,7 @@ with recursive calls as (
 insert into tests.fn_reach select root, fn from reach;
 
 -- A definer RPC that never looks at the caller answers everyone alike, so it must be a deliberate public
--- lookup: the showcase prices by slug and a story card by its unguessable id (both also open to anon in 000).
+-- lookup: the showcase prices and honors by slug and a story card by its unguessable id (all also open to anon in 000).
 select is(
   array(
     select f.name from tests.fn f join pg_catalog.pg_proc p on p.oid = f.oid
@@ -39,7 +39,7 @@ select is(
         where r.root = f.oid and g.def ~ 'auth\.uid\(\)')
     order by 1
   ),
-  array['get_trainer_showcase_prices', 'story_card'],
+  array['get_trainer_honors', 'get_trainer_showcase_prices', 'story_card'],
   'every definer RPC reads the caller (auth.uid()), directly or through what it calls, except the listed public lookups'
 );
 
