@@ -28,7 +28,7 @@ vi.mock("@/lib/supabase/server", () => ({
         then: (resolve: (value: unknown) => void) => resolve(result),
         maybeSingle: async () => result,
       };
-      for (const op of ["select", "order"]) query[op] = () => query;
+      for (const op of ["select", "order", "range"]) query[op] = () => query;
       for (const op of ["eq", "lt", "gte", "in", "or"]) {
         query[op] = (column: string, value: unknown) => {
           entry.filters.push([op, column, value]);

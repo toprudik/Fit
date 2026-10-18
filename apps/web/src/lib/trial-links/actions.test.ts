@@ -111,6 +111,15 @@ describe("createTrialLink", () => {
     expect(db.writes).toEqual([]);
   });
 
+  it("reads the price like every other price field: no hex, no exponent, at most two decimals", async () => {
+    for (const price of ["0x10", "1e3", "12.345", "1 000 001"]) {
+      expect((await createTrialLink(IDLE, form({ ...VALID, price }))).status, price).toBe("invalid");
+    }
+    expect(db.writes).toEqual([]);
+    await createTrialLink(IDLE, form({ ...VALID, price: "1 000 000" }));
+    expect(db.writes[0].values).toMatchObject({ price_minor: 100_000_000 });
+  });
+
   it("fails for a signed-out caller, a non-trainer and a refused insert", async () => {
     db.user = null;
     expect((await createTrialLink(IDLE, form(VALID))).status).toBe("failed");
