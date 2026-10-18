@@ -127,6 +127,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "admin-audit-denied", path: "/admin/audit", title: "Такой страницы нет", documentTitle: false, status: 404 },
   { slug: "admin-plans-denied", path: "/admin/plans", title: "Такой страницы нет", documentTitle: false, status: 404 },
   { slug: "admin-feedback-denied", path: "/admin/feedback", title: "Такой страницы нет", documentTitle: false, status: 404 },
+  { slug: "admin-reviews-denied", path: "/admin/reviews", title: "Такой страницы нет", documentTitle: false, status: 404 },
   { slug: "admin-stats-denied", path: "/admin/stats", title: "Такой страницы нет", documentTitle: false, status: 404 },
 ];
 
