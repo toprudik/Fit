@@ -2310,6 +2310,8 @@ export const ru = {
     journalFooter: "Что помощники и подменяющие тренеры сделали от твоего имени",
     journalEntry: "{action}: {client}",
     journalBy: "{name}, {when}",
+    pairJournal: "Что сделали помощники",
+    pairJournalFooter: "Действия помощников и подменяющих тренеров от твоего имени с этим клиентом",
     journalActions: {
       "session:created": "Новое занятие",
       "session:cancelled": "Отмена занятия",
