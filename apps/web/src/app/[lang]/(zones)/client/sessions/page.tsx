@@ -51,7 +51,12 @@ async function Bookings({ searchParams }: { searchParams: PageProps<"/[lang]/cli
   const { upcoming, past, requests } = segmentBookings(bookings, now());
   const zones = await loadTrainerZones(owner.supabase, bookings.map((booking) => booking.trainerId));
   const subtitle = (booking: ClientBooking) => {
-    const name = booking.trainer ? interpolate(copy.trainer, { name: booking.trainer }) : null;
+    const name =
+      booking.substitute !== null
+        ? interpolate(copy.substitute, { name: booking.substitute || t.schedule.booking.trainer })
+        : booking.trainer
+          ? interpolate(copy.trainer, { name: booking.trainer })
+          : null;
     const clock = trainerClock(booking, owner.timeZone, zones.get(booking.trainerId), INTL_LOCALE[locale]);
     const caption = clock ? interpolate(t.schedule.trainerTime, { time: clock }) : null;
     return [name, caption].filter(Boolean).join(" · ") || undefined;

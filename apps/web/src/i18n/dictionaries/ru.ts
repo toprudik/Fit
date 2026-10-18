@@ -3558,6 +3558,7 @@ export const ru = {
       emptyRequestsTitle: "Запросов нет",
       emptyRequestsText: "Если подходящего абонемента нет, запись уходит тренеру запросом и ждёт здесь ответа.",
       trainer: "Тренер {name}",
+      substitute: "Вместо тренера: {name}",
       status: {
         requested: "Запрос",
         confirmed: "Подтверждено",
@@ -3574,6 +3575,7 @@ export const ru = {
     booking: {
       title: "Запись",
       trainer: "Тренер",
+      substitute: "Вместо твоего тренера",
       reason: "Причина",
       /** «История записи» (PRD wave-1 SCHED-22). */
       history: {

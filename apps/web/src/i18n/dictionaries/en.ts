@@ -3530,6 +3530,7 @@ export const en: Dictionary = {
       emptyRequestsTitle: "No requests",
       emptyRequestsText: "When no pass fits, a booking goes to your trainer as a request and waits here for an answer.",
       trainer: "With {name}",
+      substitute: "Instead of your trainer: {name}",
       status: {
         requested: "Request",
         confirmed: "Confirmed",
@@ -3546,6 +3547,7 @@ export const en: Dictionary = {
     booking: {
       title: "Booking",
       trainer: "Trainer",
+      substitute: "Instead of your trainer",
       reason: "Reason",
       history: {
         header: "Booking history",
