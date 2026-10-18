@@ -4415,6 +4415,7 @@ export const en: Dictionary = {
         records_1: { title: "First record", text: "Your first personal record in an exercise" },
         records_10: { title: "10 records", text: "10 personal records" },
         homework_10: { title: "10 homework tasks", text: "10 homework tasks done" },
+        challenge_joined: { title: "Challenge finisher", text: "Finished a challenge with points on the board" },
         challenge_done: { title: "Challenge done", text: "Reached the goal of a challenge" },
         challenge_winner: { title: "Top three", text: "Among the top three on a challenge leaderboard" },
       },
