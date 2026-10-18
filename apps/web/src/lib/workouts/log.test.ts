@@ -80,6 +80,10 @@ describe("draftPayload", () => {
       errors: [{ kind: "date" }, { kind: "duration" }, { kind: "set", exercise: 0, set: 0 }, { kind: "set", exercise: 0, set: 1 }],
     });
     expect(draftPayload(draft([]), "kg", context)).toEqual({ ok: false, errors: [{ kind: "empty" }] });
+    expect(draftPayload({ ...draft([]), date: "2026-02-31" }, "kg", context)).toEqual({
+      ok: false,
+      errors: [{ kind: "date" }, { kind: "empty" }],
+    });
   });
 });
 
