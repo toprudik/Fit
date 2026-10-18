@@ -726,6 +726,13 @@ export const en: Dictionary = {
     cardText: "A client without an account: they get no messages, and you enter all their data.",
     actions: "Actions",
     failed: "Couldn't save that. Try again.",
+    dpa: {
+      title: "Agreement for trainers",
+      text: "You are responsible for what you write about clients: cards without an account, notes, sessions and payments. DaFit keeps it on your behalf. Accept this once to continue.",
+      read: "Read the agreement",
+      accept: "I accept",
+      accepted: "Agreement accepted",
+    },
     cards: {
       add: "Add a client",
       invite: "Invite by link",

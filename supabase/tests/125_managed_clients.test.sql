@@ -12,6 +12,9 @@ select tests.create_user('client_d');
 select tests.create_user('client_e');
 select tests.create_user('stranger_s');
 select tests.grant_plan('trainer_b', 'trainer_pro');
+-- Both trainers accepted the data processing agreement (20261020104113_trainer_dpa.sql); 979 tests without it.
+insert into public.consents (user_id, kind, version)
+select tests.user_id(h), 'trainer_dpa', '2026-10-18' from unnest(array['trainer_a', 'trainer_b']) h;
 
 create function tests.u(p_handle text) returns uuid language sql stable set search_path = '' as $$
   select tests.user_id(p_handle)

@@ -15,7 +15,7 @@ import { formatDay, formatNoteTime, formatSessionTime } from "@/lib/pairs/format
 import { TrainerPasses } from "@/components/passes/trainer-passes";
 import { TrainerPayments } from "@/components/passes/trainer-payments";
 import { currencySymbol } from "@/lib/money/format";
-import { loadPair, type PairDetail } from "@/lib/pairs/load";
+import { loadPair, loadTrainerDpaAccepted, type PairDetail } from "@/lib/pairs/load";
 import { loadPairMoney } from "@/lib/passes/load";
 import { formatLocalDay, lastValidDay } from "@/lib/passes/present";
 import { TrainerNutrition } from "@/components/nutrition/sections";
@@ -27,6 +27,7 @@ import { LogListSection } from "@/components/workouts/log-screens";
 import { AskContactButton } from "./ask-contact";
 import { PairMilestones } from "./milestones";
 import { NoteComposer, NoteItem, NoteVisibility } from "./notes";
+import { TrainerDpa } from "./trainer-dpa";
 import { PairDelegateJournal } from "@/components/team/pair-journal";
 import { Suspense } from "react";
 import { PairTabs } from "./pair-tabs";
@@ -157,10 +158,10 @@ function Overview({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: Pa
   );
 }
 
-function Notes({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: PairDetail }) {
+function Notes({ t, locale, pair, dpaAccepted }: { t: Dictionary; locale: Locale; pair: PairDetail; dpaAccepted: boolean | null }) {
   return (
     <div className="flex flex-col gap-4">
-      <NoteComposer coachingId={pair.coachingId} />
+      {dpaAccepted === false ? <TrainerDpa /> : <NoteComposer coachingId={pair.coachingId} />}
       {pair.notes.length === 0 ? (
         <div className="flex flex-col gap-1 px-1 pt-2">
           <h2 className="text-headline">{t.pairs.notes.empty}</h2>
@@ -188,11 +189,12 @@ function Notes({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: PairD
  * "Написать", the sections as tabs, then the open section. Not the trainer's pair → 404.
  */
 export async function TrainerPair({ coachingId, tab, action, day }: { coachingId: string; tab: PairTab; action?: string; day?: string }) {
-  const [t, locale, pair, money] = await Promise.all([
+  const [t, locale, pair, money, dpaAccepted] = await Promise.all([
     getDictionary(),
     getLocale(),
     loadPair(coachingId, "trainer"),
     tab === "passes" || tab === "payments" ? loadPairMoney(coachingId) : null,
+    tab === "notes" ? loadTrainerDpaAccepted() : true,
   ]);
   if (!pair) notFound();
   const base = `/trainer/clients/${pair.coachingId}`;
@@ -258,7 +260,7 @@ export async function TrainerPair({ coachingId, tab, action, day }: { coachingId
           </>
         ) : tab === "notes" ? (
           <>
-            <Notes t={t} locale={locale} pair={pair} />
+            <Notes t={t} locale={locale} pair={pair} dpaAccepted={dpaAccepted} />
             <Suspense>
               <PairDelegateJournal coachingId={pair.coachingId} />
             </Suspense>

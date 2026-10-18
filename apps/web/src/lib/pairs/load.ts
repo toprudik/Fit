@@ -21,6 +21,25 @@ function fail(what: string, error: { code: string } | null): never {
   throw new Error(`loading ${what} failed: ${error?.code}`);
 }
 
+/**
+ * Whether the signed-in trainer accepted the data processing agreement: cards without an account and notes wait
+ * for it, and the database refuses them too (migration 20261020104113_trainer_dpa.sql). Null without a session,
+ * where the screens render as a shell only.
+ */
+export async function loadTrainerDpaAccepted(): Promise<boolean | null> {
+  const me = await viewer();
+  if (!me) return null;
+  const { data, error } = await me.supabase
+    .from("consents")
+    .select("id")
+    .eq("user_id", me.userId)
+    .eq("kind", "trainer_dpa")
+    .is("revoked_at", null)
+    .limit(1);
+  if (error) fail("the trainer agreement", error);
+  return data.length > 0;
+}
+
 // telegram_id is not granted, so profile columns are always listed.
 const PERSON_COLUMNS = "id, first_name, last_name, display_name, username, photo_url, managed_by_trainer_id";
 
