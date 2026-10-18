@@ -127,7 +127,7 @@ async function TrialStep({ params }: { params: PageProps<"/[lang]/trial/[token]"
           </Button>
         </div>
       ) : slots.length > 0 ? (
-        <TrialPicker token={token} timeZone={timeZone} slots={slots} signIn={signIn} />
+        <TrialPicker token={token} timeZone={timeZone} trainerTimeZone={link.time_zone} slots={slots} signIn={signIn} />
       ) : link.status === "joined" ? (
         <div className="flex flex-col gap-4">
           <p className="text-callout">{copy.joined.title}</p>
