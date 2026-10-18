@@ -4834,6 +4834,7 @@ export const en: Dictionary = {
     cancelDeletion: "Cancel deletion",
     /** Wave-2 §1.3: payload { coaching_id, goal, previous_goal, first_name, last_name } from set_client_goal. */
     goalChanged: "Your client {name} has a new goal: “{goal}”. Your target stayed the same, check that it still fits.",
+    goalChangedGroup: "Your client {name} has a new goal: “{goal}”. The target of the group “{group}” stayed the same, check that it still fits.",
     openNutrition: "Open nutrition",
     goalNames: { lose: "lose weight", maintain: "keep weight", gain: "gain mass" },
     /** Wave-2 §6.9: a trainer's broadcast to a group, with the trainer's name above the text. */
