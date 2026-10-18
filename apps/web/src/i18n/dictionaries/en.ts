@@ -3929,6 +3929,13 @@ export const en: Dictionary = {
       label: "Language",
     },
   },
+  /** Legal documents at /legal: list, draft note, links from settings and the beta terms. */
+  legal: {
+    title: "Legal",
+    intro: "How DaFit works, what happens to your data and what your rights are. These are drafts still under legal review; until then the closed beta terms apply.",
+    all: "All documents",
+    table: "Table, scrolls sideways",
+  },
   /** Reminder lead times: "1 day before", "in 3 hours" (PRD wave-1 §2.9-2). */
   reminders: {
     units: {
