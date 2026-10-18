@@ -14,6 +14,7 @@ import { priceGridItems } from "@/lib/packages/present";
 import { isShowcaseSlug, normalizeSlug, showcasePath, showcaseTelegram } from "@/lib/showcase/link";
 import { showcaseFrom, showcasePricesFrom, type Showcase } from "@/lib/showcase/load";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isTrialToken, trialPath } from "@/lib/trial-links/link";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
@@ -76,11 +77,12 @@ async function ShowcaseContent({ params }: { params: PageProps<"/[lang]/trainers
   if (!isShowcaseSlug(slug)) return <Unavailable t={t} text={copy.unavailableText} />;
 
   const supabase = await createSupabaseServerClient();
-  const [locale, { data: session }, { data, error }, prices] = await Promise.all([
+  const [locale, { data: session }, { data, error }, prices, trial] = await Promise.all([
     getLocale(),
     supabase.auth.getClaims(),
     supabase.rpc("get_trainer_showcase", { p_slug: slug }),
     supabase.rpc("get_trainer_showcase_prices", { p_slug: slug }),
+    supabase.rpc("get_showcase_trial", { p_slug: slug }),
   ]);
   if (error) {
     console.error("loading a showcase failed", error.code);
@@ -90,11 +92,22 @@ async function ShowcaseContent({ params }: { params: PageProps<"/[lang]/trainers
   if (!showcase) return <Unavailable t={t} text={copy.unavailableText} />;
   // Prices are extra: a failed read leaves them out instead of closing the page.
   if (prices.error) console.error("loading showcase prices failed", prices.error.code);
+  // So is the trial button: the function answers null when there is none to show.
+  if (trial.error) console.error("loading the showcase trial failed", trial.error.code);
+  const trialToken = isTrialToken(trial.data) ? trial.data : null;
 
   return (
     <div className="flex flex-col gap-8">
       <ShowcaseProfile t={t} showcase={showcase} prices={priceGridItems(showcasePricesFrom(prices.data), t, locale)} />
-      <Actions t={t} showcase={showcase} signedIn={Boolean(session?.claims.sub)} />
+      <div className="flex flex-col gap-3">
+        <Actions t={t} showcase={showcase} signedIn={Boolean(session?.claims.sub)} />
+        {trialToken ? (
+          // The trial page shows the terms and slots and asks to sign in only to book.
+          <Button asChild size="lg" block variant="secondary">
+            <Link href={trialPath(trialToken)}>{copy.trial}</Link>
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }

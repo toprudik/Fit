@@ -97,6 +97,34 @@ export async function setTrialLinkEnabled(id: string, enabled: boolean): Promise
   return { failed: false };
 }
 
+/**
+ * "Показать на витрине" / "Убрать с витрины" (PRD wave-1 §2.3 rule 1): one live link at a time, so the one
+ * there now steps down first. RLS keeps both writes to the signed-in trainer's own links.
+ */
+export async function setTrialLinkOnShowcase(id: string, onShowcase: boolean): Promise<TrialLinkActionResult> {
+  if (!z.uuid().safeParse(id).success || typeof onShowcase !== "boolean") return { failed: true };
+  const supabase = await createSupabaseServerClient();
+  if (onShowcase) {
+    const { error } = await supabase.from("trial_links").update({ on_showcase: false }).eq("on_showcase", true).neq("id", id);
+    if (error) {
+      console.error("taking a trial link off the showcase failed", error.code);
+      return { failed: true };
+    }
+  }
+  const { data, error } = await supabase
+    .from("trial_links")
+    .update({ on_showcase: onShowcase })
+    .eq("id", id)
+    .is("archived_at", null)
+    .select("id");
+  if (error || data.length !== 1) {
+    console.error("putting a trial link on the showcase failed", error?.code);
+    return { failed: true };
+  }
+  refresh();
+  return { failed: false };
+}
+
 /** "Удалить": archiving is final (the database keeps an archived link archived). */
 export async function archiveTrialLink(id: string): Promise<TrialLinkActionResult> {
   if (!z.uuid().safeParse(id).success) return { failed: true };

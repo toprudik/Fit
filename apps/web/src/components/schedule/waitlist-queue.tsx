@@ -14,10 +14,12 @@ type Props = {
   entries: (SessionWaitlistEntry & { offeredUntil: string | null })[];
   /** Offers can go out only while the session is ahead and has a free seat. */
   canOffer: boolean;
+  /** The list header; "Очередь" by default, a slot's time on the slots page. */
+  header?: string;
 };
 
-/** The queue of a group session on the trainer's session page (PRD wave-2 §9.6), with "Предложить место". */
-export function WaitlistQueue({ entries, canOffer }: Props) {
+/** The queue of a group session or a free slot for the trainer (PRD wave-2 §9.6, §9-7), with "Предложить место". */
+export function WaitlistQueue({ entries, canOffer, header }: Props) {
   const { t } = useI18n();
   const copy = t.schedule.waitlist;
   const [error, setError] = useState<Extract<OfferSeatResult, { status: "error" }>["error"] | null>(null);
@@ -36,7 +38,7 @@ export function WaitlistQueue({ entries, canOffer }: Props) {
 
   return (
     <div className="flex flex-col gap-2">
-      <ListGroup header={copy.queue}>
+      <ListGroup header={header ?? copy.queue}>
         {entries.map((entry) => (
           <ListRow
             key={entry.id}
