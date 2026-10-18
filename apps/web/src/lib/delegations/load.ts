@@ -141,6 +141,18 @@ export async function loadTeam(): Promise<TeamData | null> {
   };
 }
 
+/** What delegates did for one of the owner's pairs, newest first, for the client card (rule 8, 1.9). */
+export async function loadPairJournal(coachingId: string): Promise<{ entries: JournalEntry[]; timeZone: string } | null> {
+  const owner = await loadScheduleOwner();
+  if (!owner) return null;
+  const { data, error } = await owner.supabase.rpc("delegate_journal", { p_coaching_id: coachingId }).limit(JOURNAL_SIZE);
+  if (error) fail("delegate journal", error);
+  return {
+    entries: data.map((row) => ({ at: row.at, action: row.action, delegateName: row.delegate_name, clientName: null })),
+    timeZone: owner.timeZone,
+  };
+}
+
 /** The live substitute of a session for its owner's session page, or null. */
 export async function loadSessionDelegation(sessionId: string): Promise<{ delegation: Delegation | null; canDelegate: boolean } | null> {
   const owner = await loadScheduleOwner();
