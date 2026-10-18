@@ -2,67 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
-import {
-  CancellationForm,
-  CertificatesForm,
-  FormatForm,
-  LocationsForm,
-  PaymentForm,
-  PricesForm,
-  ProfileForm,
-  RegionForm,
-} from "@/components/trainer-wizard/step-forms";
+import { StepFields } from "@/components/trainer-wizard/step-fields";
 import { WizardScreen, WizardSkeleton } from "@/components/trainer-wizard/wizard-screen";
 import { Button } from "@/components/ui/button";
 import { interpolate } from "@/i18n/format";
-import type { Locale } from "@/i18n/config";
 import { getDictionary, getLocale } from "@/i18n/server";
-import { currencySymbol } from "@/lib/money/format";
-import { loadWizard, type WizardData } from "@/lib/trainer-wizard/load";
-import { timeZones } from "@/lib/trainer-wizard/options";
+import { loadWizard } from "@/lib/trainer-wizard/load";
 import { isWizardStep, previousPath, stepNumber, stepPath, WIZARD_STEPS, type WizardStep } from "@/lib/trainer-wizard/steps";
-
-/** Where the last step sends documents: the verification screen (built with trainer verification). */
-const CERTIFICATES_PATH = "/trainer/verification";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
   return { title: t.trainerWizard.title };
-}
-
-/** "Europe/Moscow (GMT+3)", sorted as the runtime lists them. */
-function zoneOptions(): { id: string; label: string }[] {
-  const now = new Date();
-  return timeZones().map((id) => {
-    const offset = new Intl.DateTimeFormat("en-US", { timeZone: id, timeZoneName: "shortOffset" })
-      .formatToParts(now)
-      .find((part) => part.type === "timeZoneName")?.value;
-    return { id, label: `${id.replaceAll("_", " ")}${offset ? ` (${offset})` : ""}` };
-  });
-}
-
-function StepFields({ step, data, locale }: { step: WizardStep; data: NonNullable<WizardData>; locale: Locale }) {
-  const { trainer } = data;
-  switch (step) {
-    case "profile":
-      return <ProfileForm name={data.name} photoUrl={data.photoUrl} headline={trainer.headline ?? ""} bio={trainer.bio ?? ""} />;
-    case "format":
-      return (
-        <FormatForm offline={trainer.works_offline} online={trainer.works_online} specialties={trainer.specialties} city={trainer.city ?? ""} />
-      );
-    case "locations":
-      return <LocationsForm locations={data.locations} onlineOnly={!trainer.works_offline} />;
-    case "region":
-      return <RegionForm timeZone={data.timeZone} currency={trainer.default_currency} zones={zoneOptions()} />;
-    case "cancellation":
-      return <CancellationForm hours={trainer.cancellation_deadline_hours} />;
-    case "payment":
-      return <PaymentForm links={data.paymentLinks} />;
-    case "prices":
-      return <PricesForm currency={trainer.default_currency} symbol={currencySymbol(locale, trainer.default_currency)} hasPackages={data.packageCount > 0} />;
-    case "certificates":
-      return <CertificatesForm uploadHref={CERTIFICATES_PATH} />;
-  }
 }
 
 async function StepContent({ step }: { step: WizardStep }) {

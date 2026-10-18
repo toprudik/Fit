@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ListChecks, Store } from "lucide-react";
+import { ListChecks, Store, UserRound } from "lucide-react";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { Suspense } from "react";
@@ -16,7 +16,7 @@ import type { Dictionary } from "@/i18n/dictionaries";
 import { getDictionary } from "@/i18n/server";
 import { showcasePath, showcaseUrl } from "@/lib/showcase/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { stepPath } from "@/lib/trainer-wizard/steps";
+import { editPath, PROFILE_EDIT_PATH } from "@/lib/trainer-wizard/steps";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
@@ -100,8 +100,8 @@ async function ShowcaseEditor() {
   const rejected = trainer.verification_status === "rejected";
   const open = trainer.is_public && !rejected;
   const missing = [
-    trainer.headline ? null : { title: copy.checklist.headline, href: stepPath("profile") },
-    trainer.specialties.length > 0 ? null : { title: copy.checklist.specialties, href: stepPath("format") },
+    trainer.headline ? null : { title: copy.checklist.headline, href: editPath("profile") },
+    trainer.specialties.length > 0 ? null : { title: copy.checklist.specialties, href: editPath("format") },
   ].filter((item) => item !== null);
 
   return (
@@ -114,6 +114,9 @@ async function ShowcaseEditor() {
           ))}
         </ListGroup>
       ) : null}
+      <ListGroup>
+        <ListRow icon={UserRound} title={t.trainerWizard.edit.open} subtitle={t.trainerWizard.edit.openText} href={PROFILE_EDIT_PATH} />
+      </ListGroup>
       <ShowcaseAddressForm slug={trainer.slug} />
       <StoryCardsSwitch enabled={trainer.story_card_showcase} />
       <ShowcaseVisibilityForm visible={trainer.is_public} />

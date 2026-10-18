@@ -7,6 +7,7 @@ import { ScreenHeader } from "@/components/shell/screen-header";
 import { TodayDate } from "@/components/shell/today-date";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ClientTodayGoals } from "@/components/today/client-goals";
 import { ClientHomeView } from "@/components/today/client-home";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { getDictionary, getLocale } from "@/i18n/server";
@@ -42,7 +43,7 @@ function now(): Date {
 }
 
 /**
- * The client zone's first screen: the next session and the passes (screens.md §3.1). Someone who trains with no
+ * The client zone's first screen: the next session, the passes and today's goals (screens.md §3.1). Someone who trains with no
  * one yet, a trainer opening the client zone included, gets the way to a trainer: their code on /join (screens.md §1.6).
  */
 async function HomeContent() {
@@ -71,7 +72,11 @@ async function HomeContent() {
       t={t}
       locale={locale}
       home={{ timeZone: owner.timeZone, next: upcoming[0] ?? null, requests: requests.length, money: money ?? [] }}
-    />
+    >
+      <Suspense fallback={null}>
+        <ClientTodayGoals />
+      </Suspense>
+    </ClientHomeView>
   );
 }
 

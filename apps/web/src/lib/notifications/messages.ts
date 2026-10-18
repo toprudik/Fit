@@ -575,7 +575,8 @@ const templates: Partial<Record<NotificationType, Template>> = {
     const shown = dates.slice(0, MAX_DATES).map((date) => sessionTime(locale, date, timeZone));
     if (dates.length > MAX_DATES) shown.push(interpolate(t.moreDates, { count: dates.length - MAX_DATES }));
     return {
-      text: interpolateEscaped(dates.length > 1 ? t.sessionsCancelled : t.sessionCancelled, {
+      // cancel_participant takes one client off a group that goes on: the text speaks of their booking.
+      text: interpolateEscaped(payload.booking_only === true ? t.bookingCancelledByTrainer : dates.length > 1 ? t.sessionsCancelled : t.sessionCancelled, {
         name: personName(payload) || t.sessionTrainer,
         dates: shown.join("; "),
         reason: String(payload.reason ?? ""),

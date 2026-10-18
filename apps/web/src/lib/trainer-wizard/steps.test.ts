@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isWizardStep, nextPath, previousPath, stepNumber, WIZARD_DONE_PATH, WIZARD_START_PATH, WIZARD_STEPS } from "./steps";
+import { editPath, isEditableStep, isWizardStep, nextPath, previousPath, stepNumber, WIZARD_DONE_PATH, WIZARD_START_PATH, WIZARD_STEPS } from "./steps";
 
 describe("wizard steps", () => {
   it("follow the order of screens.md flow 4.1", () => {
@@ -19,5 +19,14 @@ describe("wizard steps", () => {
     expect(isWizardStep("payment")).toBe(true);
     expect(isWizardStep("done")).toBe(false);
     expect(isWizardStep("price-grid")).toBe(false);
+  });
+});
+
+describe("profile sections", () => {
+  it("edit the wizard's own answers, without prices and documents", () => {
+    expect(isEditableStep("locations")).toBe(true);
+    expect(isEditableStep("prices")).toBe(false);
+    expect(isEditableStep("certificates")).toBe(false);
+    expect(editPath("region")).toBe("/trainer/profile/region");
   });
 });
