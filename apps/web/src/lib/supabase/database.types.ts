@@ -4317,6 +4317,11 @@ isOneToOne: false
               "active_clients": number,"client_limit": number,"expires_at": string,"plan_code": string,"side": Database["public"]['Enums']["plan_side"]
             }[]
                            },
+"my_session_substitutes":
+{ Args: { "p_session_ids": (string)[] }; Returns: {
+              "name": string,"session_id": string
+            }[]
+                           },
 "my_streaks":
 { Args: Record<PropertyKey, never>; Returns: {
               "diary": number,"steps": number,"week_done": number,"week_goal": number,"workouts": number
