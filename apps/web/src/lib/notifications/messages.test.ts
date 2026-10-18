@@ -741,6 +741,14 @@ describe("goal_changed", () => {
       { text: "Открыть питание", web_app: { url: `https://fit.example/trainer/clients/${PAIR}/nutrition?source=goal_changed` } },
     ]);
   });
+
+  it("names the group when its template is the client's target", () => {
+    const message = renderMessage(
+      { ...row, kind: "goal_changed", payload: { coaching_id: PAIR, goal: "lose", first_name: "Анна", group_name: "Марафон <весна>" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe("У клиента Анна новая цель: «снизить вес». Норма группы «Марафон &lt;весна&gt;» осталась прежней, проверь, подходит ли она.");
+  });
 });
 
 describe("trainer_comment", () => {

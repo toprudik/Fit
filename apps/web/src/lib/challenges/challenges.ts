@@ -71,10 +71,29 @@ export type Challenge = {
 };
 
 /** A row of the leaderboard. hidden: the participant stopped sharing the metric, the score is their last one. */
-export type BoardRow = { place: number; name: string; alias: string | null; score: number; isMe: boolean; shown: boolean; hidden: boolean };
+export type BoardRow = {
+  place: number;
+  name: string;
+  alias: string | null;
+  score: number;
+  isMe: boolean;
+  shown: boolean;
+  hidden: boolean;
+  /** The participant's Telegram photo, or null: the initials show instead. */
+  photoUrl: string | null;
+};
 
 export function toBoardRows(
-  rows: { place: number; name: string; alias: string | null; score: number; is_me: boolean; shown: boolean; hidden: boolean }[],
+  rows: {
+    place: number;
+    name: string;
+    alias: string | null;
+    score: number;
+    is_me: boolean;
+    shown: boolean;
+    hidden: boolean;
+    photo_url: string | null;
+  }[],
 ): BoardRow[] {
   return rows.map((row) => ({
     place: row.place,
@@ -84,6 +103,7 @@ export function toBoardRows(
     isMe: row.is_me,
     shown: row.shown,
     hidden: row.hidden,
+    photoUrl: row.photo_url ?? null,
   }));
 }
 
