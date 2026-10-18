@@ -6,6 +6,39 @@ export const en: Dictionary = {
     appName: "DaFit",
     description: "DaFit helps personal trainers manage their schedule and keep track of client passes and progress.",
   },
+  linkPreview: {
+    showcase: {
+      title: "{name}, a trainer on DaFit",
+      generic: "A trainer on DaFit",
+      kicker: "Trainer page",
+      description: "Specialties, prices and a trial session to book. Your schedule, passes and progress then stay in one place.",
+    },
+    trial: {
+      title: "Trial session with {name}",
+      generic: "Trial session on DaFit",
+      kicker: "Trial session",
+      minutes: "{minutes} min",
+      description: "Pick a time that suits you and book a trial workout on DaFit.",
+    },
+    referral: {
+      title: "Join {name} on DaFit",
+      generic: "Join a trainer on DaFit",
+      kicker: "Invite from a friend",
+      description: "A friend invites you to train with their trainer. Your schedule, pass and progress stay in one place.",
+    },
+    client: {
+      title: "{name} invites you to DaFit",
+      generic: "A trainer invites you to DaFit",
+      kicker: "Trainer invite",
+      description: "Become a client on DaFit: your schedule, pass and progress stay in one place.",
+    },
+    trainerInvite: {
+      title: "You're invited to coach on DaFit",
+      generic: "You're invited to coach on DaFit",
+      kicker: "For trainers",
+      description: "Run your schedule, client passes and progress in one app, right inside Telegram.",
+    },
+  },
   common: {
     back: "Back",
     close: "Close",
