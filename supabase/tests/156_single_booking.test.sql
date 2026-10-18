@@ -1,4 +1,4 @@
--- A booking marked as a single session, migration 20261018064213_single_booking.sql (PRD wave-1 §2.8-12): its
+-- A booking marked as a single session, migration 20261018071347_single_booking.sql (PRD wave-1 §2.8-12): its
 -- own drop-in pass at the drop-in price for that day, reserved for it, and the charge comes off it.
 begin;
 \ir _helpers.psql

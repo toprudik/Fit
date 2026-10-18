@@ -80,7 +80,7 @@ grant execute on function public.make_booking_single(uuid, text) to authenticate
 
 -- "Подтвердить как разовое" (PRD 2.6.4-6): decide_booking gets p_single, so the request is made single before
 -- К2 goes out and the message says pay = 'single'. The rest of the body is that of
--- 20261018060847_request_confirmed_pay.sql. The new parameters have defaults, so old calls keep working.
+-- 20261018070113_request_confirmed_pay.sql. The new parameters have defaults, so old calls keep working.
 drop function public.decide_booking(uuid, boolean, text);
 
 create function public.decide_booking(
