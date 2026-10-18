@@ -1,4 +1,4 @@
--- Streak and badge story cards, migration 20261017232614_story_streak_badge_cards.sql (PRD wave-3 §4 rule 4): a
+-- Streak and badge story cards, migration 20261018002741_story_streak_badge_cards.sql (PRD wave-3 §4 rule 4): a
 -- card for each streak that runs on the month's last day and one for the month's badges with the latest of them.
 begin;
 \ir _helpers.psql
