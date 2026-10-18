@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isClientCount, waitlistSource } from "./waitlist";
+import { calculatorCtaHref, isClientCount, waitlistSource } from "./waitlist";
 
 describe("waitlistSource", () => {
   it("takes ?src= first, then utm_source", () => {
@@ -23,5 +23,12 @@ describe("isClientCount", () => {
     expect(isClientCount("6_15")).toBe(true);
     expect(isClientCount("many")).toBe(false);
     expect(isClientCount(null)).toBe(false);
+  });
+});
+
+describe("calculatorCtaHref", () => {
+  it("carries the visit's label on to the waitlist, or the calculator's own", () => {
+    expect(calculatorCtaHref("ch_vk")).toBe("/for-trainers?src=ch_vk#waitlist");
+    expect(calculatorCtaHref(null)).toBe("/for-trainers?src=price_calc#waitlist");
   });
 });

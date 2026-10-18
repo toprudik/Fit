@@ -26,3 +26,13 @@ export function waitlistSource(params: Record<string, string | string[] | undefi
 }
 
 export const LANDING_PATH = "/for-trainers";
+
+export const CALCULATOR_PATH = "/for-trainers/calculator";
+
+/** The label the calculator gives its own visitors, so the waitlist tells them apart from the landing's. */
+export const CALCULATOR_SOURCE = "price_calc";
+
+/** «Вести абонементы в DaFit» on the calculator: the waitlist, with the visit's label or the calculator's own. */
+export function calculatorCtaHref(source: string | null): string {
+  return `${LANDING_PATH}?src=${source ?? CALCULATOR_SOURCE}#waitlist`;
+}
