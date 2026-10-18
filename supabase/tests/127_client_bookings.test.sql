@@ -184,8 +184,9 @@ select is((select confirmed from private.booking_auto_confirm(:'pair_ac', 'perso
   false, 'auto: a pass sold after the session date does not confirm');
 update public.passes set status = 'cancelled', cancelled_at = now() where id = :'pass_frozen';
 
--- Debt allowed by the trainer (§2.8-9), up to the limit.
-update public.coachings set self_book_on_debt = true where id = :'pair_ac';
+-- Debt allowed by the trainer (§2.8-9), up to the limit. The confirmed request above is one unpaid session already,
+-- so the limit is raised to 2 here; the default of 1 is covered in 979_debt_limit.
+update public.coachings set self_book_on_debt = true, debt_limit_sessions = 2 where id = :'pair_ac';
 select is((select row(confirmed, pass_id)::text from private.booking_auto_confirm(:'pair_ac', 'personal', tests.at(tests.next_day(4), '09:00'))),
   row(true, null::uuid)::text, 'auto: allowed debt confirms without a pass');
 select tests.create_session('trainer_a', now() - interval '2 days') as past \gset
