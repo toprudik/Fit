@@ -693,6 +693,11 @@ describe("plan messages", () => {
       const confirmed = renderMessage({ ...row, kind: "booking_confirmed", payload: { ...trainer, ...base } }, options);
       expect(confirmed?.text).toMatch(/^Запись к тренеру Иван Петров на .* подтверждена\.$/);
       expect(confirmed?.buttons[0].text).toBe("Открыть запись");
+      const paid = (pay: Record<string, string>, locale: "ru" | "en" = "ru") =>
+        renderMessage({ ...row, kind: "booking_confirmed", locale, payload: { ...trainer, ...base, ...pay } }, options)?.text;
+      expect(paid({ pay: "pass", pass_title: "10 занятий <зал>" })).toMatch(/подтверждена\. Занятие спишется с абонемента «10 занятий &lt;зал&gt;»\.$/);
+      expect(paid({ pay: "single", pass_title: "Разовое" })).toMatch(/подтверждена\. Занятие разовое\.$/);
+      expect(paid({ pay: "debt" }, "en")).toMatch(/is confirmed\. Your pass has no sessions left, so this one goes on debt\.$/);
       const declined = renderMessage({ ...row, kind: "booking_declined", payload: { ...trainer, ...base, reason: "Зал <закрыт>" } }, options);
       expect(declined?.text).toMatch(/^Запрос к тренеру Иван Петров на .* отклонён\. Причина: «Зал &lt;закрыт&gt;»\.$/);
       const bare = renderMessage({ ...row, kind: "booking_declined", locale: "en", payload: { ...base, reason: null } }, options);

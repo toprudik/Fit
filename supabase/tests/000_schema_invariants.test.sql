@@ -89,7 +89,7 @@ select is(
     order by 1
   ),
   -- The public lookups of data-model §1.1: definer functions that answer people without an account.
-  array['get_trainer_showcase_prices(text)', 'get_trainer_showcase(text)', 'get_trial_link(text)', 'get_trial_slots(text)',
+  array['get_showcase_trial(text)', 'get_trainer_showcase_prices(text)', 'get_trainer_showcase(text)', 'get_trial_link(text)', 'get_trial_slots(text)',
         'resolve_client_invite(text,text)', 'resolve_referral(text)', 'story_card(uuid)'],
   'anon can execute only the listed public lookups in public or private'
 );

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CalendarClock, CalendarX, Clock, Link2, MapPin, MessageCircle, UserRound } from "lucide-react";
+import { CalendarClock, CalendarX, Clock, Link2, MapPin, MessageCircle, UserRound, UserRoundCheck } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { BookingHistory } from "@/components/bookings/booking-history";
@@ -137,6 +137,9 @@ async function BookingDetails({
           />
         )}
         <ListRow icon={UserRound} title={booking.trainer || copy.trainer} subtitle={booking.trainer ? copy.trainer : undefined} />
+        {booking.substitute !== null ? (
+          <ListRow icon={UserRoundCheck} title={booking.substitute || copy.trainer} subtitle={copy.substitute} />
+        ) : null}
       </ListGroup>
 
       {booking.cancelReason && ["cancelled", "declined", "late_cancelled"].includes(booking.status) ? (

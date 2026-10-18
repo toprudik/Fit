@@ -174,6 +174,8 @@ export type ClientBooking = {
   trainer: string;
   trainerUsername: string | null;
   trainerId: string;
+  /** Who runs the session instead of the trainer (a substitute), or null. */
+  substitute: string | null;
   sessionId: string;
   locationId: string | null;
   cancelReason: string | null;
@@ -207,18 +209,19 @@ export async function loadClientBookings(owner: ScheduleOwner, bookingId?: strin
   if (error) fail("bookings", error);
   if (bookings.length === 0) return [];
 
-  const [sessions, people] = await Promise.all([
-    supabase
-      .from("sessions")
-      .select("id, status, kind, starts_at, ends_at, mode, title, location_id, cancel_reason")
-      .in("id", [...new Set(bookings.map((booking) => booking.session_id))]),
+  const sessionIds = [...new Set(bookings.map((booking) => booking.session_id))];
+  const [sessions, people, substitutes] = await Promise.all([
+    supabase.from("sessions").select("id, status, kind, starts_at, ends_at, mode, title, location_id, cancel_reason").in("id", sessionIds),
     trainerPeople(
       supabase,
       bookings.map((booking) => booking.trainer_id),
     ),
+    supabase.rpc("my_session_substitutes", { p_session_ids: sessionIds }),
   ]);
   if (sessions.error) fail("sessions", sessions.error);
+  if (substitutes.error) fail("substitutes", substitutes.error);
   const byId = new Map(sessions.data.map((session) => [session.id, session]));
+  const substituteOf = new Map(substitutes.data.map((row) => [row.session_id, row.name]));
 
   return bookings
     .flatMap((booking) => {
@@ -238,6 +241,7 @@ export async function loadClientBookings(owner: ScheduleOwner, bookingId?: strin
           trainer: people.get(booking.trainer_id)?.name ?? "",
           trainerUsername: people.get(booking.trainer_id)?.username ?? null,
           trainerId: booking.trainer_id,
+          substitute: session.status !== "cancelled" && substituteOf.has(session.id) ? (substituteOf.get(session.id) ?? "") : null,
           sessionId: session.id,
           locationId: session.location_id,
           cancelReason: booking.cancel_reason ?? session.cancel_reason,
