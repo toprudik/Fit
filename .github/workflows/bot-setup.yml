@@ -3,8 +3,12 @@ name: Bot setup
 # Points the Telegram webhook of @fitconnection_bot at the bot's Vercel production domain and syncs its commands,
 # descriptions, name and menu button (python -m fit_bot setup, see apps/bot/src/fit_bot/bot_setup.py). Runs after a
 # push to main that changes apps/bot or this file, once Vercel serves that commit; by hand (mode setup or check); and
-# daily as a read-only check. The only secret is the repository secret TELEGRAM_BOT_TOKEN (the production bot, the
-# same token as in the Vercel projects; optional TELEGRAM_WEBHOOK_SECRET), and only the last step gets it. Code that
+# daily as a read-only check. Vercel does not deploy dafit-bot on its own (apps/bot/vercel.json turns off deployments
+# from git and overrides the dashboard's Ignored Build Step with `exit 1`, since the hook builds the latest main, which
+# may not change apps/bot): on such a push this job calls the project's Deploy Hook, so the bot costs a deployment only
+# when it changes, out of the Hobby plan's 100 a day. The secrets are TELEGRAM_BOT_TOKEN (the production bot, the same
+# token as in the Vercel projects; optional TELEGRAM_WEBHOOK_SECRET), which only the last step gets, and
+# BOT_DEPLOY_HOOK (the hook's URL), which only the deploy step gets. Code that
 # runs in this job is pinned: actions by commit SHA, uv by version and checksum, Python packages by the hashes in
 # uv.lock, and nothing is built. Prints no secrets.
 
@@ -74,6 +78,19 @@ jobs:
         # Only the locked wheels. The project itself is not built, so no build backend runs in this job; the last step
         # imports fit_bot from src.
         run: uv sync --frozen --no-dev --no-install-project
+      - name: Ask Vercel to deploy main
+        if: steps.config.outputs.ready == 'true' && github.event_name == 'push'
+        env:
+          BOT_DEPLOY_HOOK: ${{ secrets.BOT_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$BOT_DEPLOY_HOOK" ]; then
+            echo "::error::The repository has no Actions secret BOT_DEPLOY_HOOK (the Deploy Hook of the Vercel project dafit-bot for main), so the bot is not deployed."
+            exit 1
+          fi
+          # The URL deploys the project, so it is never printed: curl stays silent and only the status code is shown.
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 -X POST "$BOT_DEPLOY_HOOK" || true)
+          if [ "$code" != 201 ] && [ "$code" != 200 ]; then echo "::error::The Deploy Hook answered ${code:-nothing}."; exit 1; fi
+          echo "Vercel builds the latest main of dafit-bot."
       - name: Wait until Vercel serves this commit
         if: steps.config.outputs.ready == 'true' && github.event_name == 'push'
         run: |

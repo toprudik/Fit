@@ -6,6 +6,7 @@ import { BookingHistory } from "@/components/bookings/booking-history";
 import { CheckInQr } from "@/components/check-in/check-in-qr";
 import { AttendanceMarks } from "@/components/passes/attendance-marks";
 import { SessionWaivers } from "@/components/passes/session-waivers";
+import { CancelParticipant } from "@/components/schedule/cancel-participant";
 import { CancelSession } from "@/components/schedule/cancel-session";
 import { GroupControls } from "@/components/schedule/group-controls";
 import { ScheduleSignIn } from "@/components/schedule/sign-in-state";
@@ -168,15 +169,27 @@ async function SessionDetails({
       ) : null}
       {participants.length > 0 ? (
         <ListGroup header={group ? groupCopy.participants : participants.length > 1 ? copy.clients : copy.client}>
-          {participants.map((client) => (
-            <ListRow
-              key={client.coachingId}
-              icon={User}
-              title={client.name}
-              subtitle={client.status === "requested" ? t.schedule.clientSessions.status.requested : undefined}
-              href={client.status === "requested" ? `/trainer/requests/${client.bookingId}` : `/trainer/clients/${client.coachingId}`}
-            />
-          ))}
+          {participants.map((client) => {
+            const row = (
+              <ListRow
+                key={client.coachingId}
+                icon={User}
+                title={client.name}
+                subtitle={client.status === "requested" ? t.schedule.clientSessions.status.requested : undefined}
+                href={client.status === "requested" ? `/trainer/requests/${client.bookingId}` : `/trainer/clients/${client.coachingId}`}
+                className={group && editable ? "min-w-0 flex-1" : undefined}
+              />
+            );
+            // A link can't hold a button: the "take off" button sits next to the row, not inside it.
+            return group && editable && (client.status === "requested" || client.status === "confirmed") ? (
+              <div key={client.coachingId} className="flex items-center pr-2">
+                {row}
+                <CancelParticipant bookingId={client.bookingId} name={client.name} />
+              </div>
+            ) : (
+              row
+            );
+          })}
         </ListGroup>
       ) : null}
 

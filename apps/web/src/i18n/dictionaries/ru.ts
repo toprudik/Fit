@@ -247,6 +247,33 @@ export const ru = {
     back: "Вернуться",
     another: "Написать ещё",
   },
+  /** The assistant's side of a delegation in the trainer zone (wave-3 §1, rules 3 and 10). */
+  delegatedZone: {
+    switchLabel: "Чьи клиенты",
+    mine: "Мои клиенты",
+    delegated: "Делегировано мне",
+    title: "Делегировано мне",
+    intro: "Клиенты, которых тебе передали другие тренеры. Ты видишь только то, что они разрешили.",
+    emptyTitle: "Пока никто не передал тебе клиентов",
+    emptyText: "Когда тренер сделает тебя помощником и ты примешь приглашение, его клиенты появятся здесь.",
+    from: "От тренера {name}",
+    until: "до {date}",
+    access: "Доступ: {list}",
+    noClients: "Сейчас среди переданных клиентов нет активных.",
+    clientOf: "Клиент тренера {name}",
+    progress: "Прогресс",
+    progressEmptyTitle: "Замеров не видно",
+    progressEmptyText: "Клиент ещё не вносил замеры, не открыл их своему тренеру или выключил доступ помощникам.",
+    homework: "Домашние задания",
+    homeworkEmpty: "Активных домашних заданий нет.",
+    notes: "Заметки",
+    notesEmpty: "Заметок пока нет.",
+    nothingTitle: "Здесь пока нечего показать",
+    nothingText: "Тренер не дал тебе доступ к прогрессу, домашним заданиям и заметкам этого клиента.",
+    goneTitle: "Клиент больше не передан тебе",
+    goneText: "Тренер мог забрать клиента или закончить делегирование. Остальные переданные клиенты в списке.",
+    noName: "Без имени",
+  },
   /** Disputes about reviews in /admin/reviews (wave-2 §11 rule 7). */
   adminReviews: {
     title: "Отзывы",
@@ -593,6 +620,30 @@ export const ru = {
     fillProfile: "Заполнить профиль",
     signedOutText: "Чтобы заполнить профиль тренера, войди через Telegram.",
     signIn: "Войти через Telegram",
+    /** "Профиль тренера" after the wizard: the same answers, one section at a time. */
+    edit: {
+      title: "Профиль тренера",
+      text: "Здесь можно поменять всё, что было в мастере профиля. Клиенты сразу увидят изменения.",
+      open: "Профиль тренера",
+      openText: "Имя, о себе, места занятий, часовой пояс, дедлайн отмены",
+      save: "Сохранить",
+      notTrainer: "Профиль тренера появится, когда ты примешь приглашение тренера.",
+      signedOutText: "Чтобы поменять профиль тренера, войди через Telegram.",
+      notSet: "Не указано",
+      noLocations: "Пока ни одного",
+      cancellation: "Не позже чем за {hours} ч",
+      locations: {
+        add: "Добавить место",
+        edit: "Изменить",
+        editTitle: "Место занятий",
+        remove: "Удалить",
+        removeTitle: "Удалить это место?",
+        removeText: "Новые занятия здесь поставить будет нельзя. Прошлые и уже назначенные занятия останутся как есть.",
+        cancel: "Отмена",
+        saved: "Сохранено",
+        removed: "Место удалено",
+      },
+    },
     steps: {
       profile: {
         title: "Как тебя зовут",
@@ -639,7 +690,7 @@ export const ru = {
         text: "Если клиент отменит занятие позже этого срока, оно спишется с абонемента. Правило одно для всех твоих клиентов.",
         label: "Бесплатная отмена не позже чем за",
         hours: "{hours} ч",
-        hint: "Обычно ставят 24 часа. Поменять можно в настройках.",
+        hint: "Обычно ставят 24 часа. Поменять можно потом в профиле тренера.",
       },
       payment: {
         title: "Ссылка на оплату",
@@ -3345,6 +3396,11 @@ export const ru = {
       noSeats: "мест нет",
       seatsLeft: "свободно {count} из {capacity}",
       confirmTitle: "Записаться на «{title}»?",
+      removeLabel: "Убрать с занятия: {name}",
+      removeTitle: "Убрать {name} с занятия?",
+      removeText: "Запись отменится без списания, клиенту придёт сообщение с причиной. Остальные участники остаются.",
+      remove: "Убрать с занятия",
+      removed: "Запись отменена, место свободно",
       errors: {
         already_booked: "Этот клиент уже в списке",
         session_full: "Все места заняты",
@@ -4291,6 +4347,18 @@ export const ru = {
   },
   /** Steps, water and sleep (wave-2 §4). */
   /** Streaks and badges (PRD wave-3 §2.1–2.2): "Прогресс", "Значки" and the client card. */
+  /** A participant of the session a substitute runs (PRD wave-3 §1 "Подмена" rule 4). */
+  substitute: {
+    title: "Участник",
+    group: "Тренировка и анкета",
+    groupFooter: "Записать тренировку за это занятие и открыть анкету участника можно до конца занятия.",
+    logs: "Тренировка за это занятие",
+    logsFooter: "Тренировка попадёт в дневник клиента и к его тренеру.",
+    noLogs: "Тренировку не записали",
+    intakeFooter: "Анкету видно, только если клиент показывает её своему тренеру.",
+    noIntake: "Анкеты нет",
+    noIntakeText: "Клиент ещё не заполнил анкету или не показывает её своему тренеру.",
+  },
   gamification: {
     title: "Серии и значки",
     streaks: {
@@ -4924,6 +4992,7 @@ export const ru = {
     /** К5: the trainer cancelled sessions, with the reason and no charge. */
     sessionCancelled: "Занятие с тренером {name} отменено: {dates}. Причина: «{reason}». Списаний не будет.",
     sessionsCancelled: "Занятия с тренером {name} отменены: {dates}. Причина: «{reason}». Списаний не будет.",
+    bookingCancelledByTrainer: "Тренер {name} отменил твою запись на занятие {dates}. Причина: «{reason}». Списаний не будет.",
     /** Stands in for the name of a trainer without one in К1, К5 and К6. */
     sessionTrainer: "без имени",
     moreDates: "и ещё {count}",

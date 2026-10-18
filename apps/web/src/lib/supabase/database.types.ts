@@ -3983,6 +3983,9 @@ isOneToOne: false
 "cancel_my_booking":
 { Args: { "p_booking_id": string,"p_late"?: boolean,"p_reason"?: string }; Returns: Database["public"]['Enums']["booking_status"]
                            },
+"cancel_participant":
+{ Args: { "p_booking_id": string,"p_reason": string }; Returns: undefined
+                           },
 "cancel_pass":
 { Args: { "p_pass_id": string,"p_reason": string }; Returns: undefined
                            },
