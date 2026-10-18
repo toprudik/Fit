@@ -3587,6 +3587,8 @@ export const en: Dictionary = {
       chargeFree: "This is a free trial, cancelling charges nothing.",
       cancelReason: "Reason, if you like",
       cancelReasonHint: "Your trainer sees it in the message.",
+      cancelReasons: ["I'm ill", "Work", "Can't make it", "Plans changed"],
+      cancelReasonOwn: "Or in your own words",
       cancelConfirm: "Cancel booking",
       cancelLateConfirm: "Cancel and charge",
       keepBooking: "Keep booking",
