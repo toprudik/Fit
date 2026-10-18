@@ -254,6 +254,24 @@ export async function cancelSession(raw: { sessionId: string; reason: string; fo
   return { status: "done", count: data };
 }
 
+export type CancelParticipantResult = { status: "done" } | { status: "error"; error: "reason_required" | "booking_not_found" | "failed" };
+
+/** "Убрать с занятия" on a group session (PRD 2.6.3-4): one booking off, no charge, the client sees the reason. */
+export async function cancelParticipant(raw: { bookingId: string; reason: string }): Promise<CancelParticipantResult> {
+  const parsed = z.object({ bookingId: z.uuid(), reason: z.string().trim().max(500) }).safeParse(raw);
+  if (!parsed.success) return { status: "error", error: "failed" };
+  if (!parsed.data.reason) return { status: "error", error: "reason_required" };
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("cancel_participant", { p_booking_id: parsed.data.bookingId, p_reason: parsed.data.reason });
+  if (error) {
+    if (error.message === "reason_required" || error.message === "booking_not_found") return { status: "error", error: error.message };
+    console.error("cancelling a participant failed", error.code);
+    return { status: "error", error: "failed" };
+  }
+  refresh();
+  return { status: "done" };
+}
+
 /** Errors of the participant and seat controls on a group session page. */
 const GROUP_ERRORS = ["already_booked", "session_full", "not_your_client", "session_not_found", "capacity_below_occupied"] as const;
 

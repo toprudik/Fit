@@ -124,3 +124,20 @@ export async function loadTrainerIntake(coachingId: string): Promise<TrainerInta
   const changed = seen && seen !== rows[0] ? changedSections(toVersion(seen), latest) : new Set<string>();
   return { state: "filled", coachingId: pair.id, timeZone, first: rows[rows.length - 1].submitted_at, latest, changed };
 }
+
+/**
+ * A substitute's view of a participant's intake (PRD wave-3 §1 "Подмена" rule 4): the first and the latest
+ * version while the client shows it to the owner trainer. RLS answers nothing otherwise, so null stands for
+ * both "not shown" and "not filled in yet".
+ */
+export async function loadSubstituteIntake(clientId: string): Promise<{ first: string; latest: IntakeVersion } | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data: rows, error } = await supabase
+    .from("intakes")
+    .select(VERSION_COLUMNS)
+    .eq("user_id", clientId)
+    .order("submitted_at", { ascending: false });
+  if (error) throw new Error(`loading the intake failed: ${error.code}`);
+  if (!rows.length) return null;
+  return { first: rows[rows.length - 1].submitted_at, latest: toVersion(rows[0]) };
+}

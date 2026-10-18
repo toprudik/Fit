@@ -641,6 +641,30 @@ export const en: Dictionary = {
     fillProfile: "Fill in your profile",
     signedOutText: "Sign in with Telegram to fill in your trainer profile.",
     signIn: "Sign in with Telegram",
+    /** "Профиль тренера" after the wizard: the same answers, one section at a time. */
+    edit: {
+      title: "Trainer profile",
+      text: "Change anything you filled in when setting up your profile. Clients see the changes right away.",
+      open: "Trainer profile",
+      openText: "Name, about, locations, time zone, cancellation deadline",
+      save: "Save",
+      notTrainer: "Your trainer profile appears once you accept a trainer invite.",
+      signedOutText: "Sign in with Telegram to change your trainer profile.",
+      notSet: "Not set",
+      noLocations: "None yet",
+      cancellation: "At least {hours} h before",
+      locations: {
+        add: "Add a location",
+        edit: "Edit",
+        editTitle: "Location",
+        remove: "Delete",
+        removeTitle: "Delete this location?",
+        removeText: "You won't be able to schedule new sessions here. Past and already scheduled sessions stay as they are.",
+        cancel: "Cancel",
+        saved: "Saved",
+        removed: "Location deleted",
+      },
+    },
     steps: {
       profile: {
         title: "What's your name",
@@ -687,7 +711,7 @@ export const en: Dictionary = {
         text: "If a client cancels later than this, the session is taken from their pass. The rule is the same for all your clients.",
         label: "Free cancellation up to",
         hours: "{hours} h",
-        hint: "Most trainers use 24 hours. You can change it in settings.",
+        hint: "Most trainers use 24 hours. You can change it later in your trainer profile.",
       },
       payment: {
         title: "Payment link",
@@ -3372,6 +3396,11 @@ export const en: Dictionary = {
       noSeats: "no seats left",
       seatsLeft: "{count} of {capacity} seats free",
       confirmTitle: "Book “{title}”?",
+      removeLabel: "Take off the session: {name}",
+      removeTitle: "Take {name} off the session?",
+      removeText: "The booking is cancelled with no charge, and the client gets a message with the reason. Everyone else stays.",
+      remove: "Take off the session",
+      removed: "Booking cancelled, the seat is free",
       errors: {
         already_booked: "This client is already on the list",
         session_full: "All seats are taken",
@@ -4316,6 +4345,17 @@ export const en: Dictionary = {
   },
   /** Steps, water and sleep (wave-2 §4). */
   /** Streaks and badges (PRD wave-3 §2.1–2.2): "Progress", "Badges" and the client card. */
+  substitute: {
+    title: "Participant",
+    group: "Workout and intake",
+    groupFooter: "You can log this session's workout and open a participant's intake until the session ends.",
+    logs: "Workout for this session",
+    logsFooter: "The workout goes to the client's diary and to their trainer.",
+    noLogs: "No workout logged",
+    intakeFooter: "The intake shows only if the client shares it with their trainer.",
+    noIntake: "No intake",
+    noIntakeText: "The client hasn't filled in the intake yet or doesn't share it with their trainer.",
+  },
   gamification: {
     title: "Streaks and badges",
     streaks: {
@@ -4780,6 +4820,7 @@ export const en: Dictionary = {
     /** Account deletion: payload { stage, scheduled_for? } from request_account_deletion and cancel_account_deletion. */
     deletionRequested: "Your DaFit account will be deleted on {date}. Upcoming bookings are cancelled with no charge. If you change your mind, open DaFit and cancel before then.",
     deletionCancelled: "Account deletion cancelled, everything stays as it was.",
+    deletionDone: "Your DaFit account is deleted. If you want to come back, just open DaFit again.",
     cancelDeletion: "Cancel deletion",
     /** Wave-2 §1.3: payload { coaching_id, goal, previous_goal, first_name, last_name } from set_client_goal. */
     goalChanged: "Your client {name} has a new goal: “{goal}”. Your target stayed the same, check that it still fits.",
@@ -4896,6 +4937,7 @@ export const en: Dictionary = {
     /** К5: the trainer cancelled sessions, with the reason and no charge. */
     sessionCancelled: "Your session with {name} is cancelled: {dates}. Reason: “{reason}”. Nothing is charged.",
     sessionsCancelled: "Your sessions with {name} are cancelled: {dates}. Reason: “{reason}”. Nothing is charged.",
+    bookingCancelledByTrainer: "{name} cancelled your booking for the session {dates}. Reason: “{reason}”. Nothing is charged.",
     /** Stands in for the name of a trainer without one in К1, К5 and К6. */
     sessionTrainer: "your trainer",
     moreDates: "and {count} more",
