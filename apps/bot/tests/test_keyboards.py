@@ -1,7 +1,7 @@
 import pytest
 from aiogram.types import MenuButtonWebApp
 
-from fit_bot.keyboards import SOURCES, app_url, menu_button, open_app_keyboard
+from fit_bot.keyboards import SOURCES, app_url, menu_button, open_app_keyboard, start_param
 from fit_bot.texts import CATALOG
 
 
@@ -32,3 +32,20 @@ def test_keyboard_and_menu_button(locale: str) -> None:
     assert isinstance(menu, MenuButtonWebApp)
     assert menu.text == texts.menu_button
     assert menu.web_app.url == "https://app.example/?source=bot_menu"
+
+
+def test_app_url_with_start_param() -> None:
+    assert (
+        app_url("https://h", "bot_start", "tp_anna__s_tg")
+        == "https://h/?source=bot_start&tgWebAppStartParam=tp_anna__s_tg"
+    )
+    with pytest.raises(ValueError):
+        app_url("https://h", "bot_start", "a b")
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [(None, None), ("", None), ("ch_tg", "ch_tg"), ("A-z_09", "A-z_09"), ("a b", None), ("é", None), ("x" * 513, None)],
+)
+def test_start_param(payload: str | None, expected: str | None) -> None:
+    assert start_param(payload) == expected

@@ -5,31 +5,34 @@ import logging
 from aiogram import Bot, F, Router
 from aiogram.enums import ChatType
 from aiogram.exceptions import ClientDecodeError, TelegramAPIError
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.types import MenuButtonDefault, Message
 
 from fit_bot.config import Settings
-from fit_bot.keyboards import Source, menu_button, open_app_keyboard
+from fit_bot.keyboards import Source, menu_button, open_app_keyboard, start_param
 from fit_bot.texts import CATALOG, DEFAULT_LOCALE, Locale, pick_locale
 
 log = logging.getLogger("fit_bot.handlers")
 
 
-async def on_start(message: Message, bot: Bot, settings: Settings) -> None:
-    """/start and /start <payload>: the payload is ignored and never echoed."""
-    await _answer_with_app(message, bot, settings, "bot_start")
+async def on_start(message: Message, bot: Bot, settings: Settings, command: CommandObject) -> None:
+    """/start and /start <payload>: a valid payload goes to the Mini App button as its startapp parameter
+    (marketing §5.2), so it opens the screen and keeps the source tag. It is never echoed in the text."""
+    await _answer_with_app(message, bot, settings, "bot_start", start_param(command.args))
 
 
 async def on_help(message: Message, bot: Bot, settings: Settings) -> None:
     await _answer_with_app(message, bot, settings, "bot_help")
 
 
-async def _answer_with_app(message: Message, bot: Bot, settings: Settings, source: Source) -> None:
+async def _answer_with_app(
+    message: Message, bot: Bot, settings: Settings, source: Source, start: str | None = None
+) -> None:
     locale = pick_locale(message.from_user.language_code if message.from_user else None)
     texts = CATALOG[locale]
     text = texts.start if source == "bot_start" else texts.help
     # The reply goes first, so a menu-button failure never costs the user the answer.
-    await message.answer(text, reply_markup=open_app_keyboard(str(settings.webapp_url), texts, source))
+    await message.answer(text, reply_markup=open_app_keyboard(str(settings.webapp_url), texts, source, start))
     await sync_chat_menu_button(bot, message.chat.id, locale, settings)
 
 
