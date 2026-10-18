@@ -3282,6 +3282,8 @@ export const en: Dictionary = {
       reopen: "Open",
       reopened: "Days open again",
       upcoming: "Next two weeks",
+      queues: "Queues for free slots",
+      queuesText: "A slot that opens again goes to the first in line on its own. If nobody holds it, you can offer it to anyone in the queue.",
       noSlotsTitle: "No free slots",
       noSlotsText: "Clients can't book on their own. Slots come from your week template.",
       closeSlot: "Close",
