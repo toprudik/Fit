@@ -1949,6 +1949,7 @@ export const en: Dictionary = {
       hiddenCount: "Show hidden: {count}",
       hidden: "Comment hidden",
       shown: "Comment shown again",
+      reply: "Reply",
     },
     addScreen: {
       title: "Add food",
@@ -3409,13 +3410,16 @@ export const en: Dictionary = {
       participants: "Participants",
       noParticipants: "Nobody has booked yet",
       addParticipant: "Add a participant",
-      fullHint: "All seats are taken. To add someone else, add seats.",
+      fullHint: "All seats are taken. You can still add a client out of turn, and the group gets one more seat.",
+      fullMax: "All 100 seats are taken, no one else can be added.",
       everyoneIn: "All your clients are already on the list.",
       seats: "Seats and booking",
       seatsTitle: "Seats and booking",
       seatsSaved: "Saved",
       addTitle: "Add a participant",
       addText: "The booking is confirmed at once and the client gets a message.",
+      addExtraTitle: "Add out of turn",
+      addExtraText: "There are no free seats, so the group gets one more. The booking is confirmed at once and the client gets a message. If they were in the queue, the seat is theirs.",
       add: "Add",
       added: "Participant added",
       back: "Back",
@@ -3537,6 +3541,7 @@ export const en: Dictionary = {
       emptyRequestsTitle: "No requests",
       emptyRequestsText: "When no pass fits, a booking goes to your trainer as a request and waits here for an answer.",
       trainer: "With {name}",
+      substitute: "Instead of your trainer: {name}",
       status: {
         requested: "Request",
         confirmed: "Confirmed",
@@ -3553,6 +3558,7 @@ export const en: Dictionary = {
     booking: {
       title: "Booking",
       trainer: "Trainer",
+      substitute: "Instead of your trainer",
       reason: "Reason",
       history: {
         header: "Booking history",
