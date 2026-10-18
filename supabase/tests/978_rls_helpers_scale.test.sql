@@ -1,4 +1,4 @@
--- RLS helpers of migration 20261018140317_rls_helpers_scale.sql: each answers what its previous body answered, for
+-- RLS helpers of migration 20261018184517_rls_helpers_scale.sql: each answers what its previous body answered, for
 -- owners, assistants (all clients, chosen clients), a substitute, delegations that are pending, expired or revoked,
 -- clients, an admin with break-glass access and a stranger. The previous bodies are copied below as tests.old_*.
 begin;
@@ -49,7 +49,7 @@ values
 insert into public.delegation_clients (delegation_id, coaching_id)
 select d.id, tests.pair_id('owner_b', 'client_f') from public.delegations d where d.delegate_trainer_id = tests.user_id('helper_some');
 
--- The bodies before 20261018140317 (20261017090713_delegations.sql, 20261017113217_delegate_schedule.sql).
+-- The bodies before 20261018184517 (20261017090713_delegations.sql, 20261017113217_delegate_schedule.sql).
 create function tests.old_trainer_coaching_ids(p_scopes public.delegation_scope[] default null) returns uuid[]
 language sql stable security definer set search_path = '' as $$
   select coalesce(pg_catalog.array_agg(c.id), '{}')
