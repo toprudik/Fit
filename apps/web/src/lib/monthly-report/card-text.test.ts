@@ -22,4 +22,19 @@ describe("story card text", () => {
     expect(text.label).toBe("новых рекорда");
     expect(text.detail).toMatch(/^Присед: 100/);
   });
+
+  it("prints a streak in its own unit", () => {
+    expect(cardText(dictionaries.ru, "ru", { kind: "streak_workouts", month: "2026-09-01", data: { count: 5 } }).label).toBe(
+      "недель тренировок подряд",
+    );
+    expect(cardText(dictionaries.en, "en", { kind: "streak_diary", month: "2026-09-01", data: { count: 1 } }).label).toBe(
+      "day of food diary in a row",
+    );
+  });
+
+  it("prints the new badges with the latest one by name", () => {
+    const text = cardText(dictionaries.ru, "ru", { kind: "badges", month: "2026-09-01", data: { count: 2, code: "diary_7" } });
+    expect(text).toEqual({ month: "Сентябрь 2026", figure: "2", label: "новых значка", detail: "Неделя дневника" });
+    expect(cardText(dictionaries.ru, "ru", { kind: "badges", month: "2026-09-01", data: { count: 1, code: "gone" } }).detail).toBeNull();
+  });
 });
