@@ -3822,6 +3822,9 @@ isOneToOne: false
 "add_group_participant":
 { Args: { "p_coaching_id": string,"p_session_id": string }; Returns: string
                            },
+"add_group_participant_extra":
+{ Args: { "p_coaching_id": string,"p_session_id": string }; Returns: string
+                           },
 "add_water":
 { Args: { "p_day": string,"p_ml": number }; Returns: string
                            },
