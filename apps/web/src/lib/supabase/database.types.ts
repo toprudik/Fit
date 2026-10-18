@@ -3886,6 +3886,11 @@ isOneToOne: false
               "cohort_week": string,"retained": (number)[],"size": number
             }[]
                            },
+"admin_owner_success":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "clients": number,"clients_with_streak": number,"trainers": number,"trainers_offer_ever": number,"trainers_offer_live": number
+            }[]
+                           },
 "admin_owner_summary":
 { Args: Record<PropertyKey, never>; Returns: {
               "attended": number,"bookings": number,"cards": number,"client_referrals": number,"client_referrals_qualified": number,"clients": number,"clients_active_30": number,"clients_active_7": number,"dau": number,"held_sessions": number,"joins_by_source": Json,"mau": number,"pairs": number,"passes_sold": number,"trainer_invites_created": number,"trainer_invites_redeemed": number,"trainer_referrals": number,"trainers": number,"trainers_active_30": number,"trainers_active_7": number,"trainers_verified": number,"turnover": Json,"turnover_30": Json,"users": number,"wau": number
