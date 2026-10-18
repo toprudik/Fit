@@ -4008,6 +4008,14 @@ export const en: Dictionary = {
     scanFailed: "That isn't a session QR.",
   },
   /** "Пригласить тренера": a trainer's referral link for other trainers (PRD wave-3 §3.2), /trainer/invite-trainers. */
+  share: {
+    open: "Open",
+    titles: {
+      referral: "An invitation to a trainer on DaFit",
+      trainer_invite: "An invitation for a trainer on DaFit",
+      client_link: "Your trainer invites you to DaFit",
+    },
+  },
   trainerReferrals: {
     title: "Invite a trainer",
     moreText: "A bonus for colleagues who join by your link",
