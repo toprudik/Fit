@@ -77,7 +77,7 @@ test.describe("food diary", () => {
     await page.getByRole("textbox", { name: "Как назвать порцию" }).fill("2 шт");
     await page.getByRole("textbox", { name: "Штрихкод" }).fill("4600000000017");
     await page.getByRole("button", { name: "Сохранить" }).click();
-    await expect(page.getByText("Продукт сохранён")).toBeVisible();
+    await expect(page.getByText("Продукт сохранён").first()).toBeVisible();
     await expect(page).toHaveURL(/\/client\/diary\/food\/foods$/);
     const row = page.getByRole("link", { name: /Сырники бабушкины/ });
     await expect(row).toContainText("220,5 ккал на 100 г");
@@ -89,7 +89,7 @@ test.describe("food diary", () => {
     await checked(page);
     await page.getByRole("textbox", { name: "Название" }).fill("Сырники с изюмом");
     await page.getByRole("button", { name: "Сохранить" }).click();
-    await expect(page.getByText("Продукт сохранён")).toBeVisible();
+    await expect(page.getByText("Продукт сохранён").first()).toBeVisible();
     await expect(page.getByRole("link", { name: /Сырники с изюмом/ })).toBeVisible();
 
     // A second product with the same barcode is refused on the field.

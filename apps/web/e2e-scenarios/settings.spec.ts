@@ -164,9 +164,9 @@ test.describe("account settings", () => {
     await expectAccessible(page);
     await page.getByRole("button", { name: "Запросить экспорт" }).click();
     await expectToast(page, "Запрос принят. Бот напишет, когда архив будет готов.");
-    await expect(page.getByText("В очереди")).toBeVisible();
+    await expect(page.getByText("В очереди").first()).toBeVisible();
     await page.reload();
-    await expect(page.getByText("В очереди")).toBeVisible();
+    await expect(page.getByText("В очереди").first()).toBeVisible();
     await expect(page.getByText(/Запрошен/)).toBeVisible();
     await expectAccessible(page);
   });
@@ -216,7 +216,7 @@ test.describe("account settings", () => {
     const { page } = trainer;
     await page.goto("/trainer");
     await page.goto("/feedback?from=/trainer/schedule");
-    await expect(page.getByText("Вместе с сообщением уйдут экран", { exact: false })).toBeVisible();
+    await expect(page.getByRole("main").getByText("Вместе с сообщением уйдут экран", { exact: false })).toBeVisible();
     const files = page.locator('input[type="file"]');
     await files.setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("не картинка") });
     await expect(page.getByText("Подойдёт картинка PNG, JPG или WebP до 5 МБ")).toBeVisible();

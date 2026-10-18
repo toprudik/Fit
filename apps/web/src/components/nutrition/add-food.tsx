@@ -65,6 +65,8 @@ export function AddFood({ day, initialMeal, shelf }: { day: string; initialMeal:
   const back = day ? `${FOOD_PATH}?day=${day}` : FOOD_PATH;
 
   function added() {
+    // The screen stays mounted (Activity) for the next «Добавить»: it must open without this food's sheet.
+    setPicked(null);
     toast.success(interpolate(copy.addScreen.added, { meal: copy.meals[meal] }));
     router.push(back);
   }
@@ -106,7 +108,7 @@ export function AddFood({ day, initialMeal, shelf }: { day: string; initialMeal:
 }
 
 function SearchTab({ day, meal, shelf, onPick }: { day: string; meal: Meal; shelf: FoodShelf; onPick: (food: Food) => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const copy = t.foodDiary.addScreen;
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<{ query: string; foods: Food[]; drafts: OffDraft[]; catalogDown: boolean } | null>(null);
@@ -120,7 +122,7 @@ function SearchTab({ day, meal, shelf, onPick }: { day: string; meal: Meal; shel
     const timer = setTimeout(() => {
       startTransition(async () => {
         try {
-          const found = await findFoods(q);
+          const found = await findFoods(q, locale);
           if (latest.current === q) setResult({ query: q, ...found });
         } catch {
           if (latest.current === q) setResult({ query: q, foods: [], drafts: [], catalogDown: true });
@@ -128,7 +130,7 @@ function SearchTab({ day, meal, shelf, onPick }: { day: string; meal: Meal; shel
       });
     }, SEARCH_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, locale]);
 
   const q = query.trim();
   const shown = q.length >= 2 && result?.query === q ? result : null;
@@ -194,7 +196,7 @@ function SearchTab({ day, meal, shelf, onPick }: { day: string; meal: Meal; shel
 }
 
 function BarcodeTab({ day, meal, onPick }: { day: string; meal: Meal; onPick: (food: Food) => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const copy = t.foodDiary.barcode;
   const [error, setError] = useState<string | undefined>();
   const [missing, setMissing] = useState<{ barcode: string; catalogDown: boolean; draft: OffDraft | null } | null>(null);
@@ -203,7 +205,7 @@ function BarcodeTab({ day, meal, onPick }: { day: string; meal: Meal; onPick: (f
   function look(value: string) {
     setMissing(null);
     startTransition(async () => {
-      const found = await findBarcode(value).catch(() => null);
+      const found = await findBarcode(value, locale).catch(() => null);
       if (!found) {
         toast.error(t.foodDiary.failed);
         return;

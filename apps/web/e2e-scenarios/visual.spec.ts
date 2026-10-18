@@ -90,7 +90,8 @@ const SHOTS: Shot[] = [
         .click();
       await page.getByRole("button", { name: /16:00/ }).first().click();
       const sheet = page.getByRole("dialog");
-      await expect(sheet).toBeVisible();
+      // The pass check runs after the sheet opens; capture its answer, not the spinner.
+      await expect(sheet.getByText(/останется занятий/)).toBeVisible();
       return sheet;
     },
   },
@@ -142,7 +143,12 @@ const SHOTS: Shot[] = [
     path: () => "/trainer",
     heading: "Сегодня",
     act: async (page) => {
-      await page.getByRole("button", { name: "Профиль", exact: true }).click();
+      // The avatar in the phone header is «Профиль»; the side menu on a computer names the account.
+      await page
+        .getByRole("button", { name: /^(Профиль|Иван Тренеров)$/ })
+        .filter({ visible: true })
+        .first()
+        .click();
       const sheet = page.getByRole("dialog", { name: "Профиль" });
       await expect(sheet).toBeVisible();
       return sheet;

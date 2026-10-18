@@ -29,11 +29,13 @@ export function lastMonth(): { day: string; month: string } {
   return { day: `${previous.year}-${mm}-15`, month: `${previous.year}-${mm}` };
 }
 
-/** Goes to a route and waits until the screen has no skeleton left, then checks it with axe. */
+/** Goes to a route and waits until the screen has no skeleton left and the page has settled on the network. */
 export async function open(page: Page, path: string, heading?: string | RegExp) {
   await page.goto(path);
   if (heading) await expect(page.getByRole("heading", { level: 1, name: heading }).first()).toBeVisible();
   await expect(page.locator('[data-slot="skeleton-rows"]')).toHaveCount(0);
+  // A tap before hydration is lost; under load that is the first tap of a test.
+  await page.waitForLoadState("networkidle");
 }
 
 /** Picks a chip or choice row by clicking the label that wraps its radio or checkbox, then checks it took. */

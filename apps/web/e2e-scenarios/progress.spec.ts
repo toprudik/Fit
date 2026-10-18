@@ -314,6 +314,9 @@ test.describe("what the trainer sees", () => {
     await expect(workouts).not.toBeChecked();
     // Each switch saves through its own server action; let the last one land before reloading.
     await page.waitForLoadState("networkidle");
+    await expect
+      .poll(async () => ok(await client.db.from("data_shares").select("measurements, photos, workouts").eq("coaching_id", client.coachingId).single(), "shares"), { timeout: 10_000 })
+      .toEqual({ measurements: false, photos: true, workouts: false });
     await page.reload();
     await expect(page.getByRole("switch", { name: "Замеры" })).not.toBeChecked();
     await expect(page.getByRole("switch", { name: "Фото прогресса" })).toBeChecked();

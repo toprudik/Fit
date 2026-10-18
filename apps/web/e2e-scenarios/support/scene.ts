@@ -201,11 +201,11 @@ export async function buildScene(trainer: Persona, client: Persona & { coachingI
   );
   const exercises = ok(await client.db.rpc("search_exercises", { p_query: "", p_limit: 1 }), "exercise");
   const exerciseId = (exercises as { id: string }[])[0].id;
-  const log = (who: string, coaching: string | null) => ({
+  const log = (who: string, coaching: string | null, hour: number) => ({
     client_id: client.userId,
     coaching_id: coaching,
     title: who,
-    performed_at: mskAt(-1, 18),
+    performed_at: mskAt(-1, hour),
     local_date: mskDay(-1),
     duration_min: 50,
     exercises: [
@@ -219,10 +219,10 @@ export async function buildScene(trainer: Persona, client: Persona & { coachingI
     ],
   });
   // The client's own log, and one the trainer wrote for the pair.
-  const workoutLogId = ok(await client.db.rpc("save_workout_log", { p_log: log("Ноги", null) }), "client workout log");
+  const workoutLogId = ok(await client.db.rpc("save_workout_log", { p_log: log("Ноги", null, 18) }), "client workout log");
   const pairLogId = ok(
     await trainer.db.rpc("save_workout_log", {
-      p_log: log("Спина", coachingId),
+      p_log: log("Спина", coachingId, 11),
     }),
     "pair workout log",
   );

@@ -28,7 +28,7 @@ export function rub(major: number): RegExp {
 
 export async function trainerCurrency(trainer: Persona): Promise<string> {
   const row = ok(await trainer.db.from("trainer_profiles").select("default_currency").eq("user_id", trainer.userId).single(), "trainer currency");
-  return row!.default_currency;
+  return (row as { default_currency: string }).default_currency;
 }
 
 /** A live package of the trainer, straight into `packages` as the packages screen saves it. */
@@ -53,7 +53,7 @@ export async function addPackage(
       .single(),
     "package",
   );
-  return row!.id;
+  return (row as { id: string }).id;
 }
 
 /**

@@ -1083,7 +1083,7 @@ export const en: Dictionary = {
         lastDay: "Last day",
         noExpiry: "No expiry",
         reason: "Reason",
-        reasonHint: "The client doesn't see it. For example: ill for two weeks",
+        reasonHint: "The client will see it in the pass history. For example: ill for two weeks",
         reasonError: "Enter a reason",
         submit: "Save",
         done: "Expiry changed",
