@@ -784,6 +784,8 @@ create index on public.slots (starts_at) where status = 'open';
 --   materialize_recurrence и roll_recurrences раскладывают групповой повтор так же, как персональный.
 --   Название группы обязательно при создании; триггер sessions_keep_group_title не даёт стереть его потом.
 -- add_group_participant(session, coaching) тренер добавляет клиента: запись сразу confirmed, клиенту К1.
+-- add_group_participant_extra(session, coaching) то же вне очереди (волна 2 §9-7): полное занятие получает одно место
+--   больше (до 100), запись клиента в очереди этого занятия становится accepted.
 -- bookable_group_sessions(trainer, from, to) отдаёт клиенту группы тренера с open_for_booking, занятыми местами
 --   и своей записью; private.bookable_group_session проверяет пару, время, места и что клиент ещё не записан.
 -- group_booking_preview(session) и book_group_session(session) решают оплату через
