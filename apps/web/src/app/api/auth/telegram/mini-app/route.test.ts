@@ -51,6 +51,16 @@ vi.mock("@/lib/auth/sign-in-with-telegram", async () => {
   return { AccountBlockedError, signInWithTelegram, isAccountBlocked: async (userId: string) => blocked.has(userId) };
 });
 
+/** The fresh sign-in limit per Telegram account: whether it allows the next one, and what it counted. */
+const limits = vi.hoisted(() => ({ allow: true, hits: [] as [string, string][] }));
+vi.mock("@/lib/rate-limit", () => ({
+  RATE_LIMITS: { miniAppSignIn: { bucket: "sign-in:mini-app", limit: 20, windowSeconds: 600 } },
+  withinRateLimit: async ({ bucket }: { bucket: string }, subject: string) => {
+    limits.hits.push([bucket, subject]);
+    return limits.allow;
+  },
+}));
+
 const { POST } = await import("./route");
 
 const nowSec = () => Math.floor(Date.now() / 1000);
@@ -89,6 +99,8 @@ beforeEach(() => {
   session.signedOut = false;
   blocked.clear();
   signInWithTelegram.mockClear();
+  limits.allow = true;
+  limits.hits = [];
 });
 
 describe("POST /api/auth/telegram/mini-app", () => {
@@ -131,6 +143,63 @@ describe("POST /api/auth/telegram/mini-app", () => {
 
     expect(res.status).toBe(401);
     expect(signInWithTelegram).not.toHaveBeenCalled();
+  });
+});
+
+describe("CSRF and input (ADR 0004)", () => {
+  const send = (headers: Record<string, string>, body: string = JSON.stringify({ initData: initData(10) })) =>
+    POST(new Request(`${APP_URL}/api/auth/telegram/mini-app`, { method: "POST", headers, body }));
+
+  it.each([
+    ["another site's origin", { origin: "https://evil.example", "content-type": "application/json" }],
+    ["no origin", { "content-type": "application/json" }],
+    ["a cross-site fetch", { origin: APP_URL, "sec-fetch-site": "cross-site", "content-type": "application/json" }],
+    ["a same-site but not same-origin fetch", { origin: APP_URL, "sec-fetch-site": "same-site", "content-type": "application/json" }],
+    ["a form post", { origin: APP_URL, "sec-fetch-site": "same-origin", "content-type": "application/x-www-form-urlencoded" }],
+    ["a text/plain post", { origin: APP_URL, "sec-fetch-site": "same-origin", "content-type": "text/plain" }],
+    ["the origin with a path trick", { origin: `${APP_URL}.evil.example`, "content-type": "application/json" }],
+  ])("refuses %s with 403 before signing anyone in", async (_name, headers) => {
+    const res = await send(headers);
+    expect(res.status).toBe(403);
+    expect(setCookies(res)).toEqual([]);
+    expect(signInWithTelegram).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["no JSON", "initData=abc"],
+    ["no initData", JSON.stringify({})],
+    ["an empty initData", JSON.stringify({ initData: "" })],
+    ["an oversized initData", JSON.stringify({ initData: "a".repeat(4097) })],
+    ["initDataUnsafe instead of initData", JSON.stringify({ initDataUnsafe: { user: { id: 1 } } })],
+  ])("answers 400 to %s", async (_name, body) => {
+    const res = await send({ origin: APP_URL, "sec-fetch-site": "same-origin", "content-type": "application/json" }, body);
+    expect(res.status).toBe(400);
+    expect(signInWithTelegram).not.toHaveBeenCalled();
+  });
+
+  it("counts fresh sign-ins per Telegram account and answers 429 past the limit, without a session", async () => {
+    limits.allow = false;
+    const res = await post(initData(10));
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("600");
+    expect(limits.hits).toEqual([["sign-in:mini-app", "42"]]);
+    expect(signInWithTelegram).not.toHaveBeenCalled();
+    expect(setCookies(res)).toEqual([]);
+  });
+
+  it("never counts page loads of a signed-in user or data that did not verify", async () => {
+    session.claims = { sub: "user-42", app_metadata: { telegram_id: 42 } };
+    await post(initData(7200));
+    session.claims = null;
+    await post(initData(10, "999:other-bot"));
+    await post(initData(7200));
+    expect(limits.hits).toEqual([]);
+  });
+
+  it("ignores user fields sent next to initData: only the signed user counts", async () => {
+    const body = JSON.stringify({ initData: initData(10), user: { id: 1 }, telegram_id: 1, userId: "admin" });
+    await send({ origin: APP_URL, "sec-fetch-site": "same-origin", "content-type": "application/json" }, body);
+    expect(signInWithTelegram).toHaveBeenCalledWith(expect.objectContaining({ telegramId: 42 }));
   });
 });
 

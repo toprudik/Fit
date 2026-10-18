@@ -31,6 +31,16 @@ vi.mock("@/lib/bot-actions/act-as", () => ({
   },
 }));
 
+/** The tap limit per Telegram account: whether it allows the next tap, and what it counted. */
+const limits = vi.hoisted(() => ({ allow: true, hits: [] as [string, string][] }));
+vi.mock("@/lib/rate-limit", () => ({
+  RATE_LIMITS: { botAction: { bucket: "bot:action", limit: 30, windowSeconds: 60 } },
+  withinRateLimit: async ({ bucket }: { bucket: string }, subject: string) => {
+    limits.hits.push([bucket, subject]);
+    return limits.allow;
+  },
+}));
+
 const { POST } = await import("./route");
 
 const call = (body: unknown, authorization: string | null = `Bearer ${SECRET}`) =>
@@ -48,6 +58,24 @@ beforeEach(() => {
   user.error = null;
   user.results = {};
   user.calls = [];
+  limits.allow = true;
+  limits.hits = [];
+});
+
+describe("POST /api/bot/actions limits", () => {
+  it("answers 429 past the tap limit of the Telegram account and acts on nothing", async () => {
+    limits.allow = false;
+    const response = await call({ telegram_id: 7, data: `bky:${BOOKING}` });
+    expect(response.status).toBe(429);
+    expect(limits.hits).toEqual([["bot:action", "7"]]);
+    expect(user.calls).toEqual([]);
+  });
+
+  it("counts nothing for a caller without the bot's secret or with a bad body", async () => {
+    await call({ telegram_id: 7, data: `bky:${BOOKING}` }, "Bearer wrong");
+    await call({ telegram_id: -1, data: "bky" });
+    expect(limits.hits).toEqual([]);
+  });
 });
 
 describe("POST /api/bot/actions", () => {

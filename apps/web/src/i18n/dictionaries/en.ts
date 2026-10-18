@@ -245,6 +245,7 @@ export const en: Dictionary = {
     context: "The message comes with the screen you're writing from, the app version, language and theme. Nothing else from the screen goes along: no clients, no records.",
     send: "Send",
     failed: "Couldn't send it. Try again.",
+    tooMany: "That's a lot of messages in a row. Try again a little later.",
     signedOut: "Sign in to write to the team.",
     signIn: "Sign in",
     sentTitle: "Thanks, got it",

@@ -4364,6 +4364,9 @@ isOneToOne: false
 "purge_account":
 { Args: { "p_user": string }; Returns: (string)[]
                            },
+"rate_limit_hit":
+{ Args: { "p_bucket": string,"p_limit": number,"p_subject": string,"p_window_seconds": number }; Returns: boolean
+                           },
 "record_app_open":
 { Args: { "p_source"?: string }; Returns: undefined
                            },

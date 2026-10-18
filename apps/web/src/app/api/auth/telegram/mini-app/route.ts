@@ -6,6 +6,7 @@ import { deviceCookies, setPreferenceCookies, syncPreferences } from "@/lib/acco
 import { isSameOrigin } from "@/lib/auth/same-origin";
 import { AccountBlockedError, isAccountBlocked, signInWithTelegram } from "@/lib/auth/sign-in-with-telegram";
 import { readCookie } from "@/lib/preferences";
+import { RATE_LIMITS, withinRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { assertInitDataFresh, InitDataError, verifyInitData } from "@/lib/telegram/init-data";
 import type { TelegramIdentity } from "@/lib/telegram/identity";
@@ -67,6 +68,11 @@ export async function POST(request: Request) {
     }
 
     assertInitDataFresh(initData, { maxAgeSeconds: env.TELEGRAM_INIT_DATA_MAX_AGE });
+    // Each new session goes through Supabase Auth's admin API, whose limits are per server: one account
+    // repeating fresh sign-ins must not use them up for everyone.
+    if (!(await withinRateLimit(RATE_LIMITS.miniAppSignIn, String(identity.telegramId)))) {
+      return NextResponse.json({ error: "rate_limited" }, { status: 429, headers: { "retry-after": "600" } });
+    }
     const { userId, newAccount } = await signInWithTelegram(identity);
     // The same client reads the session cookies signInWithTelegram just wrote to this response.
     return await respond(request, supabase, { identity, userId, newAccount, fresh: true });
