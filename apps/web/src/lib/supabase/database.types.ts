@@ -3193,14 +3193,14 @@ isOneToOne: false
                   ]
                 },"trial_links": {
                   Row: {
-                    "archived_at": string | null,"created_at": string,"currency": string,"description": string | null,"duration_min": number,"expires_at": string | null,"id": string,"is_enabled": boolean,"location_id": string | null,"max_uses": number | null,"mode": Database["public"]['Enums']["session_mode"] | null,"price_minor": number,"title": string,"token": string,"trainer_id": string,"uses_count": number
+                    "archived_at": string | null,"created_at": string,"currency": string,"description": string | null,"duration_min": number,"expires_at": string | null,"id": string,"is_enabled": boolean,"location_id": string | null,"max_uses": number | null,"mode": Database["public"]['Enums']["session_mode"] | null,"on_showcase": boolean,"price_minor": number,"title": string,"token": string,"trainer_id": string,"uses_count": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "archived_at"?: string | null,"created_at"?: string,"currency": string,"description"?: string | null,"duration_min"?: number,"expires_at"?: string | null,"id"?: string,"is_enabled"?: boolean,"location_id"?: string | null,"max_uses"?: number | null,"mode"?: Database["public"]['Enums']["session_mode"] | null,"price_minor"?: number,"title": string,"token"?: string,"trainer_id": string,"uses_count"?: number
+                    "archived_at"?: string | null,"created_at"?: string,"currency": string,"description"?: string | null,"duration_min"?: number,"expires_at"?: string | null,"id"?: string,"is_enabled"?: boolean,"location_id"?: string | null,"max_uses"?: number | null,"mode"?: Database["public"]['Enums']["session_mode"] | null,"on_showcase"?: boolean,"price_minor"?: number,"title": string,"token"?: string,"trainer_id": string,"uses_count"?: number
                   }
                   Update: {
-                    "archived_at"?: string | null,"created_at"?: string,"currency"?: string,"description"?: string | null,"duration_min"?: number,"expires_at"?: string | null,"id"?: string,"is_enabled"?: boolean,"location_id"?: string | null,"max_uses"?: number | null,"mode"?: Database["public"]['Enums']["session_mode"] | null,"price_minor"?: number,"title"?: string,"token"?: string,"trainer_id"?: string,"uses_count"?: number
+                    "archived_at"?: string | null,"created_at"?: string,"currency"?: string,"description"?: string | null,"duration_min"?: number,"expires_at"?: string | null,"id"?: string,"is_enabled"?: boolean,"location_id"?: string | null,"max_uses"?: number | null,"mode"?: Database["public"]['Enums']["session_mode"] | null,"on_showcase"?: boolean,"price_minor"?: number,"title"?: string,"token"?: string,"trainer_id"?: string,"uses_count"?: number
                   }
                   Relationships: [
                     {
@@ -4168,6 +4168,9 @@ isOneToOne: false
       } },
 "get_managed_client_claim":
 { Args: { "p_claim_id": string }; Returns: Json
+                           },
+"get_showcase_trial":
+{ Args: { "p_slug": string }; Returns: string
                            },
 "get_trainer_showcase":
 { Args: { "p_slug": string }; Returns: {

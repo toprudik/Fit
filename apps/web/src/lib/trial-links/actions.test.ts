@@ -37,6 +37,14 @@ vi.mock("@/lib/supabase/server", () => ({
             write.filters.push([column, value]);
             return chain;
           },
+          neq: (column: string, value: unknown) => {
+            write.filters.push(["not", column, value]);
+            return chain;
+          },
+          then: (resolve: (value: { error: { code: string } | null }) => unknown) => {
+            db.writes.push(write);
+            return resolve({ error: db.error });
+          },
           select: async () => {
             db.writes.push(write);
             return { data: db.error ? null : Array.from({ length: db.rows }, () => ({ id: "x" })), error: db.error };
@@ -48,7 +56,7 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-const { archiveTrialLink, createTrialLink, setTrialLinkEnabled } = await import("./actions");
+const { archiveTrialLink, createTrialLink, setTrialLinkEnabled, setTrialLinkOnShowcase } = await import("./actions");
 
 const IDLE = { status: "idle" } as const;
 const ID = "4f9c2a8e-1b6d-4c3e-9a7f-2d5e8b1c0a93";
@@ -135,5 +143,35 @@ describe("switching and deleting", () => {
     expect(await setTrialLinkEnabled("nope", true)).toEqual({ failed: true });
     expect(await archiveTrialLink("nope")).toEqual({ failed: true });
     expect(db.writes).toEqual([]);
+  });
+});
+
+describe("setTrialLinkOnShowcase", () => {
+  it("takes the current link off the showcase before putting this one on", async () => {
+    expect(await setTrialLinkOnShowcase(ID, true)).toEqual({ failed: false });
+    expect(db.writes).toEqual([
+      { table: "trial_links", kind: "update", values: { on_showcase: false }, filters: [["on_showcase", true], ["not", "id", ID]] },
+      { table: "trial_links", kind: "update", values: { on_showcase: true }, filters: [["id", ID], ["archived_at", null]] },
+    ]);
+    expect(next.refresh).toHaveBeenCalled();
+  });
+
+  it("removes a link from the showcase with one write", async () => {
+    expect(await setTrialLinkOnShowcase(ID, false)).toEqual({ failed: false });
+    expect(db.writes).toEqual([
+      { table: "trial_links", kind: "update", values: { on_showcase: false }, filters: [["id", ID], ["archived_at", null]] },
+    ]);
+  });
+
+  it("fails on a bad id, a refused write or a link that is not there", async () => {
+    expect(await setTrialLinkOnShowcase("nope", true)).toEqual({ failed: true });
+    db.rows = 0;
+    expect(await setTrialLinkOnShowcase(ID, false)).toEqual({ failed: true });
+    db.rows = 1;
+    db.error = { code: "23505" };
+    expect(await setTrialLinkOnShowcase(ID, true)).toEqual({ failed: true });
+    // The refused step-down stops there: the link itself is not touched.
+    expect(db.writes.at(-1)?.filters).toEqual([["on_showcase", true], ["not", "id", ID]]);
+    expect(db.writes).toHaveLength(2);
   });
 });
