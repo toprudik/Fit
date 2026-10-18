@@ -78,3 +78,14 @@ export function checkInPathFromScan(text: string): string | null {
   const parsed = parseCheckInStartParam(param);
   return parsed ? checkInPath(parsed.sessionId, parsed.code) : parsePlaceCheckInStartParam(param);
 }
+
+/**
+ * A session's attendance as one string of "bookingId:status", sorted so that the order bookings were read in does
+ * not matter. loadSessionMarks and the trainer's session page build it the same way and compare the two.
+ */
+export function sessionMarks(bookings: { bookingId: string; status: string }[]): string {
+  return bookings
+    .map((booking) => `${booking.bookingId}:${booking.status}`)
+    .sort()
+    .join(",");
+}
