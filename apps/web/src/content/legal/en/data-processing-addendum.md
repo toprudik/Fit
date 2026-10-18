@@ -4,7 +4,7 @@
 
 Effective date: [EFFECTIVE DATE]
 
-This Data Processing Addendum ("DPA") forms part of the agreement between [OPERATOR LEGAL NAME], [REGISTERED ADDRESS], registration number [REGISTRATION NUMBER] ("DaFit", "we", "us") and each trainer who uses the Service ("Trainer", "you") under the [Terms of Service](terms-of-service.md). It applies from the moment you add data covered by section 2.
+This Data Processing Addendum ("DPA") forms part of the agreement between [OPERATOR FULL NAME], an individual, at [ADDRESS] ("DaFit", "we", "us") and each trainer who uses the Service ("Trainer", "you") under the [Terms of Service](terms-of-service.md). It applies from the moment you add data covered by section 2.
 
 > Team: not in the product yet, see product-changes. Trainers do not yet accept this DPA in the app, and no `consents` kind exists for it.
 
@@ -154,8 +154,8 @@ This Data Processing Addendum ("DPA") forms part of the agreement between [OPERA
 
 | | Controller (Trainer) | Processor (DaFit) |
 |---|---|---|
-| Name | As in the Trainer's DaFit account | [OPERATOR LEGAL NAME] |
-| Address | As provided by the Trainer | [REGISTERED ADDRESS] |
+| Name | As in the Trainer's DaFit account | [OPERATOR FULL NAME] (an individual) |
+| Address | As provided by the Trainer | [ADDRESS] |
 | Contact | The Trainer's Telegram account | [CONTACT EMAIL] |
 | Signature | Electronic acceptance in the app, with date and version | Electronic, by publication |
 

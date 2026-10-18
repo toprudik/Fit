@@ -10,7 +10,7 @@ Related documents: [Terms of Service](terms-of-service.md), [Subscription Terms]
 
 ## 1. Who we are and how to reach us
 
-1.1. The Service is run by [OPERATOR LEGAL NAME], registered at [REGISTERED ADDRESS], registration number [REGISTRATION NUMBER] ("DaFit", "we", "us").
+1.1. The Service is run by [OPERATOR FULL NAME], an individual, at [ADDRESS] ("DaFit", "we", "us").
 
 1.2. Privacy questions, requests and complaints: [CONTACT EMAIL], or the feedback form in the app (Profile, then "Report a problem / idea"). Write "Privacy" at the start of your message so it reaches the right person.
 
