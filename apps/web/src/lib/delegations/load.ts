@@ -38,11 +38,45 @@ export type TeamData = {
   clients: { coachingId: string; name: string }[];
   /** What delegates did for the owner's pairs, newest first (rule 8). */
   journal: JournalEntry[];
+  /** The owner's sessions ahead with no substitute yet, earliest first, to hand several over at once. */
+  sessions: SubstituteSession[];
 };
+
+export type SubstituteSession = { id: string; startsAt: string; title: string | null };
 
 export type JournalEntry = { at: string; action: string; delegateName: string | null; clientName: string | null };
 
 const JOURNAL_SIZE = 30;
+/** How far ahead and how many sessions the owner can pick from for one substitute invite. */
+const SUBSTITUTE_DAYS = 60;
+const SUBSTITUTE_SESSIONS = 60;
+
+/** Sessions ahead without a live substitute; a personal session is named by its client. */
+async function loadSubstituteSessions(owner: Owner, delegations: Delegation[]): Promise<SubstituteSession[]> {
+  const now = Date.now();
+  const { data, error } = await owner.supabase
+    .from("sessions")
+    .select("id, title, starts_at")
+    .eq("trainer_id", owner.userId)
+    .eq("status", "scheduled")
+    .gt("starts_at", new Date(now).toISOString())
+    .lt("starts_at", new Date(now + SUBSTITUTE_DAYS * 86_400_000).toISOString())
+    .order("starts_at")
+    .limit(SUBSTITUTE_SESSIONS);
+  if (error) fail("sessions", error);
+  const taken = new Set(
+    delegations.filter((row) => row.side === "owner" && (row.status === "pending" || row.status === "active")).map((row) => row.sessionId),
+  );
+  const free = data.filter((session) => !taken.has(session.id));
+  const untitled = free.filter((session) => !session.title).map((session) => session.id);
+  const bookings = untitled.length
+    ? await owner.supabase.from("bookings").select("session_id, coaching_id").in("session_id", untitled)
+    : { data: [], error: null };
+  if (bookings.error) fail("bookings", bookings.error);
+  const names = await clientNames(owner.supabase, (bookings.data ?? []).map((row) => row.coaching_id));
+  const client = new Map((bookings.data ?? []).map((row) => [row.session_id, names.get(row.coaching_id) ?? null]));
+  return free.map((session) => ({ id: session.id, startsAt: session.starts_at, title: session.title ?? client.get(session.id) ?? null }));
+}
 
 async function loadDelegations(owner: Owner): Promise<Delegation[]> {
   const { data, error } = await owner.supabase.rpc("my_delegations");
@@ -83,7 +117,10 @@ export async function loadTeam(): Promise<TeamData | null> {
   if (pairs.error) fail("pairs", pairs.error);
   if (journal.error) fail("delegate journal", journal.error);
   const live = new Set(pairs.data.map((pair) => pair.id));
-  const names = await clientNames(owner.supabase, [...live, ...journal.data.map((row) => row.coaching_id)]);
+  const [names, sessions] = await Promise.all([
+    clientNames(owner.supabase, [...live, ...journal.data.map((row) => row.coaching_id)]),
+    plan.data === true ? loadSubstituteSessions(owner, delegations) : Promise.resolve([]),
+  ]);
   return {
     timeZone: owner.timeZone,
     canDelegate: plan.data === true,
@@ -100,6 +137,7 @@ export async function loadTeam(): Promise<TeamData | null> {
       delegateName: row.delegate_name,
       clientName: names.get(row.coaching_id) ?? null,
     })),
+    sessions,
   };
 }
 
@@ -178,6 +216,8 @@ export type InviteDetails = {
   allClients: boolean;
   clients: number;
   sessionStartsAt: string | null;
+  /** Every session of a substitute invite still ahead, earliest first; one for a single session. */
+  sessionsStartsAt: string[];
   endsAt: string | null;
   timeZone: string;
 };
@@ -196,6 +236,7 @@ export async function loadInvite(token: string): Promise<InviteDetails | "signed
     allClients: data.all_clients,
     clients: data.clients,
     sessionStartsAt: data.session_starts_at,
+    sessionsStartsAt: data.sessions_starts_at,
     endsAt: data.ends_at,
     timeZone: owner.timeZone,
   };

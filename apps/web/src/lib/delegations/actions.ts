@@ -4,7 +4,7 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import { clientEnv } from "@/env/client";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { invitePath, isAssistantScope, isInviteToken, type AssistantScope } from "./rules";
+import { invitePath, isAssistantScope, isInviteToken, SUBSTITUTE_MAX, type AssistantScope } from "./rules";
 
 type Reason = "invalid" | "failed" | "plan" | "taken" | "not_verified" | "own" | "expired" | "not_found";
 
@@ -47,6 +47,18 @@ export async function createSubstitute(sessionId: string): Promise<DelegationAct
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("create_delegation", { p_kind: "substitute", p_session_id: sessionId }).single();
   if (error) return failed("create substitute", error);
+  refresh();
+  return { ok: true, value: { id: data.delegation_id, link: inviteLink(data.token) } };
+}
+
+/** «Подмена на несколько занятий»: one invite for the chosen future sessions. */
+export async function createSubstitutes(sessionIds: string[]): Promise<DelegationActionResult<DelegationInvite>> {
+  const ids = Array.isArray(sessionIds) ? [...new Set(sessionIds.filter(isId))] : [];
+  if (ids.length === 0 || ids.length > SUBSTITUTE_MAX) return { ok: false, reason: "invalid" };
+  if (ids.length === 1) return createSubstitute(ids[0]);
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("create_substitutions", { p_session_ids: ids }).single();
+  if (error) return error.code === "22023" ? { ok: false, reason: "invalid" } : failed("create substitutes", error);
   refresh();
   return { ok: true, value: { id: data.delegation_id, link: inviteLink(data.token) } };
 }
