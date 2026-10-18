@@ -3,6 +3,7 @@ import { CalendarOff } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { CloseDaysForm, ReopenButton, SlotToggle } from "@/components/schedule/slot-controls";
+import { WaitlistQueue } from "@/components/schedule/waitlist-queue";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,7 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
+import { loadOpenSlotQueues } from "@/lib/bookings/slot-waitlist";
 import { loadScheduleOwner } from "@/lib/schedule/load";
 import { addDays, formatMinutes, localParts, localToUtc, today as todayIn } from "@/lib/schedule/time";
 import { isClosedMarker, type SlotRow } from "@/lib/schedule/week";
@@ -70,6 +72,11 @@ async function Slots() {
     return { id: slot.id, label: from === to ? from : interpolate(copy.closedRange, { from, to }) };
   });
 
+  const openSlots = data.filter((slot) => !isClosedMarker(slot) && slot.status === "open" && slot.starts_at > now());
+  const queues = await loadOpenSlotQueues(owner, openSlots.map((slot) => slot.id));
+  const time = new Intl.DateTimeFormat(intl, { hour: "2-digit", minute: "2-digit", timeZone });
+  const slotTime = new Intl.DateTimeFormat(intl, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone });
+
   const byDay = new Map<string, { id: string; label: string; open: boolean }[]>();
   for (const slot of data) {
     if (isClosedMarker(slot) || slot.starts_at >= until) continue;
@@ -82,6 +89,31 @@ async function Slots() {
   return (
     <div className="flex flex-col gap-10">
       <CloseDaysForm today={today} timeZone={timeZone} />
+
+      {queues.size > 0 ? (
+        <section aria-labelledby="slot-queues" className="flex flex-col gap-4">
+          <h2 id="slot-queues" className="px-1 text-title-3">
+            {copy.queues}
+          </h2>
+          <p className="px-1 text-subhead text-ink-2">{copy.queuesText}</p>
+          {openSlots
+            .filter((slot) => queues.has(slot.id))
+            .map((slot) => {
+              const entries = queues.get(slot.id) ?? [];
+              return (
+                <WaitlistQueue
+                  key={slot.id}
+                  header={slotTime.format(new Date(slot.starts_at))}
+                  entries={entries.map((entry) => ({
+                    ...entry,
+                    offeredUntil: entry.offerExpiresAt ? time.format(new Date(entry.offerExpiresAt)) : null,
+                  }))}
+                  canOffer={!entries.some((entry) => entry.status === "offered")}
+                />
+              );
+            })}
+        </section>
+      ) : null}
 
       {markers.length > 0 ? (
         <ListGroup header={copy.closedHeader}>

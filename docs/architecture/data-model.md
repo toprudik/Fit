@@ -765,7 +765,7 @@ create index on public.slots (starts_at) where status = 'open';
 -- booking_preview(slot_id) отдаёт экрану подтверждения то же решение и остаток абонемента после записи.
 -- book_slot(slot_id) создаёт персональное занятие на слоте (ссылка онлайн берётся из окна шаблона), слот
 --   становится booked, запись confirmed с reserved_pass_id или requested (source client_slot); тренеру Т1 или Т2.
--- decide_booking(id, accept, reason) тренер подтверждает запрос (К2, абонемент подбирается заново) или
+-- decide_booking(id, accept, reason) тренер подтверждает запрос (К2, абонемент подбирается заново; payload.pay = pass, single или debt говорит клиенту, чем оплатится) или
 --   отклоняет (К3); withdraw_booking_request(id) клиент отзывает запрос, тренеру Т3. Занятие отклонённого или
 --   отозванного запроса отменяется, слот снова open, если время впереди и его не закрыли и не заняли.
 -- pg_cron «booking-requests-expire» (каждые 5 минут) переводит запросы без ответа к началу занятия в expired, К4.
@@ -784,6 +784,8 @@ create index on public.slots (starts_at) where status = 'open';
 --   materialize_recurrence и roll_recurrences раскладывают групповой повтор так же, как персональный.
 --   Название группы обязательно при создании; триггер sessions_keep_group_title не даёт стереть его потом.
 -- add_group_participant(session, coaching) тренер добавляет клиента: запись сразу confirmed, клиенту К1.
+-- add_group_participant_extra(session, coaching) то же вне очереди (волна 2 §9-7): полное занятие получает одно место
+--   больше (до 100), запись клиента в очереди этого занятия становится accepted.
 -- bookable_group_sessions(trainer, from, to) отдаёт клиенту группы тренера с open_for_booking, занятыми местами
 --   и своей записью; private.bookable_group_session проверяет пару, время, места и что клиент ещё не записан.
 -- group_booking_preview(session) и book_group_session(session) решают оплату через
@@ -2045,6 +2047,7 @@ create index on public.delegation_clients (coaching_id);
 ```
 
 Подмена покрывает пары всех записей своего занятия; при принятии `sessions.conducted_by` = делегат.
+Клиент видит в своих записях, кто проводит занятие вместо тренера: имя отдаёт `public.my_session_substitutes(session_ids)` только по своим записям, потому что профиль подменяющего клиенту не виден.
 
 Как сделано (миграция `20261017090713_delegations.sql`): `delegate_trainer_id` пуст, пока приглашение не принято по одноразовой ссылке (`invite_hash`, sha256 токена); `scopes` никогда не содержат `passes` и `payments` (PRD волны 3 §1 правило 3), поэтому деньги видит только владелец, а чтение `ledger_entries` идёт по scope `passes`. Подмене выдаются `attendance` и `workouts` до конца занятия, анкета участников идёт через `can_view('intake')`. Помощник на всех клиентов (`all_clients`) проходит `acts_for_trainer` для строк тренера без пары (расписание). Выключатель клиента «доступ помощника к прогрессу» хранится в `assistant_progress_blocks (coaching_id)`. Действия делегата в `booking_events` помечаются `actor_role = 'delegate'` и `payload.on_behalf_of`.
 

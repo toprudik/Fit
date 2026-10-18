@@ -3822,6 +3822,9 @@ isOneToOne: false
 "add_group_participant":
 { Args: { "p_coaching_id": string,"p_session_id": string }; Returns: string
                            },
+"add_group_participant_extra":
+{ Args: { "p_coaching_id": string,"p_session_id": string }; Returns: string
+                           },
 "add_water":
 { Args: { "p_day": string,"p_ml": number }; Returns: string
                            },
@@ -4318,6 +4321,11 @@ isOneToOne: false
 "my_plan":
 { Args: Record<PropertyKey, never>; Returns: {
               "active_clients": number,"client_limit": number,"expires_at": string,"plan_code": string,"side": Database["public"]['Enums']["plan_side"]
+            }[]
+                           },
+"my_session_substitutes":
+{ Args: { "p_session_ids": (string)[] }; Returns: {
+              "name": string,"session_id": string
             }[]
                            },
 "my_streaks":
