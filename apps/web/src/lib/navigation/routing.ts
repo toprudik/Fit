@@ -1,5 +1,6 @@
 import { negotiateLocale, type Locale } from "@/i18n/config";
 import { CONSENT_PATH } from "@/lib/consent/beta-terms";
+import { isLegalPath } from "@/lib/legal/documents";
 import { DEFAULT_ZONE, isZone, zoneFromPath, type Zone } from "./zones";
 
 export type RouteInput = {
@@ -66,7 +67,10 @@ export function adminDeniedPath(locale: Locale): string {
   return `/${locale}/admin-not-found`;
 }
 
-/** Screens a signed-in user opens before accepting the beta terms: the terms themselves and the login screen. */
+/**
+ * Screens a signed-in user opens before accepting the beta terms: the terms themselves, the login screen
+ * and the legal documents the terms point to.
+ */
 const BEFORE_CONSENT: readonly string[] = [CONSENT_PATH, "/login"];
 
 /**
@@ -75,7 +79,7 @@ const BEFORE_CONSENT: readonly string[] = [CONSENT_PATH, "/login"];
  * survives the acceptance (rule 5). Null for the screens open before it.
  */
 export function consentRedirect(pathname: string, search: string): string | null {
-  if (BEFORE_CONSENT.includes(pathname)) return null;
+  if (BEFORE_CONSENT.includes(pathname) || isLegalPath(pathname)) return null;
   return `${CONSENT_PATH}?next=${encodeURIComponent(`${pathname}${search}`)}`;
 }
 

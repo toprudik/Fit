@@ -6,6 +6,7 @@ import {
   growthText,
   lastFullWeeks,
   moneyCell,
+  channelName,
   ownerCsv,
   ownerWeeks,
   retentionShares,
@@ -106,10 +107,15 @@ describe("owner metrics", () => {
       {
         summary,
         success: { clients: 10, clients_with_streak: 4, trainers: 5, trainers_offer_live: 2, trainers_offer_ever: 3 },
+        channels: [
+          { source: "vk", campaign: "autumn", users: 7, trainers: 2, clients: 4 },
+          { source: "promo-1", campaign: null, users: 3, trainers: 0, clients: 3 },
+          { source: null, campaign: null, users: 110, trainers: 18, clients: 50 },
+        ],
         weekly: [week("2026-10-05", { new_users: 6, turnover: { RUB: 100_000 } })],
         cohorts: [{ cohort_week: "2026-10-05", size: 4, retained: [4, 2] }],
       },
-      { ...copy.csv, sources: copy.sources },
+      { ...copy.csv, sources: copy.sources, channelNames: copy.channels.names, noChannel: copy.channels.none },
       "ru",
     );
     const lines = csv.slice(1).split("\r\n");
@@ -121,8 +127,22 @@ describe("owner metrics", () => {
     expect(lines).toContain("Клиентов с недельной серией;4");
     expect(lines).toContain("Доля клиентов с недельной серией;40%");
     expect(lines).toContain("Доля тренеров с действующей акцией;40%");
+    expect(lines).toContain("Канал;Кампания;Аккаунтов;Тренеров;Клиентов с тренером");
+    expect(lines).toContain("ВКонтакте;autumn;7;2;4");
+    expect(lines).toContain("promo-1;;3;0;3");
+    expect(lines).toContain("Без метки;;110;18;50");
     expect(lines.find((line) => line.startsWith("2026-10-05;6;"))).toContain("1000,00 RUB");
     expect(lines).toContain("Неделя;Людей;Неделя 0;Неделя 1");
     expect(lines).toContain("2026-10-05;4;100%;50%");
+  });
+});
+
+describe("channelName", () => {
+  const names = { vk: "ВКонтакте" };
+  it("names a known channel, keeps an unknown label and adds the campaign", () => {
+    expect(channelName({ source: "vk", campaign: null }, names, "Без метки")).toBe("ВКонтакте");
+    expect(channelName({ source: "vk", campaign: "autumn" }, names, "Без метки")).toBe("ВКонтакте · autumn");
+    expect(channelName({ source: "promo-1", campaign: null }, names, "Без метки")).toBe("promo-1");
+    expect(channelName({ source: null, campaign: null }, names, "Без метки")).toBe("Без метки");
   });
 });
