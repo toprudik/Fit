@@ -15,6 +15,7 @@ import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { formatInviteCode, redeemPath } from "@/lib/trainer-invites/code";
+import { referralCounts } from "@/lib/trainer-referrals/counts";
 import { loadTrainerReferral } from "@/lib/trainer-referrals/load";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -44,6 +45,8 @@ async function InviteTrainers() {
   if (!data) return <EmptyState icon={UserPlus} title={copy.title} description={copy.notTrainer} />;
 
   const date = new Intl.DateTimeFormat(INTL_LOCALE[locale], { day: "numeric", month: "long", timeZone: data.timeZone });
+  const number = new Intl.NumberFormat(INTL_LOCALE[locale]);
+  const counts = referralCounts(data.trainers);
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2 px-1">
@@ -59,6 +62,11 @@ async function InviteTrainers() {
         <ReferralShare link={new URL(redeemPath(data.code), clientEnv.NEXT_PUBLIC_APP_URL).toString()} shareText={copy.shareText} />
         <p className="px-1 text-footnote text-ink-2 tabular-nums">{interpolate(copy.code, { code: formatInviteCode(data.code) })}</p>
       </div>
+      <ListGroup header={copy.countsHeader}>
+        <ListRow title={copy.countsInvited} value={number.format(counts.invited)} />
+        <ListRow title={copy.countsActive} subtitle={copy.countsActiveHint} value={number.format(counts.active)} />
+        <ListRow title={copy.countsBonuses} value={number.format(counts.bonusesPending)} />
+      </ListGroup>
       <ListGroup header={copy.listHeader}>
         {data.trainers.length ? (
           data.trainers.map((trainer) => (

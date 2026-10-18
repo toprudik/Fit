@@ -141,6 +141,32 @@ describe("dispatchOutbox", () => {
     expect(h.recorded[0].result).toEqual({ outcome: "failed", error: "no_template" });
   });
 
+  it("fails a row its template can't render and sends the rows after it", async () => {
+    const rows = [row({ chat_id: 1 }), row({ chat_id: 2 })];
+    const h = harness([rows]);
+    const render = h.deps.render;
+    h.deps.render = (claimed, options) => {
+      if (claimed.outbox_id === rows[0].outbox_id) throw new RangeError("Invalid time value");
+      return render(claimed, options);
+    };
+    const summary = await dispatchOutbox(h.deps);
+    expect(h.recorded.map((r) => r.result)).toEqual([
+      { outcome: "failed", error: "render_failed" },
+      { outcome: "sent", messageId: 1 },
+    ]);
+    expect(summary).toMatchObject({ sent: 1, failed: 1 });
+  });
+
+  it("fails a malformed date in a real template instead of stopping the run", async () => {
+    const { renderMessage } = await import("./messages");
+    const rows = [row({ kind: "session_reminder", payload: { starts_at: "not a date" } }), row({ chat_id: 2 })];
+    const h = harness([rows]);
+    h.deps.render = (claimed, { group }) =>
+      claimed.kind === "bot_test" ? { text: "ok", buttons: [] } : renderMessage(claimed, { appUrl: "https://fit.example", group });
+    await dispatchOutbox(h.deps);
+    expect(h.recorded.map((r) => r.result.outcome)).toEqual(["failed", "sent"]);
+  });
+
   it("hands back what it could not send in time", async () => {
     const rows = [row({ chat_id: 1 }), row({ chat_id: 2 })];
     const h = harness([rows], () => {

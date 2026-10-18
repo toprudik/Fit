@@ -6,6 +6,39 @@ export const en: Dictionary = {
     appName: "DaFit",
     description: "DaFit helps personal trainers manage their schedule and keep track of client passes and progress.",
   },
+  linkPreview: {
+    showcase: {
+      title: "{name}, a trainer on DaFit",
+      generic: "A trainer on DaFit",
+      kicker: "Trainer page",
+      description: "Specialties, prices and a trial session to book. Your schedule, passes and progress then stay in one place.",
+    },
+    trial: {
+      title: "Trial session with {name}",
+      generic: "Trial session on DaFit",
+      kicker: "Trial session",
+      minutes: "{minutes} min",
+      description: "Pick a time that suits you and book a trial workout on DaFit.",
+    },
+    referral: {
+      title: "Join {name} on DaFit",
+      generic: "Join a trainer on DaFit",
+      kicker: "Invite from a friend",
+      description: "A friend invites you to train with their trainer. Your schedule, pass and progress stay in one place.",
+    },
+    client: {
+      title: "{name} invites you to DaFit",
+      generic: "A trainer invites you to DaFit",
+      kicker: "Trainer invite",
+      description: "Become a client on DaFit: your schedule, pass and progress stay in one place.",
+    },
+    trainerInvite: {
+      title: "You're invited to coach on DaFit",
+      generic: "You're invited to coach on DaFit",
+      kicker: "For trainers",
+      description: "Run your schedule, client passes and progress in one app, right inside Telegram.",
+    },
+  },
   common: {
     back: "Back",
     close: "Close",
@@ -226,6 +259,192 @@ export const en: Dictionary = {
     },
   },
   /** Pairs: the trainer's clients and client card, the client's trainer card, notes, ending a pair (PRD wave-1 §2.5, PRIV-5). */
+  /** Help (FAQ): /trainer/help and /client/help. `common` follows the role's sections on both screens. Answers describe only what the app does today. */
+  help: {
+    title: "Help",
+    lead: "Answers to common questions about DaFit. Tap a question to open the answer.",
+    moreText: "Answers to common questions",
+    contents: "Topics",
+    askTitle: "Didn't find an answer?",
+    askText: "Write to us through feedback. We read every message and will reply in the bot if we need more details.",
+    askAction: "Write to DaFit",
+    trainer: [
+      {
+        title: "Getting started",
+        items: [
+          { q: "How do I become a trainer in DaFit?", a: "The trainer zone opens with an invite from the DaFit team or from another trainer. Open your profile, choose “I have a trainer invite”, enter the code and tap “Check code”, then “Become a trainer”. There is no approval to wait for: the zone opens right away, followed by the profile setup." },
+          { q: "What goes into the profile setup?", a: "It asks for your name and a few words about you, how you train, where, your time zone and currency, the cancellation deadline, a payment link, your price grid and documents for verification. Places, the payment link, prices and documents can be skipped and added later. You edit the profile under “More”, “Trainer profile”, and payment links and prices in “Money”." },
+          { q: "Why get verified?", a: "You can work with clients without it. Verification adds the “Verified” badge to your showcase and invite page, and only verified trainers can accept an invite to another trainer's team. Upload documents in your profile under “Verification”: up to 5 JPG, PNG or PDF files, up to 10 MB each. Only you and DaFit admins see them." },
+          { q: "What happens if verification is declined?", a: "Your public showcase is hidden and shows “Trainer unavailable”. Everything else keeps working: clients, Pro, your client link, QR, code and trial links. You can submit documents again with “Send again”, and the showcase opens while they are being checked." },
+          { q: "How do I switch between the trainer and client zones?", a: "Open your profile from the avatar and pick “Trainer” or “Client” in the “Zone” switch. On a wide screen it is in the side menu too. DaFit opens the zone you used last. You can also train with another trainer as a client." },
+        ],
+      },
+      {
+        title: "Clients",
+        items: [
+          { q: "How do I add a client?", a: "Open “More”, “QR and link”. You will find a QR code, a link and a trainer code of 6 letters and digits. The client opens the link or QR, or enters the code in DaFit, and taps “Become a client”. Nothing needs confirming: they appear under “Clients” right away, and the bot tells you about the new client." },
+          { q: "Can I work with a client who has no Telegram?", a: "Yes. Under “Clients” tap “Add a client”, then “Add a client manually”. With such a card you keep sessions, passes, payments, notes and measurements, entering everything yourself. This client gets no messages." },
+          { q: "A client without an account came through my link. How do I keep their history?", a: "The bot asks whether you have a card for this person and shows “Same person” and “New client”. In the app pick the card and tap “Merge”: sessions, passes, payments, notes and measurements move to their account. A merge can't be undone. If you have several cards, you can only choose the right one in the app." },
+          { q: "How many clients can I have for free?", a: "Up to 3 on Free, and cards without an account count too. Archiving a client doesn't free a place, only ending the work together does. Pro has no limit. If Pro ends, your current clients stay, but you can't add new ones." },
+          { q: "How do I change my link if it went to the wrong person?", a: "In “QR and link” tap “Reissue link”. The old link, QR and code stop working at once, and clients already with you stay." },
+          { q: "What can I see about a client?", a: "The client decides, separately for each trainer. Measurements and their own workouts are open by default, progress photos and the intake form stay closed until the client opens them. You see the food diary and activity while the client trains with you. You never see other trainers' clients." },
+          { q: "Does the client see my notes?", a: "No, by default only you see a note. The “Show to the client” switch opens it to the client, and you can turn it off again." },
+          { q: "How do I contact a client?", a: "“Message” on the client card opens a Telegram chat. If the client has no username, you get “Ask to get in touch” instead: the bot passes on the request and, if the client agrees, sends you their contact. You can ask again after 24 hours. DaFit has no chat of its own." },
+          { q: "How do I stop working with a client?", a: "On the client card tap “Stop working with this client”. Future sessions are cancelled without charges, the client gets a message, and both of you keep the history of sessions and payments. The client can come back through your link or code." },
+        ],
+      },
+      {
+        title: "Schedule and booking",
+        items: [
+          { q: "How do I open booking to clients?", a: "Under “Schedule” open “Week template” and add windows: day, time, session length and format, in person or online. DaFit cuts the windows into slots and opens them the chosen number of weeks ahead, usually 4. Clients see free time 14 days ahead." },
+          { q: "How do I schedule a session myself?", a: "Tap “Session” in the schedule and choose the client, date and time. A session you schedule is confirmed at once, and the client gets a message. “Every week” makes a series up to a date or for a set number of sessions." },
+          { q: "How do group sessions work?", a: "In the session form pick “Group”, give it a name and set from 2 to 100 places. Clients can book themselves, or only you add participants. When it is full you can “Add out of turn”, which adds one more place." },
+          { q: "When is a booking confirmed automatically, and when do I get a request?", a: "If the client has a fitting pass or you allowed them to book in debt, the booking is confirmed at once. Otherwise you get a request: confirm or decline it in the app or with the buttons in the bot. A request with no answer closes by itself when the session starts. Trial sessions always come as requests." },
+          { q: "How does the cancellation deadline work?", a: "You pick it in your trainer profile: 6, 12, 24 or 48 hours, 24 by default. Before the deadline a client cancels for free, after it one session is charged. The rule is the same for all your clients. When you cancel, nothing is ever charged, and the client sees your reason." },
+          { q: "How do I close days for a holiday?", a: "In the schedule open “Slots” and tap “Close days”. Free slots on those days disappear. Sessions already scheduled stay, and the app lists them so you can move or cancel them." },
+          { q: "What is the waitlist?", a: "When a group is full or a slot is taken, a client can join the queue. If a place opens up, the bot offers it to the first person in line. They have 30 minutes to answer, or 10 minutes if the session is less than 3 hours away. You can offer the place to anyone in the queue yourself." },
+          { q: "How do I hand a session to another trainer?", a: "That is a substitute, available on Pro. On the session page tap “Hand over to a substitute”, and for several sessions open “More”, “Team”. Only a trainer verified by DaFit can accept. Clients get a message and can cancel without a charge until the start. The substitute doesn't see passes or payments." },
+        ],
+      },
+      {
+        title: "Attendance and QR",
+        items: [
+          { q: "Do I need to mark every session?", a: "No. After a session ends, confirmed bookings become “Took place” and are charged automatically. Only mark what went wrong: “No-show” charges the session, and “Didn't happen” removes the charge and needs a reason." },
+          { q: "How do I forgive a charge?", a: "Tap “Forgive” on the session page, in the pass or right in the bot message about a late cancellation. The session goes back to the pass or reduces the debt. A charge can be forgiven once, and forgiving can't be undone. For other fixes the pass has “Adjustment”." },
+          { q: "How does QR check-in work?", a: "On the session page open “Check-in QR” and show the code to clients. It changes every 15 seconds, so a screenshot won't work. Check-in is open from 30 minutes before the start until 15 minutes after the end. For a gym there is a permanent code under “More”, “Gym QR”, which you can print. DaFit doesn't ask for location." },
+        ],
+      },
+      {
+        title: "Passes and money",
+        items: [
+          { q: "How do I set prices?", a: "In “Money” open “Packages and prices”. “Price grid template” creates a single session and packages of 5, 10 and 20 sessions. Clients see the price per session, the saving and the “Best value” label. A new price doesn't change passes you have already sold." },
+          { q: "How do I sell a pass?", a: "On the client card open “Passes” and tap “Sell a pass”, from a package or on your own terms. Tick “Payment received” if the money has already arrived. If the client had a debt, the new pass pays it off first. A client can't buy a pass on their own, you always issue it." },
+          { q: "Can I freeze a pass?", a: "Yes, with “Freeze” and the first and last day. Each frozen day extends the pass by a day, and no sessions are charged to it on those days. You can also “Change expiry” or void the pass, both need a reason." },
+          { q: "How does a client pay me?", a: "In the beta DaFit doesn't take money: the client pays you directly. Add payment links in “Packages and prices”, and the client gets a “Pay” button. When the client taps “I paid”, you get a message. Check that the money arrived and confirm the payment. You can also record a payment yourself under the client's “Payments”." },
+          { q: "I made a mistake in a payment. How do I fix it?", a: "Open the payment and tap “Correct” or void it, a reason is required. The old entry stays in the history, and the client sees the change. A payment can't be deleted quietly." },
+          { q: "Where does a debt come from?", a: "A debt appears when a session is charged without a fitting pass: a session that took place, a no-show or a late cancellation. It is valued at your single session price. A new pass pays it off automatically. To let a client book without a paid balance, turn on “Allow booking in debt” on their card. It is off by default." },
+          { q: "Which currency is used?", a: "Your currency as a trainer: rubles, dollars, euros or tenge. It is the same for all packages and passes and is changed in your trainer profile, in “Time zone and currency”. DaFit doesn't issue receipts or invoices." },
+        ],
+      },
+      {
+        title: "Trials, showcase and growth",
+        items: [
+          { q: "How do I share a trial session link?", a: "In “QR and link” open “Trial links” and create a link: a title, what happens in the session, length, price (0 means free), format and place. The person picks a time, signs in with Telegram and sends a request, and you confirm it. Each person can have one trial with you." },
+          { q: "What is the showcase?", a: "Your public page: name, photo, about you, places, prices and a “Become a client” button. Anyone can open it without signing in. Set it up under “More”, “Showcase”: the address, which packages to show and an on/off switch. The showcase is available on the free plan too." },
+          { q: "Who sees reviews about me?", a: "A client can leave a review after three sessions that took place. It is seen by the author, you and the DaFit team, and reviews are not shown publicly anywhere yet. You can reply once and edit the reply later. If a review is unfair, tap “Dispute” and the DaFit team will check it." },
+          { q: "How does “Bring a friend” work?", a: "It is an offer for your clients on Pro. You set how many sessions a client gets for a friend and how many the friend gets. The bonus is added to the active pass after the friend's first payment that you record in DaFit. Only people who haven't trained with you before count." },
+          { q: "What does “Invite a trainer” give me?", a: "A link for trainers you know, and it works on the free plan too. You get a bonus when the invited trainer buys a plan. Plans aren't sold in the beta, so bonuses wait for now." },
+        ],
+      },
+      {
+        title: "Pro, groups and team",
+        items: [
+          { q: "What does Pro give and how do I get it?", a: "Pro removes the client limit and opens analytics, finance with the price simulator, groups with broadcasts, assistants and substitutes, the “Bring a friend” offer and CSV export. Pro isn't sold in the beta: on a locked feature tap “Request access”, an admin grants it, and the bot lets you know. See your plan in the profile under “My plan”." },
+          { q: "How are groups different from group sessions?", a: "Group sessions live in the schedule and work on any plan. Groups under “More” are client segments on Pro: a goal, a nutrition target template, analytics, challenges and broadcasts, up to 5 broadcasts a day. Clients don't see who else is in a group." },
+          { q: "How do I add an assistant?", a: "On Pro open “More”, “Team” and tap “Add an assistant”. Choose what they can do, which clients they handle and until when. An assistant never sees passes, payments, debts or prices. Everything they do shows up in the “Assistants' log”, and you can revoke access at any time." },
+          { q: "What does analytics show?", a: "On Pro: attendance, cancellations and no-shows, money earned and received, debts, passes running out, clients who may leave, and clients' progress and nutrition. There is also a price increase simulator and CSV export. The simulator only calculates, it doesn't change your prices in DaFit." },
+          { q: "How do I start a challenge?", a: "A challenge starts from a group on Pro. It can count workouts, steps, days with a diary or days on target, and weight and photos are never part of it. Clients join if they want to and appear on the leaderboard only when they turn it on themselves, under an alias if they like." },
+        ],
+      },
+      {
+        title: "Notifications",
+        items: [
+          { q: "Which notifications do trainers get?", a: "All notifications come through the bot: a new booking or request, cancellations, a new client, a client's pass running out and the morning summary, at 08:00 by default. Trainers get no reminder before each session, the summary covers that. The summary time, quiet hours and message types are set in “Settings”, “Notifications”." },
+          { q: "How do I set reminders for clients?", a: "New clients get reminders 1 day and 1 hour before a session by default. You change this in the notification settings under “Reminders for new clients”. The change doesn't affect current clients: each client sets their own reminders, up to three." },
+          { q: "How do I add sessions to my calendar?", a: "In “Settings”, “Calendar” tap “Connect calendar” and add the link to Google, Apple or Outlook. The link is shown once, and a lost one can only be reissued. Sessions go one way, from DaFit to the calendar, and the calendar itself decides how often it refreshes." },
+        ],
+      },
+    ],
+    client: [
+      {
+        title: "Getting started",
+        items: [
+          { q: "How do I start training with a trainer?", a: "Open your trainer's link or QR and tap “Become a client”. If you have no link, tap “Enter a trainer code” and type the code of 6 letters and digits. There is nothing to wait for, the trainer sees you among their clients right away." },
+          { q: "Can I train with several trainers?", a: "Yes. Under “Trainers” tap “Add a trainer”. Each trainer has their own sessions, passes and their own settings for what they see." },
+          { q: "What is the intake form and who sees it?", a: "The intake form holds your goals, health and the PAR-Q questions. You fill it in once for all trainers, and only those you allow can see it. When you join a trainer, DaFit asks: “Show your intake form to your trainer?”. Until you answer, the trainer doesn't see it. You can change your choice in “What your trainer sees”." },
+          { q: "It says the trainer can't take new clients. What now?", a: "Your trainer is on the free plan and all places are taken. Write to them, and when a place opens up, open their link again." },
+          { q: "How do I stop training with a trainer?", a: "Open the trainer under “Trainers” and tap “Stop training with this trainer”. Future sessions are cancelled without charges, and the trainer no longer sees your intake form, measurements and photos. The history of sessions and payments stays." },
+        ],
+      },
+      {
+        title: "Booking and sessions",
+        items: [
+          { q: "How do I book a session?", a: "Tap “Book a session” on the home screen or under “Sessions”. You see your trainer's free time 14 days ahead. If you have a fitting pass, the booking is confirmed at once, otherwise a request goes out and the trainer confirms or declines it. If the trainer doesn't answer before the start, the request closes by itself." },
+          { q: "Why does it say “on your trainer's clock” next to the time?", a: "DaFit shows times in your time zone. If your trainer is in another zone, their time is shown next to it, so neither of you gets it wrong." },
+          { q: "How do I cancel a booking?", a: "Open the booking and tap “Cancel booking”. The booking shows until when cancelling is free. After that, “Cancel with a charge” charges one session. Once the session has started it can't be cancelled. The bot's reminder has a cancel button too." },
+          { q: "Can I move a session?", a: "Yes, with “Move” on a confirmed personal booking before the cancellation deadline. The new time is confirmed by the same rules as a normal booking. Group and trial sessions can't be moved, but you can cancel and book again." },
+          { q: "It's full. Can I wait for a place?", a: "Tap “Join the waitlist”. If a place opens up, the bot offers it in turn. You have 30 minutes to answer, or 10 minutes if the session is less than 3 hours away." },
+          { q: "How do I check in with a QR code?", a: "In Telegram open the booking and tap “Check in by QR”, in a browser scan the code with your phone camera. The code on the trainer's screen changes every 15 seconds, so a screenshot won't work." },
+          { q: "Another trainer will run my session. What does that mean?", a: "Your trainer handed the session to a substitute, and you got a message about it. Charges follow your trainer's rules, and you can cancel such a booking without a charge right up to the start." },
+          { q: "Where is my homework?", a: "Under “Sessions”, in “Homework”. Mark it “Done” with a comment for your trainer, or log the sets, and they are saved as a workout. The bot reminds you on the due day." },
+          { q: "How do I set up reminders?", a: "In “Settings”, “Notifications” you can choose up to three reminders for each trainer: ready options or your own time. Quiet hours and the message types you can turn off are there too." },
+        ],
+      },
+      {
+        title: "Passes and payment",
+        items: [
+          { q: "Where can I see my pass?", a: "On the home screen in the passes block: sessions left, expiry, debt, payments and the history of charges." },
+          { q: "How do I pay for sessions?", a: "The money goes straight to your trainer, DaFit doesn't take it. “Pay” opens the payment method your trainer added. After paying tap “I paid”, and the trainer confirms it once the money arrives. If there is no button, ask your trainer how they prefer to be paid." },
+          { q: "Can I buy a pass in the app?", a: "No, your trainer issues passes. Agree with them, and the pass appears on your home screen." },
+          { q: "What is a debt?", a: "A debt appears when a session is charged without a fitting pass: you came, didn't come or cancelled late. A new pass pays it off automatically. If a charge looks wrong, write to your trainer: they can forgive it." },
+        ],
+      },
+      {
+        title: "Progress",
+        items: [
+          { q: "How do I log my weight and measurements?", a: "Under “Progress” tap “Add measurement” and fill in what you measured. Weight is in kilograms, measurements in centimetres. Your trainer can add measurements too, and only the person who added an entry can change it." },
+          { q: "Are progress photos safe?", a: "Your face is blurred right on your phone before upload, and only the blurred copy reaches the server. You can paint over anything else with the brush. Only you see the photos until you open “Progress photos” to a trainer." },
+          { q: "How many photos can I upload?", a: "A set is photos from one date, up to three angles: front, side and back. For free you can start one new set a month. There is no limit on Premium or if your trainer is on Pro. In the beta Premium is free, tap “Request access”." },
+          { q: "What are streaks, badges and milestones?", a: "Streaks count weeks with workouts, days with a food diary and days on your step target. Badges come for sessions, streaks, records and challenges. Milestones mark 10, 25, 50 and 100 sessions with one trainer. All of it is under “Progress”, in “Streaks and badges”." },
+          { q: "What is the monthly summary?", a: "On the first of each month DaFit puts together last month: sessions, workouts, records, measurements, nutrition and activity. Only you see it, and “Send to your trainer” shares it. You can turn it into a story card. Your weight appears on the card only if you confirm it yourself." },
+          { q: "How do I take part in a challenge?", a: "If your trainer starts a challenge for your group, the bot invites you, and you decide whether to tap “Join”. You appear on the leaderboard only if you turn on “Show me on the leaderboard”, under an alias if you like. With an alias other participants don't see your photo. You can leave at any time." },
+        ],
+      },
+      {
+        title: "Diary and nutrition",
+        items: [
+          { q: "How do I log food?", a: "Under “Diary” open the food diary and tap “Add food”. Find a product by searching Open Food Facts, scan a barcode, log just the calories or pick one of your own foods and dishes. “Same as yesterday” repeats a meal from the day before." },
+          { q: "The barcode scanner doesn't work. What can I do?", a: "The camera doesn't scan in every browser or Telegram app. Type the barcode digits by hand. If the product isn't in the catalogue, create it, and next time it is found at once." },
+          { q: "How do I work out my calorie target?", a: "Open “Goal and target”, choose a goal and fill in the calculator. It uses the Mifflin-St Jeor formula. The result becomes your target after “Make it my target”. If your trainer set a target, the diary uses theirs. The formula isn't meant for under 18s, the trainer sets the target then." },
+          { q: "How do I log my own workout?", a: "Under “Diary” log a workout: exercises, sets, reps, weight and time. It is free and unlimited. Your trainer sees your workouts if “Your own workouts” is open to them." },
+          { q: "How are steps, water and sleep counted?", a: "You can enter steps by hand, or send them automatically from an iPhone with the “Shortcuts” app and a token from the activity screen. Android, watches and fitness apps can't be connected yet. Water and sleep are entered by hand." },
+          { q: "How do I reply to my trainer's comment?", a: "A comment on your day arrives in the bot and shows in the diary. “Reply” opens a chat with your trainer in Telegram." },
+        ],
+      },
+      {
+        title: "What your trainer sees",
+        items: [
+          { q: "How do I hide something from my trainer?", a: "Under “Trainers” open the trainer and choose “What your trainer sees”. There are four switches: “Measurements”, “Progress photos”, “Your own workouts” and “Intake form”. They work at once and only for that trainer. Your trainer sees the food diary and activity while you train with them, and these can't be hidden separately yet." },
+          { q: "Do my trainer's assistants see me?", a: "An assistant sees only what you opened to your trainer, and only within their rights. On “What your trainer sees” you can turn off “Assistants see progress and nutrition”. Assistants never see amounts or payments." },
+          { q: "Which of my trainer's notes can I see?", a: "Only the ones your trainer chose to show you. They are on the trainer's card, in “Notes from the trainer”." },
+        ],
+      },
+      {
+        title: "Reviews, friends and Premium",
+        items: [
+          { q: "How do I review my trainer?", a: "After three sessions that took place, “Leave a review” appears on the trainer's card: a rating and a few words. You, the trainer and the DaFit team see the review. You can edit or delete it." },
+          { q: "How do I bring a friend?", a: "If your trainer runs an offer, their card has “Bring a friend” with your own link. Bonus sessions are added after your friend's first payment." },
+          { q: "What does Premium give?", a: "Right now Premium removes the limit on progress photos. Everything you need to work with a trainer is free: booking, passes, reminders, workouts, progress and the food diary. In the beta Premium is free with the “Request access” button." },
+        ],
+      },
+    ],
+    common: [
+      {
+        title: "Account and privacy",
+        items: [
+          { q: "How do I sign in to DaFit?", a: "With Telegram, no password or email needed. Inside Telegram you are signed in automatically, and on the website tap “Sign in with Telegram”. Your DaFit account is tied to your Telegram account." },
+          { q: "Where is my information stored and who sees it?", a: "On servers in the USA, as the beta terms say. A trainer sees only what the client opened to them. DaFit admins don't see nutrition, measurements or photos, except through emergency access, which is written to a log." },
+          { q: "How do I change the language or theme?", a: "In “Settings”: the theme “Auto”, “Light” or “Dark”, and the language. The bot writes notifications in the language chosen in DaFit." },
+          { q: "The bot stopped sending notifications. What should I do?", a: "Your profile shows “Notifications are off”. In Telegram tap “Turn on”, on the website open the bot and tap “Start”. While the bot can't write to you, messages don't arrive and aren't sent later." },
+          { q: "Why doesn't the bot answer my messages?", a: "The bot opens DaFit and sends notifications, and nobody reads messages in its chat. To write to the team, open your profile and choose “Feedback”." },
+          { q: "How do I report a bug or suggest an idea?", a: "In your profile open “Feedback”, choose what it is, describe it and attach up to three screenshots. We also see the screen you wrote from. If we need more details, we write to you in the bot." },
+          { q: "How do I download everything I have entered?", a: "In “Settings” open “Export your data” and tap “Request export”. The archive takes up to a day, the bot tells you when it is ready, and you can download it for 7 days. Inside are JSON and CSV tables and your photos." },
+          { q: "How do I delete my account?", a: "In “Settings” open “Delete account”, type the word DELETE and confirm. The account is deleted after 30 days, and until then you can cancel. Future bookings are cancelled right away, and your trainers or clients get a message." },
+          { q: "What is the closed beta?", a: "It is a test version of DaFit for a small group of trainers and clients. There are no purchases: the DaFit team grants Pro and Premium. Some things may not work perfectly yet, so please tell us about anything that gets in your way." },
+        ],
+      },
+    ],
+  },
   feedback: {
     title: "Feedback",
     intro: "Tell us what broke or what's missing. The team reads every message.",
@@ -3799,6 +4018,11 @@ export const en: Dictionary = {
     betaNote: "Plans are not on sale during the beta, so bonuses are on hold for now.",
     code: "Code to type in: {code}",
     shareText: "Join me on DaFit: clients, schedule and passes in one place",
+    countsHeader: "Your invitations",
+    countsInvited: "Joined by your link",
+    countsActive: "Working",
+    countsActiveHint: "Held 3 or more sessions in 7 days",
+    countsBonuses: "Bonuses waiting",
     listHeader: "Invited trainers",
     empty: "Nobody has joined by your link yet.",
     unnamed: "No name",
@@ -3808,6 +4032,14 @@ export const en: Dictionary = {
     signIn: "Sign in",
     notTrainer: "Only trainers can invite trainers.",
     admin: {
+      referrers: {
+        header: "Trainers who invite",
+        footer: "\"Working\" means 3 or more sessions held in 7 days. Void invitations never count as working.",
+        empty: "Nobody has invited colleagues yet.",
+        unnamed: "No name",
+        line: "{invited} joined, {active} working",
+        bonuses: "Bonuses waiting {pending}, granted {granted}",
+      },
       header: "Bonus for an invited trainer",
       text: "The trainer who brought a colleague gets it once the colleague buys a plan. A new value applies to new invitations.",
       kind: "Bonus",
@@ -3929,6 +4161,13 @@ export const en: Dictionary = {
     language: {
       label: "Language",
     },
+  },
+  /** Legal documents at /legal: list, draft note, links from settings and the beta terms. */
+  legal: {
+    title: "Legal",
+    intro: "How DaFit works, what happens to your data and what your rights are. These are drafts still under legal review; until then the closed beta terms apply.",
+    all: "All documents",
+    table: "Table, scrolls sideways",
   },
   /** Reminder lead times: "1 day before", "in 3 hours" (PRD wave-1 §2.9-2). */
   reminders: {
