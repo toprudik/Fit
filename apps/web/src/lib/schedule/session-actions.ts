@@ -298,12 +298,15 @@ function groupError(error: { message: string; code: string }, what: string): Gro
   return { status: "error", error: "failed" };
 }
 
-/** "Добавить участника" on a group session (PRD 2.6.3): the client is confirmed at once and gets К1. */
-export async function addGroupParticipant(raw: { sessionId: string; coachingId: string }): Promise<GroupActionResult> {
-  const parsed = z.object({ sessionId: z.uuid(), coachingId: z.uuid() }).safeParse(raw);
+/**
+ * "Добавить участника" on a group session (PRD 2.6.3): the client is confirmed at once and gets К1. With `extra`
+ * a full session grows by one seat for them, out of turn (PRD wave-2 §9-7).
+ */
+export async function addGroupParticipant(raw: { sessionId: string; coachingId: string; extra?: boolean }): Promise<GroupActionResult> {
+  const parsed = z.object({ sessionId: z.uuid(), coachingId: z.uuid(), extra: z.boolean().optional() }).safeParse(raw);
   if (!parsed.success) return { status: "error", error: "failed" };
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("add_group_participant", {
+  const { error } = await supabase.rpc(parsed.data.extra ? "add_group_participant_extra" : "add_group_participant", {
     p_session_id: parsed.data.sessionId,
     p_coaching_id: parsed.data.coachingId,
   });
