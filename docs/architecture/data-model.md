@@ -765,7 +765,7 @@ create index on public.slots (starts_at) where status = 'open';
 -- booking_preview(slot_id) отдаёт экрану подтверждения то же решение и остаток абонемента после записи.
 -- book_slot(slot_id) создаёт персональное занятие на слоте (ссылка онлайн берётся из окна шаблона), слот
 --   становится booked, запись confirmed с reserved_pass_id или requested (source client_slot); тренеру Т1 или Т2.
--- decide_booking(id, accept, reason) тренер подтверждает запрос (К2, абонемент подбирается заново) или
+-- decide_booking(id, accept, reason) тренер подтверждает запрос (К2, абонемент подбирается заново; payload.pay = pass, single или debt говорит клиенту, чем оплатится) или
 --   отклоняет (К3); withdraw_booking_request(id) клиент отзывает запрос, тренеру Т3. Занятие отклонённого или
 --   отозванного запроса отменяется, слот снова open, если время впереди и его не закрыли и не заняли.
 -- pg_cron «booking-requests-expire» (каждые 5 минут) переводит запросы без ответа к началу занятия в expired, К4.

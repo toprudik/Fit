@@ -5083,6 +5083,9 @@ export const ru = {
     rescheduleRequested: "Запрос на перенос: {name}, с {from} на {when}, {place}. Подтверди или отклони его до начала занятия.",
     /** К2–К4: the trainer confirmed or declined a request, or it was left unanswered. */
     requestConfirmed: "Запись к тренеру {name} на {when} подтверждена.",
+    requestConfirmedPass: "Запись к тренеру {name} на {when} подтверждена. Занятие спишется с абонемента «{pass}».",
+    requestConfirmedSingle: "Запись к тренеру {name} на {when} подтверждена. Занятие разовое.",
+    requestConfirmedDebt: "Запись к тренеру {name} на {when} подтверждена. Свободных занятий в абонементе нет, поэтому занятие пойдёт в долг.",
     requestDeclined: "Запрос к тренеру {name} на {when} отклонён.",
     requestDeclinedReason: "Запрос к тренеру {name} на {when} отклонён. Причина: «{reason}».",
     requestExpired: "Запрос к тренеру {name} на {when} остался без ответа, запись не состоялась.",
