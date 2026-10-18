@@ -1,4 +1,4 @@
--- Frozen nutrition targets of finished days (migration 20261018072553_nutrition_day_targets.sql, wave-2 §5.4):
+-- Frozen nutrition targets of finished days (migration 20261018131147_nutrition_day_targets.sql, wave-2 §5.4):
 -- revoking the permission, leaving a group or ending a pair changes today's target but not the days already over.
 begin;
 \ir _helpers.psql
