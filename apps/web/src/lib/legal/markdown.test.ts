@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inlineText, parseInline, parseMarkdown, slugify } from "./markdown";
+import { dropSections, inlineText, parseInline, parseMarkdown, slugify } from "./markdown";
 
 describe("parseInline", () => {
   it("reads bold, italics, code and links", () => {
@@ -100,5 +100,13 @@ describe("parseMarkdown", () => {
     for (const text of ["|", "| a |", "#", "####### x", ">", "1.", "-", "***", "* * *"]) {
       expect(() => parseMarkdown(text)).not.toThrow();
     }
+  });
+});
+
+describe("dropSections", () => {
+  it("drops a level-2 section up to the next one, nested headings included", () => {
+    const blocks = parseMarkdown(["# T", "## 0. Для команды", "a", "### 0.1 x", "b", "## 1. Текст", "c"].join("\n"));
+    const kept = dropSections(blocks, (heading) => heading.startsWith("0."));
+    expect(kept.map((block) => (block.kind === "heading" ? block.id : block.kind))).toEqual(["t", "1-текст", "paragraph"]);
   });
 });

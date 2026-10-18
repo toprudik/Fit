@@ -73,6 +73,18 @@ export type ParseOptions = {
   dropQuotes?: readonly string[];
 };
 
+/**
+ * Drops each section whose level-2 heading matches, up to the next level-2 heading. The drafts keep
+ * notes for the team in a "## 0. …" section that is not part of the text a reader sees.
+ */
+export function dropSections(blocks: Block[], matches: (heading: string) => boolean): Block[] {
+  let dropping = false;
+  return blocks.filter((block) => {
+    if (block.kind === "heading" && block.level <= 2) dropping = block.level === 2 && matches(inlineText(block.children));
+    return !dropping;
+  });
+}
+
 /** Block Markdown into blocks. */
 export function parseMarkdown(source: string, options: ParseOptions = {}): Block[] {
   const link = options.link ?? ((href: string) => href);

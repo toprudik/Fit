@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { cacheLife } from "next/cache";
 import type { Locale } from "@/i18n/config";
 import { INTERNAL_NOTES, legalFile, legalHref } from "./documents";
-import { inlineText, parseMarkdown, type Block } from "./markdown";
+import { dropSections, inlineText, parseMarkdown, type Block } from "./markdown";
 
 export type LegalDoc = { title: string; blocks: Block[] };
 
@@ -15,7 +15,9 @@ export async function loadLegalDocument(locale: Locale, slug: string): Promise<L
   const file = legalFile(locale, slug);
   if (!file) return null;
   const source = await readFile(join(process.cwd(), "src/content/legal", locale, file), "utf8");
-  const blocks = parseMarkdown(source, { link: (href) => legalHref(locale, href), dropQuotes: INTERNAL_NOTES });
+  const parsed = parseMarkdown(source, { link: (href) => legalHref(locale, href), dropQuotes: INTERNAL_NOTES });
+  // "## 0. Как показывать…" is for the team, never part of the document.
+  const blocks = dropSections(parsed, (heading) => /^0\.\s/.test(heading));
   const heading = blocks.find((block) => block.kind === "heading" && block.level === 1);
   return { title: heading?.kind === "heading" ? inlineText(heading.children) : slug, blocks };
 }
