@@ -199,7 +199,10 @@ select is((select confirmed from private.booking_auto_confirm(:'pair_ac', 'perso
 -- =========================================================================================================
 -- Online slots take the template link; unanswered requests expire (2.6.4-5)
 
+-- Without the permission a client holds one unpaid session at a time: clear the two above first.
 update public.coachings set self_book_on_debt = false where id = :'pair_ac';
+select private.waive_entry(e.id, 'QA') from public.ledger_entries e where e.coaching_id = :'pair_ac' and e.entry_type = 'charge';
+update public.bookings set status = 'cancelled', cancelled_at = now(), cancelled_by = tests.user_id('trainer_a'), cancelled_by_role = 'trainer', cancel_reason = 'QA' where id = :'request3';
 select tests.authenticate_as('client_c');
 select (select booking_id from public.book_slot(:'slot_online')) as request4 \gset
 select tests.clear_authentication();
