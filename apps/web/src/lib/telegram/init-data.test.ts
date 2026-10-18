@@ -88,3 +88,67 @@ describe("verifyRequestedContact", () => {
     expect(() => verifyRequestedContact(sign({ auth_date: String(nowSec), contact: noPhone }), opts)).toThrow("phone");
   });
 });
+
+describe("verifyInitData against forgeries", () => {
+  it("rejects a hash computed with the bot token directly instead of the WebAppData key", () => {
+    const fields = { auth_date: String(nowSec), user };
+    const dcs = Object.entries(fields)
+      .map(([k, v]) => `${k}=${v}`)
+      .sort()
+      .join("\n");
+    const hash = createHmac("sha256", BOT_TOKEN).update(dcs).digest("hex");
+    expect(() => verifyInitData(new URLSearchParams({ ...fields, hash }).toString(), opts)).toThrow("signature mismatch");
+  });
+
+  it("rejects a hash in another form than 64 lowercase hex characters", () => {
+    const raw = sign({ auth_date: String(nowSec), user });
+    const hash = new URLSearchParams(raw).get("hash")!;
+    expect(() => verifyInitData(raw.replace(hash, hash.toUpperCase()), opts)).toThrow("malformed hash");
+    expect(() => verifyInitData(raw.replace(hash, hash.slice(0, 63)), opts)).toThrow("malformed hash");
+    expect(() => verifyInitData(raw.replace(hash, ""), opts)).toThrow("malformed hash");
+  });
+
+  it("rejects a field added after signing", () => {
+    const raw = `${sign({ auth_date: String(nowSec), user })}&start_param=ti_admin`;
+    expect(() => verifyInitData(raw, opts)).toThrow("signature mismatch");
+  });
+
+  it("rejects a second user field appended after signing", () => {
+    const other = encodeURIComponent(JSON.stringify({ id: 1, first_name: "Admin" }));
+    expect(() => verifyInitData(`${sign({ auth_date: String(nowSec), user })}&user=${other}`, opts)).toThrow("signature mismatch");
+  });
+
+  it("rejects a moved auth_date: replaying old data with a new date breaks the signature", () => {
+    const raw = sign({ auth_date: String(nowSec - 7200), user }).replace(String(nowSec - 7200), String(nowSec));
+    expect(() => verifyInitData(raw, opts)).toThrow("signature mismatch");
+  });
+
+  it("rejects empty and garbage input", () => {
+    for (const raw of ["", "hash=", "user=%7B%7D", "%%%"]) expect(() => verifyInitData(raw, opts)).toThrow(InitDataError);
+  });
+
+  it("rejects genuine data without auth_date", () => {
+    expect(() => verifyInitData(sign({ user }), opts)).toThrow("auth_date");
+    expect(() => verifyInitData(sign({ auth_date: "soon", user }), opts)).toThrow("auth_date");
+  });
+
+  it("rejects genuine data without a user, or with a user Telegram never sends", () => {
+    expect(() => verifyInitData(sign({ auth_date: String(nowSec), query_id: "AAA" }), opts)).toThrow("missing user");
+    expect(() => verifyInitData(sign({ auth_date: String(nowSec), user: "{not json" }), opts)).toThrow("malformed user");
+    for (const id of ['"42"', "4.2", "null", "9007199254740993"]) {
+      const raw = sign({ auth_date: String(nowSec), user: `{"id":${id},"first_name":"Sam"}` });
+      expect(() => verifyInitData(raw, opts)).toThrow("malformed user id");
+    }
+  });
+
+  it("rejects a signed contact answer used as initData", () => {
+    const contact = JSON.stringify({ user_id: 42, phone_number: "79991234567" });
+    expect(() => verifyInitData(sign({ auth_date: String(nowSec), contact }), opts)).toThrow("missing user");
+  });
+
+  it("takes only the signed user fields: names that are not strings are dropped", () => {
+    const odd = JSON.stringify({ id: 42, first_name: { toString: "x" }, username: ["sam"], photo_url: "" });
+    const { identity } = verifyInitData(sign({ auth_date: String(nowSec), user: odd }), opts);
+    expect(identity).toMatchObject({ telegramId: 42, firstName: null, username: null, photoUrl: null });
+  });
+});

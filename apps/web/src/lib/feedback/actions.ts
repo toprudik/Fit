@@ -40,7 +40,7 @@ export async function prepareFeedback(screenshots: { type: string; size: number 
   return { status: "ready", id, uploads };
 }
 
-export type SendFeedbackResult = { status: "sent" | "invalid" | "signed-out" | "failed" };
+export type SendFeedbackResult = { status: "sent" | "invalid" | "signed-out" | "rate-limited" | "failed" };
 
 /**
  * Step 2: the message itself (PRD wave-1 §2.13). The row's insert queues the team message (А2); the GitHub issue
@@ -71,6 +71,8 @@ export async function sendFeedback(input: FeedbackInput): Promise<SendFeedbackRe
     attachment_paths: data.screenshots,
   });
   if (error) {
+    // The database allows 5 messages in 10 minutes and 20 a day per author (20261018140317_rate_limits.sql).
+    if (error.message === "rate_limited") return { status: "rate-limited" };
     console.error("saving feedback failed", error.code);
     return { status: "failed" };
   }
