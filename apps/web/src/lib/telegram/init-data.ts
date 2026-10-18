@@ -9,8 +9,11 @@ type Options = {
   now?: Date;
 };
 
-/** Genuine initData: the user Telegram vouches for and when it signed the data (auth_date, Unix seconds). */
-export type VerifiedInitData = { identity: TelegramIdentity; authDate: number };
+/**
+ * Genuine initData: the user Telegram vouches for, when it signed the data (auth_date, Unix seconds) and the
+ * `startapp` parameter of the launch, when there was one.
+ */
+export type VerifiedInitData = { identity: TelegramIdentity; authDate: number; startParam: string | null };
 
 /**
  * Validates Telegram Mini App initData (raw query string) and returns the verified user. The age is
@@ -39,7 +42,7 @@ export function verifyInitData(raw: string, { botToken, now = new Date() }: Opti
     languageCode: str(user.language_code),
     source: "mini-app",
   };
-  return { identity, authDate };
+  return { identity, authDate, startParam: str(params.get("start_param")) };
 }
 
 /**

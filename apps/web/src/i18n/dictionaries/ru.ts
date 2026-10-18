@@ -2822,6 +2822,16 @@ export const ru = {
       referral: "«Приведи друга»",
       manual: "Тренер добавил сам",
     },
+    channels: {
+      header: "Откуда пришли",
+      footer: "Канал из ссылки, по которой человек впервые открыл DaFit: метка src или utm_source на сайте, ch_ или __s_ в ссылке на приложение в Telegram. Без метки приходят по обычным ссылкам и все, кто зарегистрировался до 18 октября 2026, когда каналы начали считать.",
+      channel: "Канал",
+      users: "Аккаунты",
+      trainers: "Тренеры",
+      clients: "Клиенты",
+      none: "Без метки",
+      names: { tg: "Telegram", vk: "ВКонтакте", max: "MAX", ig: "Instagram", yt: "YouTube", tt: "TikTok" },
+    },
     weekly: {
       header: "По неделям",
       footer: "Недели по UTC, с понедельника. Последняя ещё идёт, поэтому рост в «Главном» считаем по двум прошлым полным неделям.",
@@ -2841,7 +2851,8 @@ export const ru = {
       empty: "За этот период никто не зарегистрировался.",
     },
     csv: {
-      sections: { summary: "Сводка", success: "Цели беты", weekly: "По неделям", cohorts: "Удержание" },
+      sections: { summary: "Сводка", success: "Цели беты", channels: "Откуда пришли", weekly: "По неделям", cohorts: "Удержание" },
+      channels: { channel: "Канал", campaign: "Кампания", users: "Аккаунтов", trainers: "Тренеров", clients: "Клиентов с тренером" },
       success: {
         clients: "Клиентов с тренером",
         clients_with_streak: "Клиентов с недельной серией",

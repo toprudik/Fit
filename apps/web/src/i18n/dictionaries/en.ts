@@ -2794,6 +2794,16 @@ export const en: Dictionary = {
       referral: "Refer a friend",
       manual: "Added by the trainer",
     },
+    channels: {
+      header: "Where people came from",
+      footer: "The channel of the link someone first opened DaFit with: src or utm_source on the website, ch_ or __s_ in a link to the app in Telegram. No label means a plain link, or signing up before channels started to count on 2026-10-18.",
+      channel: "Channel",
+      users: "Accounts",
+      trainers: "Trainers",
+      clients: "Clients",
+      none: "No label",
+      names: { tg: "Telegram", vk: "VK", max: "MAX", ig: "Instagram", yt: "YouTube", tt: "TikTok" },
+    },
     weekly: {
       header: "By week",
       footer: "Weeks in UTC, starting Monday. The last one is still running, so growth in “Highlights” compares the two weeks before it.",
@@ -2813,7 +2823,8 @@ export const en: Dictionary = {
       empty: "Nobody signed up in this period.",
     },
     csv: {
-      sections: { summary: "Summary", success: "Beta goals", weekly: "By week", cohorts: "Retention" },
+      sections: { summary: "Summary", success: "Beta goals", channels: "Where people came from", weekly: "By week", cohorts: "Retention" },
+      channels: { channel: "Channel", campaign: "Campaign", users: "Accounts", trainers: "Trainers", clients: "Clients with a trainer" },
       success: {
         clients: "Clients with a trainer",
         clients_with_streak: "Clients with a weekly streak",

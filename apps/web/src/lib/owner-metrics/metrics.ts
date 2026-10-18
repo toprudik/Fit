@@ -9,6 +9,17 @@ export type OwnerSummary = Functions["admin_owner_summary"]["Returns"][number];
 export type OwnerWeek = Functions["admin_owner_weekly"]["Returns"][number];
 export type OwnerCohort = Functions["admin_owner_cohorts"]["Returns"][number];
 export type OwnerSuccess = Functions["admin_owner_success"]["Returns"][number];
+/** The generated type says string, but no label (and no campaign) comes back as null. */
+export type OwnerSource = Omit<Functions["admin_owner_sources"]["Returns"][number], "source" | "campaign"> & {
+  source: string | null;
+  campaign: string | null;
+};
+
+/** "ВКонтакте" for vk, a label without a name as is, «Без метки» for none; the campaign after a dot. */
+export function channelName(row: Pick<OwnerSource, "source" | "campaign">, names: Record<string, string>, none: string): string {
+  const channel = row.source === null ? none : (names[row.source] ?? row.source);
+  return row.campaign ? `${channel} · ${row.campaign}` : channel;
+}
 
 /**
  * The wave-3 success signals (PRD wave-3): 30% of clients with a weekly streak, a referral offer at 3 of 5
@@ -69,7 +80,7 @@ export function moneyCell(value: Json, locale: Locale): string {
 }
 
 export type OwnerCsvCopy = {
-  sections: { summary: string; success: string; weekly: string; cohorts: string };
+  sections: { summary: string; success: string; channels: string; weekly: string; cohorts: string };
   success: Record<keyof OwnerSuccess | "streak_share" | "offer_share", string>;
   metric: string;
   value: string;
@@ -80,6 +91,9 @@ export type OwnerCsvCopy = {
   summary: Record<keyof OwnerSummary, string>;
   weekly: Record<Exclude<keyof OwnerWeek, "week_start">, string>;
   sources: Record<string, string>;
+  channels: { channel: string; campaign: string; users: string; trainers: string; clients: string };
+  channelNames: Record<string, string>;
+  noChannel: string;
 };
 
 const SUMMARY_ORDER: (keyof OwnerSummary)[] = [
@@ -155,11 +169,11 @@ function successRows(success: OwnerSuccess, copy: OwnerCsvCopy): Cell[][] {
 }
 
 /**
- * The whole page as one CSV for a deck: the summary and the beta goals as metric/value pairs, then the weeks as columns of a
- * table, then the cohorts with retention in percent. Sections are separated by an empty line.
+ * The whole page as one CSV for a deck: the summary and the beta goals as metric/value pairs, accounts by channel, then
+ * the weeks as columns of a table, then the cohorts with retention in percent. Sections are separated by an empty line.
  */
 export function ownerCsv(
-  data: { summary: OwnerSummary; success: OwnerSuccess; weekly: OwnerWeek[]; cohorts: OwnerCohort[] },
+  data: { summary: OwnerSummary; success: OwnerSuccess; channels: OwnerSource[]; weekly: OwnerWeek[]; cohorts: OwnerCohort[] },
   copy: OwnerCsvCopy,
   locale: Locale,
 ): string {
@@ -172,6 +186,16 @@ export function ownerCsv(
     [copy.sections.success],
     [copy.metric, copy.value],
     ...successRows(data.success, copy),
+    [],
+    [copy.sections.channels],
+    [copy.channels.channel, copy.channels.campaign, copy.channels.users, copy.channels.trainers, copy.channels.clients],
+    ...data.channels.map((row) => [
+      channelName({ source: row.source, campaign: null }, copy.channelNames, copy.noChannel),
+      row.campaign,
+      row.users,
+      row.trainers,
+      row.clients,
+    ]),
     [],
     [copy.sections.weekly],
     [copy.week, ...WEEKLY_ORDER.map((key) => copy.weekly[key])],

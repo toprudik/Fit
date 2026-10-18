@@ -18,6 +18,7 @@ import { loadOwnerMetrics } from "@/lib/owner-metrics/load";
 import {
   OWNER_WEEKS,
   SUCCESS_GOALS,
+  channelName,
   growth,
   growthText,
   lastFullWeeks,
@@ -101,7 +102,7 @@ async function Stats({ searchParams }: { searchParams: SearchParams }) {
   const [t, locale, params, { supabase }] = await Promise.all([getDictionary(), getLocale(), searchParams, requireAdmin()]);
   const copy = t.ownerStats;
   const weeks = ownerWeeks(params.weeks);
-  const { summary, success, weekly, cohorts } = await loadOwnerMetrics(supabase, weeks);
+  const { summary, success, channels, weekly, cohorts } = await loadOwnerMetrics(supabase, weeks);
   const n = (value: number) => formatNumber(locale, value);
   const percent = (part: number, total: number) => {
     const value = share(part, total);
@@ -166,6 +167,18 @@ async function Stats({ searchParams }: { searchParams: SearchParams }) {
         />
         <ListRow title={copy.success.offerEver} value={ofTotal(success.trainers_offer_ever, success.trainers)} />
       </ListGroup>
+
+      <Table
+        caption={copy.channels.header}
+        footer={copy.channels.footer}
+        head={[copy.channels.channel, copy.channels.users, copy.channels.trainers, copy.channels.clients]}
+        rows={channels.map((row) => [
+          channelName(row, copy.channels.names, copy.channels.none),
+          n(row.users),
+          n(row.trainers),
+          n(row.clients),
+        ])}
+      />
 
       <ListGroup header={copy.audience.header} headingLevel={2}>
         <ListRow title={copy.audience.users} value={n(summary.users)} />
