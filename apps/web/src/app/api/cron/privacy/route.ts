@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { serverEnv } from "@/env/server";
 import { runPrivacyJob } from "@/lib/account/job";
+import { type OutgoingMessage, sendTelegramMessage } from "@/lib/notifications/telegram";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 /** Vercel stops the function after this many seconds; a run stops taking new work well before (BUDGET_MS). */
@@ -25,7 +26,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   try {
-    return NextResponse.json(await runPrivacyJob(createSupabaseAdminClient(), BUDGET_MS));
+    const send = (message: OutgoingMessage) => sendTelegramMessage(env.TELEGRAM_BOT_TOKEN, message);
+    return NextResponse.json(await runPrivacyJob(createSupabaseAdminClient(), BUDGET_MS, send));
   } catch (error) {
     console.error("privacy job failed", error instanceof Error ? error.message : "unknown");
     return NextResponse.json({ error: "privacy_failed" }, { status: 500 });

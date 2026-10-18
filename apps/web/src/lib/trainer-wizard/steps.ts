@@ -39,3 +39,19 @@ export function stepNumber(step: WizardStep): number {
 
 /** Steps with nothing the trainer must fill in show "Пропустить". */
 export const SKIPPABLE_STEPS: ReadonlySet<WizardStep> = new Set(["locations", "payment", "prices", "certificates"]);
+
+/** "Профиль тренера" in the trainer zone: the wizard's answers, edited one section at a time. */
+export const PROFILE_EDIT_PATH = "/trainer/profile";
+
+/** Steps the trainer edits again after the wizard; prices live under "Деньги", documents under verification. */
+export const EDITABLE_STEPS = ["profile", "format", "locations", "region", "cancellation"] as const satisfies readonly WizardStep[];
+
+export type EditableStep = (typeof EDITABLE_STEPS)[number];
+
+export function isEditableStep(value: string): value is EditableStep {
+  return (EDITABLE_STEPS as readonly string[]).includes(value);
+}
+
+export function editPath(step: EditableStep): string {
+  return `${PROFILE_EDIT_PATH}/${step}`;
+}

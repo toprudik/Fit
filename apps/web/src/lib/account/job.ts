@@ -1,5 +1,7 @@
 import "server-only";
 import { isLocale, type Locale } from "@/i18n/config";
+import { dictionaries } from "@/i18n/dictionaries";
+import type { OutgoingMessage, SendResult } from "@/lib/notifications/telegram";
 import { PHOTO_BUCKET } from "@/lib/progress/photos";
 import type { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { buildExport, EXPORT_BUCKET, removeFolder } from "./export";
@@ -10,6 +12,9 @@ type Admin = ReturnType<typeof createSupabaseAdminClient>;
 const OWNER_BUCKETS = [PHOTO_BUCKET, "avatars", "certificates", "feedback", EXPORT_BUCKET] as const;
 
 export type PrivacySummary = { expired: number; built: number; failed: number; purged: number };
+
+/** Sends one Telegram message (lib/notifications/telegram); the route binds the bot token. */
+export type SendTelegram = (message: OutgoingMessage) => Promise<SendResult>;
 
 async function localeOf(admin: Admin, userId: string): Promise<Locale> {
   const { data } = await admin.from("user_settings").select("locale").eq("user_id", userId).maybeSingle();
@@ -58,7 +63,7 @@ async function buildExports(admin: Admin, summary: PrivacySummary, hasTime: () =
  * client cards first, then the anonymization, then the Auth users. A failure leaves the request due, so the
  * next run repeats what is left; every step is safe to repeat.
  */
-async function purgeAccounts(admin: Admin, summary: PrivacySummary, hasTime: () => boolean) {
+async function purgeAccounts(admin: Admin, summary: PrivacySummary, hasTime: () => boolean, send?: SendTelegram) {
   const { data, error } = await admin
     .from("account_deletions")
     .select("user_id")
@@ -69,6 +74,9 @@ async function purgeAccounts(admin: Admin, summary: PrivacySummary, hasTime: () 
   if (error) throw new Error(`reading due deletions failed: ${error.code}`);
   for (const { user_id: userId } of data) {
     if (!hasTime()) return;
+    // Read before the purge: the profile and its chat go with the account.
+    const { data: profile } = await admin.from("profiles").select("telegram_id, bot_blocked_at").eq("id", userId).maybeSingle();
+    const locale = await localeOf(admin, userId);
     const { data: cards, error: cardsError } = await admin.from("profiles").select("id").eq("managed_by_trainer_id", userId);
     if (cardsError) throw new Error(`reading client cards failed: ${cardsError.code}`);
     for (const owner of [userId, ...cards.map((card) => card.id)]) {
@@ -82,16 +90,39 @@ async function purgeAccounts(admin: Admin, summary: PrivacySummary, hasTime: () 
       if (authError && authError.status !== 404) throw new Error(`deleting an auth user failed: ${authError.status ?? "unknown"}`);
     }
     summary.purged += 1;
+    if (send && users?.length && profile?.telegram_id && !profile.bot_blocked_at) await sayDeleted(send, profile.telegram_id, locale);
   }
 }
 
-/** One run of the privacy route: expired archives, waiting exports, due deletions, within the time budget. */
-export async function runPrivacyJob(admin: Admin, budgetMs: number, now: () => number = Date.now): Promise<PrivacySummary> {
+/**
+ * С5 "удаление выполнено". It cannot go through the outbox: the outbox row belongs to the user, who is gone by
+ * now. One attempt, after the account is really deleted; a failure is logged by kind and changes nothing.
+ */
+async function sayDeleted(send: SendTelegram, chatId: number, locale: Locale) {
+  const t = dictionaries[locale].botMessages;
+  try {
+    const result = await send({ chatId, text: t.deletionDone, silent: false, buttons: [] });
+    if (!result.ok) console.error("telling about a done deletion failed", result.kind);
+  } catch (cause) {
+    console.error("telling about a done deletion failed", cause instanceof Error ? cause.name : "unknown");
+  }
+}
+
+/**
+ * One run of the privacy route: expired archives, waiting exports, due deletions, within the time budget. send
+ * tells each deleted user that the deletion is done (С5).
+ */
+export async function runPrivacyJob(
+  admin: Admin,
+  budgetMs: number,
+  send?: SendTelegram,
+  now: () => number = Date.now,
+): Promise<PrivacySummary> {
   const started = now();
   const hasTime = () => now() - started < budgetMs;
   const summary: PrivacySummary = { expired: 0, built: 0, failed: 0, purged: 0 };
   await expireExports(admin, summary);
-  await purgeAccounts(admin, summary, hasTime);
+  await purgeAccounts(admin, summary, hasTime, send);
   await buildExports(admin, summary, hasTime);
   return summary;
 }

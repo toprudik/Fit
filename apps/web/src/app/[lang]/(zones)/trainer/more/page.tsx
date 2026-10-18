@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ChartColumn, ClipboardList, Dumbbell, Gift, Handshake, QrCode, Salad, ScanLine, Star, Store, UserPlus, Users } from "lucide-react";
+import { ChartColumn, ClipboardList, Dumbbell, Gift, Handshake, QrCode, Salad, ScanLine, Star, Store, UserPlus, UserRound, Users } from "lucide-react";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { ListGroup, ListRow } from "@/components/ui/list";
@@ -17,6 +17,7 @@ export default async function TrainerMorePage() {
     <Screen header={<ScreenHeader title={t.tabs.trainer.more} />}>
       <div className="flex w-full max-w-2xl flex-col gap-6 pt-4 md:pt-0">
         <ListGroup footer={copy.later}>
+          <ListRow icon={UserRound} title={t.trainerWizard.edit.open} subtitle={t.trainerWizard.edit.openText} href="/trainer/profile" />
           <ListRow icon={QrCode} iconTone="accent" title={copy.links} subtitle={copy.linksText} href="/trainer/links" />
           <ListRow icon={Store} title={copy.showcase} subtitle={copy.showcaseText} href="/trainer/showcase" />
           <ListRow icon={Star} title={t.reviews.trainer.title} subtitle={t.reviews.trainer.moreText} href="/trainer/reviews" />
