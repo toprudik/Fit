@@ -1,4 +1,4 @@
--- "Записаться на пробное" on the showcase, migration 20261018050317_showcase_trial.sql (PRD wave-1 §2.3 rules 1
+-- "Записаться на пробное" on the showcase, migration 20261018063517_showcase_trial.sql (PRD wave-1 §2.3 rules 1
 -- and 6): trial_links.on_showcase and get_showcase_trial.
 begin;
 \ir _helpers.psql
