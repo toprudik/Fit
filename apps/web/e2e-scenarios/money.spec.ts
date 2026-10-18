@@ -2,6 +2,15 @@ import { collectErrors, expectAccessible } from "../e2e/support";
 import { expect, test } from "./support/fixtures";
 import { addPackage, moscowDay, recordPastSessions, rub, ruDay, sellPass } from "./support/money";
 import { ok } from "./support/personas";
+import type { Locator } from "@playwright/test";
+
+/** A click that lands before hydration does nothing, so click until the sheet is open. */
+async function openSheet(button: Locator, sheet: Locator) {
+  await expect(async () => {
+    if (!(await sheet.isVisible())) await button.click();
+    await expect(sheet).toBeVisible({ timeout: 2000 });
+  }).toPass();
+}
 
 /*
  * Money (screens.md "Деньги", flow 4.5, PRD wave-1 §2.8): packages and the price grid, marking a payment that
@@ -115,8 +124,8 @@ test.describe("Packages and the price grid", () => {
     await addPackage(trainer, { title: "Разовое занятие", sessions: 1, priceMajor: 2500 });
     const { page } = trainer;
     await page.goto("/trainer/money/packages");
-    await page.getByRole("button", { name: "Добавить пакет" }).click();
     const sheet = page.getByRole("dialog", { name: "Новый пакет" });
+    await openSheet(page.getByRole("button", { name: "Добавить пакет" }), sheet);
     await sheet.getByLabel("Сколько занятий").fill("0");
     await sheet.getByLabel("Цена за весь пакет").fill("дорого");
     await sheet.getByRole("button", { name: "Сохранить" }).click();
@@ -167,8 +176,8 @@ test.describe("Packages and the price grid", () => {
     await addPackage(trainer, { title: "Разовое занятие", sessions: 1, priceMajor: 2500 });
     const { page } = trainer;
     await page.goto("/trainer/money/packages");
-    await page.getByRole("button", { name: "Добавить пакет" }).click();
     const sheet = page.getByRole("dialog", { name: "Новый пакет" });
+    await openSheet(page.getByRole("button", { name: "Добавить пакет" }), sheet);
     await sheet.getByLabel("Сколько занятий").fill("1");
     await sheet.getByLabel("Цена за весь пакет").fill("3000");
     await sheet.getByRole("button", { name: "Сохранить" }).click();

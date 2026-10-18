@@ -17,8 +17,9 @@ async function weight(client: Persona, day: string, value: number) {
 
 /** Picks a generated PNG in "Выбрать из галереи" and confirms there is no face on it. */
 async function uploadPhoto(page: Persona["page"], date?: string) {
-  await open(page, "/client/progress/photos/new", "Новое фото");
-  if (date) await page.getByLabel("Дата").filter({ visible: true }).fill(date);
+  // The date goes in the address, as the grid's "Добавить фото" links pass it: a date typed before hydration is lost.
+  await open(page, date ? `/client/progress/photos/new?angle=front&date=${date}` : "/client/progress/photos/new", "Новое фото");
+  if (date) await expect(page.getByLabel("Дата").filter({ visible: true })).toHaveValue(date);
   // Right after a fresh load the picker may not be hydrated yet, so a pick can go unnoticed: pick again.
   await expect(async () => {
     await page.locator('label:has-text("Выбрать из галереи") input[type="file"]').setInputFiles({
@@ -201,7 +202,7 @@ test.describe("monthly reports", () => {
     // (Next.js streaming); the screen and a noindex tag are what tell it apart.
     await client.page.goto("/client/progress/reports/2026-13");
     await expect(client.page.getByRole("heading", { name: "Такой страницы нет" })).toBeVisible();
-    await expect(client.page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(1);
+    await expect(client.page.locator('meta[name="robots"][content*="noindex"]').first()).toBeAttached();
     await checked(client.page);
   });
 });

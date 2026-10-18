@@ -1,4 +1,4 @@
-import { adminDb, ok, type Persona } from "./personas";
+import { ok, type Persona } from "./personas";
 
 /*
  * Scenes for the money and growth scenarios: packages, sessions that already happened (they charge a pass or
@@ -28,7 +28,7 @@ export function rub(major: number): RegExp {
 
 export async function trainerCurrency(trainer: Persona): Promise<string> {
   const row = ok(await trainer.db.from("trainer_profiles").select("default_currency").eq("user_id", trainer.userId).single(), "trainer currency");
-  return row.default_currency;
+  return row!.default_currency;
 }
 
 /** A live package of the trainer, straight into `packages` as the packages screen saves it. */
@@ -53,7 +53,7 @@ export async function addPackage(
       .single(),
     "package",
   );
-  return row.id;
+  return row!.id;
 }
 
 /**
@@ -116,10 +116,4 @@ export async function openWeek(trainer: Persona) {
     meeting_url: "https://meet.example.invalid/e2e",
   }));
   ok(await trainer.db.rpc("save_week_template", { p_items: items, p_horizon_weeks: 2, p_buffer_min: 0 }), "week template");
-}
-
-/** The trainer's display name as clients see it, via the admin client: the fixture's names never change. */
-export async function profileName(userId: string): Promise<string> {
-  const row = ok(await adminDb().from("profiles").select("first_name").eq("id", userId).single(), "profile");
-  return row.first_name ?? "";
 }
