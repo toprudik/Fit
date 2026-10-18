@@ -1,3 +1,4 @@
+import { expect, type Locator, type Page } from "@playwright/test";
 import type { Persona } from "./personas";
 import { ok } from "./personas";
 
@@ -36,11 +37,11 @@ export function fromNow(minutes: number): string {
 export type TemplateItem = { iso_weekday: number; start_time: string; end_time: string; duration_min: number; mode?: "offline" | "online" };
 
 /** Saves the trainer's week template, which cuts the windows into open slots. Returns how many slots. */
-export async function saveTemplate(trainer: Persona, items: TemplateItem[], horizonWeeks = 2): Promise<number> {
+export async function saveTemplate(trainer: Persona, items: TemplateItem[], horizonWeeks = 1): Promise<number> {
   return ok(await trainer.db.rpc("save_week_template", { p_items: items, p_horizon_weeks: horizonWeeks, p_buffer_min: 0 }), "week template");
 }
 
-/** One window on the weekday `days` from today, cut into hour slots. */
+/** One window on the weekday `days` from today (less than a week ahead), cut into hour slots, open for a week. */
 export async function openWindow(trainer: Persona, days: number, from: number, to: number): Promise<number> {
   const pad = (hours: number) => `${String(hours).padStart(2, "0")}:00`;
   return saveTemplate(trainer, [{ iso_weekday: isoWeekday(mskDay(days)), start_time: pad(from), end_time: pad(to), duration_min: 60 }]);
@@ -109,4 +110,70 @@ export async function createPass(trainer: Persona, coachingId: string, sessions 
 /** The booking of the client on a session, read as the trainer. */
 export async function bookingsOf(trainer: Persona, sessionId: string) {
   return ok(await trainer.db.from("bookings").select("id, status, client_id").eq("session_id", sessionId), "bookings");
+}
+
+/** A session the trainer already held three hours ago, recorded after the fact (attended unless said otherwise). */
+export async function pastSession(trainer: Persona, coachingId: string, status: "attended" | "no_show" = "attended") {
+  const [row] = ok(
+    await trainer.db.rpc("record_past_session", {
+      p_coaching_id: coachingId,
+      p_starts_at: fromNow(-180),
+      p_duration_min: 60,
+      p_mode: "offline",
+      p_status: status,
+    }),
+    "past session",
+  );
+  return { sessionId: row.session_id, bookingId: row.booking_id };
+}
+
+const clock = (iso: string) =>
+  new Intl.DateTimeFormat("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Moscow" }).format(new Date(iso));
+
+/**
+ * A session on today's date in Moscow: later today when there is time left, otherwise one held earlier
+ * today. Returns its "hh:mm–hh:mm" as the screens print it.
+ */
+export async function todayStart(trainer: Persona, coachingId: string) {
+  const mskHour = new Date(Date.now() + MSK_OFFSET_MS).getUTCHours();
+  if (mskHour < 22) {
+    const startsAt = fromNow(60);
+    const sessionId = await createSession(trainer, coachingId, startsAt);
+    return { sessionId, label: `${clock(startsAt)}–${clock(new Date(Date.parse(startsAt) + 3_600_000).toISOString())}` };
+  }
+  const startsAt = fromNow(-75);
+  const [row] = ok(
+    await trainer.db.rpc("record_past_session", { p_coaching_id: coachingId, p_starts_at: startsAt, p_duration_min: 60, p_mode: "offline" }),
+    "past session today",
+  );
+  return { sessionId: row.session_id, label: `${clock(startsAt)}–${clock(new Date(Date.parse(startsAt) + 3_600_000).toISOString())}` };
+}
+
+/** The ledger lines of a pair, read as its trainer: grants, charges, waivers and so on. */
+export async function ledgerTypes(trainer: Persona, coachingId: string) {
+  const rows = ok(
+    await trainer.db.from("ledger_entries").select("entry_type, created_at").eq("coaching_id", coachingId).order("created_at"),
+    "ledger",
+  );
+  return rows.map((row) => row.entry_type);
+}
+
+/**
+ * Opens a page and waits until React has hydrated its form: a value typed before that is lost to the
+ * component's state, as a person tapping that early would lose it too.
+ */
+export async function gotoReady(page: Page, url: string) {
+  await page.goto(url);
+  await page.waitForFunction(() => {
+    const control = document.querySelector("main input, main select, main button");
+    return control !== null && Object.keys(control).some((key) => key.startsWith("__reactProps$"));
+  });
+}
+
+/** Clicks a control once React has hydrated it, so the click reaches its handler. */
+export async function tap(control: Locator) {
+  await expect
+    .poll(() => control.evaluate((element) => Object.keys(element).some((key) => key.startsWith("__reactProps$"))))
+    .toBe(true);
+  await control.click();
 }
