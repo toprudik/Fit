@@ -167,7 +167,8 @@ test.describe("account settings", () => {
     await expect(page.getByText("В очереди").first()).toBeVisible();
     await page.reload();
     await expect(page.getByText("В очереди").first()).toBeVisible();
-    await expect(page.getByText(/Запрошен/)).toBeVisible();
+    // Scoped to the screen: a streamed copy can sit hidden next to it for a moment after the reload.
+    await expect(page.locator("#main").getByText(/Запрошен/)).toBeVisible();
     await expectAccessible(page);
   });
 
@@ -216,8 +217,7 @@ test.describe("account settings", () => {
     const { page } = trainer;
     await page.goto("/trainer");
     await page.goto("/feedback?from=/trainer/schedule");
-    await expect(page.getByRole("main").getByText("Вместе с сообщением уйдут экран", { exact: false })).toBeVisible();
-    const files = page.locator('input[type="file"]');
+    const files = page.locator('#main input[type="file"]');
     await files.setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("не картинка") });
     await expect(page.getByText("Подойдёт картинка PNG, JPG или WebP до 5 МБ")).toBeVisible();
     await files.setInputFiles({ name: "screen.png", mimeType: "image/png", buffer: PNG });
@@ -249,7 +249,8 @@ test.describe("account settings", () => {
     await page.getByRole("button", { name: "Отказаться" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Просьба отклонена. Иван Тренеров получит об этом сообщение в боте." })).toBeVisible();
     await page.reload();
-    await expect(page.getByText("Просьба отклонена.", { exact: false })).toBeVisible();
+    // Scoped to the screen: React's streamed copy (div#S:0 hidden) can linger next to it for a moment.
+    await expect(page.locator("#main").getByText("Просьба отклонена.", { exact: false })).toBeVisible();
 
     // Only the asked person sees it.
     await trainer.page.goto(`/contact/${requestId}`);

@@ -119,6 +119,9 @@ test.describe("the client's progress", () => {
     await edit.getByRole("textbox", { name: "Значение" }).fill("71");
     await edit.getByRole("button", { name: "Сохранить" }).click();
     await expect(history.getByRole("button", { name: /Вес/ })).toContainText("71 кг");
+    // The toasts sit over the last rows on a phone, and a pointer resting on them keeps them open.
+    await page.mouse.move(0, 0);
+    await expect(page.locator("[data-sonner-toast]")).toHaveCount(0);
     await history.getByRole("button", { name: /Талия/ }).click();
     const del = page.getByRole("dialog", { name: "Изменить замер" });
     await del.getByRole("button", { name: "Удалить" }).click();

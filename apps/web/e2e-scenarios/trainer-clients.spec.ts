@@ -92,6 +92,8 @@ test.describe("profile and showcase", () => {
     ).toBeVisible();
     await expectAccessible(page);
     if (isPhone(testInfo)) {
+      // Scrolled to the end, the button must come out from under the tab bar.
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
       const save = await page
         .getByRole("button", { name: "Сохранить" })
         .boundingBox();
