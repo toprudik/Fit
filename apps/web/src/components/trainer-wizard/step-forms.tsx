@@ -23,6 +23,7 @@ import {
   type PaymentLinkKind,
 } from "@/lib/trainer-wizard/options";
 import { nextPath, SKIPPABLE_STEPS, type WizardStep } from "@/lib/trainer-wizard/steps";
+import { LocationList, type Place } from "./location-manager";
 
 const IDLE: WizardState = { status: "idle" };
 
@@ -30,6 +31,8 @@ type StepFormProps = {
   step: WizardStep;
   /** "Добавить ещё" next to "Далее", for steps that collect a list. */
   addMore?: boolean;
+  /** Opened from "Профиль тренера": "Сохранить" goes back there, with nothing to skip. */
+  edit?: boolean;
   children: (state: { values: WizardValues | null; error: (field: string) => boolean }) => React.ReactNode;
 };
 
@@ -38,7 +41,7 @@ type StepFormProps = {
  * React resets a form to its default values after the action runs, so a rejected form gets what was
  * sent as its defaults, and a saved one ("Добавить ещё") comes back empty.
  */
-function StepForm({ step, addMore = false, children }: StepFormProps) {
+function StepForm({ step, addMore = false, edit = false, children }: StepFormProps) {
   const { t } = useI18n();
   const [state, action, pending] = useActionState(saveWizardStep, IDLE);
   const values = state.status === "invalid" || state.status === "failed" ? state.values : null;
@@ -47,6 +50,7 @@ function StepForm({ step, addMore = false, children }: StepFormProps) {
   return (
     <form action={action} className="flex flex-1 flex-col gap-6" noValidate>
       <input type="hidden" name="step" value={step} />
+      {edit ? <input type="hidden" name="mode" value="edit" /> : null}
       <div className="flex flex-col gap-5">{children({ values, error: (field) => fields.includes(field) })}</div>
       {state.status === "failed" ? (
         <p role="alert" className="text-subhead text-danger">
@@ -55,14 +59,14 @@ function StepForm({ step, addMore = false, children }: StepFormProps) {
       ) : null}
       <div className="mt-auto flex flex-col gap-3">
         <Button type="submit" size="lg" block loading={pending}>
-          {t.trainerWizard.next}
+          {edit ? t.trainerWizard.edit.save : t.trainerWizard.next}
         </Button>
-        {addMore ? (
+        {addMore && !edit ? (
           <Button type="submit" name="intent" value="more" variant="secondary" size="lg" block disabled={pending}>
             {t.trainerWizard.addMore}
           </Button>
         ) : null}
-        {SKIPPABLE_STEPS.has(step) ? (
+        {SKIPPABLE_STEPS.has(step) && !edit ? (
           <Button asChild variant="ghost" size="lg" block>
             <Link href={nextPath(step)}>{t.trainerWizard.skip}</Link>
           </Button>
@@ -77,11 +81,19 @@ const value = (values: WizardValues | null, name: string, fallback: string) => {
   return typeof sent === "string" ? sent : fallback;
 };
 
-export function ProfileForm({ name, photoUrl, headline, bio }: { name: string; photoUrl: string | null; headline: string; bio: string }) {
+type EditProp = { edit?: boolean };
+
+export function ProfileForm({
+  name,
+  photoUrl,
+  headline,
+  bio,
+  edit,
+}: { name: string; photoUrl: string | null; headline: string; bio: string } & EditProp) {
   const { t } = useI18n();
   const copy = t.trainerWizard.steps.profile;
   return (
-    <StepForm step="profile">
+    <StepForm step="profile" edit={edit}>
       {({ values, error }) => (
         <>
           <PersonAvatar name={name} src={photoUrl} size={96} decorative />
@@ -108,13 +120,13 @@ export function ProfileForm({ name, photoUrl, headline, bio }: { name: string; p
   );
 }
 
-type FormatFormProps = { offline: boolean; online: boolean; specialties: string[]; city: string };
+type FormatFormProps = { offline: boolean; online: boolean; specialties: string[]; city: string } & EditProp;
 
-export function FormatForm({ offline, online, specialties, city }: FormatFormProps) {
+export function FormatForm({ offline, online, specialties, city, edit }: FormatFormProps) {
   const { t } = useI18n();
   const copy = t.trainerWizard.steps.format;
   return (
-    <StepForm step="format">
+    <StepForm step="format" edit={edit}>
       {({ values, error }) => {
         const sentSpecialties = values ? ((values.specialties as string[] | undefined) ?? []) : specialties;
         return (
@@ -153,53 +165,51 @@ export function FormatForm({ offline, online, specialties, city }: FormatFormPro
   );
 }
 
-type Place = { id: string; name: string; address: string | null };
-
+/**
+ * The places step: what was added so far, each with "Изменить" and "Удалить", above the form for a new
+ * one. The list sits outside the step's form, since its own forms open in sheets.
+ */
 export function LocationsForm({ locations, onlineOnly }: { locations: Place[]; onlineOnly: boolean }) {
   const { t } = useI18n();
   const copy = t.trainerWizard.steps.locations;
   return (
-    <StepForm step="locations" addMore>
-      {({ values, error }) => (
-        <>
-          {onlineOnly ? <p className="text-callout text-ink-2">{copy.onlineOnly}</p> : null}
-          {locations.length > 0 ? (
-            <ListGroup header={copy.added}>
-              {locations.map((place) => (
-                <ListRow key={place.id} title={place.name} subtitle={place.address ?? undefined} />
-              ))}
-            </ListGroup>
-          ) : null}
-          <TextField
-            name="name"
-            label={copy.name}
-            placeholder={copy.namePlaceholder}
-            defaultValue={value(values, "name", "")}
-            error={error("name") ? copy.nameError : undefined}
-            maxLength={80}
-            autoComplete="off"
-          />
-          <TextField
-            name="address"
-            label={copy.address}
-            hint={copy.addressHint}
-            defaultValue={value(values, "address", "")}
-            maxLength={200}
-            autoComplete="street-address"
-          />
-        </>
-      )}
-    </StepForm>
+    <>
+      {onlineOnly ? <p className="text-callout text-ink-2">{copy.onlineOnly}</p> : null}
+      {locations.length > 0 ? <LocationList header={copy.added} locations={locations} /> : null}
+      <StepForm step="locations" addMore>
+        {({ values, error }) => (
+          <>
+            <TextField
+              name="name"
+              label={copy.name}
+              placeholder={copy.namePlaceholder}
+              defaultValue={value(values, "name", "")}
+              error={error("name") ? copy.nameError : undefined}
+              maxLength={80}
+              autoComplete="off"
+            />
+            <TextField
+              name="address"
+              label={copy.address}
+              hint={copy.addressHint}
+              defaultValue={value(values, "address", "")}
+              maxLength={200}
+              autoComplete="street-address"
+            />
+          </>
+        )}
+      </StepForm>
+    </>
   );
 }
 
-type RegionFormProps = { timeZone: string; currency: string; zones: { id: string; label: string }[] };
+type RegionFormProps = { timeZone: string; currency: string; zones: { id: string; label: string }[] } & EditProp;
 
-export function RegionForm({ timeZone, currency, zones }: RegionFormProps) {
+export function RegionForm({ timeZone, currency, zones, edit }: RegionFormProps) {
   const { t } = useI18n();
   const copy = t.trainerWizard.steps.region;
   return (
-    <StepForm step="region">
+    <StepForm step="region" edit={edit}>
       {({ values, error }) => (
         <RegionFields
           zones={zones}
@@ -295,13 +305,13 @@ function RegionFields({
   );
 }
 
-export function CancellationForm({ hours }: { hours: number }) {
+export function CancellationForm({ hours, edit }: { hours: number } & EditProp) {
   const { t } = useI18n();
   const copy = t.trainerWizard.steps.cancellation;
   const initial = (CANCELLATION_HOURS as readonly number[]).includes(hours) ? hours : 24;
   const [selected, setSelected] = useState(String(initial));
   return (
-    <StepForm step="cancellation">
+    <StepForm step="cancellation" edit={edit}>
       {() => (
         <div className="flex flex-col gap-1.5">
           <span aria-hidden className="px-1 text-footnote text-ink-2">

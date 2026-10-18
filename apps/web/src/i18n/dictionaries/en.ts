@@ -541,6 +541,30 @@ export const en: Dictionary = {
     fillProfile: "Fill in your profile",
     signedOutText: "Sign in with Telegram to fill in your trainer profile.",
     signIn: "Sign in with Telegram",
+    /** "Профиль тренера" after the wizard: the same answers, one section at a time. */
+    edit: {
+      title: "Trainer profile",
+      text: "Change anything you filled in when setting up your profile. Clients see the changes right away.",
+      open: "Trainer profile",
+      openText: "Name, about, locations, time zone, cancellation deadline",
+      save: "Save",
+      notTrainer: "Your trainer profile appears once you accept a trainer invite.",
+      signedOutText: "Sign in with Telegram to change your trainer profile.",
+      notSet: "Not set",
+      noLocations: "None yet",
+      cancellation: "At least {hours} h before",
+      locations: {
+        add: "Add a location",
+        edit: "Edit",
+        editTitle: "Location",
+        remove: "Delete",
+        removeTitle: "Delete this location?",
+        removeText: "You won't be able to schedule new sessions here. Past and already scheduled sessions stay as they are.",
+        cancel: "Cancel",
+        saved: "Saved",
+        removed: "Location deleted",
+      },
+    },
     steps: {
       profile: {
         title: "What's your name",
@@ -587,7 +611,7 @@ export const en: Dictionary = {
         text: "If a client cancels later than this, the session is taken from their pass. The rule is the same for all your clients.",
         label: "Free cancellation up to",
         hours: "{hours} h",
-        hint: "Most trainers use 24 hours. You can change it in settings.",
+        hint: "Most trainers use 24 hours. You can change it later in your trainer profile.",
       },
       payment: {
         title: "Payment link",
