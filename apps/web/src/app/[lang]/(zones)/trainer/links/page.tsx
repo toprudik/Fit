@@ -79,7 +79,7 @@ async function TrialSection({ t, locale, supabase, userId }: { t: Dictionary; lo
   const [links, places, trainer] = await Promise.all([
     supabase
       .from("trial_links")
-      .select("id, token, title, duration_min, price_minor, currency, mode, location_id, is_enabled, uses_count")
+      .select("id, token, title, duration_min, price_minor, currency, mode, location_id, is_enabled, on_showcase, uses_count")
       .eq("trainer_id", userId)
       .is("archived_at", null)
       .order("created_at", { ascending: false }),
@@ -106,6 +106,7 @@ async function TrialSection({ t, locale, supabase, userId }: { t: Dictionary; lo
       .join(", "),
     url: trialUrl(link.token, clientEnv.NEXT_PUBLIC_APP_URL),
     enabled: link.is_enabled,
+    onShowcase: link.on_showcase,
     uses: link.uses_count,
   }));
 
