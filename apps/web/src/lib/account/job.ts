@@ -11,7 +11,7 @@ type Admin = ReturnType<typeof createSupabaseAdminClient>;
 /** Buckets whose objects sit in a folder named by the owner's id. */
 const OWNER_BUCKETS = [PHOTO_BUCKET, "avatars", "certificates", "feedback", EXPORT_BUCKET] as const;
 
-export type PrivacySummary = { expired: number; built: number; failed: number; purged: number };
+export type PrivacySummary = { expired: number; built: number; failed: number; purged: number; healthErased: number };
 
 /** Sends one Telegram message (lib/notifications/telegram); the route binds the bot token. */
 export type SendTelegram = (message: OutgoingMessage) => Promise<SendResult>;
@@ -95,6 +95,29 @@ async function purgeAccounts(admin: Admin, summary: PrivacySummary, hasTime: () 
 }
 
 /**
+ * Health data 30 days after the pd_health consent was withdrawn (право 5; consent-health-data.md 8.3): the progress
+ * photo files first, then the rows. A failure leaves the erasure due, so the next run repeats it; both steps are
+ * safe to repeat.
+ */
+async function eraseHealthData(admin: Admin, summary: PrivacySummary, hasTime: () => boolean) {
+  const { data, error } = await admin
+    .from("health_erasures")
+    .select("user_id")
+    .is("done_at", null)
+    .lte("scheduled_for", new Date().toISOString())
+    .order("scheduled_for")
+    .limit(10);
+  if (error) throw new Error(`reading due health erasures failed: ${error.code}`);
+  for (const { user_id: userId } of data) {
+    if (!hasTime()) return;
+    await removeFolder(admin, PHOTO_BUCKET, userId);
+    const { data: erased, error: eraseError } = await admin.rpc("purge_health_data", { p_user: userId });
+    if (eraseError) throw new Error(`purge_health_data failed: ${eraseError.code}`);
+    if (erased) summary.healthErased += 1;
+  }
+}
+
+/**
  * С5 "удаление выполнено". It cannot go through the outbox: the outbox row belongs to the user, who is gone by
  * now. One attempt, after the account is really deleted; a failure is logged by kind and changes nothing.
  */
@@ -109,8 +132,8 @@ async function sayDeleted(send: SendTelegram, chatId: number, locale: Locale) {
 }
 
 /**
- * One run of the privacy route: expired archives, waiting exports, due deletions, within the time budget. send
- * tells each deleted user that the deletion is done (С5).
+ * One run of the privacy route: expired archives, due deletions and health data erasures, waiting exports, within
+ * the time budget. send tells each deleted user that the deletion is done (С5).
  */
 export async function runPrivacyJob(
   admin: Admin,
@@ -120,9 +143,10 @@ export async function runPrivacyJob(
 ): Promise<PrivacySummary> {
   const started = now();
   const hasTime = () => now() - started < budgetMs;
-  const summary: PrivacySummary = { expired: 0, built: 0, failed: 0, purged: 0 };
+  const summary: PrivacySummary = { expired: 0, built: 0, failed: 0, purged: 0, healthErased: 0 };
   await expireExports(admin, summary);
   await purgeAccounts(admin, summary, hasTime, send);
+  await eraseHealthData(admin, summary, hasTime);
   await buildExports(admin, summary, hasTime);
   return summary;
 }
