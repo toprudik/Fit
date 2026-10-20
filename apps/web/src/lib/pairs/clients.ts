@@ -25,6 +25,14 @@ export const END_REASON_MAX_LENGTH = 500;
 export const CARD_NAME_MAX_LENGTH = 100;
 export const CARD_CONTACT_MAX_LENGTH = 200;
 
+/**
+ * The version of the data processing agreement for trainers (legal/ru/trainer-data-processing-agreement.md) the
+ * trainer accepts before the first client card without an account or the first note.
+ */
+export const TRAINER_DPA_VERSION = "2026-10-18";
+/** The agreement itself, on the public documents page. */
+export const TRAINER_DPA_PATH = "/legal/trainers";
+
 /** A pass ends soon at one session left or 7 days before its end, as in the К10/Т6 messages. */
 export const PASS_ENDING_SESSIONS = 1;
 export const PASS_ENDING_DAYS = 7;
