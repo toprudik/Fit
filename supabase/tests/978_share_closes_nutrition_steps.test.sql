@@ -1,5 +1,5 @@
 -- Closing nutrition or steps closes what is derived from them, migration
--- 20261018141523_share_closes_nutrition_steps.sql: the food-diary badges and the parts of a sent monthly report.
+-- 20261020102347_share_closes_nutrition_steps.sql: the food-diary badges and the parts of a sent monthly report.
 begin;
 \ir _helpers.psql
 select plan(9);
