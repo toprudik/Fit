@@ -287,7 +287,7 @@ insert into tests.admin_readable values
   ('profiles'), ('public_profiles'), ('user_roles'), ('consents'), ('account_deletions'), ('trainer_profiles'),
   ('trainer_certificates'), ('trainer_verifications'), ('trainer_invites'), ('feedback'), ('reports'),
   ('admin_audit_log'), ('break_glass_grants'), ('plan_grants'), ('access_requests'), ('plans'), ('exercises'), ('foods'),
-  ('badges'), ('reviews'), ('review_revisions'), ('trainer_waitlist');
+  ('badges'), ('reviews'), ('review_revisions'), ('trainer_waitlist'), ('public_data_consents');
 create table tests.admin_checked as
 select c.relname::text as tbl
 from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace

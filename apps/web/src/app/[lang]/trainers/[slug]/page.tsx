@@ -5,6 +5,7 @@ import { DaMark } from "@/components/brand/da-mark";
 import { JoinButton } from "@/components/client-links/join-button";
 import { ReportButton } from "@/components/reports/report-button";
 import { SignedOutActions } from "@/components/client-links/signed-out-actions";
+import { ShowcaseTerms } from "@/components/public-data/showcase-terms";
 import { ShowcaseProfile } from "@/components/showcase/showcase-profile";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -80,13 +81,14 @@ async function ShowcaseContent({ params }: { params: PageProps<"/[lang]/trainers
   if (!isShowcaseSlug(slug)) return <Unavailable t={t} text={copy.unavailableText} />;
 
   const supabase = await createSupabaseServerClient();
-  const [locale, { data: session }, { data, error }, prices, trial, honors] = await Promise.all([
+  const [locale, { data: session }, { data, error }, prices, trial, honors, terms] = await Promise.all([
     getLocale(),
     supabase.auth.getClaims(),
     supabase.rpc("get_trainer_showcase", { p_slug: slug }),
     supabase.rpc("get_trainer_showcase_prices", { p_slug: slug }),
     supabase.rpc("get_showcase_trial", { p_slug: slug }),
     supabase.rpc("get_trainer_honors", { p_slug: slug }),
+    supabase.rpc("get_showcase_terms", { p_slug: slug }),
   ]);
   if (error) {
     console.error("loading a showcase failed", error.code);
@@ -101,6 +103,9 @@ async function ShowcaseContent({ params }: { params: PageProps<"/[lang]/trainers
   const trialToken = isTrialToken(trial.data) ? trial.data : null;
   // And the honors next to the verified badge.
   if (honors.error) console.error("loading showcase honors failed", honors.error.code);
+  // The terms of publishing (152-FZ art. 10.1 part 10) are extra as well.
+  if (terms.error) console.error("loading the showcase terms failed", terms.error.code);
+  const publishTerms = terms.data?.[0] ?? null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -125,6 +130,7 @@ async function ShowcaseContent({ params }: { params: PageProps<"/[lang]/trainers
           </div>
         )}
       </div>
+      {publishTerms ? <ShowcaseTerms t={t} locale={locale} terms={publishTerms} /> : null}
     </div>
   );
 }

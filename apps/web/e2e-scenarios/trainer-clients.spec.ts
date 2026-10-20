@@ -137,14 +137,22 @@ test.describe("profile and showcase", () => {
     await page.getByRole("button", { name: "Сохранить адрес" }).click();
     await expect(page.getByText("Адрес сохранён")).toBeVisible();
 
-    // The showcase may be switched off for a new trainer; switch it on to look at it.
-    const show = page.getByRole("button", { name: "Включить витрину" });
-    if (await show.isVisible()) {
-      await show.click();
-      await expect(
-        page.getByRole("button", { name: "Выключить витрину" }),
-      ).toBeVisible();
-    }
+    // A new trainer's showcase is closed: switching it on asks for the consent to publish (152-FZ art. 10.1),
+    // with nothing ticked, and shows only what the trainer ticks.
+    await page.getByRole("button", { name: "Включить витрину" }).click();
+    const consent = page.getByRole("dialog", { name: "Согласие на публикацию" });
+    await expect(consent).toBeVisible();
+    await expect(
+      consent.getByRole("checkbox", { name: "Описание, опыт и специализации" }),
+    ).not.toBeChecked();
+    await expectAccessible(page);
+    await consent
+      .getByRole("checkbox", { name: "Описание, опыт и специализации" })
+      .check();
+    await consent.getByRole("button", { name: "Даю согласие" }).click();
+    await expect(
+      page.getByRole("button", { name: "Выключить витрину" }),
+    ).toBeVisible();
     await expect(
       page.getByRole("img", { name: "QR-код витрины" }),
     ).toBeVisible();
