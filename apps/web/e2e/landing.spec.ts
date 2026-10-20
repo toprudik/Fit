@@ -56,7 +56,7 @@ test("signed out, the admin waitlist is a 404", async ({ page }) => {
   expect(response?.status()).toBe(404);
 });
 
-/* «Калькулятор цены абонемента» at /for-trainers/calculator (marketing backlog item 9): public, both themes. */
+/* «Калькулятор цен на пакеты» at /for-trainers/calculator (marketing backlog item 9): public, both themes. */
 for (const scheme of SCHEMES) {
   test.describe(`${scheme} theme, calculator`, () => {
     test.use({ colorScheme: scheme });
@@ -66,7 +66,7 @@ for (const scheme of SCHEMES) {
       const response = await page.goto("/for-trainers/calculator?src=ch_vk", { waitUntil: "networkidle" });
 
       expect(response?.status()).toBe(200);
-      await expect(page.getByRole("heading", { level: 1, name: "Калькулятор цены абонемента" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Калькулятор цен на пакеты" })).toBeVisible();
       await expect(page.getByLabel("Пакет на 10 занятий")).toHaveValue("16000");
       await expect(page.getByRole("link", { name: "Вести абонементы в DaFit" })).toHaveAttribute("href", "/for-trainers?src=ch_vk#waitlist");
 

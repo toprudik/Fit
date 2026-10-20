@@ -19,7 +19,7 @@ async function Calculator({ searchParams }: { searchParams: PageProps<"/[lang]/f
 }
 
 /**
- * «Калькулятор цены абонемента» (marketing backlog item 9): a public tool for any trainer, without signing in,
+ * «Калькулятор цен на пакеты» (marketing backlog item 9): a public tool for any trainer, without signing in,
  * on the rules of DaFit's price grid. It leads to the waitlist on /for-trainers.
  */
 export default async function PriceCalculatorPage(props: PageProps<"/[lang]/for-trainers/calculator">) {
