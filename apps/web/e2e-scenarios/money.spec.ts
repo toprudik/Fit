@@ -296,7 +296,7 @@ test.describe("Marking a payment", () => {
     await expect(sheet.getByLabel("Сумма")).toHaveValue("9000");
     await expectAccessible(client.page);
     await sheet.getByRole("button", { name: "Я оплатил" }).click();
-    await expect(client.page.getByText("Тренер получит сообщение")).toBeVisible();
+    await expect(client.page.getByText("Тренер получит сообщение", { exact: true })).toBeVisible();
     await expect(client.page.getByRole("listitem").filter({ hasText: "Ждёт подтверждения" })).toBeVisible();
 
     const { page } = trainer;
@@ -305,7 +305,7 @@ test.describe("Marking a payment", () => {
     await expect(page.getByText("Ждут подтверждения")).toBeVisible();
     await page.goto(`/trainer/clients/${client.coachingId}/payments`);
     const reported = page.getByRole("listitem").filter({ hasText: "Клиент сообщил об оплате" });
-    await reported.getByRole("button", { name: "Подтвердить" }).click();
+    await reported.getByRole("button", { name: "Подтвердить", exact: true }).click();
     await expect(page.getByText("Оплата подтверждена")).toBeVisible();
     await expect(page.getByRole("listitem").filter({ hasText: rub(9000) })).toContainText("Подтверждена");
 

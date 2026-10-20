@@ -117,7 +117,7 @@ test.describe("booking a slot", () => {
     await expect(coach.getByRole("heading", { level: 1, name: "Запрос на запись" })).toBeVisible();
     await expect(coach.getByText(/при списании занятие уйдёт в долг/)).toBeVisible();
     await expectAccessible(coach);
-    await tap(coach.getByRole("button", { name: "Подтвердить" }));
+    await tap(coach.getByRole("button", { name: "Подтвердить", exact: true }));
     await expect(coach.getByText("Запись подтверждена")).toBeVisible();
     await expect(coach).toHaveURL(/\/trainer\/requests$/);
     await expect(coach.getByRole("heading", { name: "Запросов нет" })).toBeVisible();

@@ -10,6 +10,8 @@ apps/web/scripts/e2e-scenarios.sh                       # build for the local da
 E2E_SKIP_BUILD=1 apps/web/scripts/e2e-scenarios.sh trainer --project=phone   # one file, current build
 ```
 
+Every run adds accounts and never deletes them, so after a few full runs reset the local database (`supabase db reset`) before the next one: with thousands of trainers `/admin/analytics` hits the statement timeout (handed to the load tests).
+
 The suite refuses any database but a local one. It never runs as a required PR check: it needs Docker and a build of its own.
 
 ## How a scenario is written
