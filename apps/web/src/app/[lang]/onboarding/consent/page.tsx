@@ -9,7 +9,7 @@ import { LegalDocument } from "@/components/legal/legal-document";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getDictionary, getLocale } from "@/i18n/server";
-import { isDeletionPending } from "@/lib/account/deletion";
+import { DELETION_PATH, EXPORT_PATH, isDeletionPending } from "@/lib/account/deletion";
 import { CONSENT_PATH, PREFERENCES_PATH } from "@/lib/consent/beta-terms";
 import { type ConsentDocument, loadConsentDocument } from "@/lib/consent/documents";
 import { onboardingNext, withNext } from "@/lib/consent/next";
@@ -179,6 +179,23 @@ async function ConsentStep({ searchParams }: { searchParams: SearchParams }) {
         </ul>
       </div>
       <TermsForm next={next} />
+      {updated ? (
+        <div className="flex flex-col gap-1">
+          <p className="text-subhead text-ink-2">{copy.terms.leaving}</p>
+          <ul className="flex flex-col">
+            {[
+              { href: EXPORT_PATH, label: copy.terms.exportLink },
+              { href: DELETION_PATH, label: copy.terms.deleteLink },
+            ].map((link) => (
+              <li key={link.href}>
+                <Link href={link.href} className="inline-flex min-h-11 items-center text-callout text-accent-ink underline underline-offset-2">
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </>
   );
 }
