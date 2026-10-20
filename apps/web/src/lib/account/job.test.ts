@@ -14,7 +14,16 @@ type Admin = Parameters<typeof runPrivacyJob>[0];
  * An admin client with one due deletion: each table answers with `tables[name]` whatever the filters, so the test
  * pins what the job does with the answers, not the query text.
  */
-function fakeAdmin(options: { purged: string[] | null; telegramId?: number | null; botBlocked?: boolean; locale?: string }) {
+type DueFile = { kind: string; id: string; bucket: string; paths: string[] };
+
+function fakeAdmin(options: {
+  purged: string[] | null;
+  telegramId?: number | null;
+  botBlocked?: boolean;
+  locale?: string;
+  due?: DueFile[];
+  removeFails?: boolean;
+}) {
   const tables: Record<string, unknown> = {
     account_deletions: [{ user_id: USER }],
     data_exports: [],
@@ -36,11 +45,29 @@ function fakeAdmin(options: { purged: string[] | null; telegramId?: number | nul
     return builder;
   };
   const deleted: string[] = [];
+  const removed: string[] = [];
+  const forgotten: string[] = [];
   const admin = {
     from: query,
-    rpc: async (fn: string) =>
-      fn === "purge_account" ? { data: options.purged, error: null } : { data: [], error: null },
-    storage: { from: () => ({ list: async () => ({ data: [], error: null }), remove: async () => ({ error: null }) }) },
+    rpc: async (fn: string, args: { p_kind?: string; p_id?: string }) => {
+      if (fn === "purge_account") return { data: options.purged, error: null };
+      if (fn === "retention_due_files") return { data: options.due ?? [], error: null };
+      if (fn === "retention_forget") {
+        forgotten.push(`${args.p_kind}:${args.p_id}`);
+        return { data: true, error: null };
+      }
+      return { data: [], error: null };
+    },
+    storage: {
+      from: (bucket: string) => ({
+        list: async () => ({ data: [], error: null }),
+        remove: async (paths: string[]) => {
+          if (options.removeFails) return { error: { name: "StorageApiError" } };
+          removed.push(...paths.map((path) => `${bucket}/${path}`));
+          return { error: null };
+        },
+      }),
+    },
     auth: {
       admin: {
         deleteUser: async (id: string) => {
@@ -50,7 +77,7 @@ function fakeAdmin(options: { purged: string[] | null; telegramId?: number | nul
       },
     },
   };
-  return { admin: admin as unknown as Admin, deleted };
+  return { admin: admin as unknown as Admin, deleted, removed, forgotten };
 }
 
 describe("runPrivacyJob, due deletions (С5)", () => {
@@ -89,5 +116,26 @@ describe("runPrivacyJob, due deletions (С5)", () => {
     expect([refused.purged, thrown.purged]).toEqual([1, 1]);
     expect(error.mock.calls.flat().join(" ")).not.toContain(String(CHAT));
     error.mockRestore();
+  });
+});
+
+describe("runPrivacyJob, files past their retention", () => {
+  const due: DueFile[] = [
+    { kind: "feedback", id: "f1", bucket: "feedback", paths: ["u/f1/1.png", "u/f1/2.png"] },
+    { kind: "certificate", id: "c1", bucket: "certificates", paths: ["t/c1.pdf"] },
+  ];
+
+  it("removes the files, then forgets the rows", async () => {
+    const { admin, removed, forgotten } = fakeAdmin({ purged: null, due });
+    const summary = await runPrivacyJob(admin, 10_000);
+    expect(removed).toEqual(["feedback/u/f1/1.png", "feedback/u/f1/2.png", "certificates/t/c1.pdf"]);
+    expect(forgotten).toEqual(["feedback:f1", "certificate:c1"]);
+    expect(summary.retained).toBe(2);
+  });
+
+  it("keeps the row when its files could not be removed", async () => {
+    const { admin, forgotten } = fakeAdmin({ purged: null, due, removeFails: true });
+    await expect(runPrivacyJob(admin, 10_000)).rejects.toThrow("removing from feedback failed");
+    expect(forgotten).toEqual([]);
   });
 });

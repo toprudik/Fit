@@ -11,7 +11,7 @@ type Admin = ReturnType<typeof createSupabaseAdminClient>;
 /** Buckets whose objects sit in a folder named by the owner's id. */
 const OWNER_BUCKETS = [PHOTO_BUCKET, "avatars", "certificates", "feedback", EXPORT_BUCKET] as const;
 
-export type PrivacySummary = { expired: number; built: number; failed: number; purged: number };
+export type PrivacySummary = { expired: number; built: number; failed: number; purged: number; retained: number };
 
 /** Sends one Telegram message (lib/notifications/telegram); the route binds the bot token. */
 export type SendTelegram = (message: OutgoingMessage) => Promise<SendResult>;
@@ -95,6 +95,25 @@ async function purgeAccounts(admin: Admin, summary: PrivacySummary, hasTime: () 
 }
 
 /**
+ * Feedback screenshots and certificates past their retention (privacy policy §5.1 rows 9 and 15,
+ * 20261020154517_retention.sql): the files go first, then the row, so a failure leaves the row due for the next run.
+ */
+async function forgetRetainedFiles(admin: Admin, summary: PrivacySummary, hasTime: () => boolean) {
+  const { data, error } = await admin.rpc("retention_due_files", { p_limit: 20 });
+  if (error) throw new Error(`retention_due_files failed: ${error.code}`);
+  for (const row of data) {
+    if (!hasTime()) return;
+    if (row.paths.length > 0) {
+      const { error: removeError } = await admin.storage.from(row.bucket).remove(row.paths);
+      if (removeError) throw new Error(`removing from ${row.bucket} failed: ${removeError.name}`);
+    }
+    const { data: forgotten, error: forgetError } = await admin.rpc("retention_forget", { p_kind: row.kind, p_id: row.id });
+    if (forgetError) throw new Error(`retention_forget failed: ${forgetError.code}`);
+    if (forgotten) summary.retained += 1;
+  }
+}
+
+/**
  * С5 "удаление выполнено". It cannot go through the outbox: the outbox row belongs to the user, who is gone by
  * now. One attempt, after the account is really deleted; a failure is logged by kind and changes nothing.
  */
@@ -109,7 +128,8 @@ async function sayDeleted(send: SendTelegram, chatId: number, locale: Locale) {
 }
 
 /**
- * One run of the privacy route: expired archives, waiting exports, due deletions, within the time budget. send
+ * One run of the privacy route: expired archives, due deletions, files past their retention, waiting exports,
+ * within the time budget. send
  * tells each deleted user that the deletion is done (С5).
  */
 export async function runPrivacyJob(
@@ -120,9 +140,10 @@ export async function runPrivacyJob(
 ): Promise<PrivacySummary> {
   const started = now();
   const hasTime = () => now() - started < budgetMs;
-  const summary: PrivacySummary = { expired: 0, built: 0, failed: 0, purged: 0 };
+  const summary: PrivacySummary = { expired: 0, built: 0, failed: 0, purged: 0, retained: 0 };
   await expireExports(admin, summary);
   await purgeAccounts(admin, summary, hasTime, send);
+  await forgetRetainedFiles(admin, summary, hasTime);
   await buildExports(admin, summary, hasTime);
   return summary;
 }
