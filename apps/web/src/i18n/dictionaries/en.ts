@@ -5405,6 +5405,9 @@ export const en: Dictionary = {
       intro: "DaFit is in a closed test for now. Before you start, here is what you agree to.",
       updatedTitle: "The beta terms changed",
       updatedIntro: "We changed the terms of the closed test. Read the new version and accept it to go on.",
+      leaving: "Don't want to accept the new version? You can still download your data or delete your account without accepting it.",
+      exportLink: "Data export",
+      deleteLink: "Delete account",
       points: [
         "This is a test version. Some things may break or change without notice.",
         "Your data is stored and processed on servers in the USA.",
