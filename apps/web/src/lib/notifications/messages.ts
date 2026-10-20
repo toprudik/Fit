@@ -74,7 +74,7 @@ const templates: Partial<Record<NotificationType, Template>> = {
     text:
       payload.event === "extended" && typeof payload.due_on === "string" && /^\d{4}-\d{2}-\d{2}$/.test(payload.due_on)
         ? interpolateEscaped(t.dataRequestExtended, {
-            date: new Intl.DateTimeFormat(INTL_LOCALE[locale], { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(payload.due_on)),
+            date: diaryDay(locale, payload.due_on),
             reason: String(payload.reply ?? ""),
           })
         : interpolateEscaped(t.feedbackReply, { reply: String(payload.reply ?? "") }),
