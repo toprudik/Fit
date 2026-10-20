@@ -6,6 +6,7 @@ import { renderWithProviders } from "@/test/render";
 import { ClientComments } from "./client-comments";
 
 vi.mock("@/lib/nutrition/diary-actions", () => ({ hideComment: vi.fn() }));
+vi.mock("@/lib/reports/actions", () => ({ reportContent: vi.fn(), reportShowcase: vi.fn() }));
 vi.mock("@/components/ui/sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const COACHING = "8a1d6c3e-5b2f-4e7a-9c0d-1f2e3a4b5c6d";
@@ -36,5 +37,10 @@ describe("ClientComments", () => {
     renderWithProviders(<ClientComments comments={[comment({}), comment({ id: "c-2", authorUsername: "a b/../x" })]} />);
     const links = screen.getAllByRole("link", { name: "Ответить" });
     expect(links.map((link) => link.getAttribute("href"))).toEqual([`/client/trainers/${COACHING}`, `/client/trainers/${COACHING}`]);
+  });
+
+  it("lets the client report a trainer's comment (DSA art. 16)", () => {
+    renderWithProviders(<ClientComments comments={[comment({})]} />);
+    expect(screen.getByRole("button", { name: "Пожаловаться" })).toBeTruthy();
   });
 });

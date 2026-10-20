@@ -1244,6 +1244,9 @@ describe("review_prompt and report_resolution (wave-2 §11)", () => {
 
   it("confirms a report and an appeal as soon as they arrive", () => {
     expect(report({ event: "received" })).toBe("Жалобу получили. Посмотрим и напишем, что решили.");
+    expect(
+      renderMessage({ ...row, kind: "report_resolution", payload: { event: "received", target_type: "food_comment" } }, options)?.buttons,
+    ).toEqual([{ text: "Открыть DaFit", web_app: { url: "https://fit.example/reports?source=report_resolution" } }]);
     expect(report({ event: "appeal_received" })).toMatch(/другой человек из команды DaFit/);
   });
 

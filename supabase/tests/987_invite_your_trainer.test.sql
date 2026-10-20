@@ -1,4 +1,4 @@
--- "Пригласи своего тренера", migration 20261020143217_invite_your_trainer.sql (marketing backlog 16): a person's
+-- "Пригласи своего тренера", migration 20261020152317_invite_your_trainer.sql (marketing backlog 16): a person's
 -- inviter code, their trainer becoming a trainer by it without an admin invite, the inviter's bot message, the list
 -- of trainers who came, and the inviter starting the pair. Admin invites and trainer referral codes keep working.
 begin;

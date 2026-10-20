@@ -9,3 +9,5 @@ export const BETA_TERMS_VERSION = "2026-11-beta";
 export const CONSENT_PATH = "/onboarding/consent";
 /** Language, theme and bot messages: the step after the first acceptance (screens.md §4.1). */
 export const PREFERENCES_PATH = "/onboarding/preferences";
+/** The consents in the settings: what was given and when, and how to revoke it (право 5). */
+export const CONSENTS_SETTINGS_PATH = "/settings/consents";

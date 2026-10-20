@@ -41,6 +41,8 @@ export function NewCardForm() {
       } else if (result.reason === "limit") {
         toast.error(copy.limitText);
         router.refresh();
+      } else if (result.reason === "dpa") {
+        router.refresh();
       } else {
         toast.error(t.pairs.failed);
       }
