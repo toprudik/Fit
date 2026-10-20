@@ -10,6 +10,8 @@ const db = vi.hoisted(() => ({
   user: "user-1" as string | null,
   rows: [] as Row[],
   timeZone: null as string | null,
+  published: [] as { scope: string; accepted_at: string }[],
+  trainer: false,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -20,8 +22,11 @@ vi.mock("@/lib/supabase/server", () => ({
         select: () => chain,
         eq: () => chain,
         in: () => chain,
-        is: async () => ({ data: [...db.rows], error: null }),
-        maybeSingle: async () => ({ data: table === "user_settings" && db.timeZone ? { time_zone: db.timeZone } : null, error: null }),
+        is: async () => ({ data: table === "public_data_consents" ? [...db.published] : [...db.rows], error: null }),
+        maybeSingle: async () => {
+          if (table === "trainer_profiles") return { data: db.trainer ? { user_id: db.user } : null, error: null };
+          return { data: table === "user_settings" && db.timeZone ? { time_zone: db.timeZone } : null, error: null };
+        },
       };
       return chain;
     },
@@ -42,6 +47,8 @@ beforeEach(() => {
   db.user = "user-1";
   db.rows = [];
   db.timeZone = null;
+  db.published = [];
+  db.trainer = false;
 });
 
 describe("loadMyConsents", () => {
@@ -57,8 +64,28 @@ describe("loadMyConsents", () => {
       terms: { acceptedAt: at(2) },
       personal: { acceptedAt: at(3) },
       health: { acceptedAt: null },
+      showcase: null,
+      story: { acceptedAt: null },
       timeZone: "Asia/Yerevan",
     });
+  });
+
+  it("shows the showcase consent only to a trainer and dates both consents to publish", async () => {
+    db.published = [{ scope: "story", accepted_at: at(5) }];
+    expect((await loadMyConsents())?.showcase).toBeNull();
+    db.trainer = true;
+    db.published = [
+      { scope: "showcase", accepted_at: at(6) },
+      { scope: "story", accepted_at: at(5) },
+    ];
+    const consents = await loadMyConsents();
+    expect(consents?.showcase).toEqual({ acceptedAt: at(6) });
+    expect(consents?.story).toEqual({ acceptedAt: at(5) });
+  });
+
+  it("leaves a trainer's showcase consent not given until they turn the showcase on", async () => {
+    db.trainer = true;
+    expect((await loadMyConsents())?.showcase).toEqual({ acceptedAt: null });
   });
 
   it("counts the terms as not given while a part is missing or of an older edition", async () => {

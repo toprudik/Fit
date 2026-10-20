@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { FileCheck, HeartPulse, ShieldCheck, UserX } from "lucide-react";
+import { FileCheck, HeartPulse, Images, ShieldCheck, Store, UserX } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { HealthConsentRevoke } from "@/components/settings/health-consent-revoke";
+import { PublicConsentRevoke } from "@/components/settings/public-consent-revoke";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { Button } from "@/components/ui/button";
@@ -60,13 +61,40 @@ async function Consents() {
           )}
         </div>
       </div>
+      {consents.showcase ? (
+        <div className="flex flex-col gap-3">
+          <ListGroup footer={copy.showcaseHint}>
+            <ListRow icon={Store} title={copy.showcase} subtitle={status(consents.showcase.acceptedAt)} />
+          </ListGroup>
+          <div className="px-4">
+            {consents.showcase.acceptedAt ? (
+              <PublicConsentRevoke scope="showcase" />
+            ) : (
+              <Button asChild variant="secondary" block>
+                <Link href="/trainer/showcase">{copy.giveShowcase}</Link>
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : null}
+      <div className="flex flex-col gap-3">
+        <ListGroup footer={copy.storyHint}>
+          <ListRow icon={Images} title={copy.story} subtitle={status(consents.story.acceptedAt)} />
+        </ListGroup>
+        {consents.story.acceptedAt ? (
+          <div className="px-4">
+            <PublicConsentRevoke scope="story" />
+          </div>
+        ) : null}
+      </div>
     </>
   );
 }
 
 /**
  * The consents the user gave and when (право 5; 152-FZ art. 9 part 2): the required ones are revoked only by deleting
- * the account, the health data one here with a button and given again through the consents screen.
+ * the account, the health data one here with a button and given again through the consents screen. The consents to
+ * publish (152-FZ art. 10.1) are revoked here too and given again on the showcase or the month report.
  */
 export default async function ConsentsSettingsPage() {
   const t = await getDictionary();
