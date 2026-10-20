@@ -46,7 +46,7 @@ UK representative (UK GDPR Art. 27): [UK REPRESENTATIVE].
 
 3.1. DaFit is for people aged 18 or over, both trainers and clients. We do not knowingly collect data from anyone under 18. If you believe a minor uses DaFit, write to [CONTACT EMAIL] and we will delete the account.
 
-> Team: not in the product yet, see product-changes. The code has no age gate today; the nutrition calculator refuses users under 18, nothing else does.
+> Team: the consent screen has an "I am 18 or older" checkbox; "I'm under 18" schedules the account for deletion.
 
 ## 4. What data we collect
 
@@ -112,9 +112,7 @@ This table gives the legal bases under the EU GDPR and the UK GDPR. United State
 
 ## 6. Health data and who sees what
 
-6.1. **Your consent comes first.** Health data is special-category data under the GDPR and consumer health data under several US state laws. We will ask for your explicit consent before you first enter it. You can withdraw consent at any time by deleting the entries or your account; withdrawing does not affect what we did before.
-
-> Team: not in the product yet, see product-changes. The code records only acceptance of the beta terms today (consent kind `beta_terms`); there is no separate health data consent screen.
+6.1. **Your consent comes first.** Health data is special-category data under the GDPR and consumer health data under several US state laws. We will ask for your explicit consent before you first enter it. You can withdraw consent at any time in Settings, then Consents ("Withdraw consent"). Trainers stop seeing the data at once and we delete it 30 days later; if you give consent again before then, nothing is deleted. Withdrawing does not affect what we did before.
 
 > Counsel: a separate, unticked health data consent at first entry, with the consent version stored, is a required product change. Health data must not be collected on the beta terms alone.
 
@@ -206,7 +204,7 @@ We share personal data only as described here.
 | Correct your data | Edit the entry. Your name and username come from Telegram: change them in Telegram and they update at your next sign-in, or set a display name in DaFit |
 | Stop notifications | Settings, then Notifications, per kind. Blocking the bot stops all messages |
 | Stop us counting your app openings | Settings, then App opening count. Past openings are deleted |
-| Withdraw consent for health data | Delete the entries or your account |
+| Withdraw consent for health data | Settings, then Consents, then "Withdraw consent". Trainers lose access at once; the data is deleted after 30 days |
 
 10.3. For anything else, write to [CONTACT EMAIL]. We may ask you to confirm the request from your Telegram account so that nobody else can make it in your name. We answer within one month; if a request is complex we can extend this by up to two more months and will tell you why within the first month. Requests are free unless they are clearly unfounded or excessive.
 

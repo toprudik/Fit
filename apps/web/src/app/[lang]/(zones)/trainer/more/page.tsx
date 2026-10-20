@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ChartColumn, CircleHelp, ClipboardList, Dumbbell, Gift, Handshake, QrCode, Salad, ScanLine, Star, Store, UserPlus, UserRound, Users } from "lucide-react";
+import { Award, ChartColumn, CircleHelp, ClipboardList, Dumbbell, Gift, Handshake, QrCode, Salad, ScanLine, Star, Store, UserPlus, UserRound, Users } from "lucide-react";
 import { helpPath } from "@/components/help/path";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
@@ -21,6 +21,7 @@ export default async function TrainerMorePage() {
           <ListRow icon={UserRound} title={t.trainerWizard.edit.open} subtitle={t.trainerWizard.edit.openText} href="/trainer/profile" />
           <ListRow icon={QrCode} iconTone="accent" title={copy.links} subtitle={copy.linksText} href="/trainer/links" />
           <ListRow icon={Store} title={copy.showcase} subtitle={copy.showcaseText} href="/trainer/showcase" />
+          <ListRow icon={Award} title={t.trainerMilestones.title} subtitle={t.trainerMilestones.moreText} href="/trainer/milestones" />
           <ListRow icon={Star} title={t.reviews.trainer.title} subtitle={t.reviews.trainer.moreText} href="/trainer/reviews" />
           <ListRow icon={Dumbbell} title={copy.exercises} subtitle={copy.exercisesText} href="/trainer/exercises" />
           <ListRow icon={ClipboardList} title={copy.templates} subtitle={copy.templatesText} href="/trainer/templates" />
