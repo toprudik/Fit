@@ -92,9 +92,13 @@ export type Period = "month" | "quarter" | "all";
 /** The first day (YYYY-MM-DD) a chart of this period shows, counted back from `today`; null for all. */
 export function periodStart(period: Period, today: string): string | null {
   if (period === "all") return null;
-  const date = new Date(`${today}T12:00:00Z`);
-  date.setUTCMonth(date.getUTCMonth() - (period === "month" ? 1 : 3));
-  return date.toISOString().slice(0, 10);
+  // The same day of an earlier month, or its last day when that month is shorter: a month back from 31 March is
+  // 28 February, not 3 March (setUTCMonth alone rolls over).
+  const [year, month, day] = today.split("-").map(Number);
+  const target = new Date(Date.UTC(year, month - 1 - (period === "month" ? 1 : 3), 1));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(day, lastDay));
+  return target.toISOString().slice(0, 10);
 }
 
 export type Point = { date: string; value: number };
