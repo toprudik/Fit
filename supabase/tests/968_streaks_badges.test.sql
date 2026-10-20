@@ -156,7 +156,7 @@ select throws_ok(
   format('insert into public.user_badges (user_id, badge_code) values (%L, ''sessions_100'')', tests.user_id('client_c')),
   '42501', null, 'nobody writes badges directly'
 );
-select is((select count(*)::int from public.badges), 18, 'everyone signed in reads the catalogue');
+select is((select count(*)::int from public.badges), 19, 'everyone signed in reads the catalogue');
 
 select tests.authenticate_as('trainer_a');
 select is((select count(*)::int from public.user_badges where user_id = tests.user_id('client_c')), 2,

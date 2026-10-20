@@ -5017,6 +5017,7 @@ export const en: Dictionary = {
         challenge_joined: { title: "Challenge finisher", text: "Finished a challenge with points on the board" },
         challenge_done: { title: "Challenge done", text: "Reached the goal of a challenge" },
         challenge_winner: { title: "Top three", text: "Among the top three on a challenge leaderboard" },
+        referral_friend: { title: "Friend by invitation", text: "A friend joined your trainer by your link and paid for sessions" },
       },
     },
     trainer: {
