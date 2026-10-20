@@ -38,6 +38,8 @@ const reportSchema = z.object({
   streaks: z.object({ workouts: number.optional(), diary: number.optional(), steps: number.optional() }).optional(),
   /** Codes of the badges earned that month, oldest first. */
   badges: z.array(z.string()).optional(),
+  /** Set without the health data consent: the blocks built from health data are left out (право 3). */
+  health_closed: z.boolean().optional(),
 });
 
 export type MonthlyReport = z.infer<typeof reportSchema>;

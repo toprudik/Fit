@@ -56,6 +56,7 @@ begin
   insert into public.trial_links (trainer_id, title, currency) values (v_trainer, 'Trial', 'RUB');
   insert into public.trainer_certificates (trainer_id, title, storage_path) values (v_trainer, 'Diploma', v_trainer::text || '/diploma.pdf');
   insert into public.trainer_honors (trainer_id, honor, reason) values (v_trainer, 'founder', 'Beta');
+  insert into public.trainer_milestones (trainer_id, kind) values (v_trainer, 'clients_5');
   insert into public.exercises (id, source, owner_id, name) values (v_exercise, 'custom', v_trainer, 'Move of ' || p_trainer);
   insert into public.exercise_translations (exercise_id, locale, name) values (v_exercise, 'en', 'Move');
   insert into public.workout_templates (owner_id, title) values (v_trainer, 'Template') returning id into v_workout;

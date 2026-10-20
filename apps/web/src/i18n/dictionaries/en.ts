@@ -1935,6 +1935,7 @@ export const en: Dictionary = {
       days: { one: "Over {count} day", few: "Over {count} days", many: "Over {count} days", other: "Over {count} days" },
       units: { h: "h", min: "min" },
     },
+    healthClosed: "Without your consent to health data, the review leaves out workouts, records, streaks, measurements, nutrition and activity.",
     homework: { header: "Homework", done: "Done", ofTotal: "{done} of {total}" },
     /** Sending the month to a trainer (§4 rule 3). */
     forward: {
@@ -4230,6 +4231,25 @@ export const en: Dictionary = {
     trainerText: "You're a trainer already. Colleagues are invited with the link for trainers.",
     trainerAction: "Invite a trainer",
   },
+  /** "Мои вехи" (/trainer/milestones, marketing 14): the trainer's own milestones and the bot message about them. */
+  trainerMilestones: {
+    title: "My milestones",
+    moreText: "First clients, sessions and weeks in a row",
+    lead: "Marks of how your work in DaFit grows. The bot tells you about each new one; you can turn that message off in notification settings.",
+    signedOutText: "Sign in to see your milestones.",
+    signIn: "Sign in",
+    notTrainer: "Milestones are for trainers.",
+    reached: "Reached",
+    ahead: "Ahead",
+    progress: "{current} of {target}",
+    items: {
+      first_trial_client: { title: "First client after a trial", text: "Someone came by your trial session link and stayed to train." },
+      clients_5: { title: "Five clients", text: "Five clients train with you in DaFit at the same time." },
+      weeks_4: { title: "Four weeks in a row", text: "A month with no gaps: every week you marked who came to a session." },
+      sessions_100: { title: "100 sessions", text: "A hundred sessions held in DaFit." },
+      sessions_500: { title: "500 sessions", text: "Five hundred sessions held in DaFit." },
+    },
+  },
   trainerReferrals: {
     title: "Invite a trainer",
     moreText: "A bonus for colleagues who join by your link",
@@ -4471,6 +4491,7 @@ export const en: Dictionary = {
         trainer_broadcast: "Trainer messages to groups",
         waitlist_closed: "Waitlist closed",
         client_pass_ending: "Client's pass running out",
+        trainer_milestone: "My milestones",
       },
     },
     saved: "Saved",
@@ -5496,6 +5517,10 @@ export const en: Dictionary = {
     badge: "New badge: “{title}”. {text}.",
     badgeUnknown: "You have a new badge.",
     openBadges: "Open badges",
+    /** Marketing 14: the trainer reached a milestone (trainer_milestone). */
+    trainerMilestone: "New milestone: “{title}”. {text}",
+    trainerMilestoneUnknown: "You reached a new milestone.",
+    openTrainerMilestones: "My milestones",
     challenge: "Trainer {name} invites you to the challenge “{title}”: {metric}, {period}. Joining is up to you.",
     openChallenge: "Open challenge",
     homeworkComment: "Comment: {comment}",

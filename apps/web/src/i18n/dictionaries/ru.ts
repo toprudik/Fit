@@ -1944,6 +1944,7 @@ export const ru = {
       days: { one: "За {count} день", few: "За {count} дня", many: "За {count} дней", other: "За {count} дня" } as PluralForms,
       units: { h: "ч", min: "мин" },
     },
+    healthClosed: "Без согласия на сведения о здоровье в итогах нет тренировок, рекордов, серий, замеров, питания и активности.",
     homework: { header: "Домашние задания", done: "Выполнено", ofTotal: "{done} из {total}" },
     /** Sending the month to a trainer (§4 rule 3). */
     forward: {
@@ -4259,6 +4260,25 @@ export const ru = {
     trainerText: "Ты уже тренер. Коллег зовут ссылкой для тренеров.",
     trainerAction: "Пригласить тренера",
   },
+  /** "Мои вехи" (/trainer/milestones, marketing 14): the trainer's own milestones and the bot message about them. */
+  trainerMilestones: {
+    title: "Мои вехи",
+    moreText: "Первые клиенты, занятия и недели подряд",
+    lead: "Отметки о том, как растёт твоя работа в DaFit. О каждой новой напишет бот, это сообщение можно выключить в настройках уведомлений.",
+    signedOutText: "Войди, чтобы увидеть свои вехи.",
+    signIn: "Войти",
+    notTrainer: "Вехи есть только у тренера.",
+    reached: "Достигнуто",
+    ahead: "Впереди",
+    progress: "{current} из {target}",
+    items: {
+      first_trial_client: { title: "Первый клиент после пробного", text: "Человек пришёл по ссылке на пробное занятие и остался заниматься." },
+      clients_5: { title: "Пять клиентов", text: "Пять клиентов занимаются с тобой в DaFit одновременно." },
+      weeks_4: { title: "Четыре недели подряд", text: "Месяц без пропусков: каждую неделю в DaFit отмечено, кто пришёл на занятие." },
+      sessions_100: { title: "100 занятий", text: "Сто проведённых занятий в DaFit." },
+      sessions_500: { title: "500 занятий", text: "Пятьсот проведённых занятий в DaFit." },
+    },
+  },
   trainerReferrals: {
     title: "Пригласить тренера",
     moreText: "Бонус за коллег, которые придут по твоей ссылке",
@@ -4500,6 +4520,7 @@ export const ru = {
         trainer_broadcast: "Рассылки тренера в группах",
         waitlist_closed: "Очередь на занятие закрылась",
         client_pass_ending: "Абонемент клиента заканчивается",
+        trainer_milestone: "Мои вехи",
       },
     },
     saved: "Сохранено",
@@ -5580,6 +5601,10 @@ export const ru = {
     badge: "Новый значок: «{title}». {text}.",
     badgeUnknown: "У тебя новый значок.",
     openBadges: "Открыть значки",
+    /** Marketing 14: the trainer reached a milestone (trainer_milestone). */
+    trainerMilestone: "Новая веха: «{title}». {text}",
+    trainerMilestoneUnknown: "У тебя новая веха.",
+    openTrainerMilestones: "Мои вехи",
     challenge: "Тренер {name} зовёт в челлендж «{title}»: {metric}, {period}. Участвовать или нет, решаешь ты.",
     openChallenge: "Открыть челлендж",
     homeworkComment: "Комментарий: {comment}",
