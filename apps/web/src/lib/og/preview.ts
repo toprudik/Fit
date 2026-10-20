@@ -3,8 +3,11 @@ import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { interpolate } from "@/i18n/format";
 
-/** The shared links a chat shows a preview for (marketing §5.6): showcase, trial, referral, client link, trainer invite. */
-export const PREVIEW_KINDS = ["showcase", "trial", "referral", "client", "trainer-invite"] as const;
+/**
+ * The shared links a chat shows a preview for (marketing §5.6): showcase, trial, referral, client link, trainer invite
+ * and the trainers' landing page.
+ */
+export const PREVIEW_KINDS = ["showcase", "trial", "referral", "client", "trainer-invite", "for-trainers"] as const;
 export type PreviewKind = (typeof PREVIEW_KINDS)[number];
 
 export function isPreviewKind(value: string): value is PreviewKind {
@@ -23,7 +26,9 @@ export type LinkPreview = {
 export const PREVIEW_SIZE = { width: 1200, height: 630 } as const;
 
 function copyOf(t: Dictionary, kind: PreviewKind) {
-  return kind === "trainer-invite" ? t.linkPreview.trainerInvite : t.linkPreview[kind];
+  if (kind === "trainer-invite") return t.linkPreview.trainerInvite;
+  if (kind === "for-trainers") return t.linkPreview.forTrainers;
+  return t.linkPreview[kind];
 }
 
 /** Title, description and the small line above the title on the image. */

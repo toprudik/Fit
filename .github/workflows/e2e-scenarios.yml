@@ -1,0 +1,48 @@
+name: E2E scenarios
+
+# Sign-in scenarios for every role against a local stand (apps/web/scripts/e2e-scenarios.sh). Nightly and by hand,
+# never a PR check, so the merge queue does not wait on it. Free while the repository is public.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * *" # nightly, 05:00 MSK
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-scenarios
+  cancel-in-progress: true
+
+jobs:
+  scenarios:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
+        with:
+          version: 2.121.0
+      - run: supabase start -x studio,edge-runtime,logflare,vector,supavisor,mailpit,realtime
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+        working-directory: apps/web
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: scripts/e2e-scenarios.sh
+        working-directory: apps/web
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: e2e-scenarios-report
+          path: |
+            apps/web/playwright-report/scenarios
+            apps/web/test-results/scenarios
+          retention-days: 7

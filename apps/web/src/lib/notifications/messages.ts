@@ -17,12 +17,13 @@ import type { InlineButton } from "./telegram";
 
 export type NotificationType = Database["public"]["Enums"]["notification_type"];
 
-/** What a template needs: the recipient's catalog and language, their time zone and the row payload. */
+/** What a template needs: the recipient's catalog and language, their time zone, the row payload and the moment of sending. */
 type TemplateContext = {
   t: Dictionary["botMessages"];
   locale: Locale;
   timeZone: string | null;
   payload: Record<string, Json | undefined>;
+  now: Date;
 };
 
 /**
@@ -386,14 +387,25 @@ const templates: Partial<Record<NotificationType, Template>> = {
 
     return { text: lines.join("\n"), buttons: [{ text: t.openToday, path: "/trainer" }] };
   },
-  // П1–П3: payload { plan, expires_at? } from admin_grant_plan and admin_revoke_plan (PLAN-5, §2.14-9).
-  plan_granted: ({ t, locale, timeZone, payload }) => ({
-    text:
-      typeof payload.expires_at === "string"
-        ? interpolateEscaped(t.planGrantedUntil, { plan: planName(payload), date: formatPlanDate(locale, payload.expires_at, timeZone) })
-        : interpolateEscaped(t.planGranted, { plan: planName(payload) }),
-    buttons: [{ text: t.openPlan, path: "/settings/plan" }],
-  }),
+  // П1–П3: payload { plan, starts_at?, expires_at? } from admin_grant_plan, admin_grant_referral_bonus and
+  // admin_revoke_plan (PLAN-5, §2.14-9). A referral bonus month can start later; until then the start is named.
+  plan_granted: ({ t, locale, timeZone, payload, now }) => {
+    const plan = planName(payload);
+    const startsLater = typeof payload.starts_at === "string" && Date.parse(payload.starts_at) > now.getTime();
+    const start = startsLater ? formatPlanDate(locale, payload.starts_at as string, timeZone) : null;
+    const until = typeof payload.expires_at === "string" ? formatPlanDate(locale, payload.expires_at, timeZone) : null;
+    return {
+      text:
+        start && until
+          ? interpolateEscaped(t.planGrantedFromUntil, { plan, start, date: until })
+          : start
+            ? interpolateEscaped(t.planGrantedFrom, { plan, start })
+            : until
+              ? interpolateEscaped(t.planGrantedUntil, { plan, date: until })
+              : interpolateEscaped(t.planGranted, { plan }),
+      buttons: [{ text: t.openPlan, path: "/settings/plan" }],
+    };
+  },
   plan_revoked: ({ t, payload }) => ({
     text: interpolateEscaped(t.planRevoked, { plan: planName(payload) }),
     buttons: [{ text: t.openPlan, path: "/settings/plan" }],
@@ -781,7 +793,7 @@ const templates: Partial<Record<NotificationType, Template>> = {
 /** A report under DSA arts. 16, 17 and 20: the receipt, the decision with its reason, an appeal's outcome. */
 function reportNotice(t: TemplateContext["t"], payload: TemplateContext["payload"]): ReturnType<Template> {
   const reason = typeof payload.reason === "string" ? payload.reason : "";
-  const buttons: TemplateButton[] = [{ text: t.open, path: "/" }];
+  const buttons: TemplateButton[] = [{ text: t.open, path: "/reports" }];
   if (payload.event === "received") return { text: escapeHtml(t.reportReceived), buttons };
   if (payload.event === "appeal_received") return { text: escapeHtml(t.reportAppealReceived), buttons };
   if (payload.event === "dismissed") return { text: interpolateEscaped(t.reportDismissed, { reason }), buttons };
@@ -1016,12 +1028,12 @@ export function escapeHtml(value: string): string {
  */
 export function renderMessage(
   row: { kind: NotificationType; locale: Locale; time_zone: string | null; payload: Json },
-  options: { appUrl: string; group: boolean },
+  options: { appUrl: string; group: boolean; now?: Date },
 ): { text: string; buttons: InlineButton[] } | null {
   const template = templates[row.kind];
   if (!template) return null;
   const payload = row.payload && typeof row.payload === "object" && !Array.isArray(row.payload) ? row.payload : {};
-  const rendered = template({ t: dictionaries[row.locale].botMessages, locale: row.locale, timeZone: row.time_zone, payload });
+  const rendered = template({ t: dictionaries[row.locale].botMessages, locale: row.locale, timeZone: row.time_zone, payload, now: options.now ?? new Date() });
   const buttons = new URL(options.appUrl).protocol === "https:" ? rendered.buttons : [];
   return {
     text: rendered.text,

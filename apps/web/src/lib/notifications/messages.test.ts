@@ -347,6 +347,27 @@ describe("plan messages", () => {
     ]);
   });
 
+  it("names a start that is still ahead at sending, and drops it once it has come (referral bonus)", () => {
+    const now = new Date("2026-12-15T09:00:00Z");
+    const later = { plan: "trainer_pro", starts_at: "2027-01-31T21:00:00Z", expires_at: "2027-02-28T21:00:00Z" };
+    expect(renderMessage({ ...row, kind: "plan_granted", payload: later }, { ...options, now })?.text).toBe(
+      "Тебе выдан тариф Pro с 1 февраля 2027 до 1 марта 2027. Спасибо, что ты в бете DaFit.",
+    );
+    expect(renderMessage({ ...row, kind: "plan_granted", locale: "en", payload: later }, { ...options, now })?.text).toBe(
+      "You get Pro from February 1, 2027 until March 1, 2027. Thanks for being in the DaFit beta.",
+    );
+    const started = { ...later, starts_at: "2026-12-01T21:00:00Z" };
+    expect(renderMessage({ ...row, kind: "plan_granted", payload: started }, { ...options, now })?.text).toBe(
+      "Тебе выдан тариф Pro до 1 марта 2027. Спасибо, что ты в бете DaFit.",
+    );
+    const open = { plan: "trainer_pro", starts_at: "2027-01-31T21:00:00Z", expires_at: null };
+    const message = renderMessage({ ...row, kind: "plan_granted", payload: open }, { ...options, now });
+    expect(message?.text).toBe("Тебе выдан тариф Pro с 1 февраля 2027. Спасибо, что ты в бете DaFit.");
+    expect(message?.buttons).toEqual([
+      { text: "Открыть тариф", web_app: { url: "https://fit.example/settings/plan?source=plan_granted" } },
+    ]);
+  });
+
   it("tells about a revoked plan and one ending in three days", () => {
     expect(renderMessage({ ...row, kind: "plan_revoked", payload: { plan: "trainer_pro" } }, options)?.text).toBe(
       "Тариф Pro отключён. Все твои данные на месте.",
@@ -1244,6 +1265,9 @@ describe("review_prompt and report_resolution (wave-2 §11)", () => {
 
   it("confirms a report and an appeal as soon as they arrive", () => {
     expect(report({ event: "received" })).toBe("Жалобу получили. Посмотрим и напишем, что решили.");
+    expect(
+      renderMessage({ ...row, kind: "report_resolution", payload: { event: "received", target_type: "food_comment" } }, options)?.buttons,
+    ).toEqual([{ text: "Открыть DaFit", web_app: { url: "https://fit.example/reports?source=report_resolution" } }]);
     expect(report({ event: "appeal_received" })).toMatch(/другой человек из команды DaFit/);
   });
 

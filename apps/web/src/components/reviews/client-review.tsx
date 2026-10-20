@@ -1,6 +1,7 @@
 import { getDictionary } from "@/i18n/server";
 import { interpolate } from "@/i18n/format";
 import { loadMyReview } from "@/lib/reviews/load";
+import { ReportButton } from "@/components/reports/report-button";
 import { DeleteReviewButton, ReviewButton } from "./review-form";
 import { Stars } from "./stars";
 
@@ -32,6 +33,9 @@ export async function ClientReview({ coachingId }: { coachingId: string }) {
               <div className="flex w-full flex-col gap-1 border-l-2 border-line-strong pl-3">
                 <span className="text-footnote text-ink-2">{copy.reply}</span>
                 <p className="text-subhead break-words whitespace-pre-wrap">{review.reply}</p>
+                <div className="-ml-3">
+                  <ReportButton target={{ kind: "content", targetType: "review_reply", targetId: review.id }} />
+                </div>
               </div>
             ) : null}
             <p className="text-footnote text-ink-2">{copy.visibility}</p>
