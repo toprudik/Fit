@@ -383,6 +383,7 @@ export const en: Dictionary = {
           { q: "Who sees reviews about me?", a: "A client can leave a review after three sessions that took place. It is seen by the author, you and the DaFit team, and reviews are not shown publicly anywhere yet. You can reply once and edit the reply later. If a review is unfair, tap “Dispute” and the DaFit team will check it." },
           { q: "How does “Bring a friend” work?", a: "It is an offer for your clients on Pro. You set how many sessions a client gets for a friend and how many the friend gets. The bonus is added to the active pass after the friend's first payment that you record in DaFit. Only people who haven't trained with you before count." },
           { q: "What does “Invite a trainer” give me?", a: "A link for trainers you know, and it works on the free plan too: the trainer zone opens for them right away, without an invite. In the beta, for a colleague who holds 3 or more sessions a week for 4 weeks in a row, the DaFit team gives you a month of Pro. Pro is open to everyone for now, so that month starts after the beta." },
+          { q: "What are “My milestones”?", a: "Your growth markers in DaFit: “First client after a trial”, “Five clients” at the same time, “Four weeks in a row” with attendance marked, “100 sessions” and “500 sessions”. Automatic marking doesn't count towards the weeks, and a group session counts as one. The screen is under “More”, “My milestones”. The bot messages you about each new milestone, and you can switch that off in “Settings”, “Notifications”." },
         ],
       },
       {
@@ -5071,6 +5072,7 @@ export const en: Dictionary = {
         challenge_joined: { title: "Challenge finisher", text: "Finished a challenge with points on the board" },
         challenge_done: { title: "Challenge done", text: "Reached the goal of a challenge" },
         challenge_winner: { title: "Top three", text: "Among the top three on a challenge leaderboard" },
+        referral_friend: { title: "Friend by invitation", text: "A friend joined your trainer by your link and paid for sessions" },
       },
     },
     trainer: {
@@ -5115,6 +5117,13 @@ export const en: Dictionary = {
       footer: "Clients of the group get an invitation from the bot and decide themselves whether to join.",
       create: "New challenge",
     },
+    all: {
+      header: "For all clients",
+      empty: "No challenges yet",
+      footer: "All your clients get an invitation from the bot and decide themselves whether to join. Group challenges live in their groups.",
+      moreText: "A contest for all your clients, no group needed",
+      by: "For all clients",
+    },
     form: {
       title: "New challenge",
       description: "Everyone competes in one measure. Weight, measurements and photos never take part.",
@@ -5133,6 +5142,7 @@ export const en: Dictionary = {
       leaderboardHint: "Participants see the places of those who agreed to it. The top three get the “Top three” badge.",
       create: "Start",
       created: "Challenge started, the bot invited the group",
+      createdAll: "Challenge started, the bot invited your clients",
       failed: "Something went wrong, try again",
       plan: "Challenges come with the Pro plan",
     },
@@ -5150,8 +5160,8 @@ export const en: Dictionary = {
       cancelConfirm: "Cancel challenge",
       cancelled: "Challenge cancelled",
       notFound: "Challenge not found",
-      notFoundText: "It isn't among the challenges of your groups.",
-      back: "To groups",
+      notFoundText: "It isn't among your challenges.",
+      back: "To challenges",
     },
     client: {
       title: "Challenge",
