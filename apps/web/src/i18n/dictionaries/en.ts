@@ -59,6 +59,21 @@ export const en: Dictionary = {
       failed: "That didn't work. Please try again.",
     },
   },
+  healthNotice: {
+    title: "First, about your health",
+    lead: "DaFit is not a medical app. Please read this before workouts, the questionnaire and working out your nutrition target.",
+    points: [
+      "The calorie, protein, fat and carb target is an estimate. It is a guide for a healthy adult, not a diet or a doctor's advice.",
+      "The estimate does not suit pregnancy or breastfeeding, diabetes, kidney, thyroid or heart disease, or eating disorders. In those cases a doctor sets your target.",
+      "Your trainer is not a doctor. If you have a chronic condition, an injury, chest or joint pain, or haven't trained in a long time, talk to a doctor first.",
+      "If you get chest pain, severe shortness of breath or dizziness during a workout, stop and tell your trainer. If someone feels unwell right now, call your local emergency number.",
+    ],
+    full: "Read in full",
+    ok: "Got it",
+    failed: "Couldn't save that. Please try again.",
+    footnote: "The target is an estimate and doesn't replace a doctor's advice.",
+    footnoteLink: "About your health",
+  },
   common: {
     back: "Back",
     close: "Close",
@@ -4208,6 +4223,18 @@ export const en: Dictionary = {
       label: "Language",
     },
   },
+  /** /settings/app-opens: the switch for the app-opening count (legal item Б12). */
+  appOpens: {
+    title: "App opening count",
+    intro: "DaFit records when the app is opened and from which bot button. That shows us how often it is used and which reminders help. The count is our own, with no outside services, and it is never used for ads.",
+    label: "Count my app openings",
+    hint: "Switching it off deletes your past openings and stops recording new ones.",
+    on: "Your openings are counted again",
+    off: "Openings are no longer counted, past ones deleted",
+    failed: "Couldn't save it. Try again.",
+    signedOutText: "Sign in with Telegram to set up the opening count.",
+    signIn: "Sign in with Telegram",
+  },
   /** Legal documents at /legal: list, draft note, links from settings and the beta terms. */
   legal: {
     title: "Legal",
@@ -5009,6 +5036,11 @@ export const en: Dictionary = {
       items: ["Set up your profile and pass prices.", "Invite clients with a link or QR code.", "Mark sessions, DaFit counts the rest."],
       clients: "Clients don't need to install anything: bookings, pass balance and progress open in Telegram or in the browser.",
     },
+    calculator: {
+      title: "What to charge for a pack",
+      text: "Work out prices for packs of 5, 10 and 20 sessions from your drop-in price. No sign-in needed.",
+      action: "Open the calculator",
+    },
     waitlist: {
       title: "Waitlist",
       text: "Leave your name and a contact. We'll write when a spot opens in the next wave.",
@@ -5052,6 +5084,34 @@ export const en: Dictionary = {
     clients: { up_to_5: "up to 5 clients", "6_15": "6–15 clients", "16_40": "16–40 clients", over_40: "over 40 clients" },
     source: "source {source}",
     signedIn: "Signed in",
+  },
+  /** «Калькулятор цен на пакеты» at /for-trainers/calculator (marketing backlog item 9). */
+  priceCalculator: {
+    title: "Pack price calculator",
+    description: "Work out prices for packs of 5, 10 and 20 sessions from your drop-in price and see them the way clients will. Free, no sign-in needed.",
+    aboutDaFit: "About DaFit",
+    heading: "Pack price calculator",
+    lead: "Enter your drop-in price and the calculator suggests prices for packs of 5, 10 and 20 sessions. Change any of them and see the price per session and what the client saves.",
+    currency: "Currency",
+    dropIn: "Drop-in price",
+    dropInHint: "What a client pays for one session without a pass",
+    dropInError: "Enter a number, for example 40",
+    packPrice: "Pack of {count}",
+    packHint: "Suggested: {pct}% off the drop-in price",
+    packError: "Enter a number, for example 180",
+    gridTitle: "How clients will see it",
+    gridEmpty: "Enter a drop-in price and the grid shows up here.",
+    best: "Best value",
+    tipsTitle: "Pricing tips",
+    tips: [
+      "A 10–25% discount for a pack feels normal to clients and costs you little: the sessions are paid upfront.",
+      "Make the biggest pack the best value, so taking more is the easy choice.",
+      "Keep the drop-in pricier than a session in a pack, or nobody buys packs.",
+      "An expiry date keeps the rhythm: two months is usually enough for a pack of 10.",
+    ],
+    ctaText: "In DaFit clients see this grid on your page, and the pass balance updates itself after every session.",
+    cta: "Run your passes in DaFit",
+    footer: "The calculator uses the rules of the DaFit price grid. Your prices are not sent anywhere.",
   },
   languages: {
     ru: "Русский",
