@@ -1,10 +1,11 @@
-import { Award, CalendarCheck, CalendarDays, ClipboardCheck, Dumbbell, Flame, Footprints, Moon, Ruler, Trophy, Utensils } from "lucide-react";
+import { Award, CalendarCheck, CalendarDays, ClipboardCheck, Dumbbell, Flame, Footprints, Moon, Ruler, ShieldCheck, Trophy, Utensils } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { formatNumber, interpolate, plural } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
+import { healthConsentPath } from "@/lib/consent/health";
 import { isBadgeCode } from "@/lib/gamification/gamification";
 import { loadMonthlyReport, loadShareTargets } from "@/lib/monthly-report/load";
 import { formatMonth, formatSleep, monthParam, storyOptions, type MonthlyReport } from "@/lib/monthly-report/report";
@@ -31,6 +32,16 @@ export async function MonthlyReportView({ month }: { month: string }) {
         <p className="text-footnote text-ink-2">{copy.private}</p>
       </div>
       <ReportSections report={report} t={t} locale={locale} />
+      {report.health_closed ? (
+        <ListGroup footer={copy.healthClosed}>
+          <ListRow
+            icon={ShieldCheck}
+            iconTone="accent"
+            title={t.healthConsentGate.give}
+            href={healthConsentPath(`/client/progress/reports/${monthParam(report.month)}`)}
+          />
+        </ListGroup>
+      ) : null}
       <ForwardToTrainer month={monthParam(report.month)} targets={targets} />
       <StoryCards month={monthParam(report.month)} options={storyOptions(report)} />
     </div>

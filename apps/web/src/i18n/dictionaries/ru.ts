@@ -1938,6 +1938,7 @@ export const ru = {
       days: { one: "За {count} день", few: "За {count} дня", many: "За {count} дней", other: "За {count} дня" } as PluralForms,
       units: { h: "ч", min: "мин" },
     },
+    healthClosed: "Без согласия на сведения о здоровье в итогах нет тренировок, рекордов, серий, замеров, питания и активности.",
     homework: { header: "Домашние задания", done: "Выполнено", ofTotal: "{done} из {total}" },
     /** Sending the month to a trainer (§4 rule 3). */
     forward: {
