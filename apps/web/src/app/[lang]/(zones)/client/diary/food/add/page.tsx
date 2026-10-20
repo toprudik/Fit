@@ -19,7 +19,9 @@ async function Add({ searchParams }: { searchParams: Promise<Record<string, stri
   const [search, shelf] = await Promise.all([searchParams, loadFoodShelf()]);
   if (!shelf) return null;
   const day = isDay(search.day) && search.day <= shelf.today ? search.day : shelf.today;
-  return <AddFood day={day} initialMeal={isMeal(search.meal) ? search.meal : shelf.meal} shelf={shelf} />;
+  const meal = isMeal(search.meal) ? search.meal : shelf.meal;
+  // A new day or meal is a fresh screen: the kept state of the last visit (Activity) starts over.
+  return <AddFood key={`${day}:${meal}`} day={day} initialMeal={meal} shelf={shelf} />;
 }
 
 /** "+ Еда" (wave-2 §3.2): `?day=&meal=` come from the diary day the person was on. */

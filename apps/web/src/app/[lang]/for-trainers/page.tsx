@@ -9,7 +9,7 @@ import { WaitlistForm, WaitlistJoined } from "@/components/waitlist/waitlist-for
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getDictionary } from "@/i18n/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { LANDING_PATH, waitlistSource } from "@/lib/waitlist/waitlist";
+import { CALCULATOR_PATH, LANDING_PATH, waitlistSource } from "@/lib/waitlist/waitlist";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
@@ -137,6 +137,16 @@ export default async function ForTrainersPage(props: PageProps<"/[lang]/for-trai
           ))}
         </ol>
         <p className="max-w-2xl text-callout text-ink-2">{copy.steps.clients}</p>
+      </section>
+
+      <section aria-labelledby="calculator" className="flex flex-col items-start gap-3">
+        <h2 id="calculator" className="text-title-1">
+          {copy.calculator.title}
+        </h2>
+        <p className="max-w-2xl text-callout text-ink-2">{copy.calculator.text}</p>
+        <Button asChild variant="secondary">
+          <Link href={CALCULATOR_PATH}>{copy.calculator.action}</Link>
+        </Button>
       </section>
 
       <section id="waitlist" aria-labelledby="waitlist-title" className="flex scroll-mt-6 flex-col gap-4 rounded-xl bg-surface-1 p-5 md:max-w-xl md:p-8">

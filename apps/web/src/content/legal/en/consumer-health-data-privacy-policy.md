@@ -10,7 +10,7 @@ This policy is written for the Washington My Health My Data Act (RCW 19.373), Ne
 
 ## 1. Who we are
 
-1.1. The Service (the Telegram bot @fitconnection_bot, the web app at [DOMAIN] and the Telegram Mini App) is run by [OPERATOR LEGAL NAME], [REGISTERED ADDRESS], registration number [REGISTRATION NUMBER] ("DaFit", "we", "us"). Words such as user, trainer, client, pair, assistant, questionnaire and showcase have the meaning given in the [Terms of Service](terms-of-service.md), section 2.
+1.1. The Service (the Telegram bot @fitconnection_bot, the web app at [DOMAIN] and the Telegram Mini App) is run by [OPERATOR FULL NAME], an individual, at [ADDRESS] ("DaFit", "we", "us"). Words such as user, trainer, client, pair, assistant, questionnaire and showcase have the meaning given in the [Terms of Service](terms-of-service.md), section 2.
 
 1.2. Contact: [CONTACT EMAIL], or the feedback form in the app (Profile, then "Report a problem / idea").
 
@@ -82,7 +82,7 @@ This policy is written for the Washington My Health My Data Act (RCW 19.373), Ne
 
 6.1. We have no affiliates that receive consumer health data. Open Food Facts receives only food search words and barcodes from our server, never data about you.
 
-6.2. **Third-party tracking.** No third party tracks you over time across DaFit and other websites through DaFit. We use no advertising or analytics trackers. When your browser downloads the face-blurring model, jsDelivr and Google Cloud Storage see your IP address, as with any download; they receive no health data.
+6.2. **Third-party tracking.** No third party tracks you over time across DaFit and other websites through DaFit. We use no advertising or analytics trackers. The face-blurring model is downloaded from our own domain.
 
 ## 7. No sale
 

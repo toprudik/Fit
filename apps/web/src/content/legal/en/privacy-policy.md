@@ -10,7 +10,7 @@ Related documents: [Terms of Service](terms-of-service.md), [Subscription Terms]
 
 ## 1. Who we are and how to reach us
 
-1.1. The Service is run by [OPERATOR LEGAL NAME], registered at [REGISTERED ADDRESS], registration number [REGISTRATION NUMBER] ("DaFit", "we", "us").
+1.1. The Service is run by [OPERATOR FULL NAME], an individual, at [ADDRESS] ("DaFit", "we", "us").
 
 1.2. Privacy questions, requests and complaints: [CONTACT EMAIL], or the feedback form in the app (Profile, then "Report a problem / idea"). Write "Privacy" at the start of your message so it reaches the right person.
 
@@ -75,7 +75,7 @@ UK representative (UK GDPR Art. 27): [UK REPRESENTATIVE].
 
 4.1. We do not collect your Telegram messages, contacts or chats. We do not collect precise location from your device. Trainers enter addresses of their places of work themselves.
 
-4.2. **Progress photos.** Before a photo leaves your device, DaFit blurs faces on the device and removes EXIF data, including location. The original never leaves your phone or computer. To blur faces, your browser downloads a face-detection model (MediaPipe) from jsDelivr and Google Cloud Storage; these providers see your IP address and browser details, as with any web request, but never your photos. No face geometry or biometric template is stored by us. Photos are delivered through links that expire after 300 seconds.
+4.2. **Progress photos.** Before a photo leaves your device, DaFit blurs faces on the device and removes EXIF data, including location. The original never leaves your phone or computer. To blur faces, your browser downloads a face-detection model (MediaPipe) from our own domain; no third party is involved. No face geometry or biometric template is stored by us. Photos are delivered through links that expire after 300 seconds.
 
 > Counsel: the product team plans to self-host the face-detection model so that no third party receives the user's IP address (see product-changes). Update 4.2 when that ships.
 
@@ -144,7 +144,6 @@ We share personal data only as described here.
 | Vercel Inc. | Processor: hosting of the web app and the bot | Requests passing through, request logs (IP address, browser, URL) | United States |
 | Telegram (Telegram FZ-LLC, UAE, and Telegram Messenger Inc.) | Independent controller | Sign-in data it gives us, bot messages we send you (which may include names, times and places of sessions and, for contact requests, a phone number), the Mini App platform, profile photos at t.me | United Arab Emirates and Telegram's other locations |
 | Functional Software, Inc. (Sentry), only if we turn error reporting on | Processor: error reports | Error type and message, technical context. We switch off user details, request bodies, cookies, headers and query strings | United States |
-| jsDelivr and Google (Cloud Storage) | Providers of the face-detection model download | Your IP address and browser details, when the model is downloaded. No photos | Their own locations |
 | Open Food Facts | Food database | Search words and barcodes, sent from our server. No personal data | France |
 | Your trainer | Independent controller | The categories you allow (section 6) | Wherever the trainer is |
 | Calendar apps you subscribe with | Independent controllers, chosen by you | Your calendar feed | Their own locations |
