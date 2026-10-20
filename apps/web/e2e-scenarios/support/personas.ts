@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Browser, BrowserContext, Page } from "@playwright/test";
-import { BETA_TERMS_VERSION } from "../../src/lib/consent/beta-terms";
+import { HEALTH_CONSENT, REQUIRED_CONSENTS } from "../../src/lib/consent/required";
 import type { Database } from "../../src/lib/supabase/database.types";
 import { BOT_TOKEN, supabaseEnv } from "./env";
 
@@ -74,7 +74,7 @@ export type PersonaOptions = {
   firstName: string;
   lastName?: string;
   locale?: "ru" | "en";
-  /** Accept the beta terms in force, as the consent screen does. Default true. */
+  /** Give the consents in force, health data included, as the consent screens do. Default true. */
   consent?: boolean;
 };
 
@@ -94,7 +94,7 @@ export async function newPersona(browser: Browser, baseURL: string, { firstName,
   const db = await userDb(telegramId);
   const { data } = await db.auth.getUser();
   const userId = data.user!.id;
-  if (consent) await acceptBetaTerms(db, userId);
+  if (consent) await acceptConsents(db, userId);
   return { userId, telegramId, firstName, context, page: await context.newPage(), db };
 }
 
@@ -104,8 +104,9 @@ export function ok<T>(result: { data: T | null; error: { message: string; code?:
   return result.data as T;
 }
 
-export async function acceptBetaTerms(db: Db, userId: string) {
-  ok(await db.from("consents").insert({ user_id: userId, kind: "beta_terms", version: BETA_TERMS_VERSION }), "beta terms");
+export async function acceptConsents(db: Db, userId: string) {
+  const rows = [...REQUIRED_CONSENTS, HEALTH_CONSENT].map(({ kind, version }) => ({ user_id: userId, kind, version }));
+  ok(await db.from("consents").insert(rows), "consents");
 }
 
 /** Gives the admin role, which only the team grants (user_roles has no user policy). */
