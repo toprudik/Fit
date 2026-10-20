@@ -47,13 +47,16 @@ test.describe("consents in the settings", () => {
     const errors = collectErrors(page);
     await page.goto("/settings/consents");
     await expect(page.getByText("Публикация витрины")).toBeVisible();
-    await page.getByRole("link", { name: "Включить витрину" }).click();
+    await expect(page.getByRole("link", { name: "Включить витрину" })).toHaveAttribute("href", "/trainer/showcase");
+    await page.goto("/trainer/showcase");
     await expect(page.getByRole("heading", { level: 1, name: "Витрина" })).toBeVisible();
 
     const slug = `consent-e2e-${trainer.telegramId}`.slice(0, 32);
     await page.getByLabel("Адрес витрины").fill(slug);
     await page.getByRole("button", { name: "Сохранить адрес" }).click();
     await expect(page.getByText("Адрес сохранён")).toBeVisible();
+    // The toast sits over the button and stays while the pointer is on it.
+    await expect(page.getByText("Адрес сохранён")).toBeHidden();
     await page.getByRole("button", { name: "Включить витрину" }).click();
     const consent = page.getByRole("dialog", { name: "Согласие на публикацию" });
     await consent.getByRole("checkbox", { name: "Описание, опыт и специализации" }).check();
