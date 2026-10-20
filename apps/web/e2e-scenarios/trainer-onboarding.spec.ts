@@ -33,7 +33,22 @@ test("a new person with an invite code goes through consent, preferences, the in
   await expect(
     page.getByText(/Доступ каждого тренера к питанию/),
   ).toBeVisible();
+  await page.getByRole("checkbox", { name: "Мне есть 18 лет" }).check();
   await page.getByRole("button", { name: "Принимаю" }).click();
+
+  // Then the personal data consent and the health data one, which may wait.
+  await expect(
+    page.getByRole("heading", {
+      level: 1,
+      name: "Согласие на обработку персональных данных",
+    }),
+  ).toBeVisible();
+  await expectAccessible(page);
+  await page.getByRole("button", { name: "Даю согласие" }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Данные о здоровье" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Не сейчас" }).click();
 
   await expectPath(page, "/onboarding/preferences");
   await expect(

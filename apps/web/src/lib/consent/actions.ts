@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { getLocale } from "@/i18n/server";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CONSENT_PATH, PREFERENCES_PATH } from "./beta-terms";
 import { loadConsentDocument } from "./documents";
@@ -21,8 +21,16 @@ export type AcceptState = { failed: false | "save" | "age" };
 
 type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
+/** The language the screen showed the text in. The form sends it: getLocale() throws inside a Server Action. */
+function formLocale(formData: FormData): Locale {
+  const value = formData.get("locale");
+  return isLocale(value) ? value : DEFAULT_LOCALE;
+}
+
 /** The signed-in user, or the login screen that comes back to the consents with `next`. */
-async function signedIn(next: string): Promise<{ supabase: Supabase; userId: string }> {
+async function signedIn(
+  next: string,
+): Promise<{ supabase: Supabase; userId: string }> {
   const supabase = await createSupabaseServerClient();
   const { data: session } = await supabase.auth.getClaims();
   const userId = session?.claims.sub;
@@ -31,7 +39,10 @@ async function signedIn(next: string): Promise<{ supabase: Supabase; userId: str
 }
 
 /** The user's consents in force (not revoked), or null when they could not be read. */
-async function readConsents(supabase: Supabase, userId: string): Promise<ConsentRow[] | null> {
+async function readConsents(
+  supabase: Supabase,
+  userId: string,
+): Promise<ConsentRow[] | null> {
   const { data, error } = await supabase
     .from("consents")
     .select("kind, version")
@@ -49,11 +60,21 @@ async function readConsents(supabase: Supabase, userId: string): Promise<Consent
  * Records one consent with the hash of the text shown (RLS lets a user insert their own rows only). 23505: this
  * version is recorded already (a second tap, another tab), which is the state we want.
  */
-async function record(supabase: Supabase, userId: string, consent: { kind: ConsentKind; version: string }): Promise<boolean> {
-  const document = await loadConsentDocument(await getLocale(), consent.kind);
+async function record(
+  supabase: Supabase,
+  userId: string,
+  consent: { kind: ConsentKind; version: string },
+  locale: Locale,
+): Promise<boolean> {
+  const document = await loadConsentDocument(locale, consent.kind);
   const { error } = await supabase
     .from("consents")
-    .insert({ user_id: userId, kind: consent.kind, version: consent.version, text_hash: document?.hash ?? null });
+    .insert({
+      user_id: userId,
+      kind: consent.kind,
+      version: consent.version,
+      text_hash: document?.hash ?? null,
+    });
   if (error && error.code !== "23505") {
     console.error(`saving the ${consent.kind} consent failed`, error.code);
     return false;
@@ -78,7 +99,10 @@ function finish(next: string, first: boolean): never {
  * "Принимаю" on the terms screen (PRD wave-1 §2.1 rule 3, AUTH-4; legal А1, А2): the beta terms, the user
  * agreement and the privacy policy, and "Мне есть 18 лет", which has to be ticked. Then the personal data step.
  */
-export async function acceptTerms(_previous: AcceptState, formData: FormData): Promise<AcceptState> {
+export async function acceptTerms(
+  _previous: AcceptState,
+  formData: FormData,
+): Promise<AcceptState> {
   const next = onboardingNext(formData.get("next"));
   if (formData.get("adult") !== "on") return { failed: "age" };
   const { supabase, userId } = await signedIn(next);
@@ -87,17 +111,25 @@ export async function acceptTerms(_previous: AcceptState, formData: FormData): P
   if (!rows) return { failed: "save" };
   // Nobody accepted anything yet: after the consents comes the language, theme and bot messages step.
   const first = !rows.some((row) => row.kind === "beta_terms");
-  const saved = await Promise.all(missingTermsConsents(rows).map((consent) => record(supabase, userId, consent)));
+  const saved = await Promise.all(
+    missingTermsConsents(rows).map((consent) =>
+      record(supabase, userId, consent, formLocale(formData)),
+    ),
+  );
   if (saved.includes(false)) return { failed: "save" };
   redirect(stepPath(next, null, first));
 }
 
 /** "Даю согласие" on the personal data screen (legal А2, 152-FZ art. 9). Then the health data step. */
-export async function acceptPersonalData(_previous: AcceptState, formData: FormData): Promise<AcceptState> {
+export async function acceptPersonalData(
+  _previous: AcceptState,
+  formData: FormData,
+): Promise<AcceptState> {
   const next = onboardingNext(formData.get("next"));
   const first = formData.get("first") === "1";
   const { supabase, userId } = await signedIn(next);
-  if (!(await record(supabase, userId, PERSONAL_CONSENT))) return { failed: "save" };
+  if (!(await record(supabase, userId, PERSONAL_CONSENT, formLocale(formData))))
+    return { failed: "save" };
 
   const rows = await readConsents(supabase, userId);
   if (!rows) return { failed: "save" };
@@ -111,11 +143,18 @@ export async function acceptPersonalData(_previous: AcceptState, formData: FormD
  * "Даю согласие" or "Не сейчас" on the health data screen (legal А2, 152-FZ art. 10). The app works without it;
  * the health sections ask again when opened (право 3).
  */
-export async function answerHealthData(_previous: AcceptState, formData: FormData): Promise<AcceptState> {
+export async function answerHealthData(
+  _previous: AcceptState,
+  formData: FormData,
+): Promise<AcceptState> {
   const next = onboardingNext(formData.get("next"));
   const first = formData.get("first") === "1";
   const { supabase, userId } = await signedIn(next);
-  if (formData.get("answer") === "give" && !(await record(supabase, userId, HEALTH_CONSENT))) return { failed: "save" };
+  if (
+    formData.get("answer") === "give" &&
+    !(await record(supabase, userId, HEALTH_CONSENT, formLocale(formData)))
+  )
+    return { failed: "save" };
 
   const rows = await readConsents(supabase, userId);
   if (!rows) return { failed: "save" };
@@ -127,7 +166,10 @@ export async function answerHealthData(_previous: AcceptState, formData: FormDat
  * "Мне нет 18 лет" → "Удалить аккаунт" (legal А1): DaFit is for adults, so the account goes the usual way, deleted
  * after 30 days (PRIV-7). A new token carries the deletion mark to the proxy right away.
  */
-export async function closeUnderageAccount(_previous: AcceptState, formData: FormData): Promise<AcceptState> {
+export async function closeUnderageAccount(
+  _previous: AcceptState,
+  formData: FormData,
+): Promise<AcceptState> {
   const next = onboardingNext(formData.get("next"));
   const { supabase } = await signedIn(next);
   const { error } = await supabase.rpc("request_account_deletion");
@@ -136,12 +178,21 @@ export async function closeUnderageAccount(_previous: AcceptState, formData: For
     return { failed: "save" };
   }
   const { error: refreshError } = await supabase.auth.refreshSession();
-  if (refreshError) console.error("refreshing the session failed", refreshError.status ?? "unknown");
-  redirect(`${CONSENT_PATH}?${new URLSearchParams({ next, step: "underage" })}`);
+  if (refreshError)
+    console.error(
+      "refreshing the session failed",
+      refreshError.status ?? "unknown",
+    );
+  redirect(
+    `${CONSENT_PATH}?${new URLSearchParams({ next, step: "underage" })}`,
+  );
 }
 
 /** "Я ошибся с возрастом" on the underage screen: the account stays, and the terms screen comes back. */
-export async function keepUnderageAccount(_previous: AcceptState, formData: FormData): Promise<AcceptState> {
+export async function keepUnderageAccount(
+  _previous: AcceptState,
+  formData: FormData,
+): Promise<AcceptState> {
   const next = onboardingNext(formData.get("next"));
   const { supabase } = await signedIn(next);
   const { error } = await supabase.rpc("cancel_account_deletion");
@@ -150,6 +201,10 @@ export async function keepUnderageAccount(_previous: AcceptState, formData: Form
     return { failed: "save" };
   }
   const { error: refreshError } = await supabase.auth.refreshSession();
-  if (refreshError) console.error("refreshing the session failed", refreshError.status ?? "unknown");
+  if (refreshError)
+    console.error(
+      "refreshing the session failed",
+      refreshError.status ?? "unknown",
+    );
   redirect(stepPath(next, null, false));
 }

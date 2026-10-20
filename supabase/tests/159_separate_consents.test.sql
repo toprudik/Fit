@@ -1,4 +1,4 @@
--- Separate consents, migration 20261020104318_separate_consents.sql (legal А1, А2): the new kinds, the text hash
+-- Separate consents, migration 20261020123341_separate_consents.sql (legal А1, А2): the new kinds, the text hash
 -- the user writes with each consent and what it accepts.
 begin;
 \ir _helpers.psql
