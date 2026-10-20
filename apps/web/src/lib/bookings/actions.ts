@@ -24,6 +24,7 @@ const KNOWN_ERRORS = [
   "waitlist_not_found",
   "offer_expired",
   "account_deleting",
+  "debt_limit",
 ] as const;
 
 export type BookingError = (typeof KNOWN_ERRORS)[number] | "failed";
@@ -169,5 +170,7 @@ export async function acceptWaitlistOffer(entryId: string): Promise<BookResult> 
   const { data, error } = await supabase.rpc("accept_waitlist_offer", { p_entry_id: entryId });
   if (error) return { status: "error", error: known(error, "accepting a waitlist offer") };
   refresh();
+  // Past the debt limit the offer goes to the next in line and no booking is made.
+  if (data[0].status === "declined") return { status: "error", error: "debt_limit" };
   return { status: "done", bookingId: data[0].booking_id, confirmed: data[0].status === "confirmed" };
 }
