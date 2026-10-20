@@ -61,6 +61,7 @@ export async function sendFeedback(input: FeedbackInput): Promise<SendFeedbackRe
     id: data.id,
     user_id: userId,
     kind: data.kind,
+    request_type: data.requestType,
     body: data.body,
     route: data.route,
     zone: data.zone,
@@ -76,6 +77,7 @@ export async function sendFeedback(input: FeedbackInput): Promise<SendFeedbackRe
     console.error("saving feedback failed", error.code);
     return { status: "failed" };
   }
-  after(() => fileFeedbackIssue(data.id));
+  // A data request holds personal details and goes to the team inbox only, never to an issue tracker.
+  if (data.kind !== "data_request") after(() => fileFeedbackIssue(data.id));
   return { status: "sent" };
 }

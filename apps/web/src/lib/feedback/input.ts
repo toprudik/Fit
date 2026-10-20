@@ -4,8 +4,18 @@ import type { Zone } from "@/lib/navigation/zones";
 // The feedback form imports this module, so it stays free of zod; the schema lives in ./schema (server only).
 
 /** The form's limits (PRD wave-1 §2.13-2, FDBK-3) and the database checks on public.feedback. */
-export const FEEDBACK_KINDS = ["bug", "idea", "other"] as const;
+export const FEEDBACK_KINDS = ["bug", "idea", "data_request", "other"] as const;
 export type FeedbackKind = (typeof FEEDBACK_KINDS)[number];
+/**
+ * What "Запрос о моих данных" asks for (152-FZ arts. 14, 20, 21; GDPR arts. 15–21): see the data, correct it, object,
+ * stop the processing, appeal a refusal. The team answers within 10 working days (migration 20261020103117).
+ */
+export const DATA_REQUEST_TYPES = ["access", "correction", "objection", "stop", "appeal", "other"] as const;
+export type DataRequestType = (typeof DATA_REQUEST_TYPES)[number];
+
+export function isDataRequestType(value: unknown): value is DataRequestType {
+  return typeof value === "string" && (DATA_REQUEST_TYPES as readonly string[]).includes(value);
+}
 export const MAX_FEEDBACK_LENGTH = 5000;
 export const MAX_SCREENSHOTS = 3;
 /** The feedback bucket's own limits (migration 20261015125200_storage). */
@@ -46,6 +56,8 @@ export function routeOf(from: string | null | undefined): string | null {
 export type FeedbackInput = {
   id: string;
   kind: FeedbackKind;
+  /** Only for a data request, and then required. */
+  requestType: DataRequestType | null;
   body: string;
   route: string | null;
   zone: Zone | null;

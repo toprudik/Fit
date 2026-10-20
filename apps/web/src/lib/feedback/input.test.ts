@@ -31,6 +31,7 @@ describe("feedback input", () => {
     const base = {
       id: "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b",
       kind: "bug",
+      requestType: null,
       body: "Не работает",
       route: null,
       zone: "client",
@@ -42,6 +43,25 @@ describe("feedback input", () => {
     expect(feedbackInput.safeParse(base).success).toBe(true);
     expect(feedbackInput.safeParse({ ...base, body: "   " }).success).toBe(false);
     expect(feedbackInput.safeParse({ ...base, screenshots: ["a", "b", "c", "d"] }).success).toBe(false);
+  });
+
+  it("takes a data request only with what it asks for and without screenshots", () => {
+    const base = {
+      id: "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b",
+      kind: "data_request",
+      requestType: "access",
+      body: "Какие данные обо мне есть?",
+      route: null,
+      zone: null,
+      platform: "web-desktop",
+      locale: "ru",
+      theme: null,
+      screenshots: [],
+    };
+    expect(feedbackInput.safeParse(base).success).toBe(true);
+    expect(feedbackInput.safeParse({ ...base, requestType: null }).success).toBe(false);
+    expect(feedbackInput.safeParse({ ...base, screenshots: ["a"] }).success).toBe(false);
+    expect(feedbackInput.safeParse({ ...base, kind: "idea" }).success).toBe(false);
   });
 
   it("keeps zod out of the module the form imports", () => {
