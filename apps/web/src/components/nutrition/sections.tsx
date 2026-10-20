@@ -71,7 +71,7 @@ export async function ClientNutrition() {
       )}
       <p className="px-1 text-footnote text-ink-2">
         {t.healthNotice.footnote}{" "}
-        <Link href={HEALTH_NOTICE_PATH} className="text-accent-ink">
+        <Link href={HEALTH_NOTICE_PATH} className="text-accent-ink underline underline-offset-2">
           {t.healthNotice.footnoteLink}
         </Link>
       </p>
