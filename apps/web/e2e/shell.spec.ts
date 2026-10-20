@@ -85,6 +85,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "client-activity", path: "/client/diary/activity", title: "Активность" },
   { slug: "client-shortcut", path: "/client/diary/activity/shortcut", title: "Шаги с iPhone" },
   { slug: "client-trainers", path: "/client/trainers", title: "Тренеры" },
+  { slug: "client-invite-trainer", path: "/client/invite-trainer", title: "Пригласить своего тренера" },
   { slug: "settings", path: "/settings", title: "Настройки" },
   { slug: "settings-plan", path: "/settings/plan", title: "Мой тариф" },
   { slug: "settings-notifications", path: "/settings/notifications", title: "Уведомления" },
