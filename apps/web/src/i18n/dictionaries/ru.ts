@@ -5510,6 +5510,15 @@ export const ru = {
     reviewHiddenTrainer: "Мы посмотрели спорный отзыв и скрыли его.",
     reviewKeptTrainer: "Мы посмотрели спорный отзыв и оставили его: правила он не нарушает.",
     openReviews: "Открыть отзывы",
+    /** Reports under DSA arts. 16, 17 and 20 (legal/product-changes.md Б13). */
+    reportReceived: "Жалобу получили. Посмотрим и напишем, что решили.",
+    reportAppealReceived: "Обжалование получили. Его посмотрит другой человек из команды DaFit, не тот, кто решал в первый раз.",
+    reportDismissed: "Мы посмотрели жалобу и ничего не меняли. Причина: «{reason}».",
+    reportHiddenReporter: "Мы посмотрели жалобу и скрыли то, на что была жалоба. Причина: «{reason}».",
+    reportKeptReporter: "Мы посмотрели жалобу и оставили всё как есть. Причина: «{reason}». Решение можно обжаловать в течение полугода.",
+    reportHiddenOwner: "На твой текст пожаловались. Мы посмотрели и скрыли его. Причина: «{reason}». Решение можно обжаловать в течение полугода.",
+    reportAppealHidden: "Обжалование рассмотрели: оставляем скрытым. Причина: «{reason}».",
+    reportAppealShown: "Обжалование рассмотрели: снова показываем. Причина: «{reason}».",
   },
   toast: {
     /** Screen reader name of the area where toasts appear. */

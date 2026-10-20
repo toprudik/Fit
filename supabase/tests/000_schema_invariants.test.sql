@@ -90,7 +90,8 @@ select is(
   ),
   -- The public lookups of data-model §1.1: definer functions that answer people without an account.
   array['get_showcase_trial(text)', 'get_trainer_honors(text)', 'get_trainer_showcase_prices(text)', 'get_trainer_showcase(text)', 'get_trial_link(text)', 'get_trial_slots(text)',
-        'join_trainer_waitlist(text,text,text,text,text,text)', 'resolve_client_invite(text,text)', 'resolve_referral(text)', 'story_card(uuid)'],
+        'join_trainer_waitlist(text,text,text,text,text,text)', 'report_showcase_public(text,text,text,text)', 'resolve_client_invite(text,text)', 'resolve_referral(text)',
+        'story_card(uuid)'],
   'anon can execute only the listed public lookups in public or private'
 );
 
