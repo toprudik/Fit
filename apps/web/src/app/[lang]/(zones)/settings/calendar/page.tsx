@@ -92,13 +92,17 @@ function HowTo({ copy }: { copy: Awaited<ReturnType<typeof getDictionary>>["cale
 /**
  * "Синхронизация с календарём" (screens.md /settings/calendar, PRD wave-1 §2.7): one ICS feed per zone the
  * user has, the link shown once after creating it, then only its status; how to add it to each calendar.
+ * The note under the intro says what the events carry and who gets them (legal Б18).
  */
 export default async function CalendarSettingsPage() {
   const t = await getDictionary();
   return (
     <Screen header={<ScreenHeader title={t.calendar.title} back={{ fallbackHref: "/settings" }} />}>
       <div className="flex w-full max-w-2xl flex-col gap-8 pt-4 md:pt-0">
-        <p className="px-1 text-callout text-ink-2">{t.calendar.intro}</p>
+        <div className="flex flex-col gap-2 px-1">
+          <p className="text-callout text-ink-2">{t.calendar.intro}</p>
+          <p className="text-footnote text-ink-2">{t.calendar.privacyNote}</p>
+        </div>
         <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
           <CalendarFeeds />
         </Suspense>
