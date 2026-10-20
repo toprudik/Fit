@@ -1,6 +1,6 @@
 /**
  * Consent to make personal data public (152-FZ art. 10.1; legal/ru/consent-public-data.md, /legal/public-data). The
- * database checks every rule again (migration 20261020160743_public_data_consents.sql).
+ * database checks every rule again (migration 20261020171523_public_data_consents.sql).
  */
 export const PUBLIC_DATA_VERSION = "2026-11-beta";
 
