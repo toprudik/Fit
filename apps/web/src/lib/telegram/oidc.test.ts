@@ -63,4 +63,59 @@ describe("createAuthorizationRequest", () => {
     expect(url.searchParams.get("code_challenge_method")).toBe("S256");
     expect(url.searchParams.get("code_challenge")).toBe(createHash("sha256").update(req.codeVerifier).digest("base64url"));
   });
+
+  it("makes new, unguessable state, nonce and verifier every time", () => {
+    const a = createAuthorizationRequest({ clientId: "123456", redirectUri: "https://fit.example/auth/telegram/callback" });
+    const b = createAuthorizationRequest({ clientId: "123456", redirectUri: "https://fit.example/auth/telegram/callback" });
+    expect(a.state).not.toBe(b.state);
+    expect(a.nonce).not.toBe(b.nonce);
+    expect(a.codeVerifier).not.toBe(b.codeVerifier);
+    expect(a.state.length).toBeGreaterThanOrEqual(16);
+    expect(a.codeVerifier.length).toBeGreaterThanOrEqual(43);
+  });
+});
+
+describe("verifyIdToken against forgeries", () => {
+  it("rejects a token signed by another key", async () => {
+    const { keys } = await setup();
+    const other = await setup();
+    await expect(verifyIdToken(await other.token(claims), { audiences: ["123456"], nonce: "n1", keys })).rejects.toThrow();
+  });
+
+  it("rejects an unsigned token (alg none)", async () => {
+    const { keys } = await setup();
+    const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
+    const now = Math.floor(Date.now() / 1000);
+    const body = { ...claims, iss: TELEGRAM_ISSUER, aud: "123456", iat: now, exp: now + 300 };
+    const unsigned = `${encode({ alg: "none", kid: "k1" })}.${encode(body)}.`;
+    await expect(verifyIdToken(unsigned, { audiences: ["123456"], nonce: "n1", keys })).rejects.toThrow();
+  });
+
+  it("rejects an HMAC token keyed with something public", async () => {
+    const { keys } = await setup();
+    const forged = await new SignJWT(claims)
+      .setProtectedHeader({ alg: "HS256", kid: "k1" })
+      .setIssuer(TELEGRAM_ISSUER)
+      .setAudience("123456")
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .sign(new TextEncoder().encode("123456"));
+    await expect(verifyIdToken(forged, { audiences: ["123456"], nonce: "n1", keys })).rejects.toThrow();
+  });
+
+  it("rejects a token without a usable Telegram id", async () => {
+    const { keys, token } = await setup();
+    for (const id of [undefined, 0, -5, "abc", 1.5]) {
+      await expect(verifyIdToken(await token({ ...claims, id }), { audiences: ["123456"], nonce: "n1", keys })).rejects.toThrow(
+        "telegram id",
+      );
+    }
+  });
+
+  it("rejects a token without a nonce", async () => {
+    const { keys, token } = await setup();
+    await expect(verifyIdToken(await token({ ...claims, nonce: undefined }), { audiences: ["123456"], nonce: "n1", keys })).rejects.toThrow(
+      "nonce",
+    );
+  });
 });

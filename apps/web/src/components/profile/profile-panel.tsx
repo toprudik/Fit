@@ -1,10 +1,11 @@
 "use client";
 
-import { BadgeCheck, Gem, KeyRound, LogOut, MessageSquareText, Settings, ShieldCheck, User } from "lucide-react";
+import { BadgeCheck, CircleHelp, Gem, KeyRound, LogOut, MessageSquareText, Settings, ShieldCheck, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLayoutEffect, useRef, useState } from "react";
 import { useAccount } from "@/components/account/account-store";
+import { helpPath } from "@/components/help/path";
 import { useOptionalShell } from "@/components/shell/shell-context";
 import { PersonAvatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -137,6 +138,7 @@ export function ProfilePanel({ onNavigate, groupSurface = "default" }: ProfilePa
         {account.status === "signed-in" && account.isTrainer ? (
           <ListRow icon={BadgeCheck} title={t.profile.verification} href="/trainer/verification" onClick={onNavigate} />
         ) : null}
+        <ListRow icon={CircleHelp} title={t.help.title} href={helpPath(known ?? DEFAULT_ZONE)} onClick={onNavigate} />
         {account.status === "signed-in" ? <FeedbackRow onNavigate={onNavigate} /> : null}
         {/* Only people without a trainer profile: nobody else sees a way to become a trainer (TINV-1). */}
         {account.status === "signed-in" && !account.isTrainer ? (
