@@ -4,7 +4,7 @@
 
 Effective date: [EFFECTIVE DATE]
 
-This policy explains which cookies and similar storage the Service uses in the web app at [DOMAIN] and in the Telegram Mini App. The Service is run by [OPERATOR LEGAL NAME], [REGISTERED ADDRESS], registration number [REGISTRATION NUMBER] ("DaFit", "we", "us"; contact: [CONTACT EMAIL]). For everything else about personal data, see the [Privacy Policy](privacy-policy.md).
+This policy explains which cookies and similar storage the Service uses in the web app at [DOMAIN] and in the Telegram Mini App. The Service is run by [OPERATOR FULL NAME], an individual, at [ADDRESS] ("DaFit", "we", "us"; contact: [CONTACT EMAIL]). For everything else about personal data, see the [Privacy Policy](privacy-policy.md).
 
 ## 1. What cookies are
 
@@ -20,7 +20,6 @@ This policy explains which cookies and similar storage the Service uses in the w
 |---|---|---|---|
 | `sb-<project>-auth-token` (may be split into several parts: `.0`, `.1` …) | Keeps you signed in. Holds your session from our sign-in system (Supabase). Readable only by our server | Up to 400 days, renewed while you use DaFit; removed when you sign out | Strictly necessary |
 | `fit_tg_oidc` | Holds a one-time security code while you sign in with Telegram on the website, so the sign-in cannot be hijacked. Readable only by our server, used only on the sign-in pages | 10 minutes | Strictly necessary |
-| `dafit-consent` | Remembers that you accepted the current version of our beta terms, so we do not ask again on every page. Readable only by our server | 1 year | Strictly necessary |
 | `dafit-locale` | Remembers the language you chose (Russian or English) | 1 year | Functional (your preference) |
 | `dafit-theme` | Remembers the theme you chose (light, dark or system), so the page does not flash the wrong colours while loading | 1 year | Functional (your preference) |
 | `dafit-zone` | Remembers whether you last used DaFit as a trainer or as a client, so the app opens there | 1 year | Functional |

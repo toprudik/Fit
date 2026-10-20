@@ -4,7 +4,7 @@
 
 Effective date: [EFFECTIVE DATE]
 
-This Data Processing Addendum ("DPA") forms part of the agreement between [OPERATOR LEGAL NAME], [REGISTERED ADDRESS], registration number [REGISTRATION NUMBER] ("DaFit", "we", "us") and each trainer who uses the Service ("Trainer", "you") under the [Terms of Service](terms-of-service.md). It applies from the moment you add data covered by section 2.
+This Data Processing Addendum ("DPA") forms part of the agreement between [OPERATOR FULL NAME], an individual, at [ADDRESS] ("DaFit", "we", "us") and each trainer who uses the Service ("Trainer", "you") under the [Terms of Service](terms-of-service.md). It applies from the moment you add data covered by section 2.
 
 > Team: not in the product yet, see product-changes. Trainers do not yet accept this DPA in the app, and no `consents` kind exists for it.
 
@@ -77,7 +77,7 @@ This Data Processing Addendum ("DPA") forms part of the agreement between [OPERA
 | Vercel Inc. | Hosting of the web app and the bot | United States | EU-U.S. Data Privacy Framework (with UK Extension and Swiss framework); EU SCCs and UK Addendum in Vercel's DPA |
 | Functional Software, Inc. (Sentry), only if error reporting is on | Error reports, with user details, request bodies, cookies, headers and query strings removed | United States | [to confirm] |
 
-6.2. Telegram (Telegram FZ-LLC, United Arab Emirates, and Telegram Messenger Inc.) delivers bot messages and is an independent controller for its platform, not our subprocessor. Open Food Facts (France) receives only food search words and barcodes from our server, and jsDelivr and Google Cloud Storage serve the face-blurring model to the user's browser; none of them receives Trainer Data.
+6.2. Telegram (Telegram FZ-LLC, United Arab Emirates, and Telegram Messenger Inc.) delivers bot messages and is an independent controller for its platform, not our subprocessor. Open Food Facts (France) receives only food search words and barcodes from our server; it receives no Trainer Data.
 
 6.3. We impose on each subprocessor data protection terms that protect Trainer Data at least as well as this DPA. We remain responsible to you for our subprocessors.
 
@@ -154,8 +154,8 @@ This Data Processing Addendum ("DPA") forms part of the agreement between [OPERA
 
 | | Controller (Trainer) | Processor (DaFit) |
 |---|---|---|
-| Name | As in the Trainer's DaFit account | [OPERATOR LEGAL NAME] |
-| Address | As provided by the Trainer | [REGISTERED ADDRESS] |
+| Name | As in the Trainer's DaFit account | [OPERATOR FULL NAME] (an individual) |
+| Address | As provided by the Trainer | [ADDRESS] |
 | Contact | The Trainer's Telegram account | [CONTACT EMAIL] |
 | Signature | Electronic acceptance in the app, with date and version | Electronic, by publication |
 

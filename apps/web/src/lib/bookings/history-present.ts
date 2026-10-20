@@ -30,7 +30,8 @@ const MARKS: ReadonlySet<BookingStatus> = new Set(["attended", "no_show", "late_
 /** Names the change of a booking_events row; a waiver keeps the status and only forgives the charge. */
 export function bookingChange({ from, to, payload }: BookingEventRow): BookingChange {
   if (payload.waiver_id) return "forgiven";
-  if (from === null) return to === "confirmed" ? "booked" : "requested";
+  // A session recorded after the fact starts as a mark, not as a booking.
+  if (from === null) return to === "requested" ? "requested" : to === "attended" ? "attended" : to === "no_show" ? "noShow" : "booked";
   if (from === to) return "changed";
   if (MARKS.has(from) && (to === "attended" || to === "no_show")) return "remarked";
   switch (to) {

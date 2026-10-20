@@ -1236,4 +1236,42 @@ describe("review_prompt and report_resolution (wave-2 §11)", () => {
       "Мы посмотрели спорный отзыв и скрыли его.",
     );
   });
+
+  // Content reports (DSA arts. 16, 17, 20): payloads of migration 20261020111437_content_reports.sql.
+  const report = (payload: Record<string, unknown>) =>
+    renderMessage({ ...row, kind: "report_resolution", payload: { target_type: "food_comment", report_id: PAIR, ...payload } }, options)
+      ?.text;
+
+  it("confirms a report and an appeal as soon as they arrive", () => {
+    expect(report({ event: "received" })).toBe("Жалобу получили. Посмотрим и напишем, что решили.");
+    expect(report({ event: "appeal_received" })).toMatch(/другой человек из команды DaFit/);
+  });
+
+  it("gives every decision with its reason, escaped, and says how to appeal", () => {
+    const decided = { event: "decided", reason: "Грубо <b>", appeal: false };
+    expect(report({ ...decided, role: "reporter", hidden: true })).toBe(
+      "Мы посмотрели жалобу и скрыли то, на что была жалоба. Причина: «Грубо &lt;b&gt;».",
+    );
+    expect(report({ ...decided, role: "reporter", hidden: false })).toMatch(/оставили всё как есть.*обжаловать/);
+    expect(report({ ...decided, role: "owner", hidden: true })).toMatch(/^На твой текст пожаловались.*«Грубо &lt;b&gt;».*обжаловать/);
+    expect(report({ event: "dismissed", role: "reporter", reason: "Повтор" })).toBe(
+      "Мы посмотрели жалобу и ничего не меняли. Причина: «Повтор».",
+    );
+  });
+
+  it("tells both sides how an appeal ended", () => {
+    const appeal = { event: "decided", reason: "Шутка", appeal: true };
+    for (const role of ["reporter", "owner"]) {
+      expect(report({ ...appeal, role, hidden: false })).toBe("Обжалование рассмотрели: снова показываем. Причина: «Шутка».");
+      expect(report({ ...appeal, role, hidden: true })).toBe("Обжалование рассмотрели: оставляем скрытым. Причина: «Шутка».");
+    }
+  });
+
+  it("reads the same in English", () => {
+    const en = renderMessage(
+      { ...row, locale: "en", kind: "report_resolution", payload: { event: "decided", role: "owner", hidden: true, reason: "Rude" } },
+      options,
+    );
+    expect(en?.text).toBe("Someone reported something you wrote. We looked at it and hid it. Reason: “Rude”. You can appeal within six months.");
+  });
 });

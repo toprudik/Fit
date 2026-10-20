@@ -270,7 +270,11 @@ export function BookPicker({
             <p role="alert" className="text-subhead text-danger">
               {preview.error === "session_full" || preview.error === "already_booked"
                 ? groupCopy.bookErrors[preview.error]
-                : copy.errors[preview.error === "slot_unavailable" || preview.error === "too_late" ? preview.error : "failed"]}
+                : copy.errors[
+                    preview.error === "slot_unavailable" || preview.error === "too_late" || preview.error === "debt_limit"
+                      ? preview.error
+                      : "failed"
+                  ]}
             </p>
           ) : preview.confirmed ? (
             <p>

@@ -88,7 +88,7 @@ function GrantRow({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex min-w-0 flex-wrap items-center gap-2 text-body">
           {person ? (
-            <Link href={`/admin/plans?user=${person.id}`} className="break-words text-accent-ink underline-offset-2 hover:underline">
+            <Link href={`/admin/plans?user=${person.id}`} className="break-words text-accent-ink underline underline-offset-2">
               {person.name}
             </Link>
           ) : null}
@@ -186,7 +186,7 @@ async function SelectedPerson({ userId, plan, t, locale }: { userId: string; pla
               {name}
             </Link>
           </h2>
-          <Link href="/admin/plans" className="text-subhead text-accent-ink underline-offset-2 hover:underline">
+          <Link href="/admin/plans" className="text-subhead text-accent-ink underline underline-offset-2">
             {copy.clear}
           </Link>
         </div>
@@ -238,7 +238,7 @@ async function Requests({ t, locale }: { t: Dictionary; locale: Locale }) {
           <div key={request.id} className={ROW_LINE}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="flex min-w-0 flex-wrap items-center gap-2 text-body">
-                <Link href={`/admin/plans?user=${request.user_id}`} className="break-words text-accent-ink underline-offset-2 hover:underline">
+                <Link href={`/admin/plans?user=${request.user_id}`} className="break-words text-accent-ink underline underline-offset-2">
                   {name}
                 </Link>
                 <PlanBadge code={request.plan_code} t={t} />
