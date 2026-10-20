@@ -2,7 +2,14 @@
 
 import { refresh } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { CARD_CONTACT_MAX_LENGTH, CARD_NAME_MAX_LENGTH, END_REASON_MAX_LENGTH, isPairId, NOTE_MAX_LENGTH } from "./clients";
+import {
+  CARD_CONTACT_MAX_LENGTH,
+  CARD_NAME_MAX_LENGTH,
+  END_REASON_MAX_LENGTH,
+  isPairId,
+  NOTE_MAX_LENGTH,
+  TRAINER_DPA_VERSION,
+} from "./clients";
 
 export type PairActionResult = { ok: true } | { ok: false; reason: "invalid" | "failed" };
 
@@ -15,6 +22,19 @@ function done(what: string, error: { code: string } | null, rows?: unknown[] | n
   if (rows && rows.length === 0) return { ok: false, reason: "invalid" };
   refresh();
   return { ok: true };
+}
+
+/**
+ * "Принимаю" on the data processing agreement for trainers: records the version in force (RLS lets a user insert
+ * their own consent only). A second tap finds it accepted already, which is the state we want.
+ */
+export async function acceptTrainerDpa(): Promise<PairActionResult> {
+  const supabase = await createSupabaseServerClient();
+  const { data: session } = await supabase.auth.getClaims();
+  const userId = session?.claims.sub;
+  if (!userId) return { ok: false, reason: "invalid" };
+  const { error } = await supabase.from("consents").insert({ user_id: userId, kind: "trainer_dpa", version: TRAINER_DPA_VERSION });
+  return done("accepting the trainer agreement", error && error.code !== "23505" ? error : null);
 }
 
 /** A new note on the pair; hidden from the client unless `visibleToClient` (PRD wave-1 §2.5-4, Q38). */
@@ -94,7 +114,7 @@ export async function endCoaching(input: { coachingId: string; reason?: string }
   return done("ending a pair", error);
 }
 
-export type CreateCardResult = { ok: true; coachingId: string } | { ok: false; reason: "invalid" | "limit" | "failed" };
+export type CreateCardResult = { ok: true; coachingId: string } | { ok: false; reason: "invalid" | "limit" | "dpa" | "failed" };
 
 /**
  * "Добавить клиента вручную" (PRD wave-1 §2.5-3): a card of a client without an account and its pair. A Free
@@ -114,6 +134,7 @@ export async function createCard(input: { name: string; contact?: string; note?:
     p_note: note || undefined,
   });
   if (error?.message === "plan_limit_reached") return { ok: false, reason: "limit" };
+  if (error?.message === "dpa_required") return { ok: false, reason: "dpa" };
   if (error || !data) {
     if (error) console.error("creating a card failed", error.code);
     return { ok: false, reason: error?.message === "not_a_trainer" ? "invalid" : "failed" };

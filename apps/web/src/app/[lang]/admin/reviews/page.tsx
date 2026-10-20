@@ -34,6 +34,8 @@ async function Queue({ searchParams }: { searchParams: PageProps<"/[lang]/admin/
     .from("reports")
     .select("id, target_id, reason, status, created_at, reporter:profiles!reports_reporter_id_fkey(first_name, last_name, username)")
     .eq("target_type", "review")
+    // An appeal about a review is decided in /admin/reports, by an admin other than the first one.
+    .is("appeal_of", null)
     .order("created_at", { ascending: false })
     .limit(PAGE);
   if (status) query = query.eq("status", status);

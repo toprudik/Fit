@@ -9,6 +9,7 @@ import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
 import type { DayComment } from "@/lib/nutrition/diary-load";
 import { hideComment } from "@/lib/nutrition/diary-actions";
+import { ReportButton } from "@/components/reports/report-button";
 
 /** A Telegram username as Telegram allows it, so a stored value never builds an odd link. */
 const TELEGRAM_USERNAME = /^[A-Za-z0-9_]{5,32}$/;
@@ -70,6 +71,7 @@ export function ClientComments({ comments }: { comments: DayComment[] }) {
             <Button size="sm" variant="ghost" icon={comment.hidden ? Eye : EyeOff} disabled={pending} onClick={() => toggle(comment)}>
               {comment.hidden ? copy.show : copy.hide}
             </Button>
+            <ReportButton target={{ kind: "content", targetType: "food_comment", targetId: comment.id }} />
           </div>
         </article>
       ))}

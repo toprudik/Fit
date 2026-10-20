@@ -25,7 +25,7 @@ function trainerOf(row: Row | undefined, name: string): LinkPreview["trainer"] {
  */
 export async function loadLinkPreview(kind: PreviewKind, id: string | null): Promise<LinkPreview> {
   const generic: LinkPreview = { kind, trainer: null };
-  if (kind === "trainer-invite" || !id) return generic;
+  if (kind === "trainer-invite" || kind === "for-trainers" || !id) return generic;
   const supabase = await createSupabaseServerClient();
   if (kind === "showcase") {
     const slug = normalizeSlug(id);

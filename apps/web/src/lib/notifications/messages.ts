@@ -793,7 +793,7 @@ const templates: Partial<Record<NotificationType, Template>> = {
 /** A report under DSA arts. 16, 17 and 20: the receipt, the decision with its reason, an appeal's outcome. */
 function reportNotice(t: TemplateContext["t"], payload: TemplateContext["payload"]): ReturnType<Template> {
   const reason = typeof payload.reason === "string" ? payload.reason : "";
-  const buttons: TemplateButton[] = [{ text: t.open, path: "/" }];
+  const buttons: TemplateButton[] = [{ text: t.open, path: "/reports" }];
   if (payload.event === "received") return { text: escapeHtml(t.reportReceived), buttons };
   if (payload.event === "appeal_received") return { text: escapeHtml(t.reportAppealReceived), buttons };
   if (payload.event === "dismissed") return { text: interpolateEscaped(t.reportDismissed, { reason }), buttons };

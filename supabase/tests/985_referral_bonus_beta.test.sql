@@ -1,4 +1,4 @@
--- Trainer referral bonuses in the beta (20261020140317_referral_bonus_beta.sql, marketing backlog 7): an invited
+-- Trainer referral bonuses in the beta (20261020152317_referral_bonus_beta.sql, marketing backlog 7): an invited
 -- trainer's active weeks in a row, the admin list and giving a due bonus as a month of Pro from a chosen day.
 begin;
 \ir _helpers.psql
