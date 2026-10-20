@@ -1,4 +1,5 @@
 import { negotiateLocale, type Locale } from "@/i18n/config";
+import { DELETION_PATH, EXPORT_PATH } from "@/lib/account/deletion";
 import { CONSENT_PATH } from "@/lib/consent/beta-terms";
 import { isLegalPath } from "@/lib/legal/documents";
 import { DEFAULT_ZONE, isZone, zoneFromPath, type Zone } from "./zones";
@@ -68,10 +69,11 @@ export function adminDeniedPath(locale: Locale): string {
 }
 
 /**
- * Screens a signed-in user opens before accepting the beta terms: the terms themselves, the login screen
- * and the legal documents the terms point to.
+ * Screens a signed-in user opens before accepting the beta terms: the terms themselves, the login screen,
+ * the legal documents the terms point to, and downloading one's data or deleting the account, which work
+ * before a new edition is accepted too (152-FZ art. 14, 21).
  */
-const BEFORE_CONSENT: readonly string[] = [CONSENT_PATH, "/login"];
+const BEFORE_CONSENT: readonly string[] = [CONSENT_PATH, "/login", EXPORT_PATH, DELETION_PATH];
 
 /**
  * Where the proxy sends a signed-in user who has not accepted the beta terms in force (PRD wave-1 §2.1
