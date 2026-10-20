@@ -5011,6 +5011,13 @@ export const en: Dictionary = {
       footer: "Clients of the group get an invitation from the bot and decide themselves whether to join.",
       create: "New challenge",
     },
+    all: {
+      header: "For all clients",
+      empty: "No challenges yet",
+      footer: "All your clients get an invitation from the bot and decide themselves whether to join. Group challenges live in their groups.",
+      moreText: "A contest for all your clients, no group needed",
+      by: "For all clients",
+    },
     form: {
       title: "New challenge",
       description: "Everyone competes in one measure. Weight, measurements and photos never take part.",
@@ -5029,6 +5036,7 @@ export const en: Dictionary = {
       leaderboardHint: "Participants see the places of those who agreed to it. The top three get the “Top three” badge.",
       create: "Start",
       created: "Challenge started, the bot invited the group",
+      createdAll: "Challenge started, the bot invited your clients",
       failed: "Something went wrong, try again",
       plan: "Challenges come with the Pro plan",
     },
@@ -5046,8 +5054,8 @@ export const en: Dictionary = {
       cancelConfirm: "Cancel challenge",
       cancelled: "Challenge cancelled",
       notFound: "Challenge not found",
-      notFoundText: "It isn't among the challenges of your groups.",
-      back: "To groups",
+      notFoundText: "It isn't among your challenges.",
+      back: "To challenges",
     },
     client: {
       title: "Challenge",

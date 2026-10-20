@@ -633,14 +633,14 @@ isOneToOne: false
                   ]
                 },"challenges": {
                   Row: {
-                    "cancelled_at": string | null,"created_at": string,"ends_on": string,"finished_at": string | null,"goal": number | null,"group_id": string,"id": string,"leaderboard": boolean,"metric": string,"starts_on": string,"title": string,"trainer_id": string
+                    "cancelled_at": string | null,"created_at": string,"ends_on": string,"finished_at": string | null,"goal": number | null,"group_id": string | null,"id": string,"leaderboard": boolean,"metric": string,"starts_on": string,"title": string,"trainer_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "cancelled_at"?: string | null,"created_at"?: string,"ends_on": string,"finished_at"?: string | null,"goal"?: number | null,"group_id": string,"id"?: string,"leaderboard"?: boolean,"metric": string,"starts_on": string,"title": string,"trainer_id": string
+                    "cancelled_at"?: string | null,"created_at"?: string,"ends_on": string,"finished_at"?: string | null,"goal"?: number | null,"group_id"?: string | null,"id"?: string,"leaderboard"?: boolean,"metric": string,"starts_on": string,"title": string,"trainer_id": string
                   }
                   Update: {
-                    "cancelled_at"?: string | null,"created_at"?: string,"ends_on"?: string,"finished_at"?: string | null,"goal"?: number | null,"group_id"?: string,"id"?: string,"leaderboard"?: boolean,"metric"?: string,"starts_on"?: string,"title"?: string,"trainer_id"?: string
+                    "cancelled_at"?: string | null,"created_at"?: string,"ends_on"?: string,"finished_at"?: string | null,"goal"?: number | null,"group_id"?: string | null,"id"?: string,"leaderboard"?: boolean,"metric"?: string,"starts_on"?: string,"title"?: string,"trainer_id"?: string
                   }
                   Relationships: [
                     {

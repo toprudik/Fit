@@ -12,13 +12,14 @@ import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { plural } from "@/i18n/format";
 import { createChallenge } from "@/lib/challenges/actions";
+import { trainerChallengePath } from "@/lib/challenges/present";
 import { CHALLENGE_METRICS, CHALLENGE_TITLE_MAX, CHALLENGE_WEEK_OPTIONS, parseGoal, type ChallengeMetric } from "@/lib/challenges/challenges";
 
 /**
- * "Новый челлендж" in a group (wave-3 §2.3-9): a name, one metric, 1 to 12 weeks from today or next Monday,
- * an optional goal and the leaderboard. The bot invites the clients of the group.
+ * "Новый челлендж" in a group (wave-3 §2.3-9), or for all clients with groupId null: a name, one metric, 1 to 12
+ * weeks from today or next Monday, an optional goal and the leaderboard. The bot invites the clients.
  */
-export function NewChallengeButton({ groupId, today, monday }: { groupId: string; today: string; monday: string }) {
+export function NewChallengeButton({ groupId, today, monday }: { groupId: string | null; today: string; monday: string }) {
   const { t, locale } = useI18n();
   const copy = t.challenges;
   const router = useRouter();
@@ -62,9 +63,9 @@ export function NewChallengeButton({ groupId, today, monday }: { groupId: string
         toast.error(result.reason === "plan" ? copy.form.plan : copy.form.failed);
         return;
       }
-      toast.success(copy.form.created);
+      toast.success(groupId ? copy.form.created : copy.form.createdAll);
       setOpen(false);
-      router.push(`/trainer/groups/${groupId}/challenges/${result.value}`);
+      router.push(trainerChallengePath(groupId, result.value));
     });
   }
 
