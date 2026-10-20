@@ -6,6 +6,39 @@ export const en: Dictionary = {
     appName: "DaFit",
     description: "DaFit helps personal trainers manage their schedule and keep track of client passes and progress.",
   },
+  linkPreview: {
+    showcase: {
+      title: "{name}, a trainer on DaFit",
+      generic: "A trainer on DaFit",
+      kicker: "Trainer page",
+      description: "Specialties, prices and a trial session to book. Your schedule, passes and progress then stay in one place.",
+    },
+    trial: {
+      title: "Trial session with {name}",
+      generic: "Trial session on DaFit",
+      kicker: "Trial session",
+      minutes: "{minutes} min",
+      description: "Pick a time that suits you and book a trial workout on DaFit.",
+    },
+    referral: {
+      title: "Join {name} on DaFit",
+      generic: "Join a trainer on DaFit",
+      kicker: "Invite from a friend",
+      description: "A friend invites you to train with their trainer. Your schedule, pass and progress stay in one place.",
+    },
+    client: {
+      title: "{name} invites you to DaFit",
+      generic: "A trainer invites you to DaFit",
+      kicker: "Trainer invite",
+      description: "Become a client on DaFit: your schedule, pass and progress stay in one place.",
+    },
+    trainerInvite: {
+      title: "You're invited to coach on DaFit",
+      generic: "You're invited to coach on DaFit",
+      kicker: "For trainers",
+      description: "Run your schedule, client passes and progress in one app, right inside Telegram.",
+    },
+  },
   common: {
     back: "Back",
     close: "Close",
@@ -431,6 +464,7 @@ export const en: Dictionary = {
     context: "The message comes with the screen you're writing from, the app version, language and theme. Nothing else from the screen goes along: no clients, no records.",
     send: "Send",
     failed: "Couldn't send it. Try again.",
+    tooMany: "Too many messages in a row. Try again a bit later.",
     signedOut: "Sign in to write to the team.",
     signIn: "Sign in",
     sentTitle: "Thanks, got it",
@@ -2980,6 +3014,16 @@ export const en: Dictionary = {
       referral: "Refer a friend",
       manual: "Added by the trainer",
     },
+    channels: {
+      header: "Where people came from",
+      footer: "The channel of the link someone first opened DaFit with: src or utm_source on the website, ch_ or __s_ in a link to the app in Telegram. No label means a plain link, or signing up before channels started to count on 2026-10-18.",
+      channel: "Channel",
+      users: "Accounts",
+      trainers: "Trainers",
+      clients: "Clients",
+      none: "No label",
+      names: { tg: "Telegram", vk: "VK", max: "MAX", ig: "Instagram", yt: "YouTube", tt: "TikTok" },
+    },
     weekly: {
       header: "By week",
       footer: "Weeks in UTC, starting Monday. The last one is still running, so growth in “Highlights” compares the two weeks before it.",
@@ -2999,7 +3043,8 @@ export const en: Dictionary = {
       empty: "Nobody signed up in this period.",
     },
     csv: {
-      sections: { summary: "Summary", success: "Beta goals", weekly: "By week", cohorts: "Retention" },
+      sections: { summary: "Summary", success: "Beta goals", channels: "Where people came from", weekly: "By week", cohorts: "Retention" },
+      channels: { channel: "Channel", campaign: "Campaign", users: "Accounts", trainers: "Trainers", clients: "Clients with a trainer" },
       success: {
         clients: "Clients with a trainer",
         clients_with_streak: "Clients with a weekly streak",
@@ -3984,6 +4029,11 @@ export const en: Dictionary = {
     betaNote: "Plans are not on sale during the beta, so bonuses are on hold for now.",
     code: "Code to type in: {code}",
     shareText: "Join me on DaFit: clients, schedule and passes in one place",
+    countsHeader: "Your invitations",
+    countsInvited: "Joined by your link",
+    countsActive: "Working",
+    countsActiveHint: "Held 3 or more sessions in 7 days",
+    countsBonuses: "Bonuses waiting",
     listHeader: "Invited trainers",
     empty: "Nobody has joined by your link yet.",
     unnamed: "No name",
@@ -3993,6 +4043,14 @@ export const en: Dictionary = {
     signIn: "Sign in",
     notTrainer: "Only trainers can invite trainers.",
     admin: {
+      referrers: {
+        header: "Trainers who invite",
+        footer: "\"Working\" means 3 or more sessions held in 7 days. Void invitations never count as working.",
+        empty: "Nobody has invited colleagues yet.",
+        unnamed: "No name",
+        line: "{invited} joined, {active} working",
+        bonuses: "Bonuses waiting {pending}, granted {granted}",
+      },
       header: "Bonus for an invited trainer",
       text: "The trainer who brought a colleague gets it once the colleague buys a plan. A new value applies to new invitations.",
       kind: "Bonus",
@@ -4114,6 +4172,13 @@ export const en: Dictionary = {
     language: {
       label: "Language",
     },
+  },
+  /** Legal documents at /legal: list, draft note, links from settings and the beta terms. */
+  legal: {
+    title: "Legal",
+    intro: "How DaFit works, what happens to your data and what your rights are. These are drafts still under legal review; until then the closed beta terms apply.",
+    all: "All documents",
+    table: "Table, scrolls sideways",
   },
   /** Reminder lead times: "1 day before", "in 3 hours" (PRD wave-1 §2.9-2). */
   reminders: {

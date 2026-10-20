@@ -46,20 +46,33 @@ vi.mock("@/lib/supabase/server", () => ({
 const signInWithTelegram = vi.hoisted(() => vi.fn(async () => ({ userId: "user-42", newAccount: false })));
 /** Accounts an admin blocked (ADM-7). */
 const blocked = vi.hoisted(() => new Set<string>());
+const recordSignupSource = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock("@/lib/attribution/record", () => ({ recordSignupSource }));
 vi.mock("@/lib/auth/sign-in-with-telegram", async () => {
   class AccountBlockedError extends Error {}
   return { AccountBlockedError, signInWithTelegram, isAccountBlocked: async (userId: string) => blocked.has(userId) };
 });
+
+/** The fresh sign-in limit per Telegram account: whether it allows the next one, and what it counted. */
+const limits = vi.hoisted(() => ({ allow: true, hits: [] as [string, string][] }));
+vi.mock("@/lib/rate-limit", () => ({
+  RATE_LIMITS: { miniAppSignIn: { bucket: "sign-in:mini-app", limit: 20, windowSeconds: 600 } },
+  withinRateLimit: async ({ bucket }: { bucket: string }, subject: string) => {
+    limits.hits.push([bucket, subject]);
+    return limits.allow;
+  },
+}));
 
 const { POST } = await import("./route");
 
 const nowSec = () => Math.floor(Date.now() / 1000);
 
 /** initData for Telegram user 42, signed with the bot token as Telegram does, `age` seconds ago. */
-function initData(age: number, token = BOT_TOKEN): string {
+function initData(age: number, token = BOT_TOKEN, extra: Record<string, string> = {}): string {
   const fields = {
     auth_date: String(nowSec() - age),
     user: JSON.stringify({ id: 42, first_name: "Sam", language_code: "ru" }),
+    ...extra,
   };
   const dataCheckString = Object.entries(fields)
     .map(([key, value]) => `${key}=${value}`)
@@ -89,6 +102,9 @@ beforeEach(() => {
   session.signedOut = false;
   blocked.clear();
   signInWithTelegram.mockClear();
+  recordSignupSource.mockClear();
+  limits.allow = true;
+  limits.hits = [];
 });
 
 describe("POST /api/auth/telegram/mini-app", () => {
@@ -134,6 +150,63 @@ describe("POST /api/auth/telegram/mini-app", () => {
   });
 });
 
+describe("CSRF and input (ADR 0004)", () => {
+  const send = (headers: Record<string, string>, body: string = JSON.stringify({ initData: initData(10) })) =>
+    POST(new Request(`${APP_URL}/api/auth/telegram/mini-app`, { method: "POST", headers, body }));
+
+  it.each([
+    ["another site's origin", { origin: "https://evil.example", "content-type": "application/json" }],
+    ["no origin", { "content-type": "application/json" }],
+    ["a cross-site fetch", { origin: APP_URL, "sec-fetch-site": "cross-site", "content-type": "application/json" }],
+    ["a same-site but not same-origin fetch", { origin: APP_URL, "sec-fetch-site": "same-site", "content-type": "application/json" }],
+    ["a form post", { origin: APP_URL, "sec-fetch-site": "same-origin", "content-type": "application/x-www-form-urlencoded" }],
+    ["a text/plain post", { origin: APP_URL, "sec-fetch-site": "same-origin", "content-type": "text/plain" }],
+    ["the origin with a path trick", { origin: `${APP_URL}.evil.example`, "content-type": "application/json" }],
+  ])("refuses %s with 403 before signing anyone in", async (_name, headers) => {
+    const res = await send(headers);
+    expect(res.status).toBe(403);
+    expect(setCookies(res)).toEqual([]);
+    expect(signInWithTelegram).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["no JSON", "initData=abc"],
+    ["no initData", JSON.stringify({})],
+    ["an empty initData", JSON.stringify({ initData: "" })],
+    ["an oversized initData", JSON.stringify({ initData: "a".repeat(4097) })],
+    ["initDataUnsafe instead of initData", JSON.stringify({ initDataUnsafe: { user: { id: 1 } } })],
+  ])("answers 400 to %s", async (_name, body) => {
+    const res = await send({ origin: APP_URL, "sec-fetch-site": "same-origin", "content-type": "application/json" }, body);
+    expect(res.status).toBe(400);
+    expect(signInWithTelegram).not.toHaveBeenCalled();
+  });
+
+  it("counts fresh sign-ins per Telegram account and answers 429 past the limit, without a session", async () => {
+    limits.allow = false;
+    const res = await post(initData(10));
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("600");
+    expect(limits.hits).toEqual([["sign-in:mini-app", "42"]]);
+    expect(signInWithTelegram).not.toHaveBeenCalled();
+    expect(setCookies(res)).toEqual([]);
+  });
+
+  it("never counts page loads of a signed-in user or data that did not verify", async () => {
+    session.claims = { sub: "user-42", app_metadata: { telegram_id: 42 } };
+    await post(initData(7200));
+    session.claims = null;
+    await post(initData(10, "999:other-bot"));
+    await post(initData(7200));
+    expect(limits.hits).toEqual([]);
+  });
+
+  it("ignores user fields sent next to initData: only the signed user counts", async () => {
+    const body = JSON.stringify({ initData: initData(10), user: { id: 1 }, telegram_id: 1, userId: "admin" });
+    await send({ origin: APP_URL, "sec-fetch-site": "same-origin", "content-type": "application/json" }, body);
+    expect(signInWithTelegram).toHaveBeenCalledWith(expect.objectContaining({ telegramId: 42 }));
+  });
+});
+
 describe("blocked accounts (ADM-7)", () => {
   it("answers 403 when sign-in finds the account blocked", async () => {
     const { AccountBlockedError } = await import("@/lib/auth/sign-in-with-telegram");
@@ -174,6 +247,22 @@ describe("preferences at sign-in (ADR 0015)", () => {
     expect(await res.json()).toEqual({ ok: true, fresh: true });
     expect(setCookies(res)).toEqual([]);
     expect(session.updates).toEqual([{ locale: "en", theme: "dark", last_zone: "trainer" }]);
+    expect(recordSignupSource).toHaveBeenCalledWith("user-42", null, "mini_app");
+  });
+
+  it("keeps the channel of a new account: the signed start parameter first, then the label the browser kept", async () => {
+    signInWithTelegram.mockResolvedValue({ userId: "user-42", newAccount: true });
+    await post(initData(10, BOT_TOKEN, { start_param: "tp_anna-fit__s_vk" }), "dafit_src=ig.autumn");
+    expect(recordSignupSource).toHaveBeenLastCalledWith("user-42", { source: "vk", campaign: null }, "mini_app");
+
+    await post(initData(10), "dafit_src=ig.autumn");
+    expect(recordSignupSource).toHaveBeenLastCalledWith("user-42", { source: "ig", campaign: "autumn" }, "mini_app");
+    signInWithTelegram.mockResolvedValue({ userId: "user-42", newAccount: false });
+  });
+
+  it("records no channel for an account that already exists", async () => {
+    await post(initData(10, BOT_TOKEN, { start_param: "ch_tg" }));
+    expect(recordSignupSource).not.toHaveBeenCalled();
   });
 
   it("on the first launch takes the language from Telegram when the account can't be read", async () => {

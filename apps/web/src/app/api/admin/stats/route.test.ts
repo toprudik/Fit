@@ -34,6 +34,7 @@ const summary = {
 const success = { clients: 100, clients_with_streak: 31, trainers: 12, trainers_offer_live: 8, trainers_offer_ever: 9 };
 const week = { week_start: "2026-10-05", new_users: 6, new_trainers: 1, new_pairs: 4, active_users: 50, active_trainers: 8, active_clients: 40, held_sessions: 30, attended: 28, bookings: 32, passes_sold: 2, turnover: { RUB: 100_000 }, trainer_invites_created: 1, trainer_invites_redeemed: 1, referrals: 0 };
 const cohort = { cohort_week: "2026-09-28", size: 10, retained: [6, 4] };
+const channel = { source: "vk", campaign: null, users: 7, trainers: 2, clients: 4 };
 
 /**
  * The signed-in user, whether they hold the admin role, the owner RPCs' answers (an error code fails that RPC)
@@ -68,6 +69,7 @@ vi.mock("@/lib/supabase/server", () => ({
       const answers: Record<string, unknown> = {
         admin_owner_summary: summary,
         admin_owner_success: success,
+        admin_owner_sources: [channel],
         admin_owner_weekly: [week],
         admin_owner_cohorts: [cohort],
       };
@@ -109,6 +111,7 @@ describe("GET /api/admin/stats", () => {
     expect(body).toContain("123450,00 RUB");
     expect(body).toContain("2026-10-05;6;");
     expect(body).toContain("2026-09-28;10;60%;40%");
+    expect(body).toContain("ВКонтакте;;7;2;4");
     expect(session.roleQueries).toEqual([
       [
         ["user_id", "user-42"],
@@ -161,7 +164,7 @@ describe("GET /api/admin/stats", () => {
     expect(session.rpcs).toEqual([]);
   });
 
-  it.each(["admin_owner_summary", "admin_owner_success", "admin_owner_weekly", "admin_owner_cohorts"])(
+  it.each(["admin_owner_summary", "admin_owner_success", "admin_owner_sources", "admin_owner_weekly", "admin_owner_cohorts"])(
     "answers 500 without data when %s fails",
     async (name) => {
       const error = vi.spyOn(console, "error").mockImplementation(() => {});

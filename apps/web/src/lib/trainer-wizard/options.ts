@@ -48,6 +48,16 @@ export function timeZones(): string[] {
   return zones.includes("UTC") ? zones : [...zones, "UTC"];
 }
 
+/**
+ * A zone this runtime lists, or a current IANA name it knows by an older alias: Node lists Europe/Kiev and
+ * Asia/Calcutta, while Safari (Telegram on iOS) and Firefox report Europe/Kyiv and Asia/Kolkata.
+ */
 export function isTimeZone(value: string): boolean {
-  return timeZones().includes(value);
+  if (timeZones().includes(value)) return true;
+  if (!/^[A-Za-z]+(\/[A-Za-z0-9_+-]+)+$/.test(value)) return false;
+  try {
+    return timeZones().includes(new Intl.DateTimeFormat("en", { timeZone: value }).resolvedOptions().timeZone);
+  } catch {
+    return false;
+  }
 }

@@ -4,6 +4,7 @@ import { dictionaries } from "@/i18n/dictionaries";
 import { DEFAULT_TIME_ZONE } from "@/lib/plans/plans";
 import { clientNames } from "@/lib/schedule/load";
 import { addDays, localToUtc, parseDay } from "@/lib/schedule/time";
+import { readAllPages, readByIds } from "@/lib/supabase/paging";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { exportFileName, isExportKind, isoInZone, majorUnits, toCsv, type Cell, type ExportKind } from "@/lib/trainer-analytics/csv";
 
@@ -18,19 +19,23 @@ function fail(what: string, error: { code?: string } | null): never {
 /** Pairs of the trainer that were live at some point of the period. */
 async function clients({ supabase, userId, locale, timeZone, range }: Context): Promise<[string[], Cell[][]]> {
   const t = dictionaries[locale].trainerAnalytics.csv;
-  const { data: pairs, error } = await supabase
-    .from("coachings")
-    .select("id, status, started_at, ended_at")
-    .eq("trainer_id", userId)
-    .lt("started_at", range.toAt)
-    .or(`ended_at.is.null,ended_at.gte.${range.fromAt}`)
-    .order("started_at");
+  const { data: pairs, error } = await readAllPages((from, to) =>
+    supabase
+      .from("coachings")
+      .select("id, status, started_at, ended_at")
+      .eq("trainer_id", userId)
+      .lt("started_at", range.toAt)
+      .or(`ended_at.is.null,ended_at.gte.${range.fromAt}`)
+      .order("started_at")
+      .order("id")
+      .range(from, to),
+  );
   if (error) fail("clients", error);
   const ids = pairs.map((pair) => pair.id);
   const [names, stats, balances] = await Promise.all([
     clientNames(supabase, ids),
-    supabase.from("coaching_stats").select("coaching_id, attended_count, no_show_count").in("coaching_id", ids),
-    supabase.from("coaching_balances").select("coaching_id, available_sessions, debt_sessions").in("coaching_id", ids),
+    readByIds(ids, (chunk) => supabase.from("coaching_stats").select("coaching_id, attended_count, no_show_count").in("coaching_id", chunk)),
+    readByIds(ids, (chunk) => supabase.from("coaching_balances").select("coaching_id, available_sessions, debt_sessions").in("coaching_id", chunk)),
   ]);
   if (stats.error) fail("client stats", stats.error);
   if (balances.error) fail("client balances", balances.error);
@@ -55,21 +60,22 @@ async function clients({ supabase, userId, locale, timeZone, range }: Context): 
 async function sessions({ supabase, userId, locale, timeZone, range }: Context): Promise<[string[], Cell[][]]> {
   const d = dictionaries[locale];
   const c = d.trainerAnalytics.csv.columns;
-  const { data: rows, error } = await supabase
-    .from("sessions")
-    .select("id, starts_at, kind, title")
-    .eq("trainer_id", userId)
-    .gte("starts_at", range.fromAt)
-    .lt("starts_at", range.toAt)
-    .order("starts_at");
+  const { data: rows, error } = await readAllPages((from, to) =>
+    supabase
+      .from("sessions")
+      .select("id, starts_at, kind, title")
+      .eq("trainer_id", userId)
+      .gte("starts_at", range.fromAt)
+      .lt("starts_at", range.toAt)
+      .order("starts_at")
+      .order("id")
+      .range(from, to),
+  );
   if (error) fail("sessions", error);
-  const { data: bookings, error: bookingsError } = await supabase
-    .from("bookings")
-    .select("session_id, coaching_id, status")
-    .in(
-      "session_id",
-      rows.map((row) => row.id),
-    );
+  const { data: bookings, error: bookingsError } = await readByIds(
+    rows.map((row) => row.id),
+    (chunk) => supabase.from("bookings").select("session_id, coaching_id, status").in("session_id", chunk),
+  );
   if (bookingsError) fail("bookings", bookingsError);
   const names = await clientNames(
     supabase,
@@ -93,13 +99,17 @@ async function sessions({ supabase, userId, locale, timeZone, range }: Context):
 async function payments({ supabase, userId, locale, timeZone, range }: Context): Promise<[string[], Cell[][]]> {
   const d = dictionaries[locale];
   const c = d.trainerAnalytics.csv.columns;
-  const { data: rows, error } = await supabase
-    .from("payments")
-    .select("coaching_id, amount_minor, currency, method, paid_at, direction, status")
-    .eq("trainer_id", userId)
-    .gte("paid_at", range.fromAt)
-    .lt("paid_at", range.toAt)
-    .order("paid_at");
+  const { data: rows, error } = await readAllPages((from, to) =>
+    supabase
+      .from("payments")
+      .select("coaching_id, amount_minor, currency, method, paid_at, direction, status")
+      .eq("trainer_id", userId)
+      .gte("paid_at", range.fromAt)
+      .lt("paid_at", range.toAt)
+      .order("paid_at")
+      .order("id")
+      .range(from, to),
+  );
   if (error) fail("payments", error);
   const names = await clientNames(
     supabase,
@@ -122,13 +132,17 @@ async function payments({ supabase, userId, locale, timeZone, range }: Context):
 /** Passes sold in the period, with what is left and what is paid. */
 async function passes({ supabase, userId, locale, timeZone, range }: Context): Promise<[string[], Cell[][]]> {
   const c = dictionaries[locale].trainerAnalytics.csv.columns;
-  const { data: sold, error } = await supabase
-    .from("passes")
-    .select("id, coaching_id, starts_on")
-    .eq("trainer_id", userId)
-    .gte("starts_on", range.from)
-    .lt("starts_on", range.to)
-    .order("starts_on");
+  const { data: sold, error } = await readAllPages((from, to) =>
+    supabase
+      .from("passes")
+      .select("id, coaching_id, starts_on")
+      .eq("trainer_id", userId)
+      .gte("starts_on", range.from)
+      .lt("starts_on", range.to)
+      .order("starts_on")
+      .order("id")
+      .range(from, to),
+  );
   if (error) fail("passes", error);
   const ids = sold.map((pass) => pass.id);
   const [names, balances] = await Promise.all([
@@ -136,7 +150,9 @@ async function passes({ supabase, userId, locale, timeZone, range }: Context): P
       supabase,
       sold.map((pass) => pass.coaching_id),
     ),
-    supabase.from("pass_balances").select("pass_id, title, sessions_total, remaining, price_minor, paid_minor, currency, effective_expires_at, status").in("pass_id", ids),
+    readByIds(ids, (chunk) =>
+      supabase.from("pass_balances").select("pass_id, title, sessions_total, remaining, price_minor, paid_minor, currency, effective_expires_at, status").in("pass_id", chunk),
+    ),
   ]);
   if (balances.error) fail("pass balances", balances.error);
   const balance = new Map(balances.data.map((row) => [row.pass_id, row]));
