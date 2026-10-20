@@ -9,6 +9,8 @@ select tests.create_user('client_c');
 select tests.create_user('client_d');
 update public.profiles set first_name = 'Ира', last_name = 'Тренер' where id = tests.user_id('trainer_a');
 select tests.create_pair('trainer_a', 'client_c');
+-- C gives the health data consent: without it the report has no health blocks (989).
+insert into public.consents (user_id, kind, version) values (tests.user_id('client_c'), 'pd_health', '2026-11');
 
 delete from public.exercises where source = 'wger';
 insert into public.exercises (id, source, wger_id, name, license)

@@ -335,7 +335,7 @@ export const en: Dictionary = {
           { q: "A client without an account came through my link. How do I keep their history?", a: "The bot asks whether you have a card for this person and shows “Same person” and “New client”. In the app pick the card and tap “Merge”: sessions, passes, payments, notes and measurements move to their account. A merge can't be undone. If you have several cards, you can only choose the right one in the app." },
           { q: "How many clients can I have for free?", a: "Up to 3 on Free, and cards without an account count too. Archiving a client doesn't free a place, only ending the work together does. Pro has no limit. If Pro ends, your current clients stay, but you can't add new ones." },
           { q: "How do I change my link if it went to the wrong person?", a: "In “QR and link” tap “Reissue link”. The old link, QR and code stop working at once, and clients already with you stay." },
-          { q: "What can I see about a client?", a: "The client decides, separately for each trainer. Measurements and their own workouts are open by default, progress photos and the intake form stay closed until the client opens them. You see the food diary and activity while the client trains with you. You never see other trainers' clients." },
+          { q: "What can I see about a client?", a: "The client decides, separately for each trainer. In “What your trainer sees” they open or close their measurements, progress photos, own workouts, nutrition, steps and sleep, and intake form to you. You see only what they opened. You never see other trainers' clients." },
           { q: "Does the client see my notes?", a: "No, by default only you see a note. The “Show to the client” switch opens it to the client, and you can turn it off again." },
           { q: "What is the “Agreement for trainers”?", a: "You are responsible for what you write about clients: cards without an account, notes, sessions and payments. DaFit keeps it on your behalf. Before your first card for a client without an account or your first note, DaFit asks you to accept the agreement. You do it once: tap “I accept”. The full text opens with “Read the agreement”." },
           { q: "How do I contact a client?", a: "“Message” on the client card opens a Telegram chat. If the client has no username, you get “Ask to get in touch” instead: the bot passes on the request and, if the client agrees, sends you their contact. You can ask again after 24 hours. DaFit has no chat of its own." },
@@ -464,7 +464,7 @@ export const en: Dictionary = {
       {
         title: "What your trainer sees",
         items: [
-          { q: "How do I hide something from my trainer?", a: "Under “Trainers” open the trainer and choose “What your trainer sees”. There are four switches: “Measurements”, “Progress photos”, “Your own workouts” and “Intake form”. They work at once and only for that trainer. Your trainer sees the food diary and activity while you train with them, and these can't be hidden separately yet." },
+          { q: "How do I hide something from my trainer?", a: "Under “Trainers” open the trainer and choose “What your trainer sees”. There are six switches: “Measurements”, “Progress photos”, “Your own workouts”, “Nutrition”, “Steps and sleep” and “Intake form”. They work at once and only for that trainer." },
           { q: "Do my trainer's assistants see me?", a: "An assistant sees only what you opened to your trainer, and only within their rights. On “What your trainer sees” you can turn off “Assistants see progress and nutrition”. Assistants never see amounts or payments." },
           { q: "Which of my trainer's notes can I see?", a: "Only the ones your trainer chose to show you. They are on the trainer's card, in “Notes from the trainer”." },
         ],
@@ -1935,6 +1935,7 @@ export const en: Dictionary = {
       days: { one: "Over {count} day", few: "Over {count} days", many: "Over {count} days", other: "Over {count} days" },
       units: { h: "h", min: "min" },
     },
+    healthClosed: "Without your consent to health data, the review leaves out workouts, records, streaks, measurements, nutrition and activity.",
     homework: { header: "Homework", done: "Done", ofTotal: "{done} of {total}" },
     /** Sending the month to a trainer (§4 rule 3). */
     forward: {
@@ -5378,6 +5379,8 @@ export const en: Dictionary = {
     title: "Sign in",
     description: "You don't need a password or email, just your Telegram account.",
     action: "Sign in with Telegram",
+    cookies: "We only use our own cookies, to keep you signed in and remember your settings. No advertising or third-party cookies.",
+    cookiesLink: "About cookies",
     errors: {
       expired: "Sign-in took too long. Try again.",
       denied: "Sign-in was cancelled in Telegram. Try again.",

@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { collectErrors, isPhone } from "../e2e/support";
 import { expect, test } from "./support/fixtures";
 import { makeTrainer, ok } from "./support/personas";
@@ -340,6 +341,8 @@ test.describe("clients", () => {
     ).toHaveAttribute("href", "/trainer/links");
     await expectAccessible(page);
 
+    // Before the first card the trainer accepts the data processing agreement; the form waits for it.
+    await acceptTrainerAgreement(page);
     await page.getByRole("button", { name: "Создать" }).click();
     await expect(page.getByText("Напиши имя клиента")).toBeVisible();
     await page.getByLabel("Имя").fill("Б".repeat(101));
@@ -564,6 +567,8 @@ test.describe("clients", () => {
       page.getByRole("heading", { name: "Заметок нет" }),
     ).toBeVisible();
     await expectAccessible(page);
+    // The first note also waits for the data processing agreement.
+    await acceptTrainerAgreement(page);
     await page.getByRole("button", { name: "Сохранить заметку" }).click();
     await expect(page.getByText("Напиши текст заметки")).toBeVisible();
     await page.getByLabel("Новая заметка").fill("Любит утренние тренировки");
@@ -767,3 +772,16 @@ test.describe("the client's side of the pair", () => {
     await expectAccessible(someone.page);
   });
 });
+
+/** «Поручение для тренеров»: shown instead of the form until the trainer accepts it once (legal А7). */
+async function acceptTrainerAgreement(page: Page) {
+  const agreement = page.getByRole("region", { name: "Поручение для тренеров" });
+  await expect(agreement).toBeVisible();
+  await expect(agreement.getByRole("link", { name: "Прочитать поручение" })).toHaveAttribute("href", "/legal/trainers");
+  await agreement.getByRole("button", { name: "Принимаю" }).click();
+  await expect(page.getByText("Поручение принято")).toBeVisible();
+  await expect(agreement).toHaveCount(0);
+  // On a phone the toast sits over the form's button; sonner holds it while the pointer is over it.
+  await page.mouse.move(0, 0);
+  await expect(page.locator("[data-sonner-toast]")).toHaveCount(0);
+}
