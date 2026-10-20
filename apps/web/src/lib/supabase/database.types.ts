@@ -277,14 +277,14 @@ isOneToOne: true
                   ]
                 },"bonuses": {
                   Row: {
-                    "beneficiary_id": string,"coaching_id": string | null,"created_at": string,"discount_percent": number | null,"granted_at": string | null,"id": string,"kind": Database["public"]['Enums']["bonus_kind"],"pass_id": string | null,"referral_id": string,"sessions": number | null,"status": Database["public"]['Enums']["bonus_status"],"voided_at": string | null
+                    "beneficiary_id": string,"coaching_id": string | null,"created_at": string,"discount_percent": number | null,"granted_at": string | null,"id": string,"kind": Database["public"]['Enums']["bonus_kind"],"pass_id": string | null,"plan_grant_id": string | null,"referral_id": string,"sessions": number | null,"status": Database["public"]['Enums']["bonus_status"],"voided_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "beneficiary_id": string,"coaching_id"?: string | null,"created_at"?: string,"discount_percent"?: number | null,"granted_at"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["bonus_kind"],"pass_id"?: string | null,"referral_id": string,"sessions"?: number | null,"status"?: Database["public"]['Enums']["bonus_status"],"voided_at"?: string | null
+                    "beneficiary_id": string,"coaching_id"?: string | null,"created_at"?: string,"discount_percent"?: number | null,"granted_at"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["bonus_kind"],"pass_id"?: string | null,"plan_grant_id"?: string | null,"referral_id": string,"sessions"?: number | null,"status"?: Database["public"]['Enums']["bonus_status"],"voided_at"?: string | null
                   }
                   Update: {
-                    "beneficiary_id"?: string,"coaching_id"?: string | null,"created_at"?: string,"discount_percent"?: number | null,"granted_at"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["bonus_kind"],"pass_id"?: string | null,"referral_id"?: string,"sessions"?: number | null,"status"?: Database["public"]['Enums']["bonus_status"],"voided_at"?: string | null
+                    "beneficiary_id"?: string,"coaching_id"?: string | null,"created_at"?: string,"discount_percent"?: number | null,"granted_at"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["bonus_kind"],"pass_id"?: string | null,"plan_grant_id"?: string | null,"referral_id"?: string,"sessions"?: number | null,"status"?: Database["public"]['Enums']["bonus_status"],"voided_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -4068,6 +4068,9 @@ isOneToOne: false
 "admin_grant_plan":
 { Args: { "p_expires_at"?: string,"p_plan_code": string,"p_reason": string,"p_user_id": string }; Returns: string
                            },
+"admin_grant_referral_bonus":
+{ Args: { "p_bonus_id": string,"p_starts_on": string }; Returns: string
+                           },
 "admin_open_break_glass":
 { Args: { "p_categories": (Database["public"]['Enums']["share_category"])[],"p_minutes"?: number,"p_reason": string,"p_target_user": string }; Returns: string
                            },
@@ -4124,6 +4127,11 @@ isOneToOne: false
 "admin_trainer_honors":
 { Args: { "p_trainer_id": string }; Returns: {
               "granted_at": string,"honor": Database["public"]['Enums']["trainer_honor"],"reason": string
+            }[]
+                           },
+"admin_trainer_referral_bonuses":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "active_weeks": number,"bonus_id": string,"bonus_kind": Database["public"]['Enums']["bonus_kind"],"bonus_status": Database["public"]['Enums']["bonus_status"],"discount_percent": number,"due": boolean,"granted_at": string,"invited_at": string,"plan_expires_at": string,"plan_starts_at": string,"referee_first_name": string,"referee_id": string,"referee_last_name": string,"referee_username": string,"referral_status": Database["public"]['Enums']["referral_status"],"referrer_first_name": string,"referrer_id": string,"referrer_last_name": string,"referrer_username": string
             }[]
                            },
 "admin_trainer_referrers":

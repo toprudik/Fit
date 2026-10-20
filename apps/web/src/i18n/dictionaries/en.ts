@@ -32,6 +32,12 @@ export const en: Dictionary = {
       kicker: "Trainer invite",
       description: "Become a client on DaFit: your schedule, pass and progress stay in one place.",
     },
+    forTrainers: {
+      title: "DaFit for trainers",
+      generic: "DaFit for trainers",
+      kicker: "Beta waitlist",
+      description: "Schedule, passes and client progress in one place, in Telegram and on the web. Join the beta waitlist.",
+    },
     trainerInvite: {
       title: "You're invited to coach on DaFit",
       generic: "You're invited to coach on DaFit",
@@ -3376,6 +3382,7 @@ export const en: Dictionary = {
       analytics: "Analytics",
       stats: "Statistics",
       waitlist: "Waitlist",
+      referralBonuses: "Bonuses",
     },
     backToApp: "Back to the app",
     overview: {
@@ -3478,6 +3485,7 @@ export const en: Dictionary = {
         "break_glass.revoke": "Emergency access revoked",
         "plan.grant": "Plan granted",
         "plan.revoke": "Plan revoked",
+        "referral_bonus.grant": "Referral bonus given",
         "access_request.decline": "Plan request declined",
       },
       decision: {
@@ -5213,6 +5221,34 @@ export const en: Dictionary = {
     },
     footer: "DaFit: schedule, passes and client progress for personal trainers.",
   },
+  /** «Бонусы за приглашения» in /admin: trainers' bonuses for invited colleagues in the beta (marketing backlog 7). */
+  adminReferralBonuses: {
+    title: "Referral bonuses",
+    intro:
+      "A trainer gets a month of Pro for a colleague who runs 3 or more sessions a week for 4 weeks in a row. Pro is open during the beta anyway, so the month starts after the beta.",
+    dueTitle: "Ready to give",
+    waitingTitle: "Waiting",
+    grantedTitle: "Given",
+    emptyTitle: "No bonuses yet",
+    emptyText: "They show up when trainers invite colleagues with their link.",
+    colleague: "Colleague: {name}, invited on {date}",
+    weeks: "Weeks in a row with 3+ sessions: {n} of 4",
+    discount: "{pct}% off the plan. Given after the beta, once plans can be bought.",
+    voided: "Invitation cancelled",
+    granted: "A month of Pro from {from} to {to}",
+    start: "Month of Pro starts",
+    startHint: "The first day after the beta by default",
+    submit: "Give a month of Pro after the beta",
+    done: "Bonus given, the trainer gets a message in the bot",
+    errors: {
+      notDue: "The colleague hasn't run 3 sessions a week for 4 weeks in a row yet.",
+      notPending: "This bonus was already given or cancelled.",
+      unsupported: "This bonus is given after the beta.",
+      invalidStart: "The start can't be in the past.",
+      failed: "Couldn't give the bonus, try again.",
+    },
+    noName: "No name",
+  },
   adminWaitlist: {
     title: "Waitlist",
     intro: "Trainers who joined on the page for trainers. Newest first.",
@@ -5491,6 +5527,8 @@ export const en: Dictionary = {
     /** П1–П3: plan granted, revoked and ending in three days (PRD §2.14-8, 9). */
     planGranted: "You now have {plan} with no end date. Thanks for being in the DaFit beta.",
     planGrantedUntil: "You now have {plan} until {date}. Thanks for being in the DaFit beta.",
+    planGrantedFrom: "You get {plan} from {start}. Thanks for being in the DaFit beta.",
+    planGrantedFromUntil: "You get {plan} from {start} until {date}. Thanks for being in the DaFit beta.",
     planRevoked: "Your {plan} plan is off. All your data is still here.",
     planExpiring: "Your {plan} plan ends {date}. If you still need it, request access in your plan settings.",
     openPlan: "Open my plan",
