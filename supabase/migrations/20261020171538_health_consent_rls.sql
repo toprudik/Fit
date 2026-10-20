@@ -2,12 +2,15 @@
 -- ask for it, now a request past them gets nothing either.
 --   * private.health_allowed(user): a pd_health consent in force, or a client card without an account
 --     (profiles.managed_by_trainer_id): such a person cannot give it in the app, the trainer answers for it.
+--     It is checked at the time of the request, so a claimed card (managed_by_trainer_id cleared) needs the consent.
 --   * Reading: a trainer or a delegate reads a client's health data only while it is allowed, through
 --     private.can_view and private.viewable_client_ids and the workout_logs and workout_week_goals policies that
 --     go past them. The owner always reads their own (export, the screens until the erasure); break-glass stays.
 --   * Writing: private.require_health_consent refuses a new row, or an edit of one, for a user without it, with
 --     42501 health_consent_required, whichever RPC or policy writes it. Calls without a user (service role, cron,
---     the erasure) pass, and so do group nutrition targets, which have no client.
+--     the erasure) pass, and so do group nutrition targets, which have no client, and rows moving to another person.
+--   The share categories are all health data, so the helpers check every one of them. In viewable_client_ids the
+--   check is a semi-join, so the scan 20261020090417 removed does not come back.
 -- The helper bodies are the ones of 20261020090417_rls_helpers_scale.sql and 20261017090713_delegations.sql.
 
 create function private.health_allowed(p_user uuid)
@@ -73,7 +76,8 @@ as $$
     from public.coachings c
     join public.data_shares d on d.coaching_id = c.id
     where c.trainer_id = auth.uid() and c.status in ('trial', 'active') and private.shares_category(d, p_category)
-      and private.health_allowed(c.client_id)
+      and (exists (select 1 from public.consents k where k.user_id = c.client_id and k.kind = 'pd_health' and k.revoked_at is null)
+           or exists (select 1 from public.profiles p where p.id = c.client_id and p.managed_by_trainer_id is not null))
     union all
     select c.client_id
     from (select distinct dl.owner_trainer_id
@@ -82,7 +86,9 @@ as $$
     join public.coachings c on c.trainer_id = o.owner_trainer_id
     join public.data_shares d on d.coaching_id = c.id
     where c.status in ('trial', 'active') and private.shares_category(d, p_category)
-      and private.delegate_views(c.id, p_category) and private.health_allowed(c.client_id)
+      and private.delegate_views(c.id, p_category)
+      and (exists (select 1 from public.consents k where k.user_id = c.client_id and k.kind = 'pd_health' and k.revoked_at is null)
+           or exists (select 1 from public.profiles p where p.id = c.client_id and p.managed_by_trainer_id is not null))
     union all
     select g.target_user_id
     from public.break_glass_grants g
@@ -114,6 +120,10 @@ declare
   v_subject uuid := (pg_catalog.to_jsonb(new) ->> tg_argv[0])::uuid;
 begin
   if auth.uid() is null or v_subject is null or private.health_allowed(v_subject) then
+    return new;
+  end if;
+  -- Rows moving to another person (a card claimed by its person) bring nothing new.
+  if tg_op = 'UPDATE' and (pg_catalog.to_jsonb(old) ->> tg_argv[0])::uuid is distinct from v_subject then
     return new;
   end if;
   raise exception 'health_consent_required' using errcode = '42501';
