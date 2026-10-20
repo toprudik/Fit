@@ -1,4 +1,4 @@
--- Consent to make personal data public, migration 20261020144917_public_data_consents.sql (152-FZ art. 10.1,
+-- Consent to make personal data public, migration 20261020160743_public_data_consents.sql (152-FZ art. 10.1,
 -- legal/ru/consent-public-data.md): public_data_consents, give_/revoke_public_data_consent, the showcase switch
 -- that needs a consent, and get_showcase_terms.
 begin;
