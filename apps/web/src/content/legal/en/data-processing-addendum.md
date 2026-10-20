@@ -77,7 +77,7 @@ This Data Processing Addendum ("DPA") forms part of the agreement between [OPERA
 | Vercel Inc. | Hosting of the web app and the bot | United States | EU-U.S. Data Privacy Framework (with UK Extension and Swiss framework); EU SCCs and UK Addendum in Vercel's DPA |
 | Functional Software, Inc. (Sentry), only if error reporting is on | Error reports, with user details, request bodies, cookies, headers and query strings removed | United States | [to confirm] |
 
-6.2. Telegram (Telegram FZ-LLC, United Arab Emirates, and Telegram Messenger Inc.) delivers bot messages and is an independent controller for its platform, not our subprocessor. Open Food Facts (France) receives only food search words and barcodes from our server, and jsDelivr and Google Cloud Storage serve the face-blurring model to the user's browser; none of them receives Trainer Data.
+6.2. Telegram (Telegram FZ-LLC, United Arab Emirates, and Telegram Messenger Inc.) delivers bot messages and is an independent controller for its platform, not our subprocessor. Open Food Facts (France) receives only food search words and barcodes from our server; it receives no Trainer Data.
 
 6.3. We impose on each subprocessor data protection terms that protect Trainer Data at least as well as this DPA. We remain responsible to you for our subprocessors.
 
