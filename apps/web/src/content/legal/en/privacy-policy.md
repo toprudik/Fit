@@ -97,7 +97,7 @@ This table gives the legal bases under the EU GDPR and the UK GDPR. United State
 | Story cards and calendar feeds you create | What you pick | Contract, at your request (Art. 6(1)(b)) |
 | Verify trainers | Certificates and documents | Legitimate interests in letting clients trust trainer profiles (Art. 6(1)(f)) |
 | Invitations and trial-session links | Tokens, who invited whom | Contract (Art. 6(1)(b)) |
-| Understand how DaFit is used and improve it (counts of app openings, which bot buttons people use) | App usage | Legitimate interests in improving the Service (Art. 6(1)(f)). Aggregates only; our team does not read your health data for this |
+| Understand how DaFit is used and improve it (counts of app openings, which bot buttons people use) | App usage | Legitimate interests in improving the Service (Art. 6(1)(f)). Aggregates only; our team does not read your health data for this. You can switch it off in Settings, then "App opening count", and your past openings are deleted |
 | Support, feedback, bug fixing | Feedback, technical data, error reports | Legitimate interests (Art. 6(1)(f)) |
 | Security, abuse prevention, moderation, bans, audit log | Technical data, reports, audit log | Legitimate interests in a safe service (Art. 6(1)(f)); legal obligation where one applies (Art. 6(1)(c)) |
 | Emergency access by an admin (section 6.5) | Only the categories needed for the case | Legitimate interests (Art. 6(1)(f)); for health data, Art. 9(2)(f) (legal claims) or Art. 9(2)(c) (vital interests) where they apply |
@@ -205,6 +205,7 @@ We share personal data only as described here.
 | Choose what a trainer sees, or stop sharing | Your trainer's card, then "What your trainer sees". You can also end the pair |
 | Correct your data | Edit the entry. Your name and username come from Telegram: change them in Telegram and they update at your next sign-in, or set a display name in DaFit |
 | Stop notifications | Settings, then Notifications, per kind. Blocking the bot stops all messages |
+| Stop us counting your app openings | Settings, then App opening count. Past openings are deleted |
 | Withdraw consent for health data | Delete the entries or your account |
 
 10.3. For anything else, write to [CONTACT EMAIL]. We may ask you to confirm the request from your Telegram account so that nobody else can make it in your name. We answer within one month; if a request is complex we can extend this by up to two more months and will tell you why within the first month. Requests are free unless they are clearly unfounded or excessive.
