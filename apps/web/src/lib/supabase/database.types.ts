@@ -133,6 +133,32 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"app_open_opt_outs": {
+                  Row: {
+                    "created_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "app_open_opt_outs_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "app_open_opt_outs_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"app_opens": {
                   Row: {
                     "id": number,"opened_at": string,"source": Database["public"]['Enums']["notification_type"] | null,"user_id": string
@@ -4420,6 +4446,9 @@ isOneToOne: false
 "mark_homework_done":
 { Args: { "p_comment"?: string,"p_log"?: string,"p_occurrence": string }; Returns: string
                            },
+"my_app_opens_counted":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
 "my_challenges":
 { Args: Record<PropertyKey, never>; Returns: {
               "alias": string,"coaching_id": string,"ends_on": string,"goal": number,"id": string,"joined": boolean,"leaderboard": boolean,"metric": string,"score": number,"shared": boolean,"show_on_leaderboard": boolean,"starts_on": string,"state": string,"title": string,"trainer_name": string
@@ -4687,6 +4716,9 @@ isOneToOne: false
                            },
 "set_activity":
 { Args: { "p_day": string,"p_metric": Database["public"]['Enums']["activity_metric"],"p_quality"?: number,"p_value": number }; Returns: undefined
+                           },
+"set_app_opens_counted":
+{ Args: { "p_counted": boolean }; Returns: undefined
                            },
 "set_assistant_progress":
 { Args: { "p_allowed": boolean,"p_coaching_id": string }; Returns: boolean

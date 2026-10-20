@@ -21,7 +21,7 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-const { recordAppOpen } = await import("./actions");
+const { recordAppOpen, setAppOpensCounted } = await import("./actions");
 
 beforeEach(() => {
   db.calls = [];
@@ -64,5 +64,28 @@ describe("recordAppOpen", () => {
     db.answer = { data: null, error: { message: "boom", code: "XX000" } };
     await expect(recordAppOpen(null)).resolves.toBeUndefined();
     expect(logged).toHaveBeenCalledWith("recording an app open failed", "XX000");
+  });
+});
+
+describe("setAppOpensCounted", () => {
+  it("switches the count off and on", async () => {
+    await expect(setAppOpensCounted(false)).resolves.toEqual({ ok: true });
+    await expect(setAppOpensCounted(true)).resolves.toEqual({ ok: true });
+    expect(db.calls).toEqual([
+      ["rpc", "set_app_opens_counted", { p_counted: false }],
+      ["rpc", "set_app_opens_counted", { p_counted: true }],
+    ]);
+  });
+
+  it("refuses anything but a boolean without calling the database", async () => {
+    await expect(setAppOpensCounted("false" as unknown as boolean)).resolves.toEqual({ ok: false });
+    expect(db.calls).toEqual([]);
+  });
+
+  it("reports a database error, logging only its code", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    db.answer = { data: null, error: { message: "boom", code: "42501" } };
+    await expect(setAppOpensCounted(false)).resolves.toEqual({ ok: false });
+    expect(logged).toHaveBeenCalledWith("saving the app-opening switch failed", "42501");
   });
 });
