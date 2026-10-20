@@ -172,6 +172,7 @@ export const ru = {
         noTrainerTitle: "Ты пока не занимаешься у тренера",
         noTrainerText: "Введи код тренера или открой его ссылку, и здесь появятся занятия и абонемент.",
         noTrainerAction: "Ввести код тренера",
+        inviteTrainerAction: "Пригласить своего тренера",
         goals: "Цели на сегодня",
         food: "Питание",
         kcal: "{eaten} ккал",
@@ -256,6 +257,7 @@ export const ru = {
       codeHint: "6 букв и цифр",
       codeEmpty: "Введи код тренера",
       check: "Найти тренера",
+      inviteTrainer: "Твоего тренера ещё нет в DaFit? Пригласи его",
       invalid: "Такого кода нет. Проверь его или попроси у тренера новый.",
       otherCode: "Ввести другой код",
       scan: "Сканировать QR",
@@ -907,6 +909,10 @@ export const ru = {
       referral: {
         title: "Тебя приглашает тренер DaFit",
         text: "Нажми кнопку, и у тебя откроется зона «Тренер» на бесплатном тарифе, до 3 клиентов. Работать можно сразу, документы для проверки отправишь позже.",
+      },
+      invited: {
+        title: "Тебя зовёт в DaFit твой клиент",
+        text: "Нажми кнопку, и у тебя откроется зона «Тренер» на бесплатном тарифе, до 3 клиентов. Клиент, который прислал ссылку, сможет сразу записываться к тебе в приложении.",
       },
       alreadyTrainer: {
         title: "Ты уже тренер",
@@ -4223,6 +4229,25 @@ export const ru = {
       client_link: "Тренер зовёт тебя в DaFit",
     },
   },
+  /** /client/invite-trainer: a person invites their own trainer to DaFit (marketing backlog 16). */
+  trainerInviter: {
+    title: "Пригласить своего тренера",
+    lead: "Твоего тренера ещё нет в DaFit? Отправь ему ссылку. Зона «Тренер» откроется у него сразу, на бесплатном тарифе, а ты сможешь заниматься у него в приложении: записи, абонемент и прогресс в одном месте.",
+    code: "Код для ввода вручную: {code}",
+    shareText: "Давай вести мои тренировки в DaFit: расписание, абонемент и прогресс в одном месте",
+    listHeader: "Пришли по твоей ссылке",
+    empty: "По твоей ссылке пока никто не пришёл. Когда тренер откроет её, бот DaFit тебе напишет.",
+    since: "В DaFit с {date}",
+    unnamed: "Без имени",
+    join: "Заниматься",
+    open: "Открыть",
+    unavailable: "Сейчас недоступен",
+    notInvited: "Этот тренер пришёл не по твоей ссылке.",
+    signedOutText: "Войди через Telegram, чтобы пригласить своего тренера.",
+    signIn: "Войти через Telegram",
+    trainerText: "Ты уже тренер. Коллег зовут ссылкой для тренеров.",
+    trainerAction: "Пригласить тренера",
+  },
   trainerReferrals: {
     title: "Пригласить тренера",
     moreText: "Бонус за коллег, которые придут по твоей ссылке",
@@ -5505,6 +5530,10 @@ export const ru = {
     botTest: "Готово, теперь DaFit может писать тебе здесь. В этот чат придут напоминания о занятиях и другие уведомления.",
     /** Т7: someone became the trainer's client by link or code. */
     newClient: "Новый клиент: {name}",
+    /** Marketing 16: a trainer the user invited became a trainer by the user's link. */
+    invitedTrainerJoined: "{name} теперь в DaFit по твоему приглашению. Открой приглашения, чтобы начать заниматься в приложении.",
+    openInvitedTrainers: "Начать занятия",
+    invitedTrainerUnnamed: "Твой тренер",
     /** Т7a: someone joined while the trainer keeps cards of clients without an account. */
     newClientWithCards: "{name} теперь среди твоих клиентов. Проверь, нет ли у тебя карточки этого человека без аккаунта.",
     unnamedClient: "клиент без имени",

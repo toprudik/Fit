@@ -201,6 +201,8 @@ values (tests.user_id('client_c'), 'daily_digest', 'digest:c', '{}', now(), now(
 insert into public.story_cards (user_id, month, kind, data) values (tests.user_id('client_c'), '2026-09-01', 'sessions', '{"count": 2}');
 insert into public.signup_sources (user_id, source, entry) values (tests.user_id('client_c'), 'vk', 'mini_app');
 insert into public.app_open_opt_outs (user_id) values (tests.user_id('client_c'));
+insert into public.trainer_inviter_codes (user_id, code) values (tests.user_id('client_c'), 'ABCDEFGHJKLM');
+insert into public.invited_trainers (trainer_id, inviter_id) values (tests.user_id('trainer_a'), tests.user_id('client_c'));
 insert into public.monthly_report_shares (coaching_id, month, client_id, report) values (tests.pair_id('trainer_a', 'client_c'), '2026-09-01', tests.user_id('client_c'), '{"month": "2026-09-01"}');
 -- A reported payment of C (the client may still edit it).
 insert into public.payments (coaching_id, amount_minor, currency, method, paid_at, status, note)
