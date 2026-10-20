@@ -10,6 +10,7 @@ import { ListGroup, ListRow } from "@/components/ui/list";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { TextArea } from "@/components/ui/text-area";
 import { TextField } from "@/components/ui/text-field";
+import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
 import { useHydrated } from "@/lib/use-hydrated";
@@ -48,8 +49,9 @@ function StepForm({ step, addMore = false, edit = false, children }: StepFormPro
   const values = state.status === "invalid" || state.status === "failed" ? state.values : null;
   const fields = state.status === "invalid" ? state.fields : [];
 
+  // The wizard pins its buttons to the bottom; inside the app shell the tab bar sits there, so edits keep them in the flow.
   return (
-    <form action={action} className="flex flex-1 flex-col gap-6" noValidate>
+    <form action={action} className={cn("flex flex-col gap-6", !edit && "flex-1")} noValidate>
       <input type="hidden" name="step" value={step} />
       {edit ? <input type="hidden" name="mode" value="edit" /> : null}
       <div className="flex flex-col gap-5">{children({ values, error: (field) => fields.includes(field) })}</div>
@@ -58,7 +60,7 @@ function StepForm({ step, addMore = false, edit = false, children }: StepFormPro
           {t.trainerWizard.failed}
         </p>
       ) : null}
-      <div className="mt-auto flex flex-col gap-3">
+      <div className={cn("flex flex-col gap-3", !edit && "mt-auto")}>
         <Button type="submit" size="lg" block loading={pending}>
           {edit ? t.trainerWizard.edit.save : t.trainerWizard.next}
         </Button>

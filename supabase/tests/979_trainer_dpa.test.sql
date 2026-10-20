@@ -1,4 +1,4 @@
--- The data processing agreement for trainers, migration 20261020104113_trainer_dpa.sql: no client card without an
+-- The data processing agreement for trainers, migration 20261020141737_trainer_dpa.sql: no client card without an
 -- account and no note before the pair's trainer accepts it; an assistant writes notes under the trainer's acceptance.
 begin;
 \ir _helpers.psql

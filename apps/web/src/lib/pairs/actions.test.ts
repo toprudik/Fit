@@ -129,6 +129,19 @@ describe("pair settings", () => {
     expect(await setSelfBookOnDebt({ coachingId: PAIR, enabled: true })).toEqual({ ok: true });
     expect(db.calls[0]).toEqual(["coachings", "update", { self_book_on_debt: true }, "eq", "id", PAIR, "select", "id"]);
   });
+
+  it("saves how many debt bookings the client may hold at once", async () => {
+    db.answer = { data: [{ id: PAIR }], error: null };
+    expect(await setSelfBookOnDebt({ coachingId: PAIR, enabled: true, limit: 3 })).toEqual({ ok: true });
+    expect(db.calls[0]).toEqual([
+      "coachings", "update", { self_book_on_debt: true, debt_limit_sessions: 3 }, "eq", "id", PAIR, "select", "id",
+    ]);
+  });
+
+  it.each([0, 21, 1.5, Number.NaN])("refuses %s as the number of debt bookings", async (limit) => {
+    expect(await setSelfBookOnDebt({ coachingId: PAIR, enabled: true, limit })).toEqual({ ok: false, reason: "invalid" });
+    expect(db.calls).toEqual([]);
+  });
 });
 
 describe("endCoaching", () => {

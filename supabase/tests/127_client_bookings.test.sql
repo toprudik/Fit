@@ -184,8 +184,9 @@ select is((select confirmed from private.booking_auto_confirm(:'pair_ac', 'perso
   false, 'auto: a pass sold after the session date does not confirm');
 update public.passes set status = 'cancelled', cancelled_at = now() where id = :'pass_frozen';
 
--- Debt allowed by the trainer (§2.8-9), up to the limit.
-update public.coachings set self_book_on_debt = true where id = :'pair_ac';
+-- Debt allowed by the trainer (§2.8-9), up to the limit. The confirmed request above is one unpaid session already,
+-- so the limit is raised to 2 here; the default of 1 is covered in 979_debt_limit.
+update public.coachings set self_book_on_debt = true, debt_limit_sessions = 2 where id = :'pair_ac';
 select is((select row(confirmed, pass_id)::text from private.booking_auto_confirm(:'pair_ac', 'personal', tests.at(tests.next_day(4), '09:00'))),
   row(true, null::uuid)::text, 'auto: allowed debt confirms without a pass');
 select tests.create_session('trainer_a', now() - interval '2 days') as past \gset
@@ -198,7 +199,10 @@ select is((select confirmed from private.booking_auto_confirm(:'pair_ac', 'perso
 -- =========================================================================================================
 -- Online slots take the template link; unanswered requests expire (2.6.4-5)
 
+-- Without the permission a client holds one unpaid session at a time: clear the two above first.
 update public.coachings set self_book_on_debt = false where id = :'pair_ac';
+select private.waive_entry(e.id, 'QA') from public.ledger_entries e where e.coaching_id = :'pair_ac' and e.entry_type = 'charge';
+update public.bookings set status = 'cancelled', cancelled_at = now(), cancelled_by = tests.user_id('trainer_a'), cancelled_by_role = 'trainer', cancel_reason = 'QA' where id = :'request3';
 select tests.authenticate_as('client_c');
 select (select booking_id from public.book_slot(:'slot_online')) as request4 \gset
 select tests.clear_authentication();

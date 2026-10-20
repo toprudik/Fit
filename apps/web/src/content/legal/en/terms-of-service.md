@@ -6,7 +6,7 @@ Effective date: [EFFECTIVE DATE]
 
 ## 1. Who we are and what these terms cover
 
-1.1. DaFit is run by [OPERATOR LEGAL NAME], registered at [REGISTERED ADDRESS], registration number [REGISTRATION NUMBER] ("DaFit", "we", "us"). You can reach us at [CONTACT EMAIL].
+1.1. DaFit is run by [OPERATOR FULL NAME], an individual, at [ADDRESS] ("DaFit", "we", "us"). You can reach us at [CONTACT EMAIL].
 
 1.2. These terms apply when you use DaFit in any form: the web app at [DOMAIN], the Telegram Mini App, and the Telegram bot @fitconnection_bot (together, the "Service").
 
@@ -30,7 +30,7 @@ If these terms conflict with the [Subscription Terms](subscription-terms.md) on 
 
 These words mean the same in all DaFit legal documents. In running text we write them in lower case.
 
-- **DaFit**, **we**, **us**: [OPERATOR LEGAL NAME], the operator of the Service (section 1.1).
+- **DaFit**, **we**, **us**: [OPERATOR FULL NAME], an individual, the operator of the Service (section 1.1).
 - **Service**: the web app at [DOMAIN], the Telegram Mini App and the Telegram bot @fitconnection_bot.
 - **User**: anyone who signs in to the Service, as a trainer, a client or an assistant.
 - **Trainer**: a fitness professional who uses DaFit to work with clients.

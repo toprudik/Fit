@@ -86,13 +86,19 @@ export async function setArchived(input: { coachingId: string; archived: boolean
   return done("archiving a client", error, data);
 }
 
-/** "Разрешить запись в долг" for one client (Q22); off by default. */
-export async function setSelfBookOnDebt(input: { coachingId: string; enabled: boolean }): Promise<PairActionResult> {
-  if (!isPairId(input.coachingId)) return { ok: false, reason: "invalid" };
+/**
+ * "Разрешить запись в долг" for one client (Q22); off by default. With it the client books in debt without
+ * confirmation, up to `limit` unpaid sessions at a time (1 to 20; left as it is when not given).
+ */
+export async function setSelfBookOnDebt(input: { coachingId: string; enabled: boolean; limit?: number }): Promise<PairActionResult> {
+  const limit = input.limit;
+  if (!isPairId(input.coachingId) || (limit !== undefined && !(Number.isInteger(limit) && limit >= 1 && limit <= 20))) {
+    return { ok: false, reason: "invalid" };
+  }
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("coachings")
-    .update({ self_book_on_debt: input.enabled })
+    .update({ self_book_on_debt: input.enabled, ...(limit !== undefined ? { debt_limit_sessions: limit } : {}) })
     .eq("id", input.coachingId)
     .select("id");
   return done("changing debt booking", error, data);

@@ -4,6 +4,8 @@ import { clientEnv } from "@/env/client";
 import { serverEnv } from "@/env/server";
 import { negotiateLocale } from "@/i18n/config";
 import { deviceCookies, setPreferenceCookies, syncPreferences } from "@/lib/account-preferences";
+import { recordSignupSource } from "@/lib/attribution/record";
+import { parseSourceCookie, SOURCE_COOKIE } from "@/lib/attribution/source";
 import { AccountBlockedError, signInWithTelegram } from "@/lib/auth/sign-in-with-telegram";
 import { OIDC_COOKIE, oidcCookieOptions, parseOidcCookie, redirectUri, safeNext } from "@/lib/auth/oidc-cookie";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -57,8 +59,14 @@ export async function GET(request: NextRequest) {
     return fail("failed");
   }
 
+  // The channel label this browser arrived with (marketing backlog 1), kept once for a new account; signed in,
+  // the browser no longer needs it.
+  const source = request.cookies.get(SOURCE_COOKIE)?.value;
+  if (signedIn.newAccount) await recordSignupSource(signedIn.userId, parseSourceCookie(source), "web");
+
   const res = NextResponse.redirect(new URL(safeNext(saved.next, appUrl), appUrl));
   res.cookies.delete({ name: OIDC_COOKIE, path: oidcCookieOptions.path });
+  if (source !== undefined) res.cookies.delete({ name: SOURCE_COOKIE, path: "/" });
   // Language, theme and last zone: a new account keeps this device's, an existing one brings its own
   // (ADR 0015). A language the device never saved comes from Telegram, then the browser (ADR 0013).
   const cookies = await syncPreferences(await createSupabaseServerClient(), {

@@ -21,3 +21,18 @@ export async function recordAppOpen(raw: string | null): Promise<void> {
   const { error } = await supabase.rpc("record_app_open", { p_source: parsed.success ? (parsed.data ?? undefined) : undefined });
   if (error) console.error("recording an app open failed", error.code);
 }
+
+/**
+ * The switch in /settings/app-opens: off deletes the user's past openings and stops recording new ones (legal item
+ * Б12), on counts again from now.
+ */
+export async function setAppOpensCounted(counted: boolean): Promise<{ ok: boolean }> {
+  if (typeof counted !== "boolean") return { ok: false };
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("set_app_opens_counted", { p_counted: counted });
+  if (error) {
+    console.error("saving the app-opening switch failed", error.code);
+    return { ok: false };
+  }
+  return { ok: true };
+}

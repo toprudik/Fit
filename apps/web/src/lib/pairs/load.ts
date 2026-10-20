@@ -23,7 +23,7 @@ function fail(what: string, error: { code: string } | null): never {
 
 /**
  * Whether the signed-in trainer accepted the data processing agreement: cards without an account and notes wait
- * for it, and the database refuses them too (migration 20261020104113_trainer_dpa.sql). Null without a session,
+ * for it, and the database refuses them too (migration 20261020141737_trainer_dpa.sql). Null without a session,
  * where the screens render as a shell only.
  */
 export async function loadTrainerDpaAccepted(): Promise<boolean | null> {
@@ -208,6 +208,8 @@ export type PairDetail = {
   /** Trainer side only. */
   archived: boolean;
   selfBookOnDebt: boolean;
+  /** How many unpaid sessions the client may book on their own with selfBookOnDebt (Q22). */
+  debtLimitSessions: number;
 };
 
 /**
@@ -223,7 +225,7 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
 
   const { data: pair, error } = await supabase
     .from("coachings")
-    .select("id, trainer_id, client_id, status, started_at, ended_at, ended_by, end_reason, self_book_on_debt")
+    .select("id, trainer_id, client_id, status, started_at, ended_at, ended_by, end_reason, self_book_on_debt, debt_limit_sessions")
     .eq("id", coachingId)
     .eq(side === "trainer" ? "trainer_id" : "client_id", userId)
     .maybeSingle();
@@ -305,6 +307,7 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
     })),
     archived: Boolean(meta.data?.archived_at),
     selfBookOnDebt: pair.self_book_on_debt,
+    debtLimitSessions: pair.debt_limit_sessions ?? 1,
   };
 }
 
