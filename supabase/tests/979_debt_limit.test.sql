@@ -1,4 +1,4 @@
--- Debt bookings by the client (migration 20261018200317_debt_booking_limit.sql, docs/decisions.md Q22). Without the
+-- Debt bookings by the client (migration 20261020104917_debt_booking_limit.sql, docs/decisions.md Q22). Without the
 -- trainer's permission a client holds one unpaid session at a time, as a request; with it the client books without
 -- confirmation up to the trainer's number. Unpaid sessions are charged debt plus live bookings no pass covers. The
 -- limit holds for slots, group sessions, moves and waitlist offers; the trainer books in debt with no limit.

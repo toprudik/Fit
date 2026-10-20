@@ -25,7 +25,7 @@ export type PreparePhotoResult =
  * policy checks the folder). A photo of the same date and angle is replaced, not duplicated (R82).
  */
 export async function prepareProgressPhoto(input: { angle: PhotoAngle; date: string; type: PhotoType }): Promise<PreparePhotoResult> {
-  if (!isPhotoAngle(input.angle) || !isDay(input.date) || !(input.type in PHOTO_TYPES)) return { status: "invalid" };
+  if (!isPhotoAngle(input.angle) || !isDay(input.date) || !Object.hasOwn(PHOTO_TYPES, input.type)) return { status: "invalid" };
   const supabase = await createSupabaseServerClient();
   const me = await signedIn(supabase);
   if (!me) return { status: "invalid" };
