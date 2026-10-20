@@ -55,6 +55,7 @@ begin
   insert into public.client_invites (trainer_id, label) values (v_trainer, 'QR');
   insert into public.trial_links (trainer_id, title, currency) values (v_trainer, 'Trial', 'RUB');
   insert into public.trainer_certificates (trainer_id, title, storage_path) values (v_trainer, 'Diploma', v_trainer::text || '/diploma.pdf');
+  insert into public.trainer_honors (trainer_id, honor, reason) values (v_trainer, 'founder', 'Beta');
   insert into public.exercises (id, source, owner_id, name) values (v_exercise, 'custom', v_trainer, 'Move of ' || p_trainer);
   insert into public.exercise_translations (exercise_id, locale, name) values (v_exercise, 'en', 'Move');
   insert into public.workout_templates (owner_id, title) values (v_trainer, 'Template') returning id into v_workout;
@@ -285,7 +286,7 @@ insert into tests.admin_readable values
   ('profiles'), ('public_profiles'), ('user_roles'), ('consents'), ('account_deletions'), ('trainer_profiles'),
   ('trainer_certificates'), ('trainer_verifications'), ('trainer_invites'), ('feedback'), ('reports'),
   ('admin_audit_log'), ('break_glass_grants'), ('plan_grants'), ('access_requests'), ('plans'), ('exercises'), ('foods'),
-  ('badges'), ('reviews'), ('review_revisions');
+  ('badges'), ('reviews'), ('review_revisions'), ('trainer_waitlist');
 create table tests.admin_checked as
 select c.relname::text as tbl
 from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace

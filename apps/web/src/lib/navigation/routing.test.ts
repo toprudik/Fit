@@ -1,7 +1,7 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { adminDeniedPath, consentRedirect, isAdminPath, PUBLIC_FILES, routeRequest, trainerZoneRedirect, type RouteInput } from "./routing";
+import { adminDeniedPath, consentRedirect, isAdminPath, PUBLIC_DIRS, PUBLIC_FILES, routeRequest, trainerZoneRedirect, type RouteInput } from "./routing";
 
 function route(overrides: Partial<RouteInput>) {
   return routeRequest({
@@ -109,9 +109,24 @@ describe("routeRequest: not pages", () => {
 });
 
 describe("PUBLIC_FILES", () => {
+  const entries = readdirSync(join(__dirname, "../../../public"), { withFileTypes: true });
+
   it("lists exactly the files in apps/web/public (the proxy matcher excludes the same names)", () => {
-    const files = readdirSync(join(__dirname, "../../../public")).map((name) => `/${name}`);
+    const files = entries.filter((entry) => entry.isFile()).map((entry) => `/${entry.name}`);
     expect([...PUBLIC_FILES].sort()).toEqual(files.sort());
+  });
+
+  it("lists exactly the folders in apps/web/public, and the proxy matcher skips them too", () => {
+    const dirs = entries.filter((entry) => entry.isDirectory()).map((entry) => `/${entry.name}/`);
+    expect([...PUBLIC_DIRS].sort()).toEqual(dirs.sort());
+    const proxy = readFileSync(join(__dirname, "../../proxy.ts"), "utf8");
+    for (const dir of PUBLIC_DIRS) expect(proxy).toContain(`|${dir.slice(1)})`);
+  });
+
+  it("passes the face detector's files through without a locale, so they are not the 404 page", () => {
+    expect(route({ pathname: "/mediapipe/wasm/vision_wasm_internal.wasm" })).toEqual({ kind: "pass" });
+    expect(route({ pathname: "/mediapipe/blaze_face_short_range.tflite" })).toEqual({ kind: "pass" });
+    expect(route({ pathname: "/mediapipe" })).toMatchObject({ kind: "rewrite" });
   });
 });
 
