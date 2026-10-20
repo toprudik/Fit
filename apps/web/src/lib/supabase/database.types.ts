@@ -2605,6 +2605,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"public_data_consents": {
+                  Row: {
+                    "accepted_at": string,"bans": (string)[],"condition": string | null,"fields": (string)[],"id": string,"location_ids": (string)[],"revoked_at": string | null,"scope": string,"user_id": string,"version": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "accepted_at"?: string,"bans"?: (string)[],"condition"?: string | null,"fields"?: (string)[],"id"?: string,"location_ids"?: (string)[],"revoked_at"?: string | null,"scope": string,"user_id": string,"version": string
+                  }
+                  Update: {
+                    "accepted_at"?: string,"bans"?: (string)[],"condition"?: string | null,"fields"?: (string)[],"id"?: string,"location_ids"?: (string)[],"revoked_at"?: string | null,"scope"?: string,"user_id"?: string,"version"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "public_data_consents_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "public_data_consents_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"recurrences": {
                   Row: {
                     "capacity": number,"coaching_id": string | null,"created_at": string,"created_by": string | null,"dtstart_local": string,"duration_min": number,"ended_at": string | null,"id": string,"kind": Database["public"]['Enums']["session_kind"],"location_id": string | null,"materialized_until": string | null,"meeting_url": string | null,"mode": Database["public"]['Enums']["session_mode"],"occurrence_count": number | null,"open_for_booking": boolean,"rrule": string,"time_zone": string,"title": string | null,"trainer_id": string,"until_date": string | null,"updated_at": string
@@ -4444,6 +4470,11 @@ isOneToOne: false
 "get_managed_client_claim":
 { Args: { "p_claim_id": string }; Returns: Json
                            },
+"get_showcase_terms":
+{ Args: { "p_slug": string }; Returns: {
+              "accepted_at": string,"bans": (string)[],"condition": string
+            }[]
+                           },
 "get_showcase_trial":
 { Args: { "p_slug": string }; Returns: string
                            },
@@ -4469,6 +4500,9 @@ isOneToOne: false
 { Args: { "p_token": string }; Returns: {
               "ends_at": string,"location_name": string,"mode": Database["public"]['Enums']["session_mode"],"slot_id": string,"starts_at": string
             }[]
+                           },
+"give_public_data_consent":
+{ Args: { "p_bans"?: (string)[],"p_condition"?: string,"p_fields"?: (string)[],"p_location_ids"?: (string)[],"p_scope": string,"p_version": string }; Returns: string
                            },
 "group_analytics":
 { Args: { "p_group_id": string }; Returns: {
@@ -4753,6 +4787,9 @@ isOneToOne: false
                            },
 "revoke_ingest_token":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"revoke_public_data_consent":
+{ Args: { "p_scope": string }; Returns: boolean
                            },
 "save_calculator_target":
 { Args: { "p_weight_kg": number }; Returns: string

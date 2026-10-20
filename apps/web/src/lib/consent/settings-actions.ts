@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import type { PublicScope } from "@/lib/public-data/consent";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CONSENTS_SETTINGS_PATH } from "./beta-terms";
 import { HEALTH_CONSENT } from "./required";
@@ -25,6 +26,21 @@ export async function revokeHealthConsent(): Promise<RevokeState> {
     .is("revoked_at", null);
   if (error) {
     console.error("revoking the health data consent failed", error.code);
+    return { failed: true };
+  }
+  redirect(CONSENTS_SETTINGS_PATH);
+}
+
+/**
+ * "Отозвать" for a consent to publish (152-FZ art. 10.1 parts 12, 13): the showcase closes at once, story cards are
+ * not made any more; the cards already shared stay until they expire. Given again on the showcase or the month report.
+ */
+export async function revokePublicDataConsent(scope: PublicScope): Promise<RevokeState> {
+  if (scope !== "showcase" && scope !== "story") return { failed: true };
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("revoke_public_data_consent", { p_scope: scope });
+  if (error) {
+    console.error("revoking a consent to publish failed", error.code);
     return { failed: true };
   }
   redirect(CONSENTS_SETTINGS_PATH);
