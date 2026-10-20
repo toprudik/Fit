@@ -30,7 +30,7 @@ export async function ClientPasses() {
           <ul className="flex flex-col gap-2">
             {group.passes.map((pass) => (
               <li key={pass.id}>
-                <Link href={`/client/passes/${pass.id}`} className="block rounded-lg hover:opacity-90">
+                <Link href={`/client/passes/${pass.id}`} aria-label={pass.title} className="block rounded-lg hover:opacity-90">
                   <PassSummary pass={pass} />
                 </Link>
               </li>

@@ -130,7 +130,7 @@ async function AuditLog({ searchParams }: { searchParams: PageProps<"/[lang]/adm
                 {target ? (
                   <p className="text-subhead text-ink-2">
                     {copy.target}{" "}
-                    <Link href={`/admin/users/${entry.target_id}`} className="text-accent-ink underline-offset-2 hover:underline">
+                    <Link href={`/admin/users/${entry.target_id}`} className="text-accent-ink underline underline-offset-2">
                       {target}
                     </Link>
                   </p>
