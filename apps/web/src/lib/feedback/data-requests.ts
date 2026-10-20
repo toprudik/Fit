@@ -1,6 +1,6 @@
 /**
  * Deadlines of "Запрос о моих данных" (152-FZ arts. 20, 21): the database sets due_on, 10 working days after the
- * request came, once extendable by 5 (migration 20261020174211_data_requests.sql), counting days in Moscow time.
+ * request came, once extendable by 5 (migration 20261020190517_data_requests.sql), counting days in Moscow time.
  * The inbox counts down in the admin's own time zone, so "today" and "overdue" match the day they see.
  */
 export const DATA_REQUEST_TIME_ZONE = "Europe/Moscow";
