@@ -8,6 +8,7 @@ import { formatSessionTime } from "@/lib/pairs/format";
 import { DEFAULT_TIME_ZONE, formatPlanDate, isPlanCode } from "@/lib/plans/plans";
 import { isButtonUrl } from "@/lib/groups/rules";
 import { isBadgeCode } from "@/lib/gamification/gamification";
+import { isTrainerMilestoneKind } from "@/lib/trainer-milestones/milestones";
 import { bookingDecisionData, claimAnswerData, contactDeclineData } from "@/lib/bot-actions/callback-data";
 import { isChallengeMetric } from "@/lib/challenges/challenges";
 import { invitePath, isInviteToken } from "@/lib/delegations/rules";
@@ -155,6 +156,16 @@ const templates: Partial<Record<NotificationType, Template>> = {
     return {
       text: item ? interpolateEscaped(t.badge, { title: item.title, text: item.text }) : escapeHtml(t.badgeUnknown),
       buttons: [{ text: t.openBadges, path: "/client/progress/badges" }],
+    };
+  },
+  // Marketing 14: payload { milestone } from private.grant_trainer_milestone, the kind the trainer reached. Its
+  // title and text come from the recipient's dictionary.
+  trainer_milestone: ({ t, locale, payload }) => {
+    const items = dictionaries[locale].trainerMilestones.items;
+    const item = isTrainerMilestoneKind(payload.milestone) ? items[payload.milestone] : null;
+    return {
+      text: item ? interpolateEscaped(t.trainerMilestone, { title: item.title, text: item.text }) : escapeHtml(t.trainerMilestoneUnknown),
+      buttons: [{ text: t.openTrainerMilestones, path: "/trainer/milestones" }],
     };
   },
   // Wave-3 §2.3-11: payload { challenge_id, title, metric, starts_on, ends_on, trainer_name } from
