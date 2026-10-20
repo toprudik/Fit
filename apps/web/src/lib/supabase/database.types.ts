@@ -1451,6 +1451,32 @@ isOneToOne: false
       referencedColumns: ["user_id"]
     }
                   ]
+                },"health_erasures": {
+                  Row: {
+                    "done_at": string | null,"revoked_at": string,"scheduled_for": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "done_at"?: string | null,"revoked_at"?: string,"scheduled_for"?: string,"user_id": string
+                  }
+                  Update: {
+                    "done_at"?: string | null,"revoked_at"?: string,"scheduled_for"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "health_erasures_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "health_erasures_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"homework": {
                   Row: {
                     "archived_at": string | null,"coaching_id": string,"created_at": string,"created_by": string | null,"description": string | null,"due_date": string,"id": string,"repeat_until": string | null,"repeat_weekdays": (number)[] | null,"title": string,"updated_at": string,"video_url": string | null
@@ -4535,6 +4561,9 @@ isOneToOne: false
                            },
 "purge_account":
 { Args: { "p_user": string }; Returns: (string)[]
+                           },
+"purge_health_data":
+{ Args: { "p_user": string }; Returns: boolean
                            },
 "rate_limit_hit":
 { Args: { "p_bucket": string,"p_limit": number,"p_subject": string,"p_window_seconds": number }; Returns: boolean

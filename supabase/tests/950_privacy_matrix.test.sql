@@ -201,6 +201,7 @@ values (tests.user_id('client_c'), 'daily_digest', 'digest:c', '{}', now(), now(
 insert into public.story_cards (user_id, month, kind, data) values (tests.user_id('client_c'), '2026-09-01', 'sessions', '{"count": 2}');
 insert into public.signup_sources (user_id, source, entry) values (tests.user_id('client_c'), 'vk', 'mini_app');
 insert into public.app_open_opt_outs (user_id) values (tests.user_id('client_c'));
+insert into public.health_erasures (user_id) values (tests.user_id('client_c'));
 insert into public.monthly_report_shares (coaching_id, month, client_id, report) values (tests.pair_id('trainer_a', 'client_c'), '2026-09-01', tests.user_id('client_c'), '{"month": "2026-09-01"}');
 -- A reported payment of C (the client may still edit it).
 insert into public.payments (coaching_id, amount_minor, currency, method, paid_at, status, note)
@@ -278,7 +279,7 @@ insert into tests.personal_tables values
   ('workout_log_exercises'), ('workout_sets'), ('personal_records'), ('data_exports'), ('calendar_feeds'),
   ('client_goals'), ('body_profiles'), ('nutrition_targets'), ('food_diary_entries'), ('food_day_comments'),
   ('food_dish_items'), ('food_favorites'), ('activity_entries'), ('ingest_tokens'),
-  ('user_badges'), ('workout_week_goals'), ('challenge_participants');
+  ('user_badges'), ('workout_week_goals'), ('challenge_participants'), ('health_erasures');
 
 -- What the admin may read without break-glass (data-model §4.2); every other public table and view must give
 -- the admin 0 rows. exercises and foods are listed for the catalogs; own exercises and foods are checked separately.
