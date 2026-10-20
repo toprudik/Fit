@@ -1,8 +1,12 @@
 import { EyeOff, Utensils } from "lucide-react";
+import Link from "next/link";
+import { HealthNotice } from "@/components/health/health-notice";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { interpolate } from "@/i18n/format";
+import { HEALTH_NOTICE_PATH } from "@/lib/health-notice/notice";
+import { hasSeenHealthNotice } from "@/lib/health-notice/seen";
 import { loadMyNutrition, loadPairNutrition } from "@/lib/nutrition/load";
 import { formatChange, formatValue } from "@/lib/progress/measurements";
 import { NutritionPlanner } from "./calculator";
@@ -20,7 +24,7 @@ const WEIGHT_DRIFT_KG = 2;
 
 /** "Цель и норма": the target in force with its source, the pick between trainers, and the calculator. */
 export async function ClientNutrition() {
-  const [t, locale, nutrition] = await Promise.all([getDictionary(), getLocale(), loadMyNutrition()]);
+  const [t, locale, nutrition, noticeSeen] = await Promise.all([getDictionary(), getLocale(), loadMyNutrition(), hasSeenHealthNotice()]);
   const copy = t.nutrition;
   if (!nutrition) return <EmptyState icon={Utensils} title={t.progress.measurements.signedOut} />;
   const { active, calculator, trainerTargets } = nutrition;
@@ -52,14 +56,25 @@ export async function ClientNutrition() {
         <EmptyState icon={Utensils} title={copy.target.none} description={copy.target.noneText} />
       )}
       {trainerTargets.length > 1 ? <TargetChoice targets={trainerTargets} /> : null}
-      <NutritionPlanner
-        initialGoal={nutrition.goal}
-        activeSource={active?.source ?? null}
-        initial={nutrition.body}
-        latestWeightKg={nutrition.latestWeightKg}
-        today={nutrition.today}
-        trainerName={active && active.source !== "calculator" ? active.trainerName : null}
-      />
+      {/* The health notice comes before the first calculation (legal health-disclaimer §2); the line stays after. */}
+      {noticeSeen ? (
+        <NutritionPlanner
+          initialGoal={nutrition.goal}
+          activeSource={active?.source ?? null}
+          initial={nutrition.body}
+          latestWeightKg={nutrition.latestWeightKg}
+          today={nutrition.today}
+          trainerName={active && active.source !== "calculator" ? active.trainerName : null}
+        />
+      ) : (
+        <HealthNotice />
+      )}
+      <p className="px-1 text-footnote text-ink-2">
+        {t.healthNotice.footnote}{" "}
+        <Link href={HEALTH_NOTICE_PATH} className="text-accent-ink">
+          {t.healthNotice.footnoteLink}
+        </Link>
+      </p>
     </div>
   );
 }
