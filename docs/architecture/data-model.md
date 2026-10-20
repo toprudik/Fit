@@ -367,17 +367,19 @@ create table public.user_roles (
 
 Тренером пользователя делает наличие `trainer_profiles`, отдельной роли для этого нет (одна учётная запись, две зоны, Q13).
 
-**`consents`**: бета-согласие при первом входе (Q44), append-only.
+**`consents`**: согласия при первом входе (Q44, юр. правки А1, А2), append-only. Экран условий пишет `beta_terms`, `terms`, `privacy_policy` и `age_confirmed`, следующий экран `pd_general`; без них прокси не пускает дальше (`lib/consent/required.ts`). `pd_health` спрашивается отдельно, и без него приложение работает. В `text_hash` sha256 показанного текста документа (у `age_confirmed` и старых строк null); пользователь пишет его, но не читает (выдача select по колонкам). Прокси читает согласия на каждой странице и в API, cookie на устройстве не используется.
 
 ```sql
-create type public.consent_kind as enum ('beta_terms', 'privacy_policy', 'contact_share');
+create type public.consent_kind as enum ('beta_terms', 'privacy_policy', 'contact_share',
+  'terms', 'pd_general', 'pd_health', 'age_confirmed');
 create table public.consents (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references public.profiles(id) on delete cascade,
   kind        public.consent_kind not null,
   version     text not null,                 -- версия текста, например '2026-11-beta'
   accepted_at timestamptz not null default now(),
-  revoked_at  timestamptz                    -- отзыв один раз; время ставит guard-триггер, не клиент
+  revoked_at  timestamptz,                   -- отзыв один раз; время ставит guard-триггер, не клиент
+  text_hash   text check (text_hash ~ '^[0-9a-f]{64}$')
 );
 create index on public.consents (user_id, kind);
 create unique index consents_one_active_uniq on public.consents (user_id, kind, version) where revoked_at is null;
@@ -2513,7 +2515,7 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `user_settings` | сам; остальные: только `display_name`, `avatar_path`, `time_zone` через вью `public_profiles` (R6) | S (триггер при создании профиля, R64) | сам | никто (каскад) |
 | `notification_preferences` | сам | сам | сам (`enabled`) | сам |
 | `user_roles` | сам; A | никто (позже `admin_grant_role`, R13) | никто | никто (позже `admin_revoke_role`) |
-| `consents` | сам; A | сам (`user_id`, `kind`, `version`) | сам: только `revoked_at`, один раз | никто |
+| `consents` | сам, без `text_hash`; A | сам (`user_id`, `kind`, `version`, `text_hash`) | сам: только `revoked_at`, один раз | никто |
 | `account_deletions` | сам; партнёры по паре в любом статусе (только даты, R10); A | S-RPC `request_account_deletion` | S-RPC `cancel_account_deletion` | S |
 | `data_exports` | сам | S-RPC `request_data_export` | S | S |
 | `trainer_profiles` | сам; его клиенты в любом статусе пары (R89); A; anon/прочие: **pub** `get_trainer_showcase(slug)` (при `verification_status = 'rejected'` отвечает «недоступна», R16, Q60); зона «Тренер» и `is_trainer()` доступны при наличии `trainer_profiles` (доступ не зависит от верификации и тарифа, Q55) | S-RPC `redeem_trainer_invite` | сам (кроме `verification_status`, `verified_at`, `trainer_invite_id`: колоночные гранты); A через `admin_decide_verification` | никто |

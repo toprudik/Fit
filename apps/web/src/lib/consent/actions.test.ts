@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { BETA_TERMS_VERSION } from "./beta-terms";
+import { LEGAL_VERSION } from "./required";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/env/client", () => ({ clientEnv: { NEXT_PUBLIC_APP_URL: "https://fit.example" } }));
+vi.mock("@/i18n/server", () => ({ getLocale: async () => "ru" }));
+vi.mock("./documents", () => ({
+  loadConsentDocument: async (_locale: string, kind: string) => (kind === "age_confirmed" ? null : { hash: `hash-${kind}` }),
+}));
 
 /** redirect() throws in Next.js, so nothing after it runs; the mock does the same and keeps the target. */
 const nav = vi.hoisted(() => ({
@@ -11,51 +17,59 @@ const nav = vi.hoisted(() => ({
 }));
 vi.mock("next/navigation", () => ({ redirect: nav.redirect }));
 
-const jar = vi.hoisted(() => ({ set: vi.fn() }));
-vi.mock("next/headers", () => ({ cookies: async () => jar }));
+type Row = { kind: string; version: string };
 
-type Write = { table: string; values: unknown };
-
-/** Reads and writes made as the signed-in user, and what they answer. */
+/** The signed-in user's consent rows, what reads and writes answer, and what was written. */
 const db = vi.hoisted(() => ({
   user: "user-1" as string | null,
-  reads: [] as unknown[][],
-  writes: [] as Write[],
-  earlier: [] as { id: string }[],
+  rows: [] as Row[],
+  writes: [] as Record<string, unknown>[],
+  rpcs: [] as string[],
   readError: null as { code: string } | null,
   writeError: null as { code: string } | null,
+  rpcError: null as { code: string } | null,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({
-    auth: { getClaims: async () => ({ data: db.user ? { claims: { sub: db.user } } : null }) },
-    from: (table: string) => ({
-      select: (columns: string) => {
-        const steps: unknown[] = [table, "select", columns];
-        db.reads.push(steps);
-        const chain = {
-          eq: (column: string, value: unknown) => (steps.push("eq", column, value), chain),
-          limit: async (count: number) => {
-            steps.push("limit", count);
-            return { data: db.readError ? null : db.earlier, error: db.readError };
-          },
-        };
-        return chain;
-      },
-      insert: async (values: unknown) => {
-        db.writes.push({ table, values });
-        return { error: db.writeError };
-      },
-    }),
+    auth: {
+      getClaims: async () => ({ data: db.user ? { claims: { sub: db.user } } : null }),
+      refreshSession: async () => ({ error: null }),
+    },
+    rpc: async (name: string) => {
+      db.rpcs.push(name);
+      return { error: db.rpcError };
+    },
+    from: () => {
+      const chain = {
+        select: () => chain,
+        eq: () => chain,
+        in: () => chain,
+        is: async () => ({ data: db.readError ? null : [...db.rows], error: db.readError }),
+        insert: async (values: Record<string, unknown>) => {
+          db.writes.push(values);
+          if (!db.writeError) db.rows.push({ kind: String(values.kind), version: String(values.version) });
+          return { error: db.writeError };
+        },
+      };
+      return chain;
+    },
   }),
 }));
 
-const { acceptBetaTerms } = await import("./actions");
-const { BETA_TERMS_VERSION, CONSENT_COOKIE, consentCookieOptions } = await import("./beta-terms");
+const { acceptPersonalData, acceptTerms, answerHealthData, closeUnderageAccount, keepUnderageAccount } = await import("./actions");
 
-function form(next?: string) {
+const TERMS: Row[] = [
+  { kind: "beta_terms", version: BETA_TERMS_VERSION },
+  { kind: "terms", version: LEGAL_VERSION },
+  { kind: "privacy_policy", version: LEGAL_VERSION },
+  { kind: "age_confirmed", version: LEGAL_VERSION },
+];
+const PERSONAL: Row = { kind: "pd_general", version: LEGAL_VERSION };
+
+function form(fields: Record<string, string>) {
   const data = new FormData();
-  if (next !== undefined) data.append("next", next);
+  for (const [name, value] of Object.entries(fields)) data.append(name, value);
   return data;
 }
 
@@ -71,60 +85,113 @@ async function redirectOf(promise: Promise<unknown>): Promise<string> {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  Object.assign(db, { user: "user-1", reads: [], writes: [], earlier: [], readError: null, writeError: null });
+  Object.assign(db, { user: "user-1", rows: [], writes: [], rpcs: [], readError: null, writeError: null, rpcError: null });
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
-describe("acceptBetaTerms", () => {
-  it("records the version for the signed-in user, sets the cookie and opens the preferences step the first time", async () => {
-    const url = await redirectOf(acceptBetaTerms({ failed: false }, form("/client/book?day=2026-10-20")));
-    expect(url).toBe(`/onboarding/preferences?next=${encodeURIComponent("/client/book?day=2026-10-20")}`);
-    expect(db.reads).toEqual([["consents", "select", "id", "eq", "user_id", "user-1", "eq", "kind", "beta_terms", "limit", 1]]);
-    expect(db.writes).toEqual([{ table: "consents", values: { user_id: "user-1", kind: "beta_terms", version: BETA_TERMS_VERSION } }]);
-    expect(jar.set).toHaveBeenCalledWith(CONSENT_COOKIE, `user-1:${BETA_TERMS_VERSION}`, consentCookieOptions);
+describe("acceptTerms", () => {
+  it("needs the 18+ box ticked and writes nothing without it", async () => {
+    expect(await acceptTerms({ failed: false }, form({ next: "/client" }))).toEqual({ failed: "age" });
+    expect(db.writes).toEqual([]);
   });
 
-  it("goes straight back to next after a new version", async () => {
-    db.earlier = [{ id: "c-1" }];
-    expect(await redirectOf(acceptBetaTerms({ failed: false }, form("/trainer/schedule")))).toBe("/trainer/schedule");
+  it("records the four terms consents with the document hashes, then opens the personal data step", async () => {
+    const url = await redirectOf(acceptTerms({ failed: false }, form({ next: "/client", adult: "on" })));
+    expect(url).toBe(`/onboarding/consent?${new URLSearchParams({ next: "/client", first: "1" })}`);
+    expect(db.writes).toEqual([
+      { user_id: "user-1", kind: "beta_terms", version: BETA_TERMS_VERSION, text_hash: "hash-beta_terms" },
+      { user_id: "user-1", kind: "terms", version: LEGAL_VERSION, text_hash: "hash-terms" },
+      { user_id: "user-1", kind: "privacy_policy", version: LEGAL_VERSION, text_hash: "hash-privacy_policy" },
+      { user_id: "user-1", kind: "age_confirmed", version: LEGAL_VERSION, text_hash: null },
+    ]);
   });
 
-  it("treats a second tap on the same version as accepted", async () => {
-    db.earlier = [{ id: "c-1" }];
+  it("writes only what is missing and is not the first time after the old beta terms", async () => {
+    db.rows = [TERMS[0]];
+    const url = await redirectOf(acceptTerms({ failed: false }, form({ next: "/trainer", adult: "on" })));
+    expect(url).toBe(`/onboarding/consent?${new URLSearchParams({ next: "/trainer" })}`);
+    expect(db.writes.map((write) => write.kind)).toEqual(["terms", "privacy_policy", "age_confirmed"]);
+  });
+
+  it("treats a second tap on the same version as given", async () => {
     db.writeError = { code: "23505" };
-    expect(await redirectOf(acceptBetaTerms({ failed: false }, form("/trainer")))).toBe("/trainer");
-    expect(jar.set).toHaveBeenCalledOnce();
+    expect(await redirectOf(acceptTerms({ failed: false }, form({ next: "/trainer", adult: "on" })))).toContain("/onboarding/consent?");
+  });
+
+  it("fails when a consent is not saved or the consents cannot be read", async () => {
+    db.writeError = { code: "42501" };
+    expect(await acceptTerms({ failed: false }, form({ adult: "on" }))).toEqual({ failed: "save" });
+    db.writeError = null;
+    db.readError = { code: "42501" };
+    expect(await acceptTerms({ failed: false }, form({ adult: "on" }))).toEqual({ failed: "save" });
+    expect(nav.redirect).not.toHaveBeenCalled();
+  });
+
+  it("sends a signed-out visitor to login, coming back to the consents, without touching the database", async () => {
+    db.user = null;
+    const url = await redirectOf(acceptTerms({ failed: false }, form({ next: "/trainer", adult: "on" })));
+    expect(url).toBe(`/login?next=${encodeURIComponent(`/onboarding/consent?next=${encodeURIComponent("/trainer")}`)}`);
+    expect(db.writes).toEqual([]);
   });
 
   it("never sends the user to another site or back into onboarding", async () => {
-    db.earlier = [{ id: "c-1" }];
-    for (const next of ["https://evil.example/", "//evil.example", "/onboarding/consent", "/onboarding/preferences?x=1"]) {
-      expect(await redirectOf(acceptBetaTerms({ failed: false }, form(next)))).toBe("/");
+    for (const next of ["https://evil.example/", "//evil.example", "/onboarding/preferences?x=1"]) {
+      db.rows = [...TERMS];
+      expect(await redirectOf(acceptTerms({ failed: false }, form({ next, adult: "on" })))).toBe(`/onboarding/consent?${new URLSearchParams({ next: "/" })}`);
     }
-    expect(await redirectOf(acceptBetaTerms({ failed: false }, form()))).toBe("/");
+  });
+});
+
+describe("acceptPersonalData", () => {
+  it("records the consent and asks about health data next", async () => {
+    db.rows = [...TERMS];
+    const url = await redirectOf(acceptPersonalData({ failed: false }, form({ next: "/client", first: "1" })));
+    expect(url).toBe(`/onboarding/consent?${new URLSearchParams({ next: "/client", step: "health", first: "1" })}`);
+    expect(db.writes).toEqual([{ user_id: "user-1", kind: "pd_general", version: LEGAL_VERSION, text_hash: "hash-pd_general" }]);
   });
 
-  it("sends a signed-out visitor to login, coming back to the terms, without touching the database", async () => {
-    db.user = null;
-    const url = await redirectOf(acceptBetaTerms({ failed: false }, form("/trainer")));
-    expect(url).toBe(`/login?next=${encodeURIComponent(`/onboarding/consent?next=${encodeURIComponent("/trainer")}`)}`);
-    expect(db.reads).toEqual([]);
+  it("goes on to next when health data was given before", async () => {
+    db.rows = [...TERMS, { kind: "pd_health", version: LEGAL_VERSION }];
+    expect(await redirectOf(acceptPersonalData({ failed: false }, form({ next: "/client" })))).toBe("/client");
+  });
+
+  it("sends back to the terms when they are still missing", async () => {
+    expect(await redirectOf(acceptPersonalData({ failed: false }, form({ next: "/client" })))).toBe(
+      `/onboarding/consent?${new URLSearchParams({ next: "/client" })}`,
+    );
+  });
+});
+
+describe("answerHealthData", () => {
+  it("records the consent on «Даю согласие» and opens the language step the first time", async () => {
+    db.rows = [...TERMS, PERSONAL];
+    const url = await redirectOf(answerHealthData({ failed: false }, form({ next: "/client", first: "1", answer: "give" })));
+    expect(url).toBe(`/onboarding/preferences?next=${encodeURIComponent("/client")}`);
+    expect(db.writes.map((write) => write.kind)).toEqual(["pd_health"]);
+  });
+
+  it("writes nothing on «Не сейчас» and still goes on", async () => {
+    db.rows = [...TERMS, PERSONAL];
+    expect(await redirectOf(answerHealthData({ failed: false }, form({ next: "/client", answer: "later" })))).toBe("/client");
     expect(db.writes).toEqual([]);
-    expect(jar.set).not.toHaveBeenCalled();
+  });
+});
+
+describe("under 18", () => {
+  it("asks for the usual deletion and shows the underage screen", async () => {
+    const url = await redirectOf(closeUnderageAccount({ failed: false }, form({ next: "/client" })));
+    expect(db.rpcs).toEqual(["request_account_deletion"]);
+    expect(url).toBe(`/onboarding/consent?${new URLSearchParams({ next: "/client", step: "underage" })}`);
   });
 
-  it("fails without writing when the earlier consents cannot be read", async () => {
-    db.readError = { code: "42501" };
-    expect(await acceptBetaTerms({ failed: false }, form("/trainer"))).toEqual({ failed: true });
-    expect(db.writes).toEqual([]);
-    expect(jar.set).not.toHaveBeenCalled();
-    expect(nav.redirect).not.toHaveBeenCalled();
+  it("fails without leaving the screen when the deletion is not saved", async () => {
+    db.rpcError = { code: "42501" };
+    expect(await closeUnderageAccount({ failed: false }, form({}))).toEqual({ failed: "save" });
   });
 
-  it("fails without a cookie when the consent is not saved", async () => {
-    db.writeError = { code: "42501" };
-    expect(await acceptBetaTerms({ failed: false }, form("/trainer"))).toEqual({ failed: true });
-    expect(jar.set).not.toHaveBeenCalled();
-    expect(nav.redirect).not.toHaveBeenCalled();
+  it("keeps the account after a wrong tap and returns to the terms", async () => {
+    const url = await redirectOf(keepUnderageAccount({ failed: false }, form({ next: "/client" })));
+    expect(db.rpcs).toEqual(["cancel_account_deletion"]);
+    expect(url).toBe(`/onboarding/consent?${new URLSearchParams({ next: "/client" })}`);
   });
 });
