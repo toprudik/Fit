@@ -10,6 +10,7 @@ const db = vi.hoisted(() => ({
   user: "user-1" as string | null,
   rows: [] as Row[],
   timeZone: null as string | null,
+  erasure: null as { scheduled_for: string; done_at: string | null } | null,
   published: [] as { scope: string; accepted_at: string }[],
   trainer: false,
 }));
@@ -25,7 +26,7 @@ vi.mock("@/lib/supabase/server", () => ({
         is: async () => ({ data: table === "public_data_consents" ? [...db.published] : [...db.rows], error: null }),
         maybeSingle: async () => {
           if (table === "trainer_profiles") return { data: db.trainer ? { user_id: db.user } : null, error: null };
-          return { data: table === "user_settings" && db.timeZone ? { time_zone: db.timeZone } : null, error: null };
+          return { data: table === "user_settings" ? (db.timeZone ? { time_zone: db.timeZone } : null) : db.erasure, error: null };
         },
       };
       return chain;
@@ -47,6 +48,7 @@ beforeEach(() => {
   db.user = "user-1";
   db.rows = [];
   db.timeZone = null;
+  db.erasure = null;
   db.published = [];
   db.trainer = false;
 });
@@ -64,6 +66,7 @@ describe("loadMyConsents", () => {
       terms: { acceptedAt: at(2) },
       personal: { acceptedAt: at(3) },
       health: { acceptedAt: null },
+      erasure: null,
       showcase: null,
       story: { acceptedAt: null },
       timeZone: "Asia/Yerevan",
@@ -94,5 +97,13 @@ describe("loadMyConsents", () => {
     expect(consents?.terms.acceptedAt).toBeNull();
     expect(consents?.health.acceptedAt).toBe(at(4));
     expect(consents?.timeZone).toBe("Europe/Moscow");
+  });
+
+  it("gives the erasure date after a withdrawal, and the done date once the data is gone", async () => {
+    db.rows = [...TERMS];
+    db.erasure = { scheduled_for: at(9), done_at: null };
+    expect((await loadMyConsents())?.erasure).toEqual({ scheduledFor: at(9), done: false });
+    db.erasure = { scheduled_for: at(9), done_at: at(8) };
+    expect((await loadMyConsents())?.erasure).toEqual({ scheduledFor: at(8), done: true });
   });
 });

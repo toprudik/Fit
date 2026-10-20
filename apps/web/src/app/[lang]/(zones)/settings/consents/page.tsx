@@ -51,6 +51,13 @@ async function Consents() {
         <ListGroup header={copy.optional} footer={copy.healthHint}>
           <ListRow icon={HeartPulse} title={copy.health} subtitle={status(consents.health.acceptedAt)} />
         </ListGroup>
+        {consents.erasure && !consents.health.acceptedAt ? (
+          <p role="status" className="rounded-lg bg-surface-1 mx-4 p-4 text-subhead text-ink-2">
+            {interpolate(consents.erasure.done ? copy.erasureDone : copy.erasureScheduled, {
+              date: formatPlanDate(locale, consents.erasure.scheduledFor, consents.timeZone),
+            })}
+          </p>
+        ) : null}
         <div className="px-4">
           {consents.health.acceptedAt ? (
             <HealthConsentRevoke />

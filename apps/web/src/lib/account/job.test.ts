@@ -14,9 +14,17 @@ type Admin = Parameters<typeof runPrivacyJob>[0];
  * An admin client with one due deletion: each table answers with `tables[name]` whatever the filters, so the test
  * pins what the job does with the answers, not the query text.
  */
-function fakeAdmin(options: { purged: string[] | null; telegramId?: number | null; botBlocked?: boolean; locale?: string }) {
+function fakeAdmin(options: {
+  purged?: string[] | null;
+  telegramId?: number | null;
+  botBlocked?: boolean;
+  locale?: string;
+  erasures?: string[];
+  erased?: boolean;
+}) {
   const tables: Record<string, unknown> = {
-    account_deletions: [{ user_id: USER }],
+    account_deletions: options.purged === undefined ? [] : [{ user_id: USER }],
+    health_erasures: (options.erasures ?? []).map((user_id) => ({ user_id })),
     data_exports: [],
     profiles: [],
   };
@@ -36,11 +44,25 @@ function fakeAdmin(options: { purged: string[] | null; telegramId?: number | nul
     return builder;
   };
   const deleted: string[] = [];
+  const calls: string[] = [];
+  const listed: string[] = [];
   const admin = {
     from: query,
-    rpc: async (fn: string) =>
-      fn === "purge_account" ? { data: options.purged, error: null } : { data: [], error: null },
-    storage: { from: () => ({ list: async () => ({ data: [], error: null }), remove: async () => ({ error: null }) }) },
+    rpc: async (fn: string, args?: { p_user?: string }) => {
+      calls.push(`${fn}(${args?.p_user ?? ""})`);
+      if (fn === "purge_account") return { data: options.purged, error: null };
+      if (fn === "purge_health_data") return { data: options.erased ?? true, error: null };
+      return { data: [], error: null };
+    },
+    storage: {
+      from: (bucket: string) => ({
+        list: async (folder: string) => {
+          listed.push(`${bucket}/${folder}`);
+          return { data: [], error: null };
+        },
+        remove: async () => ({ error: null }),
+      }),
+    },
     auth: {
       admin: {
         deleteUser: async (id: string) => {
@@ -50,7 +72,7 @@ function fakeAdmin(options: { purged: string[] | null; telegramId?: number | nul
       },
     },
   };
-  return { admin: admin as unknown as Admin, deleted };
+  return { admin: admin as unknown as Admin, deleted, calls, listed };
 }
 
 describe("runPrivacyJob, due deletions (С5)", () => {
@@ -89,5 +111,20 @@ describe("runPrivacyJob, due deletions (С5)", () => {
     expect([refused.purged, thrown.purged]).toEqual([1, 1]);
     expect(error.mock.calls.flat().join(" ")).not.toContain(String(CHAT));
     error.mockRestore();
+  });
+});
+
+describe("runPrivacyJob, health data erasures (право 5)", () => {
+  it("removes the progress photo files, then erases the rows of each due erasure", async () => {
+    const { admin, calls, listed } = fakeAdmin({ erasures: [USER] });
+    const summary = await runPrivacyJob(admin, 10_000);
+    expect(listed).toContain(`progress-photos/${USER}`);
+    expect(calls).toContain(`purge_health_data(${USER})`);
+    expect(summary.healthErased).toBe(1);
+  });
+
+  it("does not count an erasure the database found not due", async () => {
+    const { admin } = fakeAdmin({ erasures: [USER], erased: false });
+    expect((await runPrivacyJob(admin, 10_000)).healthErased).toBe(0);
   });
 });
