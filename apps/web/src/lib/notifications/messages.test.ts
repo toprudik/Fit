@@ -1275,3 +1275,24 @@ describe("review_prompt and report_resolution (wave-2 §11)", () => {
     expect(en?.text).toBe("Someone reported something you wrote. We looked at it and hid it. Reason: “Rude”. You can appeal within six months.");
   });
 });
+
+describe("invited trainer joined", () => {
+  const TRAINER = "7b1f2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
+  const options = { appUrl: "https://fit.example", group: false };
+
+  it("tells the inviter their trainer came, with a button to start training", () => {
+    const message = renderMessage(
+      { ...row, kind: "invited_trainer_joined", payload: { trainer_id: TRAINER, first_name: "<Ника>", last_name: "Петрова" } },
+      options,
+    );
+    expect(message?.text).toBe("&lt;Ника&gt; Петрова теперь в DaFit по твоему приглашению. Открой приглашения, чтобы начать заниматься в приложении.");
+    expect(message?.buttons).toEqual([
+      { text: "Начать занятия", web_app: { url: "https://fit.example/client/invite-trainer?source=invited_trainer_joined" } },
+    ]);
+  });
+
+  it("names nobody when the trainer has no name", () => {
+    const message = renderMessage({ ...row, kind: "invited_trainer_joined", locale: "en", payload: { trainer_id: TRAINER } }, options);
+    expect(message?.text).toBe("Your trainer joined DaFit by your invitation. Open your invitations to start training in the app.");
+  });
+});

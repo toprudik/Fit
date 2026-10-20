@@ -140,6 +140,12 @@ const templates: Partial<Record<NotificationType, Template>> = {
       typeof id === "number" && Number.isSafeInteger(id) ? `<a href="tg://user?id=${id}">${escapeHtml(name)}</a>` : escapeHtml(name);
     return { text: interpolate(escapeHtml(t.contactShared), { name: link, phone: escapeHtml(phone) }), buttons: [button] };
   },
+  // Marketing 16: payload { trainer_id, first_name, last_name } from redeem_trainer_invite, to the person whose
+  // inviter code the trainer used. The pair starts from /client/invite-trainer, where the consent steps follow.
+  invited_trainer_joined: ({ t, payload }) => ({
+    text: interpolateEscaped(t.invitedTrainerJoined, { name: personName(payload) || t.invitedTrainerUnnamed }),
+    buttons: [{ text: t.openInvitedTrainers, path: "/client/invite-trainer" }],
+  }),
   // Wave-3 §2.2-7: payload { badge } from private.award_badges, the code of the new badge. Its title and text
   // come from the recipient's dictionary.
   badge: ({ t, locale, payload }) => {
