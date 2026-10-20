@@ -20,7 +20,7 @@
   --surface-3: #26292f;
   --field: #1c1e23;
   --field-line: #2f333a;
-  --material: rgba(19, 20, 24, 0.72);
+  --material: rgba(19, 20, 24, 0.94);
   --line: #2a2d34;
   --line-strong: #666c76;
   --scrim: rgba(0, 0, 0, 0.6);
@@ -63,7 +63,7 @@
   --surface-3: #dadde2;
   --field: #ffffff;
   --field-line: #d3d7dd;
-  --material: rgba(255, 255, 255, 0.78);
+  --material: rgba(255, 255, 255, 0.94);
   --line: #e3e6ea;
   --line-strong: #7a808a;
   --scrim: rgba(14, 15, 17, 0.4);

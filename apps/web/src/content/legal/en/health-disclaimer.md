@@ -6,7 +6,7 @@ Effective date: [EFFECTIVE DATE]
 
 ## 1. DaFit is not medical advice
 
-DaFit is software for trainers and their clients, run by [OPERATOR LEGAL NAME], [REGISTERED ADDRESS] ("DaFit", "we", "us"). Words such as trainer, client, questionnaire and showcase have the meaning given in the [Terms of Service](terms-of-service.md), section 2. Nothing in DaFit is medical advice, diagnosis or treatment, and DaFit is not a medical device. Do not use DaFit instead of a doctor, dietitian or other health professional.
+DaFit is software for trainers and their clients, run by [OPERATOR FULL NAME], an individual, at [ADDRESS] ("DaFit", "we", "us"). Words such as trainer, client, questionnaire and showcase have the meaning given in the [Terms of Service](terms-of-service.md), section 2. Nothing in DaFit is medical advice, diagnosis or treatment, and DaFit is not a medical device. Do not use DaFit instead of a doctor, dietitian or other health professional.
 
 ## 2. Numbers in DaFit are estimates
 

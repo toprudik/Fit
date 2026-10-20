@@ -4,7 +4,7 @@
 
 Effective date: [EFFECTIVE DATE]
 
-This policy explains which cookies and similar storage the Service uses in the web app at [DOMAIN] and in the Telegram Mini App. The Service is run by [OPERATOR LEGAL NAME], [REGISTERED ADDRESS], registration number [REGISTRATION NUMBER] ("DaFit", "we", "us"; contact: [CONTACT EMAIL]). For everything else about personal data, see the [Privacy Policy](privacy-policy.md).
+This policy explains which cookies and similar storage the Service uses in the web app at [DOMAIN] and in the Telegram Mini App. The Service is run by [OPERATOR FULL NAME], an individual, at [ADDRESS] ("DaFit", "we", "us"; contact: [CONTACT EMAIL]). For everything else about personal data, see the [Privacy Policy](privacy-policy.md).
 
 ## 1. What cookies are
 
