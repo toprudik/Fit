@@ -1,0 +1,31 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { CONSENTS_SETTINGS_PATH } from "./beta-terms";
+import { HEALTH_CONSENT } from "./required";
+
+export type RevokeState = { failed: boolean };
+
+/**
+ * "Отозвать" for the health data consent (право 5; 152-FZ art. 9 part 2). The guard trigger stamps revoked_at with
+ * the time of the request; the health sections ask for the consent again. The required consents are not revoked
+ * here: without them DaFit cannot keep the account, so the screen sends the user to account deletion.
+ */
+export async function revokeHealthConsent(): Promise<RevokeState> {
+  const supabase = await createSupabaseServerClient();
+  const { data: session } = await supabase.auth.getClaims();
+  const userId = session?.claims.sub;
+  if (!userId) return { failed: true };
+  const { error } = await supabase
+    .from("consents")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .eq("kind", HEALTH_CONSENT.kind)
+    .is("revoked_at", null);
+  if (error) {
+    console.error("revoking the health data consent failed", error.code);
+    return { failed: true };
+  }
+  redirect(CONSENTS_SETTINGS_PATH);
+}
