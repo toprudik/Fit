@@ -5309,11 +5309,20 @@ export const en: Dictionary = {
     reviewPrompt: "That's three sessions with {name}. How is it going? Leave a review; your trainer and the DaFit team will see it.",
     leaveReview: "Leave a review",
     /** §11 rule 7: the admin's decision on a review the trainer disputed. */
-    reviewHiddenAuthor: "We looked at your review of your trainer and hid it. Reason: “{reason}”.",
+    reviewHiddenAuthor: "We looked at your review of your trainer and hid what you reported. Reason: “{reason}”.",
     reviewKeptAuthor: "Your trainer disputed your review. We looked at it and left it as it is.",
     reviewHiddenTrainer: "We looked at the review you disputed and hid it.",
     reviewKeptTrainer: "We looked at the review you disputed and kept it: it doesn't break the rules.",
     openReviews: "Open reviews",
+    /** Reports under DSA arts. 16, 17 and 20 (legal/product-changes.md Б13). */
+    reportReceived: "We got your report. We'll look into it and tell you what we decided.",
+    reportAppealReceived: "We got your appeal. Someone else on the DaFit team will look at it, not the person who decided the first time.",
+    reportDismissed: "We looked at your report and changed nothing. Reason: “{reason}”.",
+    reportHiddenReporter: "We looked at your report and hid what you reported. Reason: “{reason}”.",
+    reportKeptReporter: "We looked at your report and left everything as it is. Reason: “{reason}”. You can appeal within six months.",
+    reportHiddenOwner: "Someone reported something you wrote. We looked at it and hid it. Reason: “{reason}”. You can appeal within six months.",
+    reportAppealHidden: "We looked at the appeal: it stays hidden. Reason: “{reason}”.",
+    reportAppealShown: "We looked at the appeal: it's shown again. Reason: “{reason}”.",
   },
   toast: {
     region: "Notifications",
