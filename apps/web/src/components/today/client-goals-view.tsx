@@ -1,4 +1,4 @@
-import { ClipboardCheck, Footprints, Utensils } from "lucide-react";
+import { ClipboardCheck, Footprints, ShieldCheck, Utensils } from "lucide-react";
 import { ACTIVITY_PATH } from "@/components/activity/paths";
 import { StreakTiles } from "@/components/gamification/streak-tiles";
 import { FOOD_PATH } from "@/components/nutrition/paths";
@@ -17,6 +17,11 @@ export type ClientGoals = {
   /** Homework deadlines that came and are not done; null when the client has no homework. */
   homework: number | null;
   streaks: Streaks | null;
+  /**
+   * Where to give the health data consent while it is not given (право 3), null when it is: until then the home
+   * shows no calories, steps or quick weight, only the way to the consent.
+   */
+  healthConsentHref: string | null;
 };
 
 /** Whether any streak has started, so empty tiles don't fill a new client's home. */
@@ -31,8 +36,10 @@ function anyStreak(streaks: Streaks): boolean {
 export function ClientGoalsView({ t, locale, goals }: { t: Dictionary; locale: Locale; goals: ClientGoals }) {
   const copy = t.screens.client.home;
   const number = new Intl.NumberFormat(INTL_LOCALE[locale]);
-  const food =
-    goals.food.target === null
+  const health = goals.healthConsentHref === null;
+  const food = !health
+    ? undefined
+    : goals.food.target === null
       ? interpolate(copy.kcal, { eaten: number.format(Math.round(goals.food.eaten)) })
       : interpolate(copy.kcalOf, { eaten: number.format(Math.round(goals.food.eaten)), target: number.format(goals.food.target) });
   return (
@@ -42,7 +49,9 @@ export function ClientGoalsView({ t, locale, goals }: { t: Dictionary; locale: L
         <ListRow
           icon={Footprints}
           title={copy.steps}
-          value={interpolate(copy.stepsOf, { done: number.format(goals.steps.done), goal: number.format(goals.steps.goal) })}
+          value={
+            health ? interpolate(copy.stepsOf, { done: number.format(goals.steps.done), goal: number.format(goals.steps.goal) }) : undefined
+          }
           href={ACTIVITY_PATH}
         />
         {goals.homework !== null ? (
@@ -56,7 +65,19 @@ export function ClientGoalsView({ t, locale, goals }: { t: Dictionary; locale: L
       </ListGroup>
       <section aria-label={copy.quick} className="flex flex-col gap-2">
         <h2 className="px-1 text-footnote text-ink-2">{copy.quick}</h2>
-        <QuickWeight today={goals.today} />
+        {goals.healthConsentHref === null ? (
+          <QuickWeight today={goals.today} />
+        ) : (
+          <ListGroup>
+            <ListRow
+              icon={ShieldCheck}
+              iconTone="accent"
+              title={t.healthConsentGate.title}
+              subtitle={t.healthConsentGate.give}
+              href={goals.healthConsentHref}
+            />
+          </ListGroup>
+        )}
       </section>
       {goals.streaks && anyStreak(goals.streaks) ? <StreakTiles t={t} locale={locale} streaks={goals.streaks} /> : null}
     </>

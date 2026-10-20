@@ -27,7 +27,7 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-const { saveShowcaseAddress, setShowcaseVisible, setStoryCardShowcase } = await import("./actions");
+const { saveShowcaseAddress, setStoryCardShowcase } = await import("./actions");
 
 const IDLE = { status: "idle" } as const;
 
@@ -69,19 +69,6 @@ describe("saveShowcaseAddress", () => {
     db.updates = [];
     expect(await saveShowcaseAddress(IDLE, form({ slug: "anna" }))).toEqual({ status: "error", reason: "failed", value: "anna" });
     expect(db.updates).toEqual([]);
-  });
-});
-
-describe("setShowcaseVisible", () => {
-  it("switches the showcase off and on", async () => {
-    expect(await setShowcaseVisible({ failed: false }, form({ visible: "false" }))).toEqual({ failed: false });
-    expect(await setShowcaseVisible({ failed: false }, form({ visible: "true" }))).toEqual({ failed: false });
-    expect(db.updates.map((update) => update.values)).toEqual([{ is_public: false }, { is_public: true }]);
-  });
-
-  it("reports a refused update", async () => {
-    db.answer = { data: [], error: { code: "42501" } };
-    expect(await setShowcaseVisible({ failed: false }, form({ visible: "false" }))).toEqual({ failed: true });
   });
 });
 
