@@ -58,6 +58,11 @@ describe("createStoryCard", () => {
     expect(db.calls).toEqual([]);
   });
 
+  it("asks for the consent to publish before the first card (152-FZ art. 10.1)", async () => {
+    db.answer = { data: null, error: { code: "P0001", message: "consent_required" } };
+    expect(await createStoryCard({ month: "2026-09", kind: "sessions" })).toEqual({ status: "consent" });
+  });
+
   it("fails on an error or an answer that is not an id", async () => {
     db.answer = broken;
     expect(await createStoryCard({ month: "2026-09", kind: "sessions" })).toEqual({ status: "failed" });
