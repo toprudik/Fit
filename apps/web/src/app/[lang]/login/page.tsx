@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { DaMark } from "@/components/brand/da-mark";
 import { MiniAppLogin } from "@/components/telegram/mini-app-login";
@@ -6,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { clientEnv } from "@/env/client";
 import { getDictionary } from "@/i18n/server";
 import { safeNext } from "@/lib/auth/oidc-cookie";
+import { LEGAL_PATH } from "@/lib/legal/documents";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
@@ -51,6 +53,13 @@ export default async function LoginPage(props: PageProps<"/[lang]/login">) {
           <LoginAction searchParams={props.searchParams} />
         </Suspense>
       </div>
+      {/* Only strictly necessary and functional first-party cookies, so a notice with a link is enough (cookie notice §1). */}
+      <p className="text-footnote text-ink-2">
+        {t.login.cookies}{" "}
+        <Link href={`${LEGAL_PATH}/cookies`} className="font-semibold text-accent-ink underline-offset-2 hover:underline">
+          {t.login.cookiesLink}
+        </Link>
+      </p>
     </main>
   );
 }

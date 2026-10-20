@@ -13,6 +13,7 @@ insert into public.locations (trainer_id, name, address)
 values (tests.user_id('trainer_a'), 'Зал на Тверской', 'Тверская, 1');
 insert into public.locations (trainer_id, name, address, archived_at)
 values (tests.user_id('trainer_a'), 'Старый зал', null, now());
+select tests.publish_locations('trainer_a');
 update public.trainer_profiles
 set headline = 'Силовые и мобильность', bio = 'Тренирую 8 лет', specialties = '{strength,mobility}', city = 'Москва',
     works_online = true

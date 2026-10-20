@@ -387,6 +387,24 @@ create index on public.consents (user_id, kind);
 create unique index consents_one_active_uniq on public.consents (user_id, kind, version) where revoked_at is null;
 ```
 
+**`public_data_consents`**: согласие на распространение (ст. 10.1 152-ФЗ, legal/ru/consent-public-data.md): витрина тренера с выбранными полями (`photo`, `about`, `city`, `locations`, `prices`; имя видно всегда) и карточки для сторис; места отмечаются по одному в `location_ids` (тренер видит адреса, домашний может не отмечать, новое место скрыто, пока его не отметят; `locations` в `fields` ровно тогда, когда отмечено хоть одно); запреты (`no_transfer`, `no_index`, `no_processing`) и своё условие. Новое согласие заменяет действующее, отзыв ставит `revoked_at`. Витрина включается только с согласием (триггер на `trainer_profiles.is_public`, по умолчанию `false`), карточка сторис создаётся только с согласием `story` (триггер на `story_cards`). `get_trainer_showcase` и `get_trainer_showcase_prices` отдают только выбранные поля, `get_showcase_terms(slug)` отдаёт запреты и условие для раздела «Условия обработки данных».
+
+```sql
+create table public.public_data_consents (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references public.profiles(id) on delete cascade,
+  scope       text not null check (scope in ('showcase', 'story')),
+  version     text not null,
+  fields      text[] not null default '{}',
+  bans        text[] not null default '{}',
+  condition   text,                          -- до 500 знаков
+  location_ids uuid[] not null default '{}',   -- места, отмеченные для витрины
+  accepted_at timestamptz not null default now(),
+  revoked_at  timestamptz
+);
+create unique index on public.public_data_consents (user_id, scope) where revoked_at is null;
+```
+
 **`account_deletions`**, **`data_exports`**
 
 ```sql
@@ -2521,6 +2539,7 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `notification_preferences` | сам | сам | сам (`enabled`) | сам |
 | `user_roles` | сам; A | никто (позже `admin_grant_role`, R13) | никто | никто (позже `admin_revoke_role`) |
 | `consents` | сам, без `text_hash`; A | сам (`user_id`, `kind`, `version`, `text_hash`) | сам: только `revoked_at`, один раз | никто |
+| `public_data_consents` | сам; A | S-RPC `give_public_data_consent` | S-RPC `revoke_public_data_consent` | никто |
 | `account_deletions` | сам; партнёры по паре в любом статусе (только даты, R10); A | S-RPC `request_account_deletion` | S-RPC `cancel_account_deletion` | S |
 | `data_exports` | сам | S-RPC `request_data_export` | S | S |
 | `trainer_profiles` | сам; его клиенты в любом статусе пары (R89); A; anon/прочие: **pub** `get_trainer_showcase(slug)` (при `verification_status = 'rejected'` отвечает «недоступна», R16, Q60); зона «Тренер» и `is_trainer()` доступны при наличии `trainer_profiles` (доступ не зависит от верификации и тарифа, Q55) | S-RPC `redeem_trainer_invite` | сам (кроме `verification_status`, `verified_at`, `trainer_invite_id`: колоночные гранты); A через `admin_decide_verification` | никто |

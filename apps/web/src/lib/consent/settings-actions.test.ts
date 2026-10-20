@@ -14,10 +14,15 @@ const db = vi.hoisted(() => ({
   set: null as Record<string, unknown> | null,
   filters: [] as [string, unknown][],
   error: null as { code: string } | null,
+  rpc: [] as [string, unknown][],
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({
+    rpc: async (name: string, args: unknown) => {
+      db.rpc.push([name, args]);
+      return { error: db.error };
+    },
     auth: { getClaims: async () => ({ data: db.user ? { claims: { sub: db.user } } : null }) },
     from: (table: string) => {
       db.filters.push(["table", table]);
@@ -40,7 +45,7 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-const { revokeHealthConsent } = await import("./settings-actions");
+const { revokeHealthConsent, revokePublicDataConsent } = await import("./settings-actions");
 
 async function redirectOf(promise: Promise<unknown>): Promise<string | null> {
   const thrown = await promise.then(
@@ -55,6 +60,7 @@ beforeEach(() => {
   db.set = null;
   db.filters = [];
   db.error = null;
+  db.rpc = [];
 });
 
 describe("revokeHealthConsent", () => {
@@ -78,5 +84,24 @@ describe("revokeHealthConsent", () => {
     db.user = null;
     await expect(revokeHealthConsent()).resolves.toEqual({ failed: true });
     expect(db.set).toBeNull();
+  });
+});
+
+describe("revokePublicDataConsent", () => {
+  it("withdraws the consent to publish through the database and comes back to the screen", async () => {
+    expect(await redirectOf(revokePublicDataConsent("showcase"))).toBe("/settings/consents");
+    expect(db.rpc).toEqual([["revoke_public_data_consent", { p_scope: "showcase" }]]);
+    expect(await redirectOf(revokePublicDataConsent("story"))).toBe("/settings/consents");
+    expect(db.rpc[1]).toEqual(["revoke_public_data_consent", { p_scope: "story" }]);
+  });
+
+  it("says so when the database refuses", async () => {
+    db.error = { code: "42501" };
+    await expect(revokePublicDataConsent("story")).resolves.toEqual({ failed: true });
+  });
+
+  it("refuses a scope it does not know without calling the database", async () => {
+    await expect(revokePublicDataConsent("profile" as never)).resolves.toEqual({ failed: true });
+    expect(db.rpc).toEqual([]);
   });
 });
