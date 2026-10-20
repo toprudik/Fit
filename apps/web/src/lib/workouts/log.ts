@@ -1,4 +1,5 @@
 import { paidAtFor } from "@/lib/passes/present";
+import { parseDay } from "@/lib/schedule/time";
 import { formatDuration, fromKg, parseAmount, parseDuration, toKg, type WeightUnit } from "./units";
 
 /**
@@ -44,7 +45,6 @@ export type DraftError =
   | { kind: "empty" }
   | { kind: "set"; exercise: number; set: number };
 
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * The payload for a draft, or what to fix. A set with nothing typed is dropped; one with only a weight is
@@ -56,7 +56,8 @@ export function draftPayload(
   context: { id?: string; clientId: string; coachingId?: string; bookingId?: string; templateId?: string; performedAt: string },
 ): { ok: true; payload: LogPayload } | { ok: false; errors: DraftError[] } {
   const errors: DraftError[] = [];
-  if (!DATE.test(draft.date) || Number.isNaN(Date.parse(`${draft.date}T00:00:00Z`))) errors.push({ kind: "date" });
+  // parseDay refuses 2026-02-31, which Date.parse quietly turns into 3 March.
+  if (parseDay(draft.date) === null) errors.push({ kind: "date" });
   const durationMin = draft.durationMin.trim() ? Number(draft.durationMin.trim()) : null;
   if (durationMin !== null && (!Number.isInteger(durationMin) || durationMin < 1 || durationMin > 600)) errors.push({ kind: "duration" });
   if (draft.title.trim().length > TITLE_MAX_LENGTH) errors.push({ kind: "title" });
