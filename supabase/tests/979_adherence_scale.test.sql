@@ -1,4 +1,4 @@
--- Adherence of migration 20261020104317_adherence_scale.sql: adherence_counts and trainer_nutrition_adherence answer
+-- Adherence of migration 20261020125317_adherence_scale.sql: adherence_counts and trainer_nutrition_adherence answer
 -- what their previous bodies answered, for frozen days (§5.4), days not frozen yet, a frozen "no target" day, a target
 -- that changed, a trainer target, a group template, a client with no target at all, today and a client who keeps
 -- nutrition private. The previous bodies (20261017091027_nutrition_adherence.sql) are copied below as tests.old_*.
@@ -58,7 +58,7 @@ select tests.user_id('client_g'), tests.today('client_g') - d, null from generat
 insert into public.nutrition_targets (source, client_id, kcal, effective_from, set_by)
 values ('calculator', tests.user_id('client_g'), 2100, tests.today('client_g') - 60, tests.user_id('client_g'));
 
--- The bodies before 20261020104317.
+-- The bodies before 20261020125317.
 create function tests.old_adherence_counts(p_client uuid, p_from date, p_to date)
 returns table (logged integer, counted integer, in_norm integer)
 language sql stable security definer set search_path = '' as $$

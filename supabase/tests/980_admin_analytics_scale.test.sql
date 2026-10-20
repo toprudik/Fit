@@ -1,4 +1,4 @@
--- Admin analytics of migration 20261020104417_admin_analytics_scale.sql: private.analytics_trainers answers what its
+-- Admin analytics of migration 20261020125417_admin_analytics_scale.sql: private.analytics_trainers answers what its
 -- previous body (20261017222540_admin_ending_passes.sql, copied below as tests.old_analytics_trainers) answered, for
 -- held and not held sessions, attendance marks inside and outside the window, a trainer with nothing and one trainer
 -- asked for by id.
@@ -28,7 +28,7 @@ select tests.create_booking(tests.create_session('trainer_b', now() - interval '
 select tests.create_booking(tests.create_session('trainer_b', now() - interval '5 days'), 'trainer_b', 'client_f') as ns_b \gset
 update public.bookings set status = 'no_show', attendance_marked_at = now() where id = :'ns_b';
 
--- The body before 20261020104417.
+-- The body before 20261020125417.
 create function tests.old_analytics_trainers(p_days integer, p_trainer_id uuid)
 returns table (
   trainer_id          uuid,
