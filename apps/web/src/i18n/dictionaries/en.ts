@@ -5330,6 +5330,8 @@ export const en: Dictionary = {
     title: "Sign in",
     description: "You don't need a password or email, just your Telegram account.",
     action: "Sign in with Telegram",
+    cookies: "We only use our own cookies, to keep you signed in and remember your settings. No advertising or third-party cookies.",
+    cookiesLink: "About cookies",
     errors: {
       expired: "Sign-in took too long. Try again.",
       denied: "Sign-in was cancelled in Telegram. Try again.",
