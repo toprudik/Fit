@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { DaMark } from "@/components/brand/da-mark";
 import { JoinButton } from "@/components/client-links/join-button";
+import { ReportButton } from "@/components/reports/report-button";
 import { SignedOutActions } from "@/components/client-links/signed-out-actions";
 import { ShowcaseProfile } from "@/components/showcase/showcase-profile";
 import { Button } from "@/components/ui/button";
@@ -117,6 +118,12 @@ async function ShowcaseContent({ params }: { params: PageProps<"/[lang]/trainers
             <Link href={trialPath(trialToken)}>{copy.trial}</Link>
           </Button>
         ) : null}
+        {/* DSA art. 16: anyone, signed in or not, can report a showcase; not its owner. */}
+        {showcase.isOwn ? null : (
+          <div className="self-center">
+            <ReportButton target={{ kind: "showcase", slug: showcase.slug }} />
+          </div>
+        )}
       </div>
     </div>
   );

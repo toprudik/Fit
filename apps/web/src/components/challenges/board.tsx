@@ -1,3 +1,4 @@
+import { ReportButton } from "@/components/reports/report-button";
 import { Badge } from "@/components/ui/badge";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import type { Locale } from "@/i18n/config";
@@ -22,7 +23,8 @@ export function ChallengeBoard({
   t: Dictionary;
   locale: Locale;
   metric: ChallengeMetric;
-  rows: BoardRow[];
+  /** reportId: an alias another participant may report (content reports), only on the client's board. */
+  rows: (BoardRow & { reportId?: string | null })[];
   header: string;
   empty: string;
   side: "trainer" | "client";
@@ -55,7 +57,13 @@ export function ChallengeBoard({
               ) : undefined
             }
             value={challengeScore(copy, locale, metric, row.score)}
-            trailing={row.isMe ? <Badge tone="accent">{copy.client.me}</Badge> : undefined}
+            trailing={
+              row.isMe ? (
+                <Badge tone="accent">{copy.client.me}</Badge>
+              ) : side === "client" && row.reportId ? (
+                <ReportButton target={{ kind: "content", targetType: "challenge_alias", targetId: row.reportId }} />
+              ) : undefined
+            }
           />
         );
       })}
