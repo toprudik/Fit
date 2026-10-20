@@ -7,14 +7,32 @@ import type { Zone } from "@/lib/navigation/zones";
 export const FEEDBACK_KINDS = ["bug", "idea", "data_request", "other"] as const;
 export type FeedbackKind = (typeof FEEDBACK_KINDS)[number];
 /**
- * What "Запрос о моих данных" asks for (152-FZ arts. 14, 20, 21; GDPR arts. 15–21): see the data, correct it, object,
- * stop the processing, appeal a refusal. The team answers within 10 working days (migration 20261020103117).
+ * What "Запрос о моих данных" asks for (152-FZ arts. 9, 14, 20, 21; GDPR arts. 7, 15–21): see the data, get a copy,
+ * correct or delete it, withdraw a consent, object, stop the processing, appeal a refusal. The team answers within
+ * 10 working days, and stops publishing within 3 once that consent is withdrawn (migration 20261020103117).
  */
-export const DATA_REQUEST_TYPES = ["access", "correction", "objection", "stop", "appeal", "other"] as const;
+export const DATA_REQUEST_TYPES = [
+  "access",
+  "export",
+  "correction",
+  "deletion",
+  "withdraw",
+  "objection",
+  "stop",
+  "appeal",
+  "other",
+] as const;
 export type DataRequestType = (typeof DATA_REQUEST_TYPES)[number];
+/** The consents a "withdraw" request can take back. */
+export const CONSENT_KINDS = ["processing", "health", "marketing", "publication"] as const;
+export type ConsentKind = (typeof CONSENT_KINDS)[number];
 
 export function isDataRequestType(value: unknown): value is DataRequestType {
   return typeof value === "string" && (DATA_REQUEST_TYPES as readonly string[]).includes(value);
+}
+
+export function isConsentKind(value: unknown): value is ConsentKind {
+  return typeof value === "string" && (CONSENT_KINDS as readonly string[]).includes(value);
 }
 export const MAX_FEEDBACK_LENGTH = 5000;
 export const MAX_SCREENSHOTS = 3;
@@ -58,6 +76,8 @@ export type FeedbackInput = {
   kind: FeedbackKind;
   /** Only for a data request, and then required. */
   requestType: DataRequestType | null;
+  /** Only when withdrawing a consent, and then required. */
+  consentKind: ConsentKind | null;
   body: string;
   route: string | null;
   zone: Zone | null;

@@ -14,7 +14,7 @@ import { getDictionary, getLocale } from "@/i18n/server";
 import { personName } from "@/lib/admin/people";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { feedbackIssueTarget } from "@/lib/feedback/github";
-import { isDataRequestType } from "@/lib/feedback/input";
+import { isConsentKind, isDataRequestType } from "@/lib/feedback/input";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
@@ -33,7 +33,7 @@ async function Message({ params }: { params: PageProps<"/[lang]/admin/feedback/[
   const { data: row, error } = await supabase
     .from("feedback")
     .select(
-      "id, user_id, kind, request_type, due_on, extended_at, extended_reason, body, status, zone, route, platform, app_version, locale, theme, attachment_paths, github_issue_url, reply, replied_at, created_at, author:profiles!feedback_user_id_fkey(first_name, last_name, username)",
+      "id, user_id, kind, request_type, consent_kind, due_on, extended_at, extended_reason, body, status, zone, route, platform, app_version, locale, theme, attachment_paths, github_issue_url, reply, replied_at, created_at, author:profiles!feedback_user_id_fkey(first_name, last_name, username)",
     )
     .eq("id", feedbackId.data)
     .maybeSingle();
@@ -46,6 +46,7 @@ async function Message({ params }: { params: PageProps<"/[lang]/admin/feedback/[
   const value = (text: string | null | undefined) => text || copy.none;
   const day = new Intl.DateTimeFormat(INTL_LOCALE[locale], { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
   const requestType = isDataRequestType(row.request_type) ? row.request_type : null;
+  const consentKind = isConsentKind(row.consent_kind) ? row.consent_kind : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,6 +58,7 @@ async function Message({ params }: { params: PageProps<"/[lang]/admin/feedback/[
       {row.due_on ? (
         <ListGroup>
           {requestType ? <ListRow title={copy.request.type} value={t.feedback.dataRequest.types[requestType]} /> : null}
+          {consentKind ? <ListRow title={copy.request.consent} value={t.feedback.dataRequest.consents[consentKind]} /> : null}
           <ListRow title={copy.request.due} value={day.format(new Date(row.due_on))} />
         </ListGroup>
       ) : null}
@@ -65,7 +67,10 @@ async function Message({ params }: { params: PageProps<"/[lang]/admin/feedback/[
           {interpolate(copy.request.extendedNote, { date: date.format(new Date(row.extended_at)), reason: row.extended_reason })}
         </p>
       ) : null}
-      {row.due_on && !row.extended_at && row.status !== "closed" && row.user_id ? <DataRequestExtend id={row.id} /> : null}
+      {/* Publishing stops within 3 working days, with no extension (152-FZ art. 10.1 part 12). */}
+      {row.due_on && !row.extended_at && row.status !== "closed" && row.user_id && consentKind !== "publication" ? (
+        <DataRequestExtend id={row.id} />
+      ) : null}
 
       <FeedbackStatusControl id={row.id} status={row.status} />
 

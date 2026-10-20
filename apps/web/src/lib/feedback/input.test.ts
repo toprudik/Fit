@@ -32,6 +32,7 @@ describe("feedback input", () => {
       id: "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b",
       kind: "bug",
       requestType: null,
+      consentKind: null,
       body: "Не работает",
       route: null,
       zone: "client",
@@ -50,6 +51,7 @@ describe("feedback input", () => {
       id: "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b",
       kind: "data_request",
       requestType: "access",
+      consentKind: null,
       body: "Какие данные обо мне есть?",
       route: null,
       zone: null,
@@ -62,6 +64,27 @@ describe("feedback input", () => {
     expect(feedbackInput.safeParse({ ...base, requestType: null }).success).toBe(false);
     expect(feedbackInput.safeParse({ ...base, screenshots: ["a"] }).success).toBe(false);
     expect(feedbackInput.safeParse({ ...base, kind: "idea" }).success).toBe(false);
+  });
+
+  it("takes a withdrawal only with the consent it takes back", () => {
+    const base = {
+      id: "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b",
+      kind: "data_request",
+      requestType: "withdraw",
+      consentKind: "publication",
+      body: "Уберите мою витрину",
+      route: null,
+      zone: null,
+      platform: "web-desktop",
+      locale: "ru",
+      theme: null,
+      screenshots: [],
+    };
+    expect(feedbackInput.safeParse(base).success).toBe(true);
+    expect(feedbackInput.safeParse({ ...base, consentKind: null }).success).toBe(false);
+    expect(feedbackInput.safeParse({ ...base, consentKind: "cookies" }).success).toBe(false);
+    expect(feedbackInput.safeParse({ ...base, requestType: "deletion" }).success).toBe(false);
+    expect(feedbackInput.safeParse({ ...base, requestType: "deletion", consentKind: null }).success).toBe(true);
   });
 
   it("keeps zod out of the module the form imports", () => {

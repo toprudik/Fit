@@ -1,28 +1,37 @@
 -- "Запрос о моих данных" in feedback (legal/product-changes.md 16; privacy policy §10): a person asks what data
--- DaFit holds, or to correct it, object, stop the processing or appeal a refusal. 152-FZ gives the operator 10
--- working days (arts. 20, 21), once extendable by 5 with the reason told in advance; GDPR's month is longer, so the
--- shorter term covers both. A request keeps its type and deadline; the admin inbox counts it down.
+-- DaFit holds, for a copy of it, to correct or delete it, to withdraw a consent, object, stop the processing or
+-- appeal a refusal. 152-FZ gives the operator 10 working days (arts. 20, 21), once extendable by 5 with the reason
+-- told in advance; GDPR's month is longer, so the shorter term covers both. Withdrawing the consent to publish
+-- (art. 10.1 part 12) takes 3 working days. A request keeps its type and deadline; the admin inbox counts it down.
 -- Working days are Monday to Friday: public holidays are not skipped, so the deadline only comes earlier.
 
 alter type public.feedback_kind add value if not exists 'data_request';
 
 alter table public.feedback
-  add column request_type     text check (request_type in ('access', 'correction', 'objection', 'stop', 'appeal', 'other')),
+  add column request_type     text check (request_type in
+    ('access', 'export', 'correction', 'deletion', 'withdraw', 'objection', 'stop', 'appeal', 'other')),
+  add column consent_kind     text check (consent_kind in ('processing', 'health', 'marketing', 'publication')),
   add column due_on           date,
   add column extended_at      timestamptz,
   add column extended_reason  text check (char_length(extended_reason) between 1 and 1000),
   -- A data request has a type and a deadline, other feedback has neither (kind compared as text: the new enum
   -- value cannot be used in this transaction).
   add constraint feedback_data_request_check check ((kind::text = 'data_request') = (request_type is not null)),
-  add constraint feedback_extension_pair_check check ((extended_at is null) = (extended_reason is null));
+  add constraint feedback_extension_pair_check check ((extended_at is null) = (extended_reason is null)),
+  -- Withdrawing a consent names which one, and only then.
+  add constraint feedback_withdraw_consent_check check ((request_type is not distinct from 'withdraw') = (consent_kind is not null));
 
 comment on column public.feedback.request_type is
-  'What a data request asks for: access, correction, objection, stop (the processing), appeal (a refusal), other.';
+  'What a data request asks for: access, export (a copy), correction, deletion, withdraw (a consent), objection, '
+  'stop (the processing), appeal (a refusal), other.';
+comment on column public.feedback.consent_kind is
+  'The consent a withdraw request takes back: processing, health, marketing or publication.';
 comment on column public.feedback.due_on is
-  'The day a data request must be answered by: 10 working days after it came, 15 once extended (152-FZ arts. 20, 21).';
+  'The day a data request must be answered by: 10 working days after it came, 15 once extended (152-FZ arts. 20, 21); '
+  '3 to stop publishing (art. 10.1 part 12).';
 comment on column public.feedback.extended_reason is 'Why the answer takes 5 more working days; the author gets it from the bot.';
 
-grant insert (request_type) on table public.feedback to authenticated;
+grant insert (request_type, consent_kind) on table public.feedback to authenticated;
 
 create index feedback_due_on_idx on public.feedback (due_on) where due_on is not null;
 
@@ -45,7 +54,7 @@ comment on function private.add_working_days(date, integer) is 'The date p_days 
 revoke all on function private.add_working_days(date, integer) from public;
 
 -- The deadline is the server's: whatever the app sends, a data request gets 10 working days from the day it came,
--- in Moscow time (the operator's).
+-- in Moscow time (the operator's), and 3 when it takes back the consent to publish.
 create function private.feedback_data_request_due()
 returns trigger
 language plpgsql
@@ -54,7 +63,9 @@ set search_path = ''
 as $$
 begin
   if new.kind::text = 'data_request' then
-    new.due_on := private.add_working_days((new.created_at at time zone 'Europe/Moscow')::date, 10);
+    new.due_on := private.add_working_days(
+      (new.created_at at time zone 'Europe/Moscow')::date,
+      case when new.consent_kind = 'publication' then 3 else 10 end);
   else
     new.due_on := null;
   end if;
@@ -63,7 +74,8 @@ begin
   return new;
 end $$;
 
-comment on function private.feedback_data_request_due() is 'Sets a data request''s deadline: 10 working days from the day it came.';
+comment on function private.feedback_data_request_due() is
+  'Sets a data request''s deadline: 10 working days from the day it came, 3 to stop publishing.';
 revoke all on function private.feedback_data_request_due() from public;
 
 create trigger feedback_data_request_due
@@ -71,7 +83,7 @@ create trigger feedback_data_request_due
   for each row execute function private.feedback_data_request_due();
 
 -- Errors (message): forbidden (42501), invalid_reason (22023), not_found (P0002), already_extended,
--- author_deleted, answered (P0001).
+-- not_extendable (publishing stops in 3 working days, with no extension in art. 10.1), author_deleted, answered (P0001).
 create function public.admin_extend_data_request(p_feedback_id uuid, p_reason text)
 returns date
 language plpgsql
@@ -96,6 +108,9 @@ begin
   end if;
   if v_row.extended_at is not null then
     raise exception 'already_extended' using errcode = 'P0001';
+  end if;
+  if v_row.consent_kind = 'publication' then
+    raise exception 'not_extendable' using errcode = 'P0001';
   end if;
   if v_row.status = 'closed' then
     raise exception 'answered' using errcode = 'P0001';

@@ -40,6 +40,34 @@ describe("FeedbackForm, a request about my data", () => {
     expect(await screen.findByText("Ответим в боте в течение 10 рабочих дней.")).toBeTruthy();
   });
 
+  it("asks which consent to withdraw and says publishing stops within 3 working days", async () => {
+    vi.mocked(prepareFeedback).mockResolvedValue({ status: "ready", id: ID, uploads: [] });
+    vi.mocked(sendFeedback).mockResolvedValue({ status: "sent" });
+    renderWithProviders(<FeedbackForm from={null} backHref="/" />);
+
+    fireEvent.click(screen.getByRole("radio", { name: "Мои данные" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Отозвать согласие" }));
+    fireEvent.change(screen.getByLabelText("Сообщение"), { target: { value: "Уберите витрину" } });
+    fireEvent.click(screen.getByRole("button", { name: "Отправить" }));
+    expect(await screen.findByText("Выбери, какое согласие")).toBeTruthy();
+    expect(sendFeedback).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("radio", { name: "На публикацию" }));
+    expect(screen.getByText(/в течение 3 рабочих дней/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Отправить" }));
+    await waitFor(() => expect(sendFeedback).toHaveBeenCalled());
+    expect(vi.mocked(sendFeedback).mock.calls[0][0]).toMatchObject({ requestType: "withdraw", consentKind: "publication" });
+  });
+
+  it("points to the settings screens for a copy or deletion", () => {
+    renderWithProviders(<FeedbackForm from={null} backHref="/" />);
+    fireEvent.click(screen.getByRole("radio", { name: "Мои данные" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Удалить мои данные" }));
+    expect(screen.getByRole("link", { name: "Удалить аккаунт" }).getAttribute("href")).toBe("/settings/delete");
+    fireEvent.click(screen.getByRole("radio", { name: "Выгрузить мои данные" }));
+    expect(screen.getByRole("link", { name: "Экспорт данных" }).getAttribute("href")).toBe("/settings/export");
+  });
+
   it("sends other feedback without a request type", async () => {
     vi.mocked(prepareFeedback).mockResolvedValue({ status: "ready", id: ID, uploads: [] });
     vi.mocked(sendFeedback).mockResolvedValue({ status: "sent" });
@@ -47,6 +75,6 @@ describe("FeedbackForm, a request about my data", () => {
     fireEvent.change(screen.getByLabelText("Сообщение"), { target: { value: "Кнопка серая" } });
     fireEvent.click(screen.getByRole("button", { name: "Отправить" }));
     await waitFor(() => expect(sendFeedback).toHaveBeenCalled());
-    expect(vi.mocked(sendFeedback).mock.calls[0][0]).toMatchObject({ kind: "bug", requestType: null });
+    expect(vi.mocked(sendFeedback).mock.calls[0][0]).toMatchObject({ kind: "bug", requestType: null, consentKind: null });
   });
 });

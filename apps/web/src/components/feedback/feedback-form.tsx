@@ -15,12 +15,14 @@ import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
 import { prepareFeedback, sendFeedback } from "@/lib/feedback/actions";
 import {
+  CONSENT_KINDS,
   DATA_REQUEST_TYPES,
   FEEDBACK_KINDS,
   MAX_FEEDBACK_LENGTH,
   MAX_SCREENSHOTS,
   platformLabel,
   screenshotProblem,
+  type ConsentKind,
   type DataRequestType,
   type FeedbackKind,
 } from "@/lib/feedback/input";
@@ -37,8 +39,9 @@ const ACCEPT = "image/png,image/jpeg,image/webp";
  * "Обратная связь" (PRD wave-1 §2.13): kind, text and up to three screenshots. The context goes along on its own:
  * the screen the form was opened from (`from`), zone, surface, language and theme; never anything from that screen.
  * Screenshots go straight to Storage first, then the message is saved, which tells the team and files the issue.
- * "Мои данные" is a request about one's personal data (152-FZ arts. 20, 21): what it asks for, no screenshots,
- * an answer within 10 working days.
+ * "Мои данные" is a request about one's personal data (152-FZ arts. 9, 20, 21): what it asks for, which consent
+ * when withdrawing one, no screenshots, an answer within 10 working days (3 to stop publishing). A copy and deletion
+ * also point to the settings screens that do them at once.
  */
 export function FeedbackForm({ from, backHref }: { from: string | null; backHref: string }) {
   const { t, locale } = useI18n();
@@ -49,9 +52,16 @@ export function FeedbackForm({ from, backHref }: { from: string | null; backHref
   const { theme } = useTheme();
   const [kind, setKind] = useState<FeedbackKind>("bug");
   const [requestType, setRequestType] = useState<DataRequestType | null>(null);
+  const [consentKind, setConsentKind] = useState<ConsentKind | null>(null);
   const [body, setBody] = useState("");
   const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
-  const [errors, setErrors] = useState<{ body?: string; requestType?: string; screenshots?: string; form?: string }>({});
+  const [errors, setErrors] = useState<{
+    body?: string;
+    requestType?: string;
+    consentKind?: string;
+    screenshots?: string;
+    form?: string;
+  }>({});
   const [sent, setSent] = useState(false);
   const [pending, startTransition] = useTransition();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -96,10 +106,14 @@ export function FeedbackForm({ from, backHref }: { from: string | null; backHref
   }
 
   const dataRequest = kind === "data_request";
+  const withdraw = dataRequest && requestType === "withdraw";
+  const selfServe = dataRequest && (requestType === "export" || requestType === "deletion") ? requestType : null;
+  const publication = withdraw && consentKind === "publication";
 
   function submit() {
     const text = body.trim();
     if (dataRequest && !requestType) return setErrors({ requestType: copy.dataRequest.typeEmpty });
+    if (withdraw && !consentKind) return setErrors({ consentKind: copy.dataRequest.consentEmpty });
     if (!text) return setErrors({ body: copy.bodyEmpty });
     if (text.length > MAX_FEEDBACK_LENGTH) return setErrors({ body: copy.bodyLong });
     setErrors({});
@@ -120,6 +134,7 @@ export function FeedbackForm({ from, backHref }: { from: string | null; backHref
         id: prepared.id,
         kind,
         requestType: dataRequest ? requestType : null,
+        consentKind: withdraw ? consentKind : null,
         body: text,
         route: from,
         zone,
@@ -144,6 +159,7 @@ export function FeedbackForm({ from, backHref }: { from: string | null; backHref
     setBody("");
     setKind("bug");
     setRequestType(null);
+    setConsentKind(null);
     setSent(false);
   }
 
@@ -163,7 +179,7 @@ export function FeedbackForm({ from, backHref }: { from: string | null; backHref
       <div role="status" className="flex flex-col items-center gap-3 rounded-lg bg-surface-1 px-6 py-10 text-center">
         <DaMark className="size-12" />
         <h2 className="text-title-3">{copy.sentTitle}</h2>
-        <p className="text-body text-ink-2">{dataRequest ? copy.dataRequest.sentText : copy.sentText}</p>
+        <p className="text-body text-ink-2">{publication ? copy.dataRequest.sentPublication : dataRequest ? copy.dataRequest.sentText : copy.sentText}</p>
         <div className="mt-2 flex flex-wrap justify-center gap-2">
           <Button asChild>
             <Link href={backHref}>{copy.back}</Link>
@@ -207,7 +223,8 @@ export function FeedbackForm({ from, backHref }: { from: string | null; backHref
                 checked={requestType === value}
                 onChange={() => {
                   setRequestType(value);
-                  setErrors((current) => ({ ...current, requestType: undefined }));
+                  setConsentKind(null);
+                  setErrors((current) => ({ ...current, requestType: undefined, consentKind: undefined }));
                 }}
               >
                 {copy.dataRequest.types[value]}
@@ -220,9 +237,43 @@ export function FeedbackForm({ from, backHref }: { from: string | null; backHref
             </p>
           ) : (
             <p id="data-request-hint" className="mt-2 px-1 text-footnote text-ink-2">
-              {copy.dataRequest.hint}
+              {publication ? copy.dataRequest.hintPublication : copy.dataRequest.hint}
             </p>
           )}
+          {selfServe ? (
+            <p className="mt-1 px-1 text-footnote text-ink-2">
+              {copy.dataRequest.selfServe[selfServe].lead}{" "}
+              <Link href={copy.dataRequest.selfServe[selfServe].href} className="text-accent underline underline-offset-2">
+                {copy.dataRequest.selfServe[selfServe].link}
+              </Link>
+            </p>
+          ) : null}
+        </fieldset>
+      ) : null}
+      {withdraw ? (
+        <fieldset aria-describedby={errors.consentKind ? "consent-kind-error" : undefined}>
+          <legend className="mb-2 px-1 text-footnote text-ink-2">{copy.dataRequest.consent}</legend>
+          <div className="flex flex-wrap gap-2">
+            {CONSENT_KINDS.map((value) => (
+              <ChipRadio
+                key={value}
+                name="consent-kind"
+                value={value}
+                checked={consentKind === value}
+                onChange={() => {
+                  setConsentKind(value);
+                  setErrors((current) => ({ ...current, consentKind: undefined }));
+                }}
+              >
+                {copy.dataRequest.consents[value]}
+              </ChipRadio>
+            ))}
+          </div>
+          {errors.consentKind ? (
+            <p id="consent-kind-error" className="mt-2 px-1 text-footnote text-danger">
+              {errors.consentKind}
+            </p>
+          ) : null}
         </fieldset>
       ) : null}
       <TextArea

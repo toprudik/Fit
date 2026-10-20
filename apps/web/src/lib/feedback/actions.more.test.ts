@@ -118,6 +118,7 @@ describe("sendFeedback", () => {
     id: ID,
     kind: "bug",
     requestType: null,
+    consentKind: null,
     body: "  Кнопка не нажимается  ",
     route: "/trainer/schedule",
     zone: "trainer",
@@ -138,6 +139,7 @@ describe("sendFeedback", () => {
           user_id: USER,
           kind: "bug",
           request_type: null,
+          consent_kind: null,
           body: "Кнопка не нажимается",
           route: "/trainer/schedule",
           zone: "trainer",
@@ -179,6 +181,8 @@ describe("sendFeedback", () => {
     ["a data request without a type", { kind: "data_request", screenshots: [] }],
     ["a data request with screenshots", { kind: "data_request", requestType: "access" }],
     ["a request type on other feedback", { requestType: "access" }],
+    ["a withdrawal without the consent", { kind: "data_request", requestType: "withdraw", screenshots: [] }],
+    ["a consent on another request", { kind: "data_request", requestType: "deletion", consentKind: "health", screenshots: [] }],
     ["an unknown request type", { kind: "data_request", requestType: "delete" as FeedbackInput["requestType"], screenshots: [] }],
   ])("refuses %s without writing", async (_label, over) => {
     expect(await sendFeedback(input(over))).toEqual({ status: "invalid" });
@@ -201,8 +205,14 @@ describe("sendFeedback", () => {
 
   it("saves a data request with its type and never files an issue for it", async () => {
     expect(await sendFeedback(input({ kind: "data_request", requestType: "correction", screenshots: [] }))).toEqual({ status: "sent" });
-    expect(db.inserts[0].values).toMatchObject({ kind: "data_request", request_type: "correction", attachment_paths: [] });
+    expect(db.inserts[0].values).toMatchObject({ kind: "data_request", request_type: "correction", consent_kind: null, attachment_paths: [] });
     expect(next.after).not.toHaveBeenCalled();
+  });
+
+  it("saves which consent a withdrawal takes back", async () => {
+    const over: Partial<FeedbackInput> = { kind: "data_request", requestType: "withdraw", consentKind: "marketing", screenshots: [] };
+    expect(await sendFeedback(input(over))).toEqual({ status: "sent" });
+    expect(db.inserts[0].values).toMatchObject({ request_type: "withdraw", consent_kind: "marketing" });
   });
 
   it("asks a signed-out visitor to sign in", async () => {

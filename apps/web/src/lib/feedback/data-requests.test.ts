@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { dueState, requestToday } from "./data-requests";
 
 describe("data request deadlines", () => {
-  it("counts the day in Moscow", () => {
-    expect(requestToday(new Date("2026-10-19T21:30:00Z"))).toBe("2026-10-20");
-    expect(requestToday(new Date("2026-10-19T20:30:00Z"))).toBe("2026-10-19");
+  it("counts the day in the admin's time zone, Moscow by default", () => {
+    expect(requestToday(undefined, new Date("2026-10-19T21:30:00Z"))).toBe("2026-10-20");
+    expect(requestToday(undefined, new Date("2026-10-19T20:30:00Z"))).toBe("2026-10-19");
+    expect(requestToday("Asia/Vladivostok", new Date("2026-10-19T14:30:00Z"))).toBe("2026-10-20");
+    expect(requestToday("America/New_York", new Date("2026-10-20T02:30:00Z"))).toBe("2026-10-19");
   });
 
   it("marks a request overdue the day after its deadline", () => {

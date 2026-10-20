@@ -62,6 +62,7 @@ export async function sendFeedback(input: FeedbackInput): Promise<SendFeedbackRe
     user_id: userId,
     kind: data.kind,
     request_type: data.requestType,
+    consent_kind: data.consentKind,
     body: data.body,
     route: data.route,
     zone: data.zone,

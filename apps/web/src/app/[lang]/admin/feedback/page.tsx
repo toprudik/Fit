@@ -44,7 +44,7 @@ async function Inbox({ searchParams }: { searchParams: PageProps<"/[lang]/admin/
   if (error) throw new Error(`loading feedback failed: ${error.code}`);
   const date = new Intl.DateTimeFormat(INTL_LOCALE[locale], { dateStyle: "medium", timeStyle: "short", timeZone });
   const day = new Intl.DateTimeFormat(INTL_LOCALE[locale], { day: "numeric", month: "long", timeZone: "UTC" });
-  const today = requestToday();
+  const today = requestToday(timeZone);
   // An open data request shows its deadline instead of the status: that is what the team must keep.
   const badge = (row: (typeof rows)[number]) => {
     if (row.due_on && row.status !== "closed") {
