@@ -4205,6 +4205,18 @@ export const en: Dictionary = {
       label: "Language",
     },
   },
+  /** /settings/app-opens: the switch for the app-opening count (legal item Б12). */
+  appOpens: {
+    title: "App opening count",
+    intro: "DaFit records when the app is opened and from which bot button. That shows us how often it is used and which reminders help. The count is our own, with no outside services, and it is never used for ads.",
+    label: "Count my app openings",
+    hint: "Switching it off deletes your past openings and stops recording new ones.",
+    on: "Your openings are counted again",
+    off: "Openings are no longer counted, past ones deleted",
+    failed: "Couldn't save it. Try again.",
+    signedOutText: "Sign in with Telegram to set up the opening count.",
+    signIn: "Sign in with Telegram",
+  },
   /** Legal documents at /legal: list, draft note, links from settings and the beta terms. */
   legal: {
     title: "Legal",
