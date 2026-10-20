@@ -1,4 +1,4 @@
--- Health data erasure, migration 20261020154217_health_data_erasure.sql (право 5): withdrawing pd_health schedules
+-- Health data erasure, migration 20261020162057_health_data_erasure.sql (право 5): withdrawing pd_health schedules
 -- it in 30 days, giving the consent again cancels it, and purge_health_data erases only a due one.
 begin;
 \ir _helpers.psql

@@ -65,6 +65,11 @@ export const en: Dictionary = {
       failed: "That didn't work. Please try again.",
     },
   },
+  healthConsentGate: {
+    title: "Health data consent needed",
+    text: "Measurements, photos, nutrition, the questionnaire, steps and sleep are kept only with your separate consent. Your schedule and passes work without it.",
+    give: "Give consent",
+  },
   healthNotice: {
     title: "First, about your health",
     lead: "DaFit is not a medical app. Please read this before workouts, the questionnaire and working out your nutrition target.",
@@ -169,6 +174,7 @@ export const en: Dictionary = {
         noTrainerTitle: "You don't have a trainer yet",
         noTrainerText: "Enter your trainer's code or open their link, and your sessions and pass will show up here.",
         noTrainerAction: "Enter a trainer code",
+        inviteTrainerAction: "Invite your trainer",
         goals: "Today's goals",
         food: "Food",
         kcal: "{eaten} kcal",
@@ -253,6 +259,7 @@ export const en: Dictionary = {
       codeHint: "6 letters and digits",
       codeEmpty: "Enter the trainer code",
       check: "Find trainer",
+      inviteTrainer: "Is your trainer not on DaFit yet? Invite them",
       invalid: "There's no such code. Check it or ask your trainer for a new one.",
       otherCode: "Enter another code",
       scan: "Scan QR",
@@ -902,6 +909,10 @@ export const en: Dictionary = {
       referral: {
         title: "A DaFit trainer invites you",
         text: "Tap the button to open the trainer zone on the free plan, up to 3 clients. You can start right away and send documents for review later.",
+      },
+      invited: {
+        title: "Your client invites you to DaFit",
+        text: "Tap the button to open the trainer zone on the free plan, up to 3 clients. The client who sent the link can then book with you in the app.",
       },
       alreadyTrainer: {
         title: "You're already a trainer",
@@ -4194,6 +4205,25 @@ export const en: Dictionary = {
       client_link: "Your trainer invites you to DaFit",
     },
   },
+  /** /client/invite-trainer: a person invites their own trainer to DaFit (marketing backlog 16). */
+  trainerInviter: {
+    title: "Invite your trainer",
+    lead: "Is your trainer not on DaFit yet? Send them the link. They get the trainer zone right away on the free plan, and you can train with them in the app: bookings, pass and progress in one place.",
+    code: "Code to type in: {code}",
+    shareText: "Let's run my training in DaFit: schedule, pass and progress in one place",
+    listHeader: "Came by your link",
+    empty: "Nobody has come by your link yet. When your trainer opens it, the DaFit bot will message you.",
+    since: "On DaFit since {date}",
+    unnamed: "No name",
+    join: "Train with them",
+    open: "Open",
+    unavailable: "Not available now",
+    notInvited: "This trainer didn't come by your link.",
+    signedOutText: "Sign in with Telegram to invite your trainer.",
+    signIn: "Sign in with Telegram",
+    trainerText: "You're a trainer already. Colleagues are invited with the link for trainers.",
+    trainerAction: "Invite a trainer",
+  },
   trainerReferrals: {
     title: "Invite a trainer",
     moreText: "A bonus for colleagues who join by your link",
@@ -5424,6 +5454,10 @@ export const en: Dictionary = {
     open: "Open DaFit",
     botTest: "Done, DaFit can now message you here. Session reminders and other notifications will come to this chat.",
     newClient: "New client: {name}",
+    /** Marketing 16: a trainer the user invited became a trainer by the user's link. */
+    invitedTrainerJoined: "{name} joined DaFit by your invitation. Open your invitations to start training in the app.",
+    openInvitedTrainers: "Start training",
+    invitedTrainerUnnamed: "Your trainer",
     newClientWithCards: "{name} is now one of your clients. Check whether you keep a card for this person without an account.",
     unnamedClient: "a client with no name",
     openClients: "Open clients",
