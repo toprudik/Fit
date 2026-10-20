@@ -35,6 +35,8 @@ async function Dispute({ params }: { params: PageProps<"/[lang]/admin/reviews/[i
     )
     .eq("id", reportId.data)
     .eq("target_type", "review")
+    // An appeal of a dispute is decided in /admin/reports, by another admin.
+    .is("appeal_of", null)
     .maybeSingle();
   if (error) throw new Error(`loading a review dispute failed: ${error.code}`);
   if (!report) notFound();
