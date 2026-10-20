@@ -59,6 +59,21 @@ export const en: Dictionary = {
       failed: "That didn't work. Please try again.",
     },
   },
+  healthNotice: {
+    title: "First, about your health",
+    lead: "DaFit is not a medical app. Please read this before workouts, the questionnaire and working out your nutrition target.",
+    points: [
+      "The calorie, protein, fat and carb target is an estimate. It is a guide for a healthy adult, not a diet or a doctor's advice.",
+      "The estimate does not suit pregnancy or breastfeeding, diabetes, kidney, thyroid or heart disease, or eating disorders. In those cases a doctor sets your target.",
+      "Your trainer is not a doctor. If you have a chronic condition, an injury, chest or joint pain, or haven't trained in a long time, talk to a doctor first.",
+      "If you get chest pain, severe shortness of breath or dizziness during a workout, stop and tell your trainer. If someone feels unwell right now, call your local emergency number.",
+    ],
+    full: "Read in full",
+    ok: "Got it",
+    failed: "Couldn't save that. Please try again.",
+    footnote: "The target is an estimate and doesn't replace a doctor's advice.",
+    footnoteLink: "About your health",
+  },
   common: {
     back: "Back",
     close: "Close",
