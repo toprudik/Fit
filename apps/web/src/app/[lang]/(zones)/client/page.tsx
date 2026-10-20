@@ -60,7 +60,7 @@ async function HomeContent() {
             <Button asChild>
               <Link href="/join">{copy.noTrainerAction}</Link>
             </Button>
-            <Button asChild variant="ghost">
+            <Button asChild variant="secondary">
               <Link href="/client/invite-trainer">{copy.inviteTrainerAction}</Link>
             </Button>
           </div>
