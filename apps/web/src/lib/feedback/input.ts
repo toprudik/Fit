@@ -9,7 +9,7 @@ export type FeedbackKind = (typeof FEEDBACK_KINDS)[number];
 /**
  * What "Запрос о моих данных" asks for (152-FZ arts. 9, 14, 20, 21; GDPR arts. 7, 15–21): see the data, get a copy,
  * correct or delete it, withdraw a consent, object, stop the processing, appeal a refusal. The team answers within
- * 10 working days, and stops publishing within 3 once that consent is withdrawn (migration 20261020103117).
+ * 10 working days, and stops publishing within 3 once that consent is withdrawn (migration 20261020174211).
  */
 export const DATA_REQUEST_TYPES = [
   "access",

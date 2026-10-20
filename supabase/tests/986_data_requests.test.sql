@@ -1,4 +1,4 @@
--- "Запрос о моих данных", migration 20261020103117_data_requests.sql (152-FZ arts. 20, 21): the request type,
+-- "Запрос о моих данных", migration 20261020174211_data_requests.sql (152-FZ arts. 20, 21): the request type,
 -- the 10-working-day deadline, the one 5-day extension with a reason, and the bot message about it.
 begin;
 \ir _helpers.psql
