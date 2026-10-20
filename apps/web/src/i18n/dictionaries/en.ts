@@ -65,6 +65,11 @@ export const en: Dictionary = {
       failed: "That didn't work. Please try again.",
     },
   },
+  healthConsentGate: {
+    title: "Health data consent needed",
+    text: "Measurements, photos, nutrition, the questionnaire, steps and sleep are kept only with your separate consent. Your schedule and passes work without it.",
+    give: "Give consent",
+  },
   healthNotice: {
     title: "First, about your health",
     lead: "DaFit is not a medical app. Please read this before workouts, the questionnaire and working out your nutrition target.",
