@@ -15,7 +15,8 @@ export async function loadPlatform(days: AnalyticsPeriod) {
 
 export async function loadTrainers(days: AnalyticsPeriod) {
   const { supabase } = await requireAdmin();
-  const { data, error } = await supabase.rpc("admin_analytics_trainers", { p_days: days });
+  // The busiest 200, like the clients: the full list grows with the platform and the page stops rendering.
+  const { data, error } = await supabase.rpc("admin_analytics_trainers", { p_days: days }).limit(200);
   if (error) throw new Error(`loading the trainers analytics failed: ${error.code}`);
   return data;
 }

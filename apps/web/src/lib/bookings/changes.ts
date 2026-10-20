@@ -60,6 +60,7 @@ export async function previewCancel(bookingId: string): Promise<CancelCharge | n
 function moveError(error: { message: string; code: string }, what: string) {
   if (error.message === "slot_unavailable") return "slot_unavailable" as const;
   if (error.message === "deadline_passed" || error.message === "too_late") return "too_late" as const;
+  if (error.message === "debt_limit") return "debt_limit" as const;
   console.error(`${what} failed`, error.code);
   return "failed" as const;
 }

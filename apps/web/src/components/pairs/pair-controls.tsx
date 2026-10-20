@@ -4,6 +4,7 @@ import { Archive, ArchiveRestore, LogOut } from "lucide-react";
 import { useOptimistic, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ListRow } from "@/components/ui/list";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
 import { Switch } from "@/components/ui/switch";
@@ -14,26 +15,42 @@ import { endCoaching, setArchived, setSelfBookOnDebt } from "@/lib/pairs/actions
 import { END_REASON_MAX_LENGTH } from "@/lib/pairs/clients";
 import { hapticSuccess } from "@/lib/telegram/mini-app";
 
-/** "Разрешить запись в долг" (Q22): applies at once, off by default. */
-export function DebtBookingSwitch({ coachingId, enabled }: { coachingId: string; enabled: boolean }) {
+const DEBT_LIMITS = ["1", "2", "3", "5"] as const;
+
+/**
+ * "Разрешить запись в долг" (Q22): applies at once, off by default. When on, the trainer picks how many unpaid
+ * sessions the client may book without confirmation at a time.
+ */
+export function DebtBookingSwitch({ coachingId, enabled, limit }: { coachingId: string; enabled: boolean; limit: number }) {
   const { t } = useI18n();
-  const [optimistic, setOptimistic] = useOptimistic(enabled);
+  const [optimistic, setOptimistic] = useOptimistic({ enabled, limit });
   const [, startTransition] = useTransition();
+  const save = (next: { enabled: boolean; limit: number }) =>
+    startTransition(async () => {
+      setOptimistic(next);
+      const result = await setSelfBookOnDebt({ coachingId, ...next });
+      if (!result.ok) toast.error(t.pairs.failed);
+    });
   return (
-    <div className="px-4 py-3">
+    <div className="flex flex-col gap-3 px-4 py-3">
       <Switch
         showLabel
         label={t.pairs.debtBooking}
         hint={t.pairs.debtBookingHint}
-        checked={optimistic}
-        onCheckedChange={(next) =>
-          startTransition(async () => {
-            setOptimistic(next);
-            const result = await setSelfBookOnDebt({ coachingId, enabled: next });
-            if (!result.ok) toast.error(t.pairs.failed);
-          })
-        }
+        checked={optimistic.enabled}
+        onCheckedChange={(next) => save({ enabled: next, limit: optimistic.limit })}
       />
+      {optimistic.enabled ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-subhead text-ink-2">{t.pairs.debtLimit}</p>
+          <SegmentedControl
+            label={t.pairs.debtLimit}
+            options={DEBT_LIMITS.map((value) => ({ value, label: value }))}
+            value={String(optimistic.limit) as (typeof DEBT_LIMITS)[number]}
+            onValueChange={(value) => save({ enabled: true, limit: Number(value) })}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
