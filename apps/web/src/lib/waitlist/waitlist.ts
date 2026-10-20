@@ -1,3 +1,5 @@
+import { sourceFromSearch } from "@/lib/attribution/source";
+
 /**
  * The trainers' waitlist of /for-trainers (marketing backlog item 10): what the form sends and how a channel
  * label is read from the link. The database checks the same rules in join_trainer_waitlist.
@@ -13,16 +15,17 @@ export type ClientCount = (typeof CLIENT_COUNTS)[number];
 export const isClientCount = (value: unknown): value is ClientCount =>
   typeof value === "string" && (CLIENT_COUNTS as readonly string[]).includes(value);
 
-const LABEL = /^[A-Za-z0-9_-]{1,64}$/;
-
-/** The channel label of the visit: ?src= first, then utm_source; anything in another shape is left out. */
+/**
+ * The channel label of the visit, read the way account sign-ups read it (lib/attribution/source): ?src= first,
+ * then utm_source, lowercased; anything in another shape is left out.
+ */
 export function waitlistSource(params: Record<string, string | string[] | undefined>): string | null {
-  for (const key of ["src", "utm_source"]) {
-    const value = params[key];
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
     const first = Array.isArray(value) ? value[0] : value;
-    if (typeof first === "string" && LABEL.test(first)) return first;
+    if (typeof first === "string") search.set(key, first);
   }
-  return null;
+  return sourceFromSearch(search)?.source ?? null;
 }
 
 export const LANDING_PATH = "/for-trainers";

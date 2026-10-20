@@ -7,6 +7,10 @@ describe("waitlistSource", () => {
     expect(waitlistSource({ utm_source: "telegram" })).toBe("telegram");
   });
 
+  it("lowercases a label, like account sign-ups do", () => {
+    expect(waitlistSource({ src: "Ch_VK" })).toBe("ch_vk");
+  });
+
   it("leaves out a label in another shape", () => {
     expect(waitlistSource({ src: "vk post!" })).toBeNull();
     expect(waitlistSource({ src: "x".repeat(65) })).toBeNull();
