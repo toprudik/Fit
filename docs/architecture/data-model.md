@@ -540,7 +540,7 @@ create table public.coachings (
   -- client_alias переехал в coaching_trainer_meta: колоночный грант не может показать столбец тренеру и скрыть от клиента.
   -- Дедлайна отмены на пару нет: правило тренера действует для всех его клиентов (PRD 2.6.5-1).
   self_book_on_debt         boolean not null default false,       -- «Разрешить запись в долг» этому клиенту (Q22); долг при списании возникает всегда
-  debt_limit_sessions       smallint check (debt_limit_sessions > 0),  -- null = без лимита при self_book_on_debt
+  debt_limit_sessions       smallint default 1 check (debt_limit_sessions > 0),  -- неоплаченных занятий при самозаписи; null = без лимита
   client_reminder_offsets   smallint[] not null                   -- копия default_client_reminder_offsets при создании; меняет клиент
                             check (private.valid_reminder_offsets(client_reminder_offsets)),
   -- W2: broadcasts_muted и primary_nutrition_group_id добавляются вместе со своими функциями;
@@ -2443,8 +2443,9 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
 При записи клиента на слот или занятие (`book_slot`, `book_session`) RPC решает статус:
 
 - `confirmed`, если у пары есть подходящий абонемент с `available ≥ 1` (ставится `reserved_pass_id`);
-- иначе `confirmed`, если тренер разрешил этому клиенту запись в долг (`coachings.self_book_on_debt`) и `debt_sessions < coalesce(debt_limit_sessions, ∞)`;
+- иначе `confirmed`, если тренер разрешил этому клиенту запись в долг (`coachings.self_book_on_debt`) и неоплаченных занятий (`private.unpaid_sessions`) меньше `coalesce(debt_limit_sessions, ∞)` (по умолчанию 1). Неоплаченные: `debt_sessions` плюс живые записи пары (`requested`, `confirmed`, `attended`) без `reserved_pass_id`, кроме пробных, по которым ещё нет charge;
 - иначе `requested`: тренер подтверждает (занятие при списании уйдёт в долг, либо тренер сразу оформляет разовое или абонемент) или отклоняет.
+- но если неоплаченных уже столько, сколько клиенту можно (1 без разрешения, `debt_limit_sessions` с ним), запись клиента без абонемента отклоняется с `debt_limit` (триггер `bookings_debt_limit` по флагу, который ставит `booking_auto_confirm`). Так работают слот, групповое, перенос и лист ожидания; принятое предложение сверх лимита уходит следующему в очереди и возвращает `declined`. Отметка на месте без записи (QR, геопозиция) по-прежнему приходит тренеру запросом.
 
 Для пары-карточки без аккаунта самостоятельной записи нет, занятия создаёт тренер.
 

@@ -6,7 +6,6 @@ vi.mock("server-only", () => ({}));
 const next = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock("next/cache", () => ({ refresh: next.refresh }));
 
-vi.mock("@/i18n/server", () => ({ getLocale: async () => "en" }));
 
 const foods = vi.hoisted(() => ({
   searchFoods: vi.fn(async () => ({ foods: [], catalogDown: false, drafts: [] })),
@@ -84,20 +83,25 @@ beforeEach(() => {
 });
 
 describe("findFoods", () => {
-  it("searches in the user's language", async () => {
-    await findFoods("гречка");
+  it("searches in the language the screen passes", async () => {
+    await findFoods("гречка", "en");
     expect(foods.searchFoods).toHaveBeenCalledWith("гречка", "en");
   });
 
   it("answers nothing for a query that is not text", async () => {
-    expect(await findFoods(5 as unknown as string)).toEqual({ foods: [], catalogDown: false, drafts: [] });
+    expect(await findFoods(5 as unknown as string, "en")).toEqual({ foods: [], catalogDown: false, drafts: [] });
+    expect(foods.searchFoods).not.toHaveBeenCalled();
+  });
+
+  it("answers nothing for a language the app does not have", async () => {
+    expect(await findFoods("гречка", "de" as unknown as "en")).toEqual({ foods: [], catalogDown: false, drafts: [] });
     expect(foods.searchFoods).not.toHaveBeenCalled();
   });
 });
 
 describe("findBarcode", () => {
   it("looks up the normalized digits and returns them", async () => {
-    expect(await findBarcode(" 4600-1234 5678 9 ")).toEqual({ food: null, catalogDown: true, draft: null, barcode: "4600123456789" });
+    expect(await findBarcode(" 4600-1234 5678 9 ", "en")).toEqual({ food: null, catalogDown: true, draft: null, barcode: "4600123456789" });
     expect(foods.foodByBarcode).toHaveBeenCalledWith("4600123456789", "en");
   });
 
@@ -107,7 +111,7 @@ describe("findBarcode", () => {
     ["letters", "46001234abc"],
     ["not text", 4600123456789 as unknown as string],
   ])("gives no food for %s without a lookup", async (_label, value) => {
-    expect(await findBarcode(value)).toEqual({ food: null, catalogDown: false, draft: null, barcode: null });
+    expect(await findBarcode(value, "en")).toEqual({ food: null, catalogDown: false, draft: null, barcode: null });
     expect(foods.foodByBarcode).not.toHaveBeenCalled();
   });
 });

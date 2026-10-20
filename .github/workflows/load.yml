@@ -1,0 +1,50 @@
+name: Load run
+
+# Load run on a local stand inside the runner (apps/web/scripts/load/README.md): the app and a local Supabase with
+# made-up users, never production or Telegram. Not a PR check, so the merge queue never waits on it.
+on:
+  workflow_dispatch:
+    inputs:
+      stages:
+        description: Virtual users × seconds per stage
+        default: 10x60,25x60
+  schedule:
+    - cron: "17 3 * * 1" # Mondays 03:17 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  group: load-run
+  cancel-in-progress: true
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
+        with:
+          version: 2.121.0
+      - run: npm ci
+      - name: Start the local Supabase
+        working-directory: .
+        run: supabase start -x studio,edge-runtime,logflare,vector,supavisor,mailpit,realtime,imgproxy
+      - name: Load run
+        env:
+          STAGES: ${{ inputs.stages || '10x60,25x60' }}
+        run: scripts/load/run.sh --stages "$STAGES" --report "$RUNNER_TEMP/load.md"
+      - name: Report in the run summary
+        if: always()
+        run: test -f "$RUNNER_TEMP/load.md" && cat "$RUNNER_TEMP/load.md" >> "$GITHUB_STEP_SUMMARY" || true

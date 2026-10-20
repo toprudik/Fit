@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
 import { useI18n } from "@/i18n/client";
@@ -13,13 +13,14 @@ const IDLE: PackageFormState = { status: "idle" };
 export function TemplateForm({ currency, symbol }: { currency: string; symbol: string }) {
   const { t } = useI18n();
   const copy = t.money.packages;
-  const [state, action, pending] = useActionState(createGridFromTemplate, IDLE);
+  // The toast goes out with the action's answer: the refresh that follows replaces this form with the list.
+  const [state, action, pending] = useActionState(async (previous: PackageFormState, form: FormData) => {
+    const next = await createGridFromTemplate(previous, form);
+    if (next.status === "saved") toast.success(copy.template.created);
+    return next;
+  }, IDLE);
   const values = state.status === "invalid" || state.status === "failed" || state.status === "taken" ? state.values : null;
   const fields = state.status === "invalid" ? state.fields : [];
-
-  useEffect(() => {
-    if (state.status === "saved") toast.success(copy.template.created);
-  }, [state, copy.template.created]);
 
   return (
     <section aria-labelledby="price-template" className="flex flex-col gap-3">

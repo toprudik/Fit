@@ -42,6 +42,7 @@ export async function loadLogs(clientId: string, locale: Locale, limit = 50): Pr
     .select("id, title, performed_at, local_date, coaching_id, workout_log_exercises(exercise_id, position)")
     .eq("client_id", clientId)
     .order("performed_at", { ascending: false })
+    .order("id", { ascending: false })
     .limit(limit);
   if (error) {
     console.error("loading workout logs failed", error.code);
