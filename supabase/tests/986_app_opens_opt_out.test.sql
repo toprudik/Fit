@@ -1,4 +1,4 @@
--- Opting out of the app-opening count, migration 20261020110713_app_opens_opt_out.sql: the switch reads on by
+-- Opting out of the app-opening count, migration 20261020140613_app_opens_opt_out.sql: the switch reads on by
 -- default, off deletes the user's past openings and no new ones are written, on counts again from then, other
 -- users are untouched, and nobody reads the opt-out table directly or calls the functions without a session.
 begin;
