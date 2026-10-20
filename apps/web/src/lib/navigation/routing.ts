@@ -1,5 +1,6 @@
 import { negotiateLocale, type Locale } from "@/i18n/config";
 import { CONSENT_PATH } from "@/lib/consent/beta-terms";
+import { isLegalPath } from "@/lib/legal/documents";
 import { DEFAULT_ZONE, isZone, zoneFromPath, type Zone } from "./zones";
 
 export type RouteInput = {
@@ -26,13 +27,15 @@ export type RouteDecision =
 
 /** Files in apps/web/public. Any other path is a page, so a mistyped URL still gets the app's 404. */
 export const PUBLIC_FILES: readonly string[] = ["/favicon.ico", "/icon.svg", "/apple-icon.png", "/robots.txt"];
+/** Folders in apps/web/public, served as they are: /mediapipe/ holds the face detector (lib/progress/face-blur.ts). */
+export const PUBLIC_DIRS: readonly string[] = ["/mediapipe/"];
 
 /** Route handlers, framework internals and public files are not pages: no locale rewrite for them. */
 function isPagePath(pathname: string): boolean {
   if (pathname.startsWith("/api/") || pathname.startsWith("/auth/") || pathname.startsWith("/_next/") || pathname.startsWith("/__")) {
     return false;
   }
-  return !PUBLIC_FILES.includes(pathname);
+  return !PUBLIC_FILES.includes(pathname) && !PUBLIC_DIRS.some((dir) => pathname.startsWith(dir));
 }
 
 /**
@@ -64,7 +67,10 @@ export function adminDeniedPath(locale: Locale): string {
   return `/${locale}/admin-not-found`;
 }
 
-/** Screens a signed-in user opens before accepting the beta terms: the terms themselves and the login screen. */
+/**
+ * Screens a signed-in user opens before accepting the beta terms: the terms themselves, the login screen
+ * and the legal documents the terms point to.
+ */
 const BEFORE_CONSENT: readonly string[] = [CONSENT_PATH, "/login"];
 
 /**
@@ -73,7 +79,7 @@ const BEFORE_CONSENT: readonly string[] = [CONSENT_PATH, "/login"];
  * survives the acceptance (rule 5). Null for the screens open before it.
  */
 export function consentRedirect(pathname: string, search: string): string | null {
-  if (BEFORE_CONSENT.includes(pathname)) return null;
+  if (BEFORE_CONSENT.includes(pathname) || isLegalPath(pathname)) return null;
   return `${CONSENT_PATH}?next=${encodeURIComponent(`${pathname}${search}`)}`;
 }
 

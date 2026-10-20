@@ -59,6 +59,7 @@ describe("POST /api/ingest/steps", () => {
     expect((await post("steps=100")).status).toBe(400);
     expect((await post({ steps: "many" })).status).toBe(422);
     expect((await post({ steps: 100, date: "17.10.2026" })).status).toBe(422);
+    expect((await post({ steps: 100, date: "2026-02-31" })).status).toBe(422);
     expect(rpc.calls).toEqual([]);
   });
 

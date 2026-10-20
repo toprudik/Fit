@@ -9,8 +9,11 @@ type Options = {
   now?: Date;
 };
 
-/** Genuine initData: the user Telegram vouches for and when it signed the data (auth_date, Unix seconds). */
-export type VerifiedInitData = { identity: TelegramIdentity; authDate: number };
+/**
+ * Genuine initData: the user Telegram vouches for, when it signed the data (auth_date, Unix seconds) and the
+ * `startapp` parameter of the launch, when there was one.
+ */
+export type VerifiedInitData = { identity: TelegramIdentity; authDate: number; startParam: string | null };
 
 /**
  * Validates Telegram Mini App initData (raw query string) and returns the verified user. The age is
@@ -39,7 +42,7 @@ export function verifyInitData(raw: string, { botToken, now = new Date() }: Opti
     languageCode: str(user.language_code),
     source: "mini-app",
   };
-  return { identity, authDate };
+  return { identity, authDate, startParam: str(params.get("start_param")) };
 }
 
 /**
@@ -61,8 +64,10 @@ function verifySigned(raw: string, botToken: string, now: Date): { params: URLSe
   const expected = createHmac("sha256", secret).update(dataCheckString).digest();
   if (!timingSafeEqual(expected, Buffer.from(hash, "hex"))) throw new InitDataError("signature mismatch");
 
-  const authDate = Number(params.get("auth_date"));
-  if (!Number.isInteger(authDate)) throw new InitDataError("missing auth_date");
+  // Number(null) is 0, so a missing auth_date has to be caught before the conversion.
+  const rawAuthDate = params.get("auth_date");
+  if (!rawAuthDate || !/^[1-9]\d{0,11}$/.test(rawAuthDate)) throw new InitDataError("missing auth_date");
+  const authDate = Number(rawAuthDate);
   if (authDate - now.getTime() / 1000 > 60) throw new InitDataError("auth_date in the future");
   return { params, authDate };
 }

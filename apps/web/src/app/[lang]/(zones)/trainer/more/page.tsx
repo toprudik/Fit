@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { ChartColumn, ClipboardList, Dumbbell, Gift, Handshake, QrCode, Salad, ScanLine, Star, Store, UserPlus, UserRound, Users } from "lucide-react";
+import { ChartColumn, CircleHelp, ClipboardList, Dumbbell, Gift, Handshake, QrCode, Salad, ScanLine, Star, Store, UserPlus, UserRound, Users } from "lucide-react";
+import { helpPath } from "@/components/help/path";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { ListGroup, ListRow } from "@/components/ui/list";
@@ -35,6 +36,9 @@ export default async function TrainerMorePage() {
             subtitle={t.trainerReferrals.moreText}
             href="/trainer/invite-trainers"
           />
+        </ListGroup>
+        <ListGroup>
+          <ListRow icon={CircleHelp} title={t.help.title} subtitle={t.help.moreText} href={helpPath("trainer")} />
         </ListGroup>
       </div>
     </Screen>
