@@ -369,6 +369,8 @@ create table public.user_roles (
 
 **`consents`**: согласия при первом входе (Q44, юр. правки А1, А2), append-only. Экран условий пишет `beta_terms`, `terms`, `privacy_policy` и `age_confirmed`, следующий экран `pd_general`; без них прокси не пускает дальше (`lib/consent/required.ts`). `pd_health` спрашивается отдельно, и без него приложение работает. В `text_hash` sha256 показанного текста документа (у `age_confirmed` и старых строк null); пользователь пишет его, но не читает (выдача select по колонкам). Прокси читает согласия на каждой странице и в API, cookie на устройстве не используется.
 
+**`health_erasures`**: удаление сведений о здоровье после отзыва `pd_health` (юр. право 5, consent-health-data.md 8.3). Когда у пользователя не остаётся действующего `pd_health`, триггер на `consents` сразу выключает все шесть категорий `data_shares` в его парах, удаляет `ingest_tokens` и выводит его из `challenge_participants`, а удаление ставит строкой с `scheduled_for` через 30 дней; новое согласие до этого срока удаляет несделанную строку. Маршрут privacy удаляет файлы фото прогресса, затем `purge_health_data` (только service_role) удаляет анкеты, цели, замеры, фото, питание, сон и шаги, тренировки и рекорды, недельную цель, отправленные тренеру отчёты и карточки сторис видов `records`, `weight`, `streak_*` (эти таблицы чистятся по отзыву согласия; клиенты-карточки тренера согласий не дают и не затрагиваются), ставит `done_at` и пишет `health_data.purge` в журнал админов. Пользователь читает свою строку, писать не может.
+
 ```sql
 create type public.consent_kind as enum ('beta_terms', 'privacy_policy', 'contact_share',
   'terms', 'pd_general', 'pd_health', 'age_confirmed');

@@ -24,6 +24,7 @@ test.describe("consents in the settings", () => {
     await expect(page.getByText(/Отозвать согласие на данные о здоровье\?/)).toBeVisible();
     await page.getByRole("button", { name: "Отозвать", exact: true }).click();
     await expect(page.getByText("Не дано")).toBeVisible();
+    await expect(page.getByText(/^Сведения о здоровье удалим /)).toBeVisible();
     await expect(page.getByText(/^Дано /)).toHaveCount(2);
     // The required consents stay: the proxy still lets the person in.
     await page.goto("/client");

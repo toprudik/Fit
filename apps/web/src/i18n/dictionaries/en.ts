@@ -65,6 +65,11 @@ export const en: Dictionary = {
       failed: "That didn't work. Please try again.",
     },
   },
+  healthConsentGate: {
+    title: "Health data consent needed",
+    text: "Measurements, photos, nutrition, the questionnaire, steps and sleep are kept only with your separate consent. Your schedule and passes work without it.",
+    give: "Give consent",
+  },
   healthNotice: {
     title: "First, about your health",
     lead: "DaFit is not a medical app. Please read this before workouts, the questionnaire and working out your nutrition target.",
@@ -5379,7 +5384,9 @@ export const en: Dictionary = {
       notGiven: "Not given",
       give: "Give consent",
       revoke: "Withdraw consent",
-      revokeConfirm: "Withdraw your consent to health data? You can give it again here.",
+      revokeConfirm: "Withdraw your consent to health data? Trainers stop seeing it right away, and in 30 days we'll delete your questionnaire, measurements, photos, nutrition, sleep, steps and workouts. If you give consent again before then, nothing is deleted.",
+      erasureScheduled: "We'll delete your health data on {date}. Until then you can download it under “Data export”.",
+      erasureDone: "Your health data was deleted on {date}.",
       revokeYes: "Withdraw",
       keep: "Keep it",
       failed: "That didn't work. Try again.",
