@@ -32,6 +32,12 @@ export const en: Dictionary = {
       kicker: "Trainer invite",
       description: "Become a client on DaFit: your schedule, pass and progress stay in one place.",
     },
+    forTrainers: {
+      title: "DaFit for trainers",
+      generic: "DaFit for trainers",
+      kicker: "Beta waitlist",
+      description: "Schedule, passes and client progress in one place, in Telegram and on the web. Join the beta waitlist.",
+    },
     trainerInvite: {
       title: "You're invited to coach on DaFit",
       generic: "You're invited to coach on DaFit",
