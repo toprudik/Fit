@@ -383,6 +383,7 @@ export const en: Dictionary = {
           { q: "Who sees reviews about me?", a: "A client can leave a review after three sessions that took place. It is seen by the author, you and the DaFit team, and reviews are not shown publicly anywhere yet. You can reply once and edit the reply later. If a review is unfair, tap “Dispute” and the DaFit team will check it." },
           { q: "How does “Bring a friend” work?", a: "It is an offer for your clients on Pro. You set how many sessions a client gets for a friend and how many the friend gets. The bonus is added to the active pass after the friend's first payment that you record in DaFit. Only people who haven't trained with you before count." },
           { q: "What does “Invite a trainer” give me?", a: "A link for trainers you know, and it works on the free plan too: the trainer zone opens for them right away, without an invite. In the beta, for a colleague who holds 3 or more sessions a week for 4 weeks in a row, the DaFit team gives you a month of Pro. Pro is open to everyone for now, so that month starts after the beta." },
+          { q: "What are “My milestones”?", a: "Your growth markers in DaFit: “First client after a trial”, “Five clients” at the same time, “Four weeks in a row” with attendance marked, “100 sessions” and “500 sessions”. Automatic marking doesn't count towards the weeks, and a group session counts as one. The screen is under “More”, “My milestones”. The bot messages you about each new milestone, and you can switch that off in “Settings”, “Notifications”." },
         ],
       },
       {
@@ -5016,6 +5017,7 @@ export const en: Dictionary = {
         challenge_joined: { title: "Challenge finisher", text: "Finished a challenge with points on the board" },
         challenge_done: { title: "Challenge done", text: "Reached the goal of a challenge" },
         challenge_winner: { title: "Top three", text: "Among the top three on a challenge leaderboard" },
+        referral_friend: { title: "Friend by invitation", text: "A friend joined your trainer by your link and paid for sessions" },
       },
     },
     trainer: {
