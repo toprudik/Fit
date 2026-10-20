@@ -3,6 +3,7 @@
 import { downloadFile, shareStory } from "@tma.js/sdk-react";
 import { Award, CalendarCheck, Download, Flame, Scale, Share2, Trophy, Users } from "lucide-react";
 import { useState, useTransition } from "react";
+import { PublicConsentSheet } from "@/components/public-data/public-consent-sheet";
 import { Button } from "@/components/ui/button";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { Sheet } from "@/components/ui/sheet";
@@ -28,7 +29,8 @@ const FILE_NAME = "dafit-story.png";
 /**
  * "Карточки для сторис" of a monthly report (PRD wave-3 §4-4…4-8): the client picks a card, the server freezes
  * it, and the 1080×1920 picture opens with "Выложить в сторис" in Telegram, or sharing and saving elsewhere.
- * The weight card asks first (§4-5). The picture follows the app's theme and language.
+ * The weight card asks first (§4-5), and the first card asks for the consent to publish story cards (152-FZ
+ * art. 10.1), then is made. The picture follows the app's theme and language.
  */
 export function StoryCards({ month, options }: { month: string; options: StoryOption[] }) {
   const { t, locale } = useI18n();
@@ -38,12 +40,18 @@ export function StoryCards({ month, options }: { month: string; options: StoryOp
   const [pending, startTransition] = useTransition();
   const [confirmWeight, setConfirmWeight] = useState(false);
   const [image, setImage] = useState<string | null>(null);
+  const [consentFor, setConsentFor] = useState<{ option: StoryOption; confirm: boolean } | null>(null);
 
   if (!options.length) return null;
 
   function make(option: StoryOption, confirm = false) {
     startTransition(async () => {
       const result = await createStoryCard({ month, kind: option.kind, coachingId: option.coachingId, confirm });
+      if (result.status === "consent") {
+        setConfirmWeight(false);
+        setConsentFor({ option, confirm });
+        return;
+      }
       if (result.status !== "created") {
         toast.error(copy.failed);
         return;
@@ -104,6 +112,15 @@ export function StoryCards({ month, options }: { month: string; options: StoryOp
             </Button>
           </>
         }
+      />
+
+      <PublicConsentSheet
+        scope="story"
+        open={consentFor !== null}
+        onOpenChange={(open) => (open ? undefined : setConsentFor(null))}
+        onDone={() => {
+          if (consentFor) make(consentFor.option, consentFor.confirm);
+        }}
       />
 
       <Sheet

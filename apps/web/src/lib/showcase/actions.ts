@@ -10,11 +10,9 @@ export type AddressState =
   | { status: "saved"; slug: string }
   | { status: "error"; reason: "invalid" | "taken" | "failed"; value: string };
 
-export type VisibilityState = { failed: boolean };
-
 /** The signed-in trainer's own row, changed under RLS and the column grants; false when nothing matched. */
 async function updateOwnProfile(
-  values: { slug: string } | { is_public: boolean } | { story_card_showcase: boolean },
+  values: { slug: string } | { story_card_showcase: boolean },
 ): Promise<{ ok: boolean; code?: string }> {
   const supabase = await createSupabaseServerClient();
   const { data: session } = await supabase.auth.getClaims();
@@ -51,15 +49,4 @@ export async function setStoryCardShowcase(enabled: boolean): Promise<{ ok: bool
   if (!ok) console.error("switching the story card showcase failed", code);
   else refresh();
   return { ok };
-}
-
-/** "Выключить витрину" / "Включить витрину": the trainer's own switch (is_public). */
-export async function setShowcaseVisible(_previous: VisibilityState, formData: FormData): Promise<VisibilityState> {
-  const { ok, code } = await updateOwnProfile({ is_public: formData.get("visible") === "true" });
-  if (!ok) {
-    console.error("switching the showcase failed", code);
-    return { failed: true };
-  }
-  refresh();
-  return { failed: false };
 }
