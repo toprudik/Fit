@@ -4070,6 +4070,14 @@ export const ru = {
     scanFailed: "Это не QR занятия.",
   },
   /** "Пригласить тренера": a trainer's referral link for other trainers (PRD wave-3 §3.2), /trainer/invite-trainers. */
+  share: {
+    open: "Открыть",
+    titles: {
+      referral: "Приглашение к тренеру в DaFit",
+      trainer_invite: "Приглашение для тренера в DaFit",
+      client_link: "Тренер зовёт тебя в DaFit",
+    },
+  },
   trainerReferrals: {
     title: "Пригласить тренера",
     moreText: "Бонус за коллег, которые придут по твоей ссылке",
