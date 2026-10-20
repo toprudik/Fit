@@ -366,7 +366,9 @@ comment on function public.get_trainer_showcase_prices(text) is
   'price_grid; no rows for an unknown or closed showcase (R16, Q60) or without that consent.';
 
 -- A story card opens to anyone with its link, so it needs the person's consent to publish, given once before the
--- first card. A trigger, so create_story_card (20261018002741) stays as it is; the app asks and tries again.
+-- first card. A trigger, so create_story_card (20261018002741) stays as it is; the app asks and tries again. A card of
+-- the trainer's showcase (kind trainer_showcase) shows only what the open showcase does, so the showcase consent covers
+-- it; every other card, a trainer's month recap included, needs the consent to story cards.
 create function private.story_cards_require_public_consent()
 returns trigger
 language plpgsql
@@ -374,7 +376,7 @@ security definer
 set search_path = ''
 as $$
 begin
-  if (private.public_consent(new.user_id, 'story')).id is null then
+  if (private.public_consent(new.user_id, case when new.kind = 'trainer_showcase' then 'showcase' else 'story' end)).id is null then
     raise exception 'consent_required' using errcode = 'P0001';
   end if;
   return new;
