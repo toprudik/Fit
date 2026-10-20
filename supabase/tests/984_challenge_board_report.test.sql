@@ -1,4 +1,4 @@
--- The board's report_id, migration 20261020113817_challenge_board_report.sql: another participant reports an alias by
+-- The board's report_id, migration 20261020143517_challenge_board_report.sql: another participant reports an alias by
 -- its challenge_participants row, and nothing on the board gives away a user's id or an aliased photo.
 begin;
 \ir _helpers.psql
