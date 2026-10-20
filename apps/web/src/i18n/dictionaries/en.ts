@@ -4259,6 +4259,7 @@ export const en: Dictionary = {
   calendar: {
     title: "Calendar",
     intro: "Add your DaFit sessions to Google, Apple or Outlook Calendar. They show up next to everything else and update on their own.",
+    privacyNote: "Events include the name of your client or trainer and the time and place of the session. The calendar you connect gets them and keeps them under its own rules. If the link ends up in the wrong hands, tap “Reissue link”: the old one stops working at once.",
     signedOutText: "Sign in with Telegram to connect a calendar.",
     signIn: "Sign in with Telegram",
     zones: { trainer: "Sessions with clients", client: "My sessions" },
