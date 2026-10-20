@@ -34,7 +34,8 @@ jobs:
         working-directory: apps/web
       - run: npx playwright install --with-deps chromium
         working-directory: apps/web
-      - run: scripts/e2e-scenarios.sh
+      # @visual snapshots have no baselines in git (compared locally, see e2e-scenarios/README.md).
+      - run: scripts/e2e-scenarios.sh --grep-invert @visual
         working-directory: apps/web
         env:
           NEXT_TELEMETRY_DISABLED: 1
