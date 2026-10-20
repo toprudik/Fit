@@ -1935,6 +1935,7 @@ export const en: Dictionary = {
       days: { one: "Over {count} day", few: "Over {count} days", many: "Over {count} days", other: "Over {count} days" },
       units: { h: "h", min: "min" },
     },
+    healthClosed: "Without your consent to health data, the review leaves out workouts, records, streaks, measurements, nutrition and activity.",
     homework: { header: "Homework", done: "Done", ofTotal: "{done} of {total}" },
     /** Sending the month to a trainer (§4 rule 3). */
     forward: {
