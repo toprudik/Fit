@@ -2,7 +2,7 @@
 
 import { refresh } from "next/cache";
 import { z } from "zod";
-import { getLocale } from "@/i18n/server";
+import { isLocale, type Locale } from "@/i18n/config";
 import { isDay } from "@/lib/passes/present";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { COMMENT_MAX, ENTRY_GRAMS_MAX, ENTRY_KCAL_MAX, FOOD_KCAL_100_MAX, SERVINGS_MAX, isMeal, type Meal } from "./diary";
@@ -23,17 +23,17 @@ function failed(what: string, error: { code: string }): { ok: false; reason: "in
   return { ok: false, reason: "failed" };
 }
 
-/** "Поиск" in "+ Еда" (§3.2, §3.8). */
-export async function findFoods(query: string): Promise<FoodSearch> {
-  if (typeof query !== "string") return { foods: [], catalogDown: false, drafts: [] };
-  return searchFoods(query, await getLocale());
+/** "Поиск" in "+ Еда" (§3.2, §3.8). The screen passes its locale: getLocale() throws inside a Server Action. */
+export async function findFoods(query: string, locale: Locale): Promise<FoodSearch> {
+  if (typeof query !== "string" || !isLocale(locale)) return { foods: [], catalogDown: false, drafts: [] };
+  return searchFoods(query, locale);
 }
 
 /** A scanned or typed barcode (§3.2–3.4); invalid digits give no food. */
-export async function findBarcode(value: string): Promise<BarcodeLookup & { barcode: string | null }> {
+export async function findBarcode(value: string, locale: Locale): Promise<BarcodeLookup & { barcode: string | null }> {
   const barcode = typeof value === "string" ? normalizeBarcode(value) : null;
-  if (!barcode) return { food: null, catalogDown: false, draft: null, barcode: null };
-  return { ...(await foodByBarcode(barcode, await getLocale())), barcode };
+  if (!barcode || !isLocale(locale)) return { food: null, catalogDown: false, draft: null, barcode: null };
+  return { ...(await foodByBarcode(barcode, locale)), barcode };
 }
 
 export type EntryInput =

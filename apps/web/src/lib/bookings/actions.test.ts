@@ -62,6 +62,7 @@ const KNOWN = [
   "waitlist_not_found",
   "offer_expired",
   "account_deleting",
+  "debt_limit",
 ];
 
 const fail = (message: string, code = "P0001") => ({ data: null, error: { message, code } });
