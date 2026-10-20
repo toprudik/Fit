@@ -217,6 +217,7 @@ export function AddAssistantButton({ clients }: { clients: { coachingId: string;
 export function SubstituteButton({ sessionId }: { sessionId: string }) {
   const { t } = useI18n();
   const copy = t.team;
+  const router = useRouter();
   const [invite, setInvite] = useState<DelegationInvite | null>(null);
   const [pending, startTransition] = useTransition();
   return (
@@ -235,7 +236,13 @@ export function SubstituteButton({ sessionId }: { sessionId: string }) {
       >
         {copy.substitute.button}
       </Button>
-      <InviteSheet invite={invite} onClose={() => setInvite(null)} />
+      <InviteSheet
+        invite={invite}
+        onClose={() => {
+          setInvite(null);
+          router.refresh();
+        }}
+      />
     </>
   );
 }

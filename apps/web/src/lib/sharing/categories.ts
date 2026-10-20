@@ -1,8 +1,8 @@
 /**
- * What a client shares with each trainer (PRD wave-1 §2.12-4, decisions Q38). Wave 1 shows these four;
- * nutrition and steps keep their defaults until wave 2 brings their screens.
+ * What a client shares with each trainer (PRD wave-1 §2.12-4, decisions Q38): every column of data_shares, so the
+ * client can close nutrition and steps too, as the beta terms promise.
  */
-export const SHARE_CATEGORIES = ["measurements", "photos", "workouts", "intake"] as const;
+export const SHARE_CATEGORIES = ["measurements", "photos", "workouts", "nutrition", "steps", "intake"] as const;
 
 export type ShareCategory = (typeof SHARE_CATEGORIES)[number];
 

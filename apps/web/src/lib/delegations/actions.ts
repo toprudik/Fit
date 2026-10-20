@@ -47,7 +47,8 @@ export async function createSubstitute(sessionId: string): Promise<DelegationAct
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("create_delegation", { p_kind: "substitute", p_session_id: sessionId }).single();
   if (error) return failed("create substitute", error);
-  refresh();
+  // No refresh here: the session page would swap the button for the pending row and drop the sheet with the
+  // one-time link. The button refreshes once the sheet closes.
   return { ok: true, value: { id: data.delegation_id, link: inviteLink(data.token) } };
 }
 
@@ -55,7 +56,11 @@ export async function createSubstitute(sessionId: string): Promise<DelegationAct
 export async function createSubstitutes(sessionIds: string[]): Promise<DelegationActionResult<DelegationInvite>> {
   const ids = Array.isArray(sessionIds) ? [...new Set(sessionIds.filter(isId))] : [];
   if (ids.length === 0 || ids.length > SUBSTITUTE_MAX) return { ok: false, reason: "invalid" };
-  if (ids.length === 1) return createSubstitute(ids[0]);
+  if (ids.length === 1) {
+    const single = await createSubstitute(ids[0]);
+    if (single.ok) refresh();
+    return single;
+  }
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("create_substitutions", { p_session_ids: ids }).single();
   if (error) return error.code === "22023" ? { ok: false, reason: "invalid" } : failed("create substitutes", error);

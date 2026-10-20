@@ -762,6 +762,7 @@ const templates: Partial<Record<NotificationType, Template>> = {
   // admin_decide_review_dispute (§11 rule 7); the author also gets the reason a hidden review shows.
   report_resolution: ({ t, payload }) => {
     const hidden = payload.hidden === true;
+    if (typeof payload.event === "string") return reportNotice(t, payload);
     if (payload.role === "author") {
       return {
         text: hidden
@@ -776,6 +777,22 @@ const templates: Partial<Record<NotificationType, Template>> = {
     };
   },
 };
+
+/** A report under DSA arts. 16, 17 and 20: the receipt, the decision with its reason, an appeal's outcome. */
+function reportNotice(t: TemplateContext["t"], payload: TemplateContext["payload"]): ReturnType<Template> {
+  const reason = typeof payload.reason === "string" ? payload.reason : "";
+  const buttons: TemplateButton[] = [{ text: t.open, path: "/" }];
+  if (payload.event === "received") return { text: escapeHtml(t.reportReceived), buttons };
+  if (payload.event === "appeal_received") return { text: escapeHtml(t.reportAppealReceived), buttons };
+  if (payload.event === "dismissed") return { text: interpolateEscaped(t.reportDismissed, { reason }), buttons };
+  const owner = payload.role === "owner";
+  const appeal = payload.appeal === true;
+  const hidden = payload.hidden === true;
+  const text = appeal
+    ? hidden ? t.reportAppealHidden : t.reportAppealShown
+    : owner ? t.reportHiddenOwner : hidden ? t.reportHiddenReporter : t.reportKeptReporter;
+  return { text: interpolateEscaped(text, { reason }), buttons };
+}
 
 /** "18:30" in the recipient's zone. */
 function clockTime(locale: Locale, value: Json | undefined, timeZone: string | null): string {
