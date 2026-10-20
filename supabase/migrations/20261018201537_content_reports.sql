@@ -412,6 +412,17 @@ comment on function public.admin_dismiss_report(uuid, text) is
 revoke all on function public.admin_dismiss_report(uuid, text) from public, anon;
 grant execute on function public.admin_dismiss_report(uuid, text) to authenticated;
 
+-- The reporter follows their own reports, but not an appeal the author filed against the decision: its text is
+-- the author's and goes to admins only.
+drop policy "reports: reporter or admin reads" on public.reports;
+create policy "reports: reporter or admin reads"
+  on public.reports for select
+  to authenticated
+  using ((reporter_id = (select auth.uid()) and (appealed_by is null or appealed_by = (select auth.uid())))
+         or (select private.is_admin()));
+comment on policy "reports: reporter or admin reads" on public.reports is
+  'The reporter follows their own complaints and appeals; admins read all of them. The reported user does not see them.';
+
 -- =========================================================================================================
 -- Appeals
 

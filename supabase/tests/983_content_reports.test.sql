@@ -2,7 +2,7 @@
 -- who can report what, the receipt, the decision with a reason to both sides, the appeal to another admin.
 begin;
 \ir _helpers.psql
-select plan(39);
+select plan(40);
 
 select tests.create_trainer('trainer_a', 'coach-anna');
 select tests.create_user('client_c');
@@ -149,6 +149,11 @@ select is((select count(*) from public.my_report_decisions()), 3::bigint, 'the a
 insert into tests.ids values ('appeal', public.appeal_report(tests.id('r_reply'), 'Это была шутка'));
 select throws_ok(format($$ select public.appeal_report(%L, 'Ещё раз') $$, tests.id('r_reply')), '23505', 'already_appealed',
   'one appeal per decision');
+select tests.clear_authentication();
+
+select tests.authenticate_as('client_c');
+select is((select count(*) from public.reports where id = tests.id('appeal')), 0::bigint,
+  'the reporter does not read the appeal the author wrote');
 select tests.clear_authentication();
 
 select tests.authenticate_as('stranger_s');
