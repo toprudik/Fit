@@ -6,7 +6,7 @@ Effective date: [EFFECTIVE DATE]
 
 This Data Processing Addendum ("DPA") forms part of the agreement between [OPERATOR FULL NAME], an individual, at [ADDRESS] ("DaFit", "we", "us") and each trainer who uses the Service ("Trainer", "you") under the [Terms of Service](terms-of-service.md). It applies from the moment you add data covered by section 2.
 
-> Team: not in the product yet, see product-changes. Trainers do not yet accept this DPA in the app, and no `consents` kind exists for it.
+> Team: trainers accept this addendum in the app (#188, consent kind `trainer_dpa`) before their first client card without an account and their first note. It is not re-asked when the text changes.
 
 > Counsel: add an unticked checkbox "I accept the Data Processing Addendum" to trainer onboarding (before the first client card or note) and record the version in `consents`. GDPR Art. 28(9) allows electronic form.
 

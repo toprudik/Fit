@@ -314,7 +314,7 @@ If you use DaFit as a trainer for business purposes, you will compensate us for 
 
 24.4. The version you accepted applies to anything that happened before the new version took effect.
 
-> Team: not in the product yet, see product-changes. Today the app records acceptance of the beta terms only (consent kind `beta_terms`, version `2026-11-beta`); there is no re-acceptance of each new version of these terms.
+> Team: acceptance of these terms is recorded with a version and a hash of the text (#186); a new version sends everyone back to the acceptance screen. There is no advance bot notice of material changes yet.
 
 > Counsel: pick [CONSUMER NOTICE DAYS] (30 is common).
 

@@ -23,6 +23,7 @@ This policy explains which cookies and similar storage the Service uses in the w
 | `dafit-locale` | Remembers the language you chose (Russian or English) | 1 year | Functional (your preference) |
 | `dafit-theme` | Remembers the theme you chose (light, dark or system), so the page does not flash the wrong colours while loading | 1 year | Functional (your preference) |
 | `dafit-zone` | Remembers whether you last used DaFit as a trainer or as a client, so the app opens there | 1 year | Functional |
+| `dafit-health-notice` | Remembers that you read the health notice shown before your first nutrition target, so it is not shown again | 1 year | Functional |
 
 ## 4. Local and session storage
 
