@@ -5058,6 +5058,7 @@ export const ru = {
         challenge_joined: { title: "Участник челленджа", text: "Челлендж завершён с очками на счету" },
         challenge_done: { title: "Челлендж пройден", text: "Цель челленджа достигнута" },
         challenge_winner: { title: "Призёр", text: "Первая тройка в лидерборде челленджа" },
+        referral_friend: { title: "Друг по приглашению", text: "Друг пришёл к тренеру по твоей ссылке и оплатил занятия" },
       },
     },
     trainer: {

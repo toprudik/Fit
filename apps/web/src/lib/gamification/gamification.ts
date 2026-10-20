@@ -23,6 +23,7 @@ export const BADGE_CODES = [
   "challenge_joined",
   "challenge_done",
   "challenge_winner",
+  "referral_friend",
 ] as const;
 
 export type BadgeCode = (typeof BADGE_CODES)[number];
