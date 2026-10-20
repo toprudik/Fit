@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
 import { BlockControls } from "@/components/admin/block-controls";
+import { TrainerHonors } from "@/components/admin/trainer-honors";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { PersonAvatar } from "@/components/ui/avatar";
@@ -89,6 +90,12 @@ async function UserCard({ params }: { params: PageProps<"/[lang]/admin/users/[id
           />
         ) : null}
       </ListGroup>
+
+      {user.is_trainer ? (
+        <Suspense fallback={<SkeletonRows rows={2} label={t.common.loading} />}>
+          <TrainerHonors trainerId={user.user_id} timeZone={timeZone} />
+        </Suspense>
+      ) : null}
 
       <ListGroup header={copy.plans} headingLevel={2}>
         {trainerPlan ? <ListRow title={copy.planTrainer} trailing={planBadge(trainerPlan.data)} /> : null}

@@ -1,14 +1,14 @@
 "use client";
 
-import { shareURL } from "@tma.js/sdk-react";
 import { Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
 import { useI18n } from "@/i18n/client";
-import { safely, useInTelegram } from "@/lib/telegram/mini-app";
+import { shareInTelegram } from "@/lib/share/share-link";
+import { useInTelegram } from "@/lib/telegram/mini-app";
 
 /**
- * "Поделиться ссылкой": Telegram's chat picker inside the Mini App (shareURL), the system share
+ * "Поделиться ссылкой": Telegram's chat picker inside the Mini App (shareInTelegram), the system share
  * sheet where the browser has one, otherwise the link goes to the clipboard. The showcase passes its
  * own button label and message.
  */
@@ -19,10 +19,7 @@ export function ShareClientLink({ link, label, text }: { link: string; label?: s
   const message = text ?? copy.shareText;
 
   async function share() {
-    if (inTelegram && safely(() => shareURL.isAvailable())) {
-      safely(() => shareURL(link, message));
-      return;
-    }
+    if (inTelegram && (await shareInTelegram(link, message))) return;
     if (typeof navigator.share === "function") {
       try {
         await navigator.share({ url: link, text: message });

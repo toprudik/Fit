@@ -143,7 +143,7 @@ function Overview({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: Pa
 
       {live ? (
         <ListGroup>
-          <DebtBookingSwitch coachingId={pair.coachingId} enabled={pair.selfBookOnDebt} />
+          <DebtBookingSwitch coachingId={pair.coachingId} enabled={pair.selfBookOnDebt} limit={pair.debtLimitSessions} />
         </ListGroup>
       ) : null}
 

@@ -1,4 +1,4 @@
-import { BadgeCheck, MapPin } from "lucide-react";
+import { Award, BadgeCheck, MapPin } from "lucide-react";
 import { PersonAvatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { PriceGrid } from "@/components/packages/price-grid";
@@ -6,6 +6,7 @@ import { ListGroup, ListRow } from "@/components/ui/list";
 import type { Dictionary } from "@/i18n/dictionaries";
 import type { PriceGridItem } from "@/lib/packages/present";
 import type { Showcase } from "@/lib/showcase/load";
+import type { TrainerHonor } from "@/lib/trainer-honors/honors";
 import { isSpecialty } from "@/lib/trainer-wizard/options";
 
 /**
@@ -13,7 +14,18 @@ import { isSpecialty } from "@/lib/trainer-wizard/options";
  * format and city, specialties, about, the price grid and locations. Only what get_trainer_showcase and
  * get_trainer_showcase_prices return, so nothing private can show up here (SHOP-7).
  */
-export function ShowcaseProfile({ t, showcase, prices }: { t: Dictionary; showcase: Showcase; prices: PriceGridItem[] }) {
+export function ShowcaseProfile({
+  t,
+  showcase,
+  prices,
+  honors = [],
+}: {
+  t: Dictionary;
+  showcase: Showcase;
+  prices: PriceGridItem[];
+  /** Founder and ambassador, next to the verified badge; get_trainer_honors gives them only for a verified trainer. */
+  honors?: readonly TrainerHonor[];
+}) {
   const copy = t.showcase.public;
   const name = showcase.name ?? copy.title;
   const format = [showcase.worksOffline ? copy.offline : null, showcase.worksOnline ? copy.online : null, showcase.city]
@@ -27,9 +39,16 @@ export function ShowcaseProfile({ t, showcase, prices }: { t: Dictionary; showca
         <div className="flex flex-col items-center gap-2">
           <h1 className="text-title-1 break-words">{name}</h1>
           {showcase.verified ? (
-            <Badge tone="success" icon={BadgeCheck}>
-              {copy.verified}
-            </Badge>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Badge tone="success" icon={BadgeCheck}>
+                {copy.verified}
+              </Badge>
+              {honors.map((honor) => (
+                <Badge key={honor} tone="accent" icon={Award}>
+                  {t.trainerHonors.names[honor]}
+                </Badge>
+              ))}
+            </div>
           ) : null}
           {showcase.headline ? <p className="text-callout">{showcase.headline}</p> : null}
           {format ? <p className="text-subhead text-ink-2">{format}</p> : null}

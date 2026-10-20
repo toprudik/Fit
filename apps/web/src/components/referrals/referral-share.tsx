@@ -1,14 +1,15 @@
 "use client";
 
-import { shareURL } from "@tma.js/sdk-react";
 import { Copy, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
 import { useI18n } from "@/i18n/client";
-import { safely, useInTelegram } from "@/lib/telegram/mini-app";
+import { shareInTelegram } from "@/lib/share/share-link";
+import { useInTelegram } from "@/lib/telegram/mini-app";
 
 /**
- * A referral link with "Поделиться" (Telegram's share sheet inside the Mini App) and "Скопировать": the client's
+ * A referral link with "Поделиться" (inside the Mini App a prepared message with an "Открыть" button, see
+ * shareInTelegram) and "Скопировать": the client's
  * one by default, or a trainer's invitation for trainers with its own share text.
  */
 export function ReferralShare({ link, shareText }: { link: string; shareText?: string }) {
@@ -25,11 +26,11 @@ export function ReferralShare({ link, shareText }: { link: string; shareText?: s
     }
   }
 
-  function share() {
-    if (inTelegram && safely(() => shareURL.isAvailable())) {
-      safely(() => shareURL(link, shareText ?? copy.shareText));
-    } else if (typeof navigator.share === "function") {
-      navigator.share({ url: link, text: shareText ?? copy.shareText }).catch(() => undefined);
+  async function share() {
+    const text = shareText ?? copy.shareText;
+    if (inTelegram && (await shareInTelegram(link, text))) return;
+    if (typeof navigator.share === "function") {
+      navigator.share({ url: link, text }).catch(() => undefined);
     } else {
       void copyLink();
     }
@@ -42,7 +43,7 @@ export function ReferralShare({ link, shareText }: { link: string; shareText?: s
         <span className="text-subhead break-all select-all">{link}</span>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" icon={Share2} onClick={share}>
+        <Button size="sm" icon={Share2} onClick={() => void share()}>
           {copy.share}
         </Button>
         <Button size="sm" variant="secondary" icon={Copy} onClick={() => void copyLink()}>
