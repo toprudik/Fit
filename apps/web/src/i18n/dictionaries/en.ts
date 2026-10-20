@@ -39,6 +39,26 @@ export const en: Dictionary = {
       description: "Run your schedule, client passes and progress in one app, right inside Telegram.",
     },
   },
+  trainerHonors: {
+    names: { founder: "Founding trainer", ambassador: "Ambassador" },
+    admin: {
+      header: "Showcase honors",
+      footer: "The showcase shows them only while the trainer is verified. Only admins see the reason, on the card and in the log.",
+      since: "Since {date}",
+      grant: "Grant",
+      revoke: "Take back",
+      reasonLabel: "Reason",
+      reasonHint: "Only admins will see it",
+      reasonEmpty: "Write a reason",
+      confirmGrant: "Grant honor",
+      confirmRevoke: "Take back honor",
+      cancel: "Cancel",
+      granted: "Honor granted",
+      revoked: "Honor taken back",
+      unchanged: "Another admin already changed it.",
+      failed: "That didn't work. Please try again.",
+    },
+  },
   common: {
     back: "Back",
     close: "Close",
@@ -464,6 +484,7 @@ export const en: Dictionary = {
     context: "The message comes with the screen you're writing from, the app version, language and theme. Nothing else from the screen goes along: no clients, no records.",
     send: "Send",
     failed: "Couldn't send it. Try again.",
+    tooMany: "Too many messages in a row. Try again a bit later.",
     signedOut: "Sign in to write to the team.",
     signIn: "Sign in",
     sentTitle: "Thanks, got it",
@@ -3013,6 +3034,16 @@ export const en: Dictionary = {
       referral: "Refer a friend",
       manual: "Added by the trainer",
     },
+    channels: {
+      header: "Where people came from",
+      footer: "The channel of the link someone first opened DaFit with: src or utm_source on the website, ch_ or __s_ in a link to the app in Telegram. No label means a plain link, or signing up before channels started to count on 2026-10-18.",
+      channel: "Channel",
+      users: "Accounts",
+      trainers: "Trainers",
+      clients: "Clients",
+      none: "No label",
+      names: { tg: "Telegram", vk: "VK", max: "MAX", ig: "Instagram", yt: "YouTube", tt: "TikTok" },
+    },
     weekly: {
       header: "By week",
       footer: "Weeks in UTC, starting Monday. The last one is still running, so growth in “Highlights” compares the two weeks before it.",
@@ -3032,7 +3063,8 @@ export const en: Dictionary = {
       empty: "Nobody signed up in this period.",
     },
     csv: {
-      sections: { summary: "Summary", success: "Beta goals", weekly: "By week", cohorts: "Retention" },
+      sections: { summary: "Summary", success: "Beta goals", channels: "Where people came from", weekly: "By week", cohorts: "Retention" },
+      channels: { channel: "Channel", campaign: "Campaign", users: "Accounts", trainers: "Trainers", clients: "Clients with a trainer" },
       success: {
         clients: "Clients with a trainer",
         clients_with_streak: "Clients with a weekly streak",
@@ -3202,6 +3234,7 @@ export const en: Dictionary = {
       plans: "Plans",
       analytics: "Analytics",
       stats: "Statistics",
+      waitlist: "Waitlist",
     },
     backToApp: "Back to the app",
     overview: {
@@ -4169,6 +4202,13 @@ export const en: Dictionary = {
       label: "Language",
     },
   },
+  /** Legal documents at /legal: list, draft note, links from settings and the beta terms. */
+  legal: {
+    title: "Legal",
+    intro: "How DaFit works, what happens to your data and what your rights are. These are drafts still under legal review; until then the closed beta terms apply.",
+    all: "All documents",
+    table: "Table, scrolls sideways",
+  },
   /** Reminder lead times: "1 day before", "in 3 hours" (PRD wave-1 §2.9-2). */
   reminders: {
     units: {
@@ -4247,6 +4287,7 @@ export const en: Dictionary = {
   calendar: {
     title: "Calendar",
     intro: "Add your DaFit sessions to Google, Apple or Outlook Calendar. They show up next to everything else and update on their own.",
+    privacyNote: "Events include the name of your client or trainer and the time and place of the session. The calendar you connect gets them and keeps them under its own rules. If the link ends up in the wrong hands, tap “Reissue link”: the old one stops working at once.",
     signedOutText: "Sign in with Telegram to connect a calendar.",
     signIn: "Sign in with Telegram",
     zones: { trainer: "Sessions with clients", client: "My sessions" },
@@ -4934,6 +4975,77 @@ export const en: Dictionary = {
       waterHidden: "Water shows when the client shares nutrition",
       hidden: "The client doesn't share steps, sleep or nutrition",
     },
+  },
+  forTrainers: {
+    title: "For trainers",
+    description: "Schedule, passes and client progress in one place, in Telegram and on the web. Join the beta waitlist.",
+    openApp: "Open DaFit",
+    hero: {
+      eyebrow: "For personal trainers",
+      title: "Yes, done.",
+      lead: "You mark the session. DaFit does the counting: passes, debts, reminders and client progress. Works in Telegram and in the browser.",
+      action: "Join the waitlist",
+      beta: "DaFit is in closed beta. We invite new trainers in waves, from the waitlist.",
+    },
+    features: {
+      title: "What DaFit takes off your plate",
+      items: {
+        passes: { title: "Passes count themselves", text: "Mark a session and the balance updates. Debts show up right away." },
+        reminders: { title: "Reminders go out on their own", text: "Clients get session reminders on their own, with quiet hours." },
+        cancellations: { title: "Cancellations by your rules", text: "Set cancellation and charge rules once. Forgive a charge in one tap." },
+        money: { title: "Income and clients who might leave", text: "Income by week, month and year, and a list of clients who might leave." },
+        progress: { title: "Clients see their progress", text: "Streaks, badges, milestones at 10, 25, 50 and 100 sessions and a monthly report." },
+        growth: { title: "New clients", text: "A showcase with a QR code and a trial session link, plus a refer-a-friend offer." },
+      },
+    },
+    steps: {
+      title: "How to start",
+      items: ["Set up your profile and pass prices.", "Invite clients with a link or QR code.", "Mark sessions, DaFit counts the rest."],
+      clients: "Clients don't need to install anything: bookings, pass balance and progress open in Telegram or in the browser.",
+    },
+    waitlist: {
+      title: "Waitlist",
+      text: "Leave your name and a contact. We'll write when a spot opens in the next wave.",
+    },
+    signInText: "Or sign in with Telegram, then you can skip the contact.",
+    signIn: "Sign in with Telegram",
+    alreadyTrainer: "You're already a trainer on DaFit, no need for the waitlist.",
+    form: {
+      name: "Your name",
+      contact: "How to reach you",
+      contactHint: "Telegram username, phone or email",
+      contactOptional: "Optional: we can message you on Telegram",
+      clients: "How many clients you have",
+      clientCounts: { up_to_5: "Up to 5", "6_15": "6–15", "16_40": "16–40", over_40: "Over 40" },
+      consent:
+        "I agree to the processing of my name and contact so DaFit can get in touch about access. I can withdraw consent by replying to our message.",
+      website: "Website",
+      submit: "Join",
+      errors: {
+        invalid: "Check your name and contact: the contact needs at least 3 characters.",
+        consent: "Tick the consent box, we can't add you without it.",
+        busy: "Lots of requests right now. Try again in a minute.",
+        failed: "Couldn't add you. Try again.",
+      },
+    },
+    joined: {
+      title: "You're on the waitlist",
+      text: "We'll write when a spot opens in the next wave.",
+    },
+    footer: "DaFit: schedule, passes and client progress for personal trainers.",
+  },
+  adminWaitlist: {
+    title: "Waitlist",
+    intro: "Trainers who joined on the page for trainers. Newest first.",
+    count: "Total: {n}",
+    emptyTitle: "No one yet",
+    emptyText: "Entries show up here when trainers join on the page for trainers.",
+    openLanding: "Open the page",
+    noContact: "no contact",
+    noName: "No name",
+    clients: { up_to_5: "up to 5 clients", "6_15": "6–15 clients", "16_40": "16–40 clients", over_40: "over 40 clients" },
+    source: "source {source}",
+    signedIn: "Signed in",
   },
   languages: {
     ru: "Русский",

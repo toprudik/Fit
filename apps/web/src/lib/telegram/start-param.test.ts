@@ -61,4 +61,14 @@ describe("startParamPath", () => {
     expect(startParamPath("ti_a/b")).toBeNull();
     expect(startParamPath(`ti_${"A".repeat(600)}`)).toBeNull();
   });
+
+  it("ignores a channel label: the suffix __s_<label> keeps the screen, ch_<label> stays on the home screen", () => {
+    expect(startParamPath("tp_anna-fit__s_vk")).toBe("/trainers/anna-fit");
+    expect(startParamPath("ti_ABCDEFGHJKLM__s_promo-1")).toBe("/onboarding/trainer?code=ABCDEFGHJKLM");
+    expect(startParamPath("ch_tg")).toBeNull();
+  });
+
+  it("keeps a link token that happens to contain __s_", () => {
+    expect(startParamPath("ci_Ab3__s_3_-Ab3_-Ab3_-Ab")).toBe("/i/Ab3__s_3_-Ab3_-Ab3_-Ab");
+  });
 });
