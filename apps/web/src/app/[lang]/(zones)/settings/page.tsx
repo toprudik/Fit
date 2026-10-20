@@ -31,10 +31,10 @@ export default async function SettingsPage() {
         <ListGroup>
           <ListRow icon={FileText} title={t.legal.title} href="/legal" />
           <ListRow icon={Scale} title={t.workouts.licenses.title} href="/settings/licenses" />
-          <ListRow icon={Activity} title={t.appOpens.title} href="/settings/app-opens" />
         </ListGroup>
         <ListGroup header={t.account.settings.header}>
           <ListRow icon={Archive} title={t.account.settings.export} href="/settings/export" />
+          <ListRow icon={Activity} title={t.appOpens.title} href="/settings/app-opens" />
           <ListRow icon={Trash2} tone="danger" title={t.account.settings.delete} href="/settings/delete" />
         </ListGroup>
       </div>
