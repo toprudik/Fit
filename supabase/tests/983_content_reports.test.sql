@@ -1,4 +1,4 @@
--- Content reports, migration 20261018201537_content_reports.sql (legal/product-changes.md Б13, DSA arts. 16, 17, 20):
+-- Content reports, migration 20261020111437_content_reports.sql (legal/product-changes.md Б13, DSA arts. 16, 17, 20):
 -- who can report what, the receipt, the decision with a reason to both sides, the appeal to another admin.
 begin;
 \ir _helpers.psql

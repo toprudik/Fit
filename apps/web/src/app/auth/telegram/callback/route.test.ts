@@ -34,6 +34,9 @@ vi.mock("@/lib/auth/sign-in-with-telegram", () => {
   return { AccountBlockedError, signInWithTelegram };
 });
 
+const recordSignupSource = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock("@/lib/attribution/record", () => ({ recordSignupSource }));
+
 /** The account's user_settings row (null: the read fails) and the updates written to it after sign-in. */
 const account = vi.hoisted(() => ({
   settings: null as Record<string, string> | null,
@@ -92,6 +95,7 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   account.settings = { locale: "en", theme: "dark", last_zone: "trainer" };
   account.updates = [];
+  recordSignupSource.mockClear();
 });
 
 describe("GET /auth/telegram/callback", () => {
@@ -127,6 +131,22 @@ describe("GET /auth/telegram/callback", () => {
 
     expect(account.updates).toEqual([{ locale: "en", theme: "dark" }]);
     expect(preferenceCookies(res)).toEqual({ "dafit-locale": "en", "dafit-zone": "client" });
+    expect(recordSignupSource).toHaveBeenCalledWith("user-43", null, "web");
+  });
+
+  it("keeps the channel label a new account arrived with and clears it from the browser", async () => {
+    signInWithTelegram.mockResolvedValueOnce({ userId: "user-43", newAccount: true });
+    const res = await get({ code: "code-1", state: STATE }, saved, "dafit_src=vk.autumn");
+
+    expect(recordSignupSource).toHaveBeenCalledWith("user-43", { source: "vk", campaign: "autumn" }, "web");
+    expect(res.headers.getSetCookie().find((line) => line.startsWith("dafit_src="))).toMatch(/Expires=Thu, 01 Jan 1970/);
+  });
+
+  it("records no channel for an account that already exists, but still clears the label", async () => {
+    const res = await get({ code: "code-1", state: STATE }, saved, "dafit_src=tg");
+
+    expect(recordSignupSource).not.toHaveBeenCalled();
+    expect(res.headers.getSetCookie().some((line) => line.startsWith("dafit_src="))).toBe(true);
   });
 
   it("still signs in when the account settings can't be read", async () => {

@@ -1237,7 +1237,7 @@ describe("review_prompt and report_resolution (wave-2 §11)", () => {
     );
   });
 
-  // Content reports (DSA arts. 16, 17, 20): payloads of migration 20261018201537_content_reports.sql.
+  // Content reports (DSA arts. 16, 17, 20): payloads of migration 20261020111437_content_reports.sql.
   const report = (payload: Record<string, unknown>) =>
     renderMessage({ ...row, kind: "report_resolution", payload: { target_type: "food_comment", report_id: PAIR, ...payload } }, options)
       ?.text;

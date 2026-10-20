@@ -54,10 +54,16 @@ describe("setShare", () => {
     expect(await setShare({ coachingId: PAIR, category: "intake", shared: true })).toEqual({ ok: false });
   });
 
-  it("rejects a bad pair id or a category outside wave 1 before touching the database", async () => {
+  it("closes nutrition and steps like any other category", async () => {
+    expect(await setShare({ coachingId: PAIR, category: "nutrition", shared: false })).toEqual({ ok: true });
+    expect(await setShare({ coachingId: PAIR, category: "steps", shared: false })).toEqual({ ok: true });
+    expect(db.calls.map((call) => call[2])).toEqual([{ nutrition: false }, { steps: false }]);
+  });
+
+  it("rejects a bad pair id or an unknown category before touching the database", async () => {
     expect(await setShare({ coachingId: "nope", category: "photos", shared: true })).toEqual({ ok: false });
-    // @ts-expect-error nutrition has no switch until wave 2.
-    expect(await setShare({ coachingId: PAIR, category: "nutrition", shared: false })).toEqual({ ok: false });
+    // @ts-expect-error not a column of data_shares.
+    expect(await setShare({ coachingId: PAIR, category: "sleep", shared: false })).toEqual({ ok: false });
     // @ts-expect-error not a boolean.
     expect(await setShare({ coachingId: PAIR, category: "photos", shared: "yes" })).toEqual({ ok: false });
     expect(db.calls).toEqual([]);

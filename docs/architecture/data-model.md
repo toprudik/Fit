@@ -540,7 +540,7 @@ create table public.coachings (
   -- client_alias переехал в coaching_trainer_meta: колоночный грант не может показать столбец тренеру и скрыть от клиента.
   -- Дедлайна отмены на пару нет: правило тренера действует для всех его клиентов (PRD 2.6.5-1).
   self_book_on_debt         boolean not null default false,       -- «Разрешить запись в долг» этому клиенту (Q22); долг при списании возникает всегда
-  debt_limit_sessions       smallint check (debt_limit_sessions > 0),  -- null = без лимита при self_book_on_debt
+  debt_limit_sessions       smallint default 1 check (debt_limit_sessions > 0),  -- неоплаченных занятий при самозаписи; null = без лимита
   client_reminder_offsets   smallint[] not null                   -- копия default_client_reminder_offsets при создании; меняет клиент
                             check (private.valid_reminder_offsets(client_reminder_offsets)),
   -- W2: broadcasts_muted и primary_nutrition_group_id добавляются вместе со своими функциями;
@@ -2182,6 +2182,8 @@ create table public.bonuses (
 
 Все четыре таблицы под RLS без грантов: читают и пишут только функции. Тренер: `save_referral_offer` (Pro, `trainer.referral_offers`; новая акция архивирует прежнюю), `stop_referral_offer`, `trainer_referral_offer`, `trainer_referrals`, `decline_referral` (только `pending`). Клиент: `client_referral(coaching_id)` создаёт код при первом вызове, если у тренера идёт акция. Лендинг: `resolve_referral(code)` (доступна anon, как `resolve_client_invite`), `join_by_referral(code)` делает пару через `private.join_pair` с `source = 'referral'` и, если человек новый для тренера и акция идёт, `pending`-реферал.
 
+**Лист ожидания тренеров** (бэклог маркетинга, пункт 10; миграция `20261018194917_trainer_waitlist.sql`). `trainer_waitlist`: имя, контакт (Telegram, телефон или почта как ввёл человек), сколько клиентов (`up_to_5`, `6_15`, `16_40`, `over_40`), язык, метка источника (`?src=` или `utm_source`, алфавит как у start-параметра, неподходящая отбрасывается), версия согласия и его время. Пишет только `join_trainer_waitlist` (доступна anon, как `resolve_referral`): со входом строка своя (`user_id`, уникальна, обновляется повторным вызовом, уходит с аккаунтом), без входа нужен контакт, второй раз тот же контакт ничего не меняет и ответ тот же, чтобы функция не выдавала, кто уже в списке; больше 30 записей без входа в минуту отклоняются (`waitlist_busy`). Читают админ (`/admin/waitlist`) и сам записавшийся со входом.
+
 «Только после факта оплаты» (Q50): триггер `payments_referral` (`after insert or update of status on payments`) на `confirmed`-платеже `direction = 'in'` в паре приглашённого вызывает `private.qualify_referral`: если платёж подходит под условие акции (пакет оплаченного абонемента или сумма в валюте акции), реферал становится `qualified`, и каждой стороне `private.grant_referral_bonus` добавляет занятия в действующий абонемент её пары (§3.1-6, `20261017174813_referral_bonus_active_pass.sql`): `adjustment` с `note = 'referral_bonus'` и суммой 0, затем гашение долга. Абонемент выбирает `private.referral_bonus_pass`: обычный (не разовый, не старый `is_bonus`), `active` или `frozen` по `pass_balances`; у приглашённого первым идёт оплаченный абонемент, дальше тот, что действует дольше. Выручку бонус не меняет: абонемент зарабатывает цену за первые `sessions_total` занятий (`pass_share_minor`). Если действующего абонемента нет, бонус `pending` с `coaching_id` пары, а триггер `ledger_entries_referral_bonus` на `grant` следующего обычного абонемента этой пары добавляет его туда и ставит `granted`. Уведомление `referral_bonus` уходит в обоих случаях (`waiting: true`, когда ждёт; `applied: true`, когда дождался). Пригласившему не больше 10 бонусов на акцию, ждущие тоже считаются. Если этот платёж переведён в `voided` в течение 14 дней после `qualified_at`, `private.revoke_referral` забирает бонусы: ждущий становится `void`, у добавленного в абонемент снимается свободная часть (`least(sessions, available)`, `adjustment` с `note = 'referral_bonus_voided'`), полностью использованный остаётся `granted`; реферал становится `void` (wave-3 §3.1-7). Бонусные абонементы `is_bonus`, выданные до этой миграции, отменяются по-старому: без списаний и погашений `refund` остатка и `cancelled`. Завершение пары аннулирует её `pending`-рефералы с обеих сторон.
 
 Тренер приводит тренера (§3.2, `20261017090519_trainer_referrals.sql`):
@@ -2441,8 +2443,9 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
 При записи клиента на слот или занятие (`book_slot`, `book_session`) RPC решает статус:
 
 - `confirmed`, если у пары есть подходящий абонемент с `available ≥ 1` (ставится `reserved_pass_id`);
-- иначе `confirmed`, если тренер разрешил этому клиенту запись в долг (`coachings.self_book_on_debt`) и `debt_sessions < coalesce(debt_limit_sessions, ∞)`;
+- иначе `confirmed`, если тренер разрешил этому клиенту запись в долг (`coachings.self_book_on_debt`) и неоплаченных занятий (`private.unpaid_sessions`) меньше `coalesce(debt_limit_sessions, ∞)` (по умолчанию 1). Неоплаченные: `debt_sessions` плюс живые записи пары (`requested`, `confirmed`, `attended`) без `reserved_pass_id`, кроме пробных, по которым ещё нет charge;
 - иначе `requested`: тренер подтверждает (занятие при списании уйдёт в долг, либо тренер сразу оформляет разовое или абонемент) или отклоняет.
+- но если неоплаченных уже столько, сколько клиенту можно (1 без разрешения, `debt_limit_sessions` с ним), запись клиента без абонемента отклоняется с `debt_limit` (триггер `bookings_debt_limit` по флагу, который ставит `booking_auto_confirm`). Так работают слот, групповое, перенос и лист ожидания; принятое предложение сверх лимита уходит следующему в очереди и возвращает `declined`. Отметка на месте без записи (QR, геопозиция) по-прежнему приходит тренеру запросом.
 
 Для пары-карточки без аккаунта самостоятельной записи нет, занятия создаёт тренер.
 
@@ -2517,6 +2520,7 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `trainer_profiles` | сам; его клиенты в любом статусе пары (R89); A; anon/прочие: **pub** `get_trainer_showcase(slug)` (при `verification_status = 'rejected'` отвечает «недоступна», R16, Q60); зона «Тренер» и `is_trainer()` доступны при наличии `trainer_profiles` (доступ не зависит от верификации и тарифа, Q55) | S-RPC `redeem_trainer_invite` | сам (кроме `verification_status`, `verified_at`, `trainer_invite_id`: колоночные гранты); A через `admin_decide_verification` | никто |
 | `trainer_certificates` | сам; A | сам (не больше 5, R53) | сам | сам |
 | `trainer_verifications` | сам; A | S-RPC `submit_trainer_verification` (подача), `admin_decide_verification` (решение) | никто | никто |
+| `trainer_honors` | никто напрямую; A через `admin_trainer_honors(trainer)` (с причиной); **pub** `get_trainer_honors(slug)` только у открытой витрины верифицированного тренера (Q55), без причин | S-RPC `admin_set_trainer_honor` (A, причина обязательна, аудит `trainer_honor.grant`) | никто | S-RPC `admin_set_trainer_honor(..., false, ...)` (A, аудит `trainer_honor.revoke`) |
 | `trainer_invites` | A (без хеша кода); статус кода для экрана погашения: S-RPC `trainer_invite_status` | A через `admin_create_trainer_invite` | S-RPC `admin_revoke_trainer_invite` (A), `redeem_trainer_invite` | никто |
 | `client_invites` | T; **pub** по токену, по коду после входа (`resolve_client_invite`) | T; S-RPC `my_client_invite` (создаёт ссылку при первом открытии), `reissue_client_invite` | T; S-RPC `reissue_client_invite` (архивирует старые) | никто (архив) |
 | `trial_links` | T; **pub** `get_trial_link(token)` | T | T (вкл. `is_enabled`) | никто (архив) |
@@ -2558,6 +2562,7 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `plans` | все authenticated | никто (миграции) | никто | никто |
 | `plan_grants` | сам; A (R59) | A через `admin_grant_plan` | A через `admin_revoke_plan` (отзыв один раз) | никто (каскад) |
 | `access_requests` | сам; A | сам: платный тариф своей стороны, тренерский только тренеру | S-RPC (решение A) | никто (каскад) |
+| `trainer_waitlist` | сам (своя запись, если записался со входом); A | S-RPC `join_trainer_waitlist` (anon и authenticated, согласие обязательно) | S-RPC `join_trainer_waitlist` (только своя запись) | никто (каскад с аккаунтом) |
 | **W2** `client_goals` | C; T/D share:nutrition | C | никто | C |
 | `body_profiles` | C; T/D share:nutrition; BG | C | C | C |
 | `nutrition_targets` | C (свои и групп, где состоит); T: свои пары и группы; другой тренер клиента видит только факт «активна норма другого тренера» через функцию; D[nutrition] | T/D[nutrition] (source trainer/group, `low_kcal_confirmed_at` обязателен при низкой норме, это проверяет RPC `set_nutrition_target`); C (calculator) | никто (неизменяемые; закрытие периода через RPC) | никто |
