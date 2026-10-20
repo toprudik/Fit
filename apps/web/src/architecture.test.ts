@@ -144,11 +144,13 @@ describe("data access", () => {
       "app/api/cron/privacy/route.ts",
       "app/api/ingest/steps/route.ts",
       "lib/admin/user-actions.ts",
+      "lib/attribution/record.ts",
       "lib/auth/sign-in-with-telegram.ts",
       "lib/bot-actions/act-as.ts",
       "lib/contact/actions.ts",
       "lib/feedback/github.ts",
       "lib/nutrition/foods.ts",
+      "lib/rate-limit.ts",
     ]);
   });
 
