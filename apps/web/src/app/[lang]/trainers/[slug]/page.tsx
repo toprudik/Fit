@@ -10,16 +10,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { serverEnv } from "@/env/server";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getDictionary, getLocale } from "@/i18n/server";
+import { linkPreviewMetadata } from "@/lib/og/load";
 import { priceGridItems } from "@/lib/packages/present";
 import { isShowcaseSlug, normalizeSlug, showcasePath, showcaseTelegram } from "@/lib/showcase/link";
 import { showcaseFrom, showcasePricesFrom, type Showcase } from "@/lib/showcase/load";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isTrialToken, trialPath } from "@/lib/trial-links/link";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getDictionary();
-  // Closed beta: showcases stay out of search engines (PRD wave-1 §2.3-1).
-  return { title: t.showcase.public.title, robots: { index: false, follow: false } };
+export async function generateMetadata({ params }: PageProps<"/[lang]/trainers/[slug]">): Promise<Metadata> {
+  const [t, { slug }] = await Promise.all([getDictionary(), params]);
+  // Closed beta: showcases stay out of search engines (PRD wave-1 §2.3-1). Chats still show the preview (marketing §5.6).
+  return { ...(await linkPreviewMetadata("showcase", slug)), title: t.showcase.public.title, robots: { index: false, follow: false } };
 }
 
 function Unavailable({ t, text }: { t: Dictionary; text: string }) {

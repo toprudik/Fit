@@ -1,6 +1,7 @@
 import "server-only";
 import { DEFAULT_TIME_ZONE } from "@/lib/plans/plans";
 import { displayName } from "@/lib/pairs/clients";
+import { readByIds } from "@/lib/supabase/paging";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ScheduleOwner = {
@@ -25,16 +26,13 @@ export async function clientNames(supabase: ScheduleOwner["supabase"], coachingI
   const ids = [...new Set(coachingIds)];
   if (ids.length === 0) return new Map();
   const [pairs, meta] = await Promise.all([
-    supabase.from("coachings").select("id, client_id").in("id", ids),
-    supabase.from("coaching_trainer_meta").select("coaching_id, client_alias").in("coaching_id", ids),
+    readByIds(ids, (chunk) => supabase.from("coachings").select("id, client_id").in("id", chunk)),
+    readByIds(ids, (chunk) => supabase.from("coaching_trainer_meta").select("coaching_id, client_alias").in("coaching_id", chunk)),
   ]);
-  const people = await supabase
-    .from("profiles")
-    .select("id, first_name, last_name, display_name, username")
-    .in(
-      "id",
-      (pairs.data ?? []).map((pair) => pair.client_id),
-    );
+  const people = await readByIds(
+    (pairs.data ?? []).map((pair) => pair.client_id),
+    (chunk) => supabase.from("profiles").select("id, first_name, last_name, display_name, username").in("id", chunk),
+  );
   const person = new Map((people.data ?? []).map((row) => [row.id, row]));
   const alias = new Map((meta.data ?? []).map((row) => [row.coaching_id, row.client_alias]));
   return new Map((pairs.data ?? []).map((pair) => [pair.id, displayName(person.get(pair.client_id), alias.get(pair.id))]));

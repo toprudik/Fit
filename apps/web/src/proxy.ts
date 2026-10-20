@@ -4,10 +4,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { clientEnv } from "@/env/client";
 import { LOCALE_COOKIE } from "@/i18n/config";
 import { deletionRedirect, isDeletionPending } from "@/lib/account/deletion";
+import { SOURCE_COOKIE, SOURCE_COOKIE_MAX_AGE, sourceCookieValue, sourceFromSearch } from "@/lib/attribution/source";
 import { BETA_TERMS_VERSION, CONSENT_COOKIE, consentCookieOptions, consentCookieValue } from "@/lib/consent/beta-terms";
 import { adminDeniedPath, consentRedirect, isAdminPath, routeRequest, trainerZoneRedirect } from "@/lib/navigation/routing";
 import { ZONE_COOKIE } from "@/lib/navigation/zones";
 import { preferenceCookieOptions } from "@/lib/preferences";
+import { cookieAttributes, SECURE_COOKIES } from "@/lib/cookie-attributes";
 import { sessionCookieOptions } from "@/lib/supabase/cookie-options";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -127,6 +129,18 @@ export async function proxy(request: NextRequest) {
       : NextResponse.next(init);
   for (const { name, value, options } of refreshed) response.cookies.set(name, value, options);
   if (consentCookie) response.cookies.set(CONSENT_COOKIE, consentCookie, consentCookieOptions);
+  // The first channel label a signed-out browser arrives with (?src=, utm_source, the bot's start parameter),
+  // kept until Telegram sign-in creates the account and records it (marketing backlog 1). Later labels do not
+  // replace it, and a signed-in user's account already has its source.
+  const source = userId || request.cookies.has(SOURCE_COOKIE) ? null : sourceFromSearch(request.nextUrl.searchParams);
+  if (source) {
+    response.cookies.set(SOURCE_COOKIE, sourceCookieValue(source), {
+      httpOnly: true,
+      path: "/",
+      maxAge: SOURCE_COOKIE_MAX_AGE,
+      ...cookieAttributes(SECURE_COOKIES),
+    });
+  }
   if (decision.kind === "rewrite" && decision.rememberZone) {
     response.cookies.set(ZONE_COOKIE, decision.rememberZone, preferenceCookieOptions);
     // The account keeps it too, so a new device opens the same zone (ADR 0015). Only page loads
@@ -142,5 +156,5 @@ export async function proxy(request: NextRequest) {
 export const config = {
   // Everything except build assets, the public files, the auth endpoints that manage the session
   // themselves, and the cron, calendar and iOS Shortcuts routes, which have no session or locale. Other paths with a dot are pages too, so they get the app's localized 404.
-  matcher: ["/((?!_next/static|_next/image|api/auth|api/cron|api/calendar|api/ingest|auth/telegram|favicon\\.ico$|icon\\.svg$|apple-icon\\.png$|robots\\.txt$).*)"],
+  matcher: ["/((?!_next/static|_next/image|api/auth|api/cron|api/calendar|api/ingest|auth/telegram|favicon\\.ico$|icon\\.svg$|apple-icon\\.png$|robots\\.txt$|mediapipe/).*)"],
 };

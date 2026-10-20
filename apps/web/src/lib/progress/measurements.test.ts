@@ -45,7 +45,10 @@ describe("parseMeasurement", () => {
 
 describe("periods", () => {
   it("counts a month and three months back", () => {
-    expect(periodStart("month", "2026-03-31")).toBe("2026-03-03");
+    // A month back from 31 March is the last day of February, not a rolled-over 3 March.
+    expect(periodStart("month", "2026-03-31")).toBe("2026-02-28");
+    expect(periodStart("quarter", "2026-05-31")).toBe("2026-02-28");
+    expect(periodStart("month", "2028-03-31")).toBe("2028-02-29");
     expect(periodStart("quarter", "2026-10-16")).toBe("2026-07-16");
     expect(periodStart("all", "2026-10-16")).toBeNull();
   });
