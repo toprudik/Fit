@@ -1,4 +1,4 @@
-import { BadgeCheck, ChartColumn, Gem, KeyRound, LayoutDashboard, MessageSquareText, ScrollText, Star, TrendingUp, Users, type LucideIcon } from "lucide-react";
+import { BadgeCheck, ChartColumn, ClipboardList, Gem, KeyRound, LayoutDashboard, MessageSquareText, ScrollText, Star, TrendingUp, Users, type LucideIcon } from "lucide-react";
 import type { Dictionary } from "@/i18n/dictionaries";
 
 export type AdminSection = keyof Dictionary["adminShell"]["sections"];
@@ -17,5 +17,6 @@ export const ADMIN_SECTIONS: readonly { id: AdminSection; href: string; segment:
   { id: "reviews", href: "/admin/reviews", segment: "reviews", icon: Star },
   { id: "analytics", href: "/admin/analytics", segment: "analytics", icon: ChartColumn },
   { id: "stats", href: "/admin/stats", segment: "stats", icon: TrendingUp },
+  { id: "waitlist", href: "/admin/waitlist", segment: "waitlist", icon: ClipboardList },
   { id: "audit", href: "/admin/audit", segment: "audit", icon: ScrollText },
 ];
