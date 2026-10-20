@@ -10,6 +10,11 @@ test.describe("health sections behind the health data consent", () => {
     const errors = collectErrors(page);
     ok(await db.from("consents").update({ revoked_at: new Date().toISOString() }).eq("user_id", userId).eq("kind", "pd_health"), "revoke");
 
+    await page.goto("/client");
+    await expect(page.getByRole("link", { name: /Нужно согласие на данные о здоровье/ })).toBeVisible();
+    await expect(page.getByLabel("Вес сегодня")).toHaveCount(0);
+    await expectAccessible(page);
+
     await page.goto("/client/progress");
     await expect(page.getByRole("heading", { level: 2, name: "Нужно согласие на данные о здоровье" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Замеры" })).toHaveCount(0);
