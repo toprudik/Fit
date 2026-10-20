@@ -6,7 +6,7 @@ import { ownerCsv, ownerCsvName, ownerWeeks } from "@/lib/owner-metrics/metrics"
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
- * «Скачать CSV» of /admin/stats: the summary, the weeks and the cohorts in one file for a deck. Admins only:
+ * «Скачать CSV» of /admin/stats: the summary, the channels, the weeks and the cohorts in one file for a deck. Admins only:
  * everyone else gets the same 404 as the admin pages (ADM-12).
  */
 export async function GET(request: NextRequest) {
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const data = await loadOwnerMetrics(supabase, ownerWeeks(request.nextUrl.searchParams.get("weeks") ?? undefined));
     const today = new Date().toISOString().slice(0, 10);
     const copy = dictionaries[locale].ownerStats;
-    return new NextResponse(ownerCsv(data, { ...copy.csv, sources: copy.sources }, locale), {
+    return new NextResponse(ownerCsv(data, { ...copy.csv, sources: copy.sources, channelNames: copy.channels.names, noChannel: copy.channels.none }, locale), {
       headers: {
         "content-type": "text/csv; charset=utf-8",
         "content-disposition": `attachment; filename="${ownerCsvName(today)}"`,

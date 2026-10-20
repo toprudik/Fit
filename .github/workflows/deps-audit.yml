@@ -1,0 +1,51 @@
+name: Dependency audit
+
+# Known vulnerabilities in production dependencies of the web app (npm) and the bot (PyPI).
+# Not a required check: a new advisory can turn it red without any change of ours, and a required
+# check would then block every merge. It runs on PRs that change dependencies, weekly, and by hand.
+on:
+  pull_request:
+    paths:
+      - apps/web/package.json
+      - apps/web/package-lock.json
+      - apps/bot/pyproject.toml
+      - apps/bot/uv.lock
+      - .github/workflows/deps-audit.yml
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deps-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: deps-audit (web)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: npm audit --omit=dev --audit-level=high
+
+  bot:
+    name: deps-audit (bot)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/bot
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+        with:
+          python-version: "3.13"
+      # The bot itself shows up as an editable "-e ." line that pip-audit skips; its dependencies are checked.
+      - run: uv export --no-dev --no-hashes --frozen | uvx pip-audit==2.10.1 -r /dev/stdin --disable-pip --no-deps
