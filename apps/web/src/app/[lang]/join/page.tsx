@@ -71,6 +71,9 @@ async function JoinStep({ searchParams }: { searchParams: PageProps<"/[lang]/joi
       <div className="flex flex-col gap-6">
         <p className="text-callout text-ink-2">{copy.text}</p>
         <CodeForm t={t} error={submitted ? copy.codeEmpty : undefined} />
+        <Button asChild variant="ghost" block>
+          <Link href="/client/invite-trainer">{copy.inviteTrainer}</Link>
+        </Button>
       </div>
     );
   }

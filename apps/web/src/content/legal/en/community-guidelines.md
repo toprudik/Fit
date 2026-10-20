@@ -8,7 +8,7 @@ Effective date: [EFFECTIVE DATE]
 
 1.1. These guidelines apply to everything people add to the Service and show to someone else: reviews and trainer replies, showcases, story cards, challenge entries and nicknames, comments on food diary days, notes, messages sent through the bot, feedback and reports. They form part of the [Terms of Service](terms-of-service.md).
 
-1.2. The Service is run by [OPERATOR LEGAL NAME], [REGISTERED ADDRESS] ("DaFit", "we", "us"). Words such as Service, user, trainer, client, pair, assistant and showcase have the meaning given in the [Terms of Service](terms-of-service.md), section 2.
+1.2. The Service is run by [OPERATOR FULL NAME], an individual, at [ADDRESS] ("DaFit", "we", "us"). Words such as Service, user, trainer, client, pair, assistant and showcase have the meaning given in the [Terms of Service](terms-of-service.md), section 2.
 
 1.3. Most of what happens in DaFit is private to a pair. These rules still apply there: a trainer's comment on a client's food diary must be as respectful as a public post.
 

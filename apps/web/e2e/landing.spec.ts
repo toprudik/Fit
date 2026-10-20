@@ -55,3 +55,39 @@ test("signed out, the admin waitlist is a 404", async ({ page }) => {
   const response = await page.goto("/admin/waitlist");
   expect(response?.status()).toBe(404);
 });
+
+/* «Калькулятор цен на пакеты» at /for-trainers/calculator (marketing backlog item 9): public, both themes. */
+for (const scheme of SCHEMES) {
+  test.describe(`${scheme} theme, calculator`, () => {
+    test.use({ colorScheme: scheme });
+
+    test("/for-trainers/calculator renders, passes axe and is captured", async ({ page }, testInfo) => {
+      const errors = collectErrors(page);
+      const response = await page.goto("/for-trainers/calculator?src=ch_vk", { waitUntil: "networkidle" });
+
+      expect(response?.status()).toBe(200);
+      await expect(page.getByRole("heading", { level: 1, name: "Калькулятор цен на пакеты" })).toBeVisible();
+      await expect(page.getByLabel("Пакет на 10 занятий")).toHaveValue("16000");
+      await expect(page.getByRole("link", { name: "Вести абонементы в DaFit" })).toHaveAttribute("href", "/for-trainers?src=ch_vk#waitlist");
+
+      await settle(page);
+      await expectAccessible(page);
+      await page.screenshot({ path: screenshotPath(testInfo, scheme, "price-calculator"), fullPage: true });
+      expect(errors()).toEqual([]);
+    });
+  });
+}
+
+test("the calculator recounts the grid as the drop-in price changes", async ({ page }) => {
+  await page.goto("/for-trainers/calculator", { waitUntil: "networkidle" });
+  await page.getByLabel("Цена разового занятия").fill("3000");
+  await expect(page.getByLabel("Пакет на 20 занятий")).toHaveValue("45000");
+  await expect(page.getByRole("link", { name: "Вести абонементы в DaFit" })).toHaveAttribute("href", "/for-trainers?src=price_calc#waitlist");
+  await page.getByRole("link", { name: "Про DaFit" }).click();
+  await expect(page.getByRole("link", { name: "Открыть калькулятор" })).toBeVisible();
+});
+
+test("signed out, the admin referral bonuses are a 404", async ({ page }) => {
+  const response = await page.goto("/admin/referral-bonuses");
+  expect(response?.status()).toBe(404);
+});

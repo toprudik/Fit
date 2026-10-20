@@ -7,6 +7,8 @@ select plan(7);
 select tests.create_trainer('trainer_a');
 select tests.create_user('client_c');
 select tests.create_pair('trainer_a', 'client_c');
+-- C gives the health data consent: without it the report has no health blocks (989).
+insert into public.consents (user_id, kind, version) values (tests.user_id('client_c'), 'pd_health', '2026-11');
 
 -- September 2026 of C (Moscow): the weekly goal met in the last two weeks, the food diary on the last three days,
 -- no steps, and two badges that month.

@@ -158,12 +158,12 @@ function PickSheet({ own, onPick, onClose }: { own: Food[]; onPick: (food: Food)
     if (q.length < 2) return;
     const timer = setTimeout(() => {
       startTransition(async () => {
-        const found = await findFoods(q).catch(() => ({ foods: [] as Food[], catalogDown: true }));
+        const found = await findFoods(q, locale).catch(() => ({ foods: [] as Food[], catalogDown: true }));
         if (latest.current === q) setResult({ query: q, foods: found.foods });
       });
     }, SEARCH_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, locale]);
 
   const q = query.trim();
   const products = (foods: Food[]) => foods.filter((food) => food.kind === "product");

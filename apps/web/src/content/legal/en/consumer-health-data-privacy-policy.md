@@ -10,7 +10,7 @@ This policy is written for the Washington My Health My Data Act (RCW 19.373), Ne
 
 ## 1. Who we are
 
-1.1. The Service (the Telegram bot @fitconnection_bot, the web app at [DOMAIN] and the Telegram Mini App) is run by [OPERATOR LEGAL NAME], [REGISTERED ADDRESS], registration number [REGISTRATION NUMBER] ("DaFit", "we", "us"). Words such as user, trainer, client, pair, assistant, questionnaire and showcase have the meaning given in the [Terms of Service](terms-of-service.md), section 2.
+1.1. The Service (the Telegram bot @fitconnection_bot, the web app at [DOMAIN] and the Telegram Mini App) is run by [OPERATOR FULL NAME], an individual, at [ADDRESS] ("DaFit", "we", "us"). Words such as user, trainer, client, pair, assistant, questionnaire and showcase have the meaning given in the [Terms of Service](terms-of-service.md), section 2.
 
 1.2. Contact: [CONTACT EMAIL], or the feedback form in the app (Profile, then "Report a problem / idea").
 
@@ -56,13 +56,13 @@ This policy is written for the Washington My Health My Data Act (RCW 19.373), Ne
 
 5.1. **Collection.** Before you first enter consumer health data, we will ask for your consent in a separate screen that names the categories, the purpose, who may receive it and how to withdraw. We will collect it only after you agree.
 
-> Team: not in the product yet, see product-changes. There is no separate health data consent screen; only beta-terms acceptance is recorded.
+> Team: the consent screen exists (#186). Without consent the app now closes measurements, photos and the food diary (#199); the questionnaire, steps and sleep, workouts and the home weight entry still open without it.
 
 5.2. **Sharing with your trainer.** Sharing is a separate choice. For each trainer, on the screen "What your trainer sees", you decide which categories that trainer may see: nutrition, measurements, photos, steps, workouts and the questionnaire. The questionnaire is shown only after you answer "Show" on a dedicated screen with no preselected answer.
 
 > Team: not in the product yet, see product-changes. Today nutrition, measurements, steps and workouts are visible to the trainer by default when a pair is created; only photos and the questionnaire start hidden.
 
-5.3. **Withdrawal.** You can withdraw consent to collection by deleting the entries or your account, and consent to sharing by turning categories off in "What your trainer sees" or by ending the pair. The trainer stops seeing that data straight away.
+5.3. **Withdrawal.** You can withdraw consent to collection in Settings, then Consents ("Withdraw consent"): trainers lose access at once and the data is deleted 30 days later. You can also delete entries or your account. You withdraw and consent to sharing by turning categories off in "What your trainer sees" or by ending the pair. The trainer stops seeing that data straight away.
 
 5.4. Accepting our terms of service is not consent to collect or share consumer health data.
 
@@ -82,7 +82,7 @@ This policy is written for the Washington My Health My Data Act (RCW 19.373), Ne
 
 6.1. We have no affiliates that receive consumer health data. Open Food Facts receives only food search words and barcodes from our server, never data about you.
 
-6.2. **Third-party tracking.** No third party tracks you over time across DaFit and other websites through DaFit. We use no advertising or analytics trackers. When your browser downloads the face-blurring model, jsDelivr and Google Cloud Storage see your IP address, as with any download; they receive no health data.
+6.2. **Third-party tracking.** No third party tracks you over time across DaFit and other websites through DaFit. We use no advertising or analytics trackers. The face-blurring model is downloaded from our own domain.
 
 ## 7. No sale
 
@@ -105,6 +105,7 @@ This policy is written for the Washington My Health My Data Act (RCW 19.373), Ne
 
 10.1. In the app:
 - **Access and copy**: Settings, then Export. The bot sends you a link to an archive; it works for 7 days.
+- **Withdraw consent**: Settings, then Consents, then "Withdraw consent".
 - **Withdraw sharing**: your trainer's card, then "What your trainer sees"; or end the pair.
 - **Delete**: delete an entry, or Settings, then Delete account. Your account is deleted after a 30-day period in which you can cancel.
 

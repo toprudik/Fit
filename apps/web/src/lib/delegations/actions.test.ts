@@ -97,7 +97,8 @@ describe("createSubstitute", () => {
     db.answer = { data: INVITE, error: null };
     expect(await createSubstitute(SESSION)).toEqual({ ok: true, value: { id: DELEGATION, link: LINK } });
     expect(db.calls).toEqual([["rpc", "create_delegation", { p_kind: "substitute", p_session_id: SESSION }, "single"]]);
-    expect(next.refresh).toHaveBeenCalledOnce();
+    // No refresh here: it would re-render the session card and close the sheet that shows the link. The sheet refreshes on close.
+    expect(next.refresh).not.toHaveBeenCalled();
   });
 
   it("refuses a bad session id without a call", async () => {

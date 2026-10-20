@@ -367,6 +367,27 @@ describe("plan messages", () => {
     ]);
   });
 
+  it("names a start that is still ahead at sending, and drops it once it has come (referral bonus)", () => {
+    const now = new Date("2026-12-15T09:00:00Z");
+    const later = { plan: "trainer_pro", starts_at: "2027-01-31T21:00:00Z", expires_at: "2027-02-28T21:00:00Z" };
+    expect(renderMessage({ ...row, kind: "plan_granted", payload: later }, { ...options, now })?.text).toBe(
+      "Тебе выдан тариф Pro с 1 февраля 2027 до 1 марта 2027. Спасибо, что ты в бете DaFit.",
+    );
+    expect(renderMessage({ ...row, kind: "plan_granted", locale: "en", payload: later }, { ...options, now })?.text).toBe(
+      "You get Pro from February 1, 2027 until March 1, 2027. Thanks for being in the DaFit beta.",
+    );
+    const started = { ...later, starts_at: "2026-12-01T21:00:00Z" };
+    expect(renderMessage({ ...row, kind: "plan_granted", payload: started }, { ...options, now })?.text).toBe(
+      "Тебе выдан тариф Pro до 1 марта 2027. Спасибо, что ты в бете DaFit.",
+    );
+    const open = { plan: "trainer_pro", starts_at: "2027-01-31T21:00:00Z", expires_at: null };
+    const message = renderMessage({ ...row, kind: "plan_granted", payload: open }, { ...options, now });
+    expect(message?.text).toBe("Тебе выдан тариф Pro с 1 февраля 2027. Спасибо, что ты в бете DaFit.");
+    expect(message?.buttons).toEqual([
+      { text: "Открыть тариф", web_app: { url: "https://fit.example/settings/plan?source=plan_granted" } },
+    ]);
+  });
+
   it("tells about a revoked plan and one ending in three days", () => {
     expect(renderMessage({ ...row, kind: "plan_revoked", payload: { plan: "trainer_pro" } }, options)?.text).toBe(
       "Тариф Pro отключён. Все твои данные на месте.",
@@ -1255,5 +1276,67 @@ describe("review_prompt and report_resolution (wave-2 §11)", () => {
     expect(renderMessage({ ...row, kind: "report_resolution", payload: { ...payload, hidden: true } }, options)?.text).toBe(
       "Мы посмотрели спорный отзыв и скрыли его.",
     );
+  });
+
+  // Content reports (DSA arts. 16, 17, 20): payloads of migration 20261020111437_content_reports.sql.
+  const report = (payload: Record<string, unknown>) =>
+    renderMessage({ ...row, kind: "report_resolution", payload: { target_type: "food_comment", report_id: PAIR, ...payload } }, options)
+      ?.text;
+
+  it("confirms a report and an appeal as soon as they arrive", () => {
+    expect(report({ event: "received" })).toBe("Жалобу получили. Посмотрим и напишем, что решили.");
+    expect(
+      renderMessage({ ...row, kind: "report_resolution", payload: { event: "received", target_type: "food_comment" } }, options)?.buttons,
+    ).toEqual([{ text: "Открыть DaFit", web_app: { url: "https://fit.example/reports?source=report_resolution" } }]);
+    expect(report({ event: "appeal_received" })).toMatch(/другой человек из команды DaFit/);
+  });
+
+  it("gives every decision with its reason, escaped, and says how to appeal", () => {
+    const decided = { event: "decided", reason: "Грубо <b>", appeal: false };
+    expect(report({ ...decided, role: "reporter", hidden: true })).toBe(
+      "Мы посмотрели жалобу и скрыли то, на что была жалоба. Причина: «Грубо &lt;b&gt;».",
+    );
+    expect(report({ ...decided, role: "reporter", hidden: false })).toMatch(/оставили всё как есть.*обжаловать/);
+    expect(report({ ...decided, role: "owner", hidden: true })).toMatch(/^На твой текст пожаловались.*«Грубо &lt;b&gt;».*обжаловать/);
+    expect(report({ event: "dismissed", role: "reporter", reason: "Повтор" })).toBe(
+      "Мы посмотрели жалобу и ничего не меняли. Причина: «Повтор».",
+    );
+  });
+
+  it("tells both sides how an appeal ended", () => {
+    const appeal = { event: "decided", reason: "Шутка", appeal: true };
+    for (const role of ["reporter", "owner"]) {
+      expect(report({ ...appeal, role, hidden: false })).toBe("Обжалование рассмотрели: снова показываем. Причина: «Шутка».");
+      expect(report({ ...appeal, role, hidden: true })).toBe("Обжалование рассмотрели: оставляем скрытым. Причина: «Шутка».");
+    }
+  });
+
+  it("reads the same in English", () => {
+    const en = renderMessage(
+      { ...row, locale: "en", kind: "report_resolution", payload: { event: "decided", role: "owner", hidden: true, reason: "Rude" } },
+      options,
+    );
+    expect(en?.text).toBe("Someone reported something you wrote. We looked at it and hid it. Reason: “Rude”. You can appeal within six months.");
+  });
+});
+
+describe("invited trainer joined", () => {
+  const TRAINER = "7b1f2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
+  const options = { appUrl: "https://fit.example", group: false };
+
+  it("tells the inviter their trainer came, with a button to start training", () => {
+    const message = renderMessage(
+      { ...row, kind: "invited_trainer_joined", payload: { trainer_id: TRAINER, first_name: "<Ника>", last_name: "Петрова" } },
+      options,
+    );
+    expect(message?.text).toBe("&lt;Ника&gt; Петрова теперь в DaFit по твоему приглашению. Открой приглашения, чтобы начать заниматься в приложении.");
+    expect(message?.buttons).toEqual([
+      { text: "Начать занятия", web_app: { url: "https://fit.example/client/invite-trainer?source=invited_trainer_joined" } },
+    ]);
+  });
+
+  it("names nobody when the trainer has no name", () => {
+    const message = renderMessage({ ...row, kind: "invited_trainer_joined", locale: "en", payload: { trainer_id: TRAINER } }, options);
+    expect(message?.text).toBe("Your trainer joined DaFit by your invitation. Open your invitations to start training in the app.");
   });
 });

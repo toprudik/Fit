@@ -368,17 +368,21 @@ create table public.user_roles (
 
 Тренером пользователя делает наличие `trainer_profiles`, отдельной роли для этого нет (одна учётная запись, две зоны, Q13).
 
-**`consents`**: бета-согласие при первом входе (Q44), append-only.
+**`consents`**: согласия при первом входе (Q44, юр. правки А1, А2), append-only. Экран условий пишет `beta_terms`, `terms`, `privacy_policy` и `age_confirmed`, следующий экран `pd_general`; без них прокси не пускает дальше (`lib/consent/required.ts`). `pd_health` спрашивается отдельно, и без него приложение работает. В `text_hash` sha256 показанного текста документа (у `age_confirmed` и старых строк null); пользователь пишет его, но не читает (выдача select по колонкам). Прокси читает согласия на каждой странице и в API, cookie на устройстве не используется.
+
+**`health_erasures`**: удаление сведений о здоровье после отзыва `pd_health` (юр. право 5, consent-health-data.md 8.3). Когда у пользователя не остаётся действующего `pd_health`, триггер на `consents` сразу выключает все шесть категорий `data_shares` в его парах, удаляет `ingest_tokens` и выводит его из `challenge_participants`, а удаление ставит строкой с `scheduled_for` через 30 дней; новое согласие до этого срока удаляет несделанную строку. Маршрут privacy удаляет файлы фото прогресса, затем `purge_health_data` (только service_role) удаляет анкеты, цели, замеры, фото, питание, сон и шаги, тренировки и рекорды, недельную цель, отправленные тренеру отчёты и карточки сторис видов `records`, `weight`, `streak_*` (эти таблицы чистятся по отзыву согласия; клиенты-карточки тренера согласий не дают и не затрагиваются), ставит `done_at` и пишет `health_data.purge` в журнал админов. Пользователь читает свою строку, писать не может.
 
 ```sql
-create type public.consent_kind as enum ('beta_terms', 'privacy_policy', 'contact_share');
+create type public.consent_kind as enum ('beta_terms', 'privacy_policy', 'contact_share',
+  'terms', 'pd_general', 'pd_health', 'age_confirmed');
 create table public.consents (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references public.profiles(id) on delete cascade,
   kind        public.consent_kind not null,
   version     text not null,                 -- версия текста, например '2026-11-beta'
   accepted_at timestamptz not null default now(),
-  revoked_at  timestamptz                    -- отзыв один раз; время ставит guard-триггер, не клиент
+  revoked_at  timestamptz,                   -- отзыв один раз; время ставит guard-триггер, не клиент
+  text_hash   text check (text_hash ~ '^[0-9a-f]{64}$')
 );
 create index on public.consents (user_id, kind);
 create unique index consents_one_active_uniq on public.consents (user_id, kind, version) where revoked_at is null;
@@ -541,7 +545,7 @@ create table public.coachings (
   -- client_alias переехал в coaching_trainer_meta: колоночный грант не может показать столбец тренеру и скрыть от клиента.
   -- Дедлайна отмены на пару нет: правило тренера действует для всех его клиентов (PRD 2.6.5-1).
   self_book_on_debt         boolean not null default false,       -- «Разрешить запись в долг» этому клиенту (Q22); долг при списании возникает всегда
-  debt_limit_sessions       smallint check (debt_limit_sessions > 0),  -- null = без лимита при self_book_on_debt
+  debt_limit_sessions       smallint default 1 check (debt_limit_sessions > 0),  -- неоплаченных занятий при самозаписи; null = без лимита
   client_reminder_offsets   smallint[] not null                   -- копия default_client_reminder_offsets при создании; меняет клиент
                             check (private.valid_reminder_offsets(client_reminder_offsets)),
   -- W2: broadcasts_muted и primary_nutrition_group_id добавляются вместе со своими функциями;
@@ -2215,6 +2219,8 @@ create table public.trainer_referral_terms (       -- одна строка: б�
 
 Счётчик приглашённых (бэклог маркетинга 6, `20261018135217_trainer_referral_counts.sql`): приглашённый тренер «работает», если за последние 7 дней у него 3 и больше проведённых занятий по `private.analytics_held_sessions` (то же определение, что в статистике владельца, Q26); это `private.trainer_is_active(trainer_id)`. `my_trainer_referral()` отдаёт `active` у каждого приглашённого, экран «Пригласить тренера» считает пришедших, работающих (без `void`) и ждущие бонусы. Админ видит то же по каждому пригласившему через `admin_trainer_referrers()` (имя, пришли, работают, бонусов ждёт и выдано) в /admin/invites.
 
+Бонус в бете (бэклог маркетинга 7, Q50 с поправкой 20.10.2026, `20261020152317_referral_bonus_beta.sql`): тариф в бете не покупают, поэтому бонус пригласившему (`plan_month`) становится положен, когда приглашённый активен 4 недели подряд. `private.trainer_active_weeks(trainer_id, since)` считает самую длинную серию целых 7-дневных недель от приглашения, в каждой из которых 3 и больше проведённых занятий (то же определение, Q26). Админ видит бонусы тренеров с обоими тренерами, неделями и признаком «положен» через `admin_trainer_referral_bonuses()` в /admin/referral-bonuses и выдаёт положенный через `admin_grant_referral_bonus(bonus_id, starts_on)`: выдача `plan_grants` (`trainer_pro`, `source = 'referral_bonus'`, причина «Бонус за приглашение тренера») на месяц с начала выбранного дня в поясе тренера, по умолчанию 1 февраля 2027, первый день после беты. Бонус становится `granted` и запоминает выдачу в `bonuses.plan_grant_id` (без внешнего ключа: `plan_grants` запрещает `truncate`), реферал `qualified`, аудит `referral_bonus.grant`, тренеру уходят `plan_granted` (с `starts_at`) и `plan_expiring` за три дня до конца. Скидка на тариф (`plan_discount`) ждёт покупок после беты (`bonus_kind_unsupported`).
+
 ```sql
 create type public.check_in_method as enum ('qr', 'trainer');
 create table public.check_ins (                    -- QR-чек-ин
@@ -2444,8 +2450,9 @@ unpaid_minor(pass) = price_minor − sum(payments.amount_minor where pass_id = p
 При записи клиента на слот или занятие (`book_slot`, `book_session`) RPC решает статус:
 
 - `confirmed`, если у пары есть подходящий абонемент с `available ≥ 1` (ставится `reserved_pass_id`);
-- иначе `confirmed`, если тренер разрешил этому клиенту запись в долг (`coachings.self_book_on_debt`) и `debt_sessions < coalesce(debt_limit_sessions, ∞)`;
+- иначе `confirmed`, если тренер разрешил этому клиенту запись в долг (`coachings.self_book_on_debt`) и неоплаченных занятий (`private.unpaid_sessions`) меньше `coalesce(debt_limit_sessions, ∞)` (по умолчанию 1). Неоплаченные: `debt_sessions` плюс живые записи пары (`requested`, `confirmed`, `attended`) без `reserved_pass_id`, кроме пробных, по которым ещё нет charge;
 - иначе `requested`: тренер подтверждает (занятие при списании уйдёт в долг, либо тренер сразу оформляет разовое или абонемент) или отклоняет.
+- но если неоплаченных уже столько, сколько клиенту можно (1 без разрешения, `debt_limit_sessions` с ним), запись клиента без абонемента отклоняется с `debt_limit` (триггер `bookings_debt_limit` по флагу, который ставит `booking_auto_confirm`). Так работают слот, групповое, перенос и лист ожидания; принятое предложение сверх лимита уходит следующему в очереди и возвращает `declined`. Отметка на месте без записи (QR, геопозиция) по-прежнему приходит тренеру запросом.
 
 Для пары-карточки без аккаунта самостоятельной записи нет, занятия создаёт тренер.
 
@@ -2514,12 +2521,14 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `user_settings` | сам; остальные: только `display_name`, `avatar_path`, `time_zone` через вью `public_profiles` (R6) | S (триггер при создании профиля, R64) | сам | никто (каскад) |
 | `notification_preferences` | сам | сам | сам (`enabled`) | сам |
 | `user_roles` | сам; A | никто (позже `admin_grant_role`, R13) | никто | никто (позже `admin_revoke_role`) |
-| `consents` | сам; A | сам (`user_id`, `kind`, `version`) | сам: только `revoked_at`, один раз | никто |
+| `consents` | сам, без `text_hash`; A | сам (`user_id`, `kind`, `version`, `text_hash`) | сам: только `revoked_at`, один раз | никто |
 | `account_deletions` | сам; партнёры по паре в любом статусе (только даты, R10); A | S-RPC `request_account_deletion` | S-RPC `cancel_account_deletion` | S |
 | `data_exports` | сам | S-RPC `request_data_export` | S | S |
 | `trainer_profiles` | сам; его клиенты в любом статусе пары (R89); A; anon/прочие: **pub** `get_trainer_showcase(slug)` (при `verification_status = 'rejected'` отвечает «недоступна», R16, Q60); зона «Тренер» и `is_trainer()` доступны при наличии `trainer_profiles` (доступ не зависит от верификации и тарифа, Q55) | S-RPC `redeem_trainer_invite` | сам (кроме `verification_status`, `verified_at`, `trainer_invite_id`: колоночные гранты); A через `admin_decide_verification` | никто |
 | `trainer_certificates` | сам; A | сам (не больше 5, R53) | сам | сам |
 | `trainer_verifications` | сам; A | S-RPC `submit_trainer_verification` (подача), `admin_decide_verification` (решение) | никто | никто |
+| `trainer_honors` | никто напрямую; A через `admin_trainer_honors(trainer)` (с причиной); **pub** `get_trainer_honors(slug)` только у открытой витрины верифицированного тренера (Q55), без причин | S-RPC `admin_set_trainer_honor` (A, причина обязательна, аудит `trainer_honor.grant`) | никто | S-RPC `admin_set_trainer_honor(..., false, ...)` (A, аудит `trainer_honor.revoke`) |
+| `trainer_milestones` | T свои (вехи маркетинга 14: `clients_5`, `sessions_100`, `sessions_500`, `weeks_4`, `first_trial_client`) | S триггеры на `sessions` и `bookings` (проведённые занятия по Q26, как `private.analytics_held_sessions`: закончилось, не отменено, есть запись confirmed или attended; группа одно занятие), `coachings` (активные пары, пара по пробной ссылке) и `bookings` (посещаемость, отмеченная человеком, 4 недели подряд по поясу тренера); первая запись ставит в очередь `trainer_milestone`, тренер выключает его в настройках уведомлений | никто | каскад от `trainer_profiles` |
 | `trainer_invites` | A (без хеша кода); статус кода для экрана погашения: S-RPC `trainer_invite_status` | A через `admin_create_trainer_invite` | S-RPC `admin_revoke_trainer_invite` (A), `redeem_trainer_invite` | никто |
 | `client_invites` | T; **pub** по токену, по коду после входа (`resolve_client_invite`) | T; S-RPC `my_client_invite` (создаёт ссылку при первом открытии), `reissue_client_invite` | T; S-RPC `reissue_client_invite` (архивирует старые) | никто (архив) |
 | `trial_links` | T; **pub** `get_trial_link(token)` | T | T (вкл. `is_enabled`) | никто (архив) |

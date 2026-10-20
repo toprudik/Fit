@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { DaMark } from "@/components/brand/da-mark";
 import { JoinButton } from "@/components/client-links/join-button";
+import { ReportButton } from "@/components/reports/report-button";
 import { SignedOutActions } from "@/components/client-links/signed-out-actions";
 import { ShowcaseProfile } from "@/components/showcase/showcase-profile";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import { priceGridItems } from "@/lib/packages/present";
 import { isShowcaseSlug, normalizeSlug, showcasePath, showcaseTelegram } from "@/lib/showcase/link";
 import { showcaseFrom, showcasePricesFrom, type Showcase } from "@/lib/showcase/load";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { honorsFrom } from "@/lib/trainer-honors/honors";
 import { isTrialToken, trialPath } from "@/lib/trial-links/link";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/trainers/[slug]">): Promise<Metadata> {
@@ -78,12 +80,13 @@ async function ShowcaseContent({ params }: { params: PageProps<"/[lang]/trainers
   if (!isShowcaseSlug(slug)) return <Unavailable t={t} text={copy.unavailableText} />;
 
   const supabase = await createSupabaseServerClient();
-  const [locale, { data: session }, { data, error }, prices, trial] = await Promise.all([
+  const [locale, { data: session }, { data, error }, prices, trial, honors] = await Promise.all([
     getLocale(),
     supabase.auth.getClaims(),
     supabase.rpc("get_trainer_showcase", { p_slug: slug }),
     supabase.rpc("get_trainer_showcase_prices", { p_slug: slug }),
     supabase.rpc("get_showcase_trial", { p_slug: slug }),
+    supabase.rpc("get_trainer_honors", { p_slug: slug }),
   ]);
   if (error) {
     console.error("loading a showcase failed", error.code);
@@ -96,10 +99,17 @@ async function ShowcaseContent({ params }: { params: PageProps<"/[lang]/trainers
   // So is the trial button: the function answers null when there is none to show.
   if (trial.error) console.error("loading the showcase trial failed", trial.error.code);
   const trialToken = isTrialToken(trial.data) ? trial.data : null;
+  // And the honors next to the verified badge.
+  if (honors.error) console.error("loading showcase honors failed", honors.error.code);
 
   return (
     <div className="flex flex-col gap-8">
-      <ShowcaseProfile t={t} showcase={showcase} prices={priceGridItems(showcasePricesFrom(prices.data), t, locale)} />
+      <ShowcaseProfile
+        t={t}
+        showcase={showcase}
+        prices={priceGridItems(showcasePricesFrom(prices.data), t, locale)}
+        honors={honorsFrom(honors.data)}
+      />
       <div className="flex flex-col gap-3">
         <Actions t={t} showcase={showcase} signedIn={Boolean(session?.claims.sub)} />
         {trialToken ? (
@@ -108,6 +118,12 @@ async function ShowcaseContent({ params }: { params: PageProps<"/[lang]/trainers
             <Link href={trialPath(trialToken)}>{copy.trial}</Link>
           </Button>
         ) : null}
+        {/* DSA art. 16: anyone, signed in or not, can report a showcase; not its owner. */}
+        {showcase.isOwn ? null : (
+          <div className="self-center">
+            <ReportButton target={{ kind: "showcase", slug: showcase.slug }} />
+          </div>
+        )}
       </div>
     </div>
   );

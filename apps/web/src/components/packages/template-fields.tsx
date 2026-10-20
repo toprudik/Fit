@@ -42,7 +42,13 @@ export function TemplateFields({
   const [dropIn, setDropIn] = useState(sent("dropIn"));
   // A pack the trainer has not touched follows the drop-in price; typed ones stay as typed.
   const [typed, setTyped] = useState<Partial<Record<PackField, string>>>(() =>
-    values ? Object.fromEntries(TEMPLATE.map(({ sessions }) => [packField(sessions), sent(packField(sessions))])) : {},
+    // Empty fields of a rejected form are not typed: they keep following the drop-in price.
+    Object.fromEntries(
+      TEMPLATE.flatMap(({ sessions }) => {
+        const value = sent(packField(sessions));
+        return value ? [[packField(sessions), value]] : [];
+      }),
+    ),
   );
 
   const dropInMinor = parseMajor(dropIn);

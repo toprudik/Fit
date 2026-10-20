@@ -10,7 +10,7 @@ Related documents: [Terms of Service](terms-of-service.md), [Subscription Terms]
 
 ## 1. Who we are and how to reach us
 
-1.1. The Service is run by [OPERATOR LEGAL NAME], registered at [REGISTERED ADDRESS], registration number [REGISTRATION NUMBER] ("DaFit", "we", "us").
+1.1. The Service is run by [OPERATOR FULL NAME], an individual, at [ADDRESS] ("DaFit", "we", "us").
 
 1.2. Privacy questions, requests and complaints: [CONTACT EMAIL], or the feedback form in the app (Profile, then "Report a problem / idea"). Write "Privacy" at the start of your message so it reaches the right person.
 
@@ -46,7 +46,7 @@ UK representative (UK GDPR Art. 27): [UK REPRESENTATIVE].
 
 3.1. DaFit is for people aged 18 or over, both trainers and clients. We do not knowingly collect data from anyone under 18. If you believe a minor uses DaFit, write to [CONTACT EMAIL] and we will delete the account.
 
-> Team: not in the product yet, see product-changes. The code has no age gate today; the nutrition calculator refuses users under 18, nothing else does.
+> Team: the consent screen has an "I am 18 or older" checkbox; "I'm under 18" schedules the account for deletion.
 
 ## 4. What data we collect
 
@@ -75,7 +75,7 @@ UK representative (UK GDPR Art. 27): [UK REPRESENTATIVE].
 
 4.1. We do not collect your Telegram messages, contacts or chats. We do not collect precise location from your device. Trainers enter addresses of their places of work themselves.
 
-4.2. **Progress photos.** Before a photo leaves your device, DaFit blurs faces on the device and removes EXIF data, including location. The original never leaves your phone or computer. To blur faces, your browser downloads a face-detection model (MediaPipe) from jsDelivr and Google Cloud Storage; these providers see your IP address and browser details, as with any web request, but never your photos. No face geometry or biometric template is stored by us. Photos are delivered through links that expire after 300 seconds.
+4.2. **Progress photos.** Before a photo leaves your device, DaFit blurs faces on the device and removes EXIF data, including location. The original never leaves your phone or computer. To blur faces, your browser downloads a face-detection model (MediaPipe) from our own domain; no third party is involved. No face geometry or biometric template is stored by us. Photos are delivered through links that expire after 300 seconds.
 
 > Counsel: the product team plans to self-host the face-detection model so that no third party receives the user's IP address (see product-changes). Update 4.2 when that ships.
 
@@ -97,7 +97,7 @@ This table gives the legal bases under the EU GDPR and the UK GDPR. United State
 | Story cards and calendar feeds you create | What you pick | Contract, at your request (Art. 6(1)(b)) |
 | Verify trainers | Certificates and documents | Legitimate interests in letting clients trust trainer profiles (Art. 6(1)(f)) |
 | Invitations and trial-session links | Tokens, who invited whom | Contract (Art. 6(1)(b)) |
-| Understand how DaFit is used and improve it (counts of app openings, which bot buttons people use) | App usage | Legitimate interests in improving the Service (Art. 6(1)(f)). Aggregates only; our team does not read your health data for this |
+| Understand how DaFit is used and improve it (counts of app openings, which bot buttons people use) | App usage | Legitimate interests in improving the Service (Art. 6(1)(f)). Aggregates only; our team does not read your health data for this. You can switch it off in Settings, then "App opening count", and your past openings are deleted |
 | Support, feedback, bug fixing | Feedback, technical data, error reports | Legitimate interests (Art. 6(1)(f)) |
 | Security, abuse prevention, moderation, bans, audit log | Technical data, reports, audit log | Legitimate interests in a safe service (Art. 6(1)(f)); legal obligation where one applies (Art. 6(1)(c)) |
 | Emergency access by an admin (section 6.5) | Only the categories needed for the case | Legitimate interests (Art. 6(1)(f)); for health data, Art. 9(2)(f) (legal claims) or Art. 9(2)(c) (vital interests) where they apply |
@@ -112,9 +112,7 @@ This table gives the legal bases under the EU GDPR and the UK GDPR. United State
 
 ## 6. Health data and who sees what
 
-6.1. **Your consent comes first.** Health data is special-category data under the GDPR and consumer health data under several US state laws. We will ask for your explicit consent before you first enter it. You can withdraw consent at any time by deleting the entries or your account; withdrawing does not affect what we did before.
-
-> Team: not in the product yet, see product-changes. The code records only acceptance of the beta terms today (consent kind `beta_terms`); there is no separate health data consent screen.
+6.1. **Your consent comes first.** Health data is special-category data under the GDPR and consumer health data under several US state laws. We will ask for your explicit consent before you first enter it. You can withdraw consent at any time in Settings, then Consents ("Withdraw consent"). Trainers stop seeing the data at once and we delete it 30 days later; if you give consent again before then, nothing is deleted. Withdrawing does not affect what we did before.
 
 > Counsel: a separate, unticked health data consent at first entry, with the consent version stored, is a required product change. Health data must not be collected on the beta terms alone.
 
@@ -144,7 +142,6 @@ We share personal data only as described here.
 | Vercel Inc. | Processor: hosting of the web app and the bot | Requests passing through, request logs (IP address, browser, URL) | United States |
 | Telegram (Telegram FZ-LLC, UAE, and Telegram Messenger Inc.) | Independent controller | Sign-in data it gives us, bot messages we send you (which may include names, times and places of sessions and, for contact requests, a phone number), the Mini App platform, profile photos at t.me | United Arab Emirates and Telegram's other locations |
 | Functional Software, Inc. (Sentry), only if we turn error reporting on | Processor: error reports | Error type and message, technical context. We switch off user details, request bodies, cookies, headers and query strings | United States |
-| jsDelivr and Google (Cloud Storage) | Providers of the face-detection model download | Your IP address and browser details, when the model is downloaded. No photos | Their own locations |
 | Open Food Facts | Food database | Search words and barcodes, sent from our server. No personal data | France |
 | Your trainer | Independent controller | The categories you allow (section 6) | Wherever the trainer is |
 | Calendar apps you subscribe with | Independent controllers, chosen by you | Your calendar feed | Their own locations |
@@ -206,7 +203,8 @@ We share personal data only as described here.
 | Choose what a trainer sees, or stop sharing | Your trainer's card, then "What your trainer sees". You can also end the pair |
 | Correct your data | Edit the entry. Your name and username come from Telegram: change them in Telegram and they update at your next sign-in, or set a display name in DaFit |
 | Stop notifications | Settings, then Notifications, per kind. Blocking the bot stops all messages |
-| Withdraw consent for health data | Delete the entries or your account |
+| Stop us counting your app openings | Settings, then App opening count. Past openings are deleted |
+| Withdraw consent for health data | Settings, then Consents, then "Withdraw consent". Trainers lose access at once; the data is deleted after 30 days |
 
 10.3. For anything else, write to [CONTACT EMAIL]. We may ask you to confirm the request from your Telegram account so that nobody else can make it in your name. We answer within one month; if a request is complex we can extend this by up to two more months and will tell you why within the first month. Requests are free unless they are clearly unfounded or excessive.
 

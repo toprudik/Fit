@@ -42,7 +42,7 @@ vi.mock("@/lib/supabase/server", () => ({
   },
 }));
 
-const { addNote, createCard, deleteNote, endCoaching, resolveClaim, setArchived, setSelfBookOnDebt, updateNote } = await import("./actions");
+const { acceptTrainerDpa, addNote, createCard, deleteNote, endCoaching, resolveClaim, setArchived, setSelfBookOnDebt, updateNote } = await import("./actions");
 
 const PAIR = "0b7c2f4e-1d2a-4c3b-9e8f-7a6b5c4d3e2f";
 const NOTE = "1c8d3a5f-2e3b-4d4c-8f9a-8b7c6d5e4f3a";
@@ -52,6 +52,28 @@ beforeEach(() => {
   db.calls = [];
   db.answer = { data: null, error: null };
   db.userId = "user-1";
+});
+
+describe("acceptTrainerDpa", () => {
+  it("records the agreement version for the signed-in trainer", async () => {
+    expect(await acceptTrainerDpa()).toEqual({ ok: true });
+    expect(db.calls).toEqual([["consents", "insert", { user_id: "user-1", kind: "trainer_dpa", version: "2026-10-18" }]]);
+    expect(next.refresh).toHaveBeenCalledOnce();
+  });
+
+  it("takes an agreement accepted already as done", async () => {
+    db.answer = { data: null, error: { message: "duplicate", code: "23505" } };
+    expect(await acceptTrainerDpa()).toEqual({ ok: true });
+  });
+
+  it("fails without a session or on a database error", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    db.userId = null;
+    expect(await acceptTrainerDpa()).toEqual({ ok: false, reason: "invalid" });
+    db.userId = "user-1";
+    db.answer = { data: null, error: { message: "denied", code: "42501" } };
+    expect(await acceptTrainerDpa()).toEqual({ ok: false, reason: "failed" });
+  });
 });
 
 describe("notes", () => {
@@ -107,6 +129,19 @@ describe("pair settings", () => {
     expect(await setSelfBookOnDebt({ coachingId: PAIR, enabled: true })).toEqual({ ok: true });
     expect(db.calls[0]).toEqual(["coachings", "update", { self_book_on_debt: true }, "eq", "id", PAIR, "select", "id"]);
   });
+
+  it("saves how many debt bookings the client may hold at once", async () => {
+    db.answer = { data: [{ id: PAIR }], error: null };
+    expect(await setSelfBookOnDebt({ coachingId: PAIR, enabled: true, limit: 3 })).toEqual({ ok: true });
+    expect(db.calls[0]).toEqual([
+      "coachings", "update", { self_book_on_debt: true, debt_limit_sessions: 3 }, "eq", "id", PAIR, "select", "id",
+    ]);
+  });
+
+  it.each([0, 21, 1.5, Number.NaN])("refuses %s as the number of debt bookings", async (limit) => {
+    expect(await setSelfBookOnDebt({ coachingId: PAIR, enabled: true, limit })).toEqual({ ok: false, reason: "invalid" });
+    expect(db.calls).toEqual([]);
+  });
 });
 
 describe("endCoaching", () => {
@@ -150,6 +185,11 @@ describe("createCard", () => {
   it("reports the Free limit", async () => {
     db.answer = { data: null, error: { message: "plan_limit_reached", code: "P0001" } };
     expect(await createCard({ name: "Аня" })).toEqual({ ok: false, reason: "limit" });
+  });
+
+  it("reports a trainer who has not accepted the data processing agreement", async () => {
+    db.answer = { data: null, error: { message: "dpa_required", code: "P0001" } };
+    expect(await createCard({ name: "Аня" })).toEqual({ ok: false, reason: "dpa" });
   });
 });
 
