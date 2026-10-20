@@ -30,10 +30,10 @@ select results_eq(
 );
 select tests.authenticate_as_service_role();
 select results_eq(
-  $$ select nutrition or measurements or photos or steps or intake or workouts from public.data_shares
+  $$ select nutrition or measurements or photos or steps or intake or workouts, intake_decided_at is null from public.data_shares
      where coaching_id = tests.pair_id('trainer_t', 'client_e') $$,
-  $$ values (false) $$,
-  'the trainer loses every category at once'
+  $$ values (false, true) $$,
+  'the trainer loses every category at once, and the client chooses them again after a new consent'
 );
 select is_empty(
   $$ select 1 from public.ingest_tokens where user_id = tests.user_id('client_e') $$,

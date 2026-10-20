@@ -28,9 +28,10 @@ create policy "health_erasures: owner reads"
 comment on policy "health_erasures: owner reads" on public.health_erasures is
   'A user sees when their health data will be erased; only the consent triggers and the privacy route write.';
 
--- Withdrawn, with no other pd_health consent in force (8.3): processing stops at once, so the trainers lose every
--- category of the user's pairs, the iOS Shortcuts token stops taking steps and the user leaves the challenges,
--- whose scores come from health data. The erasure itself is scheduled (again from today if one was done).
+-- Withdrawn, with no other pd_health consent in force (8.3): processing stops at once. The trainers lose every
+-- category of the user's pairs, and after a new consent the client chooses them again; the iOS Shortcuts token
+-- stops taking steps; the user leaves the challenges, whose scores come from health data. The erasure itself is
+-- scheduled (again from today if one was done).
 create function private.schedule_health_erasure()
 returns trigger
 language plpgsql
@@ -45,7 +46,8 @@ begin
     return null;
   end if;
   update public.data_shares ds
-  set nutrition = false, measurements = false, photos = false, steps = false, intake = false, workouts = false
+  set nutrition = false, measurements = false, photos = false, steps = false, intake = false, workouts = false,
+    intake_decided_at = null
   where ds.coaching_id in (select c.id from public.coachings c where c.client_id = new.user_id);
   delete from public.ingest_tokens t where t.user_id = new.user_id;
   delete from public.challenge_participants cp where cp.user_id = new.user_id;
