@@ -4136,7 +4136,7 @@ isOneToOne: false
                            },
 "challenge_board":
 { Args: { "p_challenge_id": string }; Returns: {
-              "alias": string,"hidden": boolean,"is_me": boolean,"name": string,"photo_url": string,"place": number,"score": number,"shown": boolean
+              "alias": string,"hidden": boolean,"is_me": boolean,"name": string,"photo_url": string,"place": number,"report_id": string,"score": number,"shown": boolean
             }[]
                            },
 "change_pass_expiry":
