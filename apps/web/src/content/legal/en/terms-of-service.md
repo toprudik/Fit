@@ -52,7 +52,7 @@ These words mean the same in all DaFit legal documents. In running text we write
 
 3.3. If we learn that a user is under 18, we will close the account and delete its data in line with the [Privacy Policy](privacy-policy.md).
 
-> Team: not in the product yet, see product-changes. There is no 18+ confirmation at sign-up; only the nutrition target calculator refuses users under 18.
+> Team: the sign-up screen has an "I am 18" checkbox (self-declaration, stored in the database); the nutrition target calculator also refuses users under 18.
 
 > Counsel: consider whether the "actual knowledge" standard (US COPPA, UK Children's Code) needs a stronger signal than self-declaration for a service that stores health data.
 

@@ -35,6 +35,12 @@ export const ru = {
       kicker: "Приглашение тренера",
       description: "Стань клиентом в DaFit: расписание, абонемент и прогресс будут в одном месте.",
     },
+    forTrainers: {
+      title: "DaFit для тренеров",
+      generic: "DaFit для тренеров",
+      kicker: "Лист ожидания беты",
+      description: "Расписание, абонементы и прогресс клиентов в одном месте, в Telegram и на сайте. Запишись в лист ожидания беты.",
+    },
     trainerInvite: {
       title: "Приглашение тренеру в DaFit",
       generic: "Приглашение тренеру в DaFit",
@@ -3398,6 +3404,7 @@ export const ru = {
       analytics: "Аналитика",
       stats: "Статистика",
       waitlist: "Лист ожидания",
+      referralBonuses: "Бонусы",
     },
     backToApp: "В приложение",
     overview: {
@@ -3500,6 +3507,7 @@ export const ru = {
         "break_glass.revoke": "Аварийный доступ отозван",
         "plan.grant": "Тариф выдан",
         "plan.revoke": "Тариф отозван",
+        "referral_bonus.grant": "Бонус за приглашение выдан",
         "access_request.decline": "Заявка на тариф отклонена",
       },
       decision: {
@@ -5263,6 +5271,34 @@ export const ru = {
     },
     footer: "DaFit: расписание, абонементы и прогресс клиентов для персональных тренеров.",
   },
+  /** «Бонусы за приглашения» in /admin: trainers' bonuses for invited colleagues in the beta (marketing backlog 7). */
+  adminReferralBonuses: {
+    title: "Бонусы за приглашения",
+    intro:
+      "Тренер получает месяц Pro за коллегу, который 4 недели подряд проводит от 3 занятий в неделю. В бете Pro и так открыт, поэтому месяц начинается после беты.",
+    dueTitle: "Можно выдать",
+    waitingTitle: "Ждут",
+    grantedTitle: "Выданы",
+    emptyTitle: "Бонусов пока нет",
+    emptyText: "Они появятся, когда тренеры позовут коллег по своей ссылке.",
+    colleague: "Коллега: {name}, приглашение от {date}",
+    weeks: "Недель подряд с 3+ занятиями: {n} из 4",
+    discount: "Скидка {pct} % на тариф. Выдаётся после беты, когда появятся покупки.",
+    voided: "Приглашение отменено",
+    granted: "Месяц Pro с {from} до {to}",
+    start: "Начало месяца Pro",
+    startHint: "По умолчанию первый день после беты",
+    submit: "Выдать месяц Pro после беты",
+    done: "Бонус выдан, тренер получит сообщение в боте",
+    errors: {
+      notDue: "Коллега ещё не провёл 4 недели подряд по 3 занятия.",
+      notPending: "Этот бонус уже выдан или отменён.",
+      unsupported: "Такой бонус выдаётся после беты.",
+      invalidStart: "Начало не может быть в прошлом.",
+      failed: "Не получилось выдать бонус, попробуй ещё раз.",
+    },
+    noName: "Без имени",
+  },
   /** «Лист ожидания» in /admin: who joined from /for-trainers (marketing backlog item 10). */
   adminWaitlist: {
     title: "Лист ожидания",
@@ -5550,6 +5586,8 @@ export const ru = {
     /** П1–П3: plan granted, revoked and ending in three days (PRD §2.14-8, 9). */
     planGranted: "Тебе выдан тариф {plan} без срока. Спасибо, что ты в бете DaFit.",
     planGrantedUntil: "Тебе выдан тариф {plan} до {date}. Спасибо, что ты в бете DaFit.",
+    planGrantedFrom: "Тебе выдан тариф {plan} с {start}. Спасибо, что ты в бете DaFit.",
+    planGrantedFromUntil: "Тебе выдан тариф {plan} с {start} до {date}. Спасибо, что ты в бете DaFit.",
     planRevoked: "Тариф {plan} отключён. Все твои данные на месте.",
     planExpiring: "Тариф {plan} закончится {date}. Если он ещё нужен, запроси доступ в разделе «Мой тариф».",
     openPlan: "Открыть тариф",

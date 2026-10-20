@@ -86,3 +86,8 @@ test("the calculator recounts the grid as the drop-in price changes", async ({ p
   await page.getByRole("link", { name: "Про DaFit" }).click();
   await expect(page.getByRole("link", { name: "Открыть калькулятор" })).toBeVisible();
 });
+
+test("signed out, the admin referral bonuses are a 404", async ({ page }) => {
+  const response = await page.goto("/admin/referral-bonuses");
+  expect(response?.status()).toBe(404);
+});
