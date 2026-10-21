@@ -1,5 +1,5 @@
 -- Withdrawing the consent to story cards closes the cards already shared (152-FZ art. 10.1 part 14), migration
--- 20261021001317_story_cards_close_on_revoke.sql: revoke_public_data_consent expires them, story_card opens a card
+-- 20261021014013_story_cards_close_on_revoke.sql: revoke_public_data_consent expires them, story_card opens a card
 -- only while its author's consent is in force.
 begin;
 \ir _helpers.psql
