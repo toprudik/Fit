@@ -52,6 +52,7 @@ export function SellPassForm({
   const chosen = packages.find((item) => item.id === packageId) ?? null;
   const [payment, setPayment] = useState<PaymentValues>({ amount: chosen ? majorText(chosen.priceMinor) : "", method: "sbp", paidOn: today });
   const [errors, setErrors] = useState<string[]>([]);
+  const [requestId] = useState(() => crypto.randomUUID());
   const [pending, startTransition] = useTransition();
   const invalid = (field: string) => errors.some((error) => error === field || error.startsWith(`${field}.`));
 
@@ -75,6 +76,7 @@ export function SellPassForm({
             ? { kind: "package", packageId: packageId ?? "" }
             : { kind: "custom", ...custom, title: custom.title || (sessions === 1 ? pack.titles.dropIn : plural(locale, sessions, pack.titles.pack)) },
         payment: paid ? payment : null,
+        requestId,
       });
       if (result.status === "invalid") {
         setErrors(result.fields);
@@ -86,6 +88,7 @@ export function SellPassForm({
         toast.success(result.settled > 0 ? interpolateDebt(copy.soldSettled, plural(locale, result.settled, t.pairs.debtSessions)) : copy.sold);
         onDone();
       } else if (result.status === "refused") toast.error(copy.ended);
+      else if (result.status === "stale") toast.error(copy.alreadySold);
       else toast.error(t.money.passes.failed);
     });
   }

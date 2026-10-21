@@ -126,6 +126,16 @@ describe("sellPass", () => {
     ]);
   });
 
+  it("passes the form's request key, so a repeated submit sells nothing new", async () => {
+    db.answers["rpc:create_pass"] = { data: [{ pass_id: PASS, settled: 0 }] };
+    const requestId = "7d1f9a2e-3b4c-4d5e-8f6a-0b1c2d3e4f5a";
+    await actions.sellPass({ ...fromPackage, requestId });
+    expect(rpcs()[0]?.[2]).toMatchObject({ p_request_id: requestId });
+    expect(await actions.sellPass({ ...fromPackage, requestId: "again" })).toEqual({ status: "invalid", fields: ["requestId"] });
+    db.answers["rpc:create_pass"] = { data: null, error: { message: "request_reused", code: "P0001" } };
+    expect(await actions.sellPass({ ...fromPackage, requestId })).toEqual({ status: "stale" });
+  });
+
   it("sends no validity for a pass without expiry", async () => {
     db.answers.trainer_profiles = { data: { default_currency: "RUB" } };
     db.answers["rpc:create_pass"] = { data: [{ pass_id: PASS, settled: 0 }] };

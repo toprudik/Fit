@@ -1011,6 +1011,7 @@ create table public.passes (                    -- абонемент: экзе�
   cancel_reason  text check (char_length(cancel_reason) <= 500),
   note           text check (char_length(note) <= 500),
   sold_by        uuid references public.profiles(id) on delete set null,  -- ставит триггер из auth.uid()
+  request_id     uuid,                            -- ключ формы продажи: повтор create_pass с ним вернёт этот абонемент
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now(),
   check ((status = 'cancelled') = (cancelled_at is not null)),
@@ -1024,6 +1025,7 @@ create index on public.passes (coaching_id);
 create index on public.passes (client_id);
 create index on public.passes (trainer_id, created_at);
 create index on public.passes (package_id);
+create unique index passes_request_id_uniq on public.passes (coaching_id, request_id) where request_id is not null;
 alter table public.bookings add foreign key (reserved_pass_id, coaching_id)
   references public.passes (id, coaching_id) on delete set null (reserved_pass_id);
 
