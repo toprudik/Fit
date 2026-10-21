@@ -4883,6 +4883,7 @@ export const en: Dictionary = {
       untitled: "Workout",
       minutes: "{count} min",
       failed: "Couldn't load workouts. Try again.",
+      showMore: "Show more",
       notFoundTitle: "Workout not found",
       notFoundText: "It may have been deleted, or you can't open it.",
       edit: "Edit",

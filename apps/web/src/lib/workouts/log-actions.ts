@@ -5,6 +5,8 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isCategory, isExerciseId } from "./catalog";
 import type { LogPayload } from "./log";
+import { type LogCursor, type LogListItem, loadLogs } from "./logs";
+import { placeClient } from "./place";
 
 export type SaveLogResult = { ok: true; id: string } | { ok: false; reason: "forbidden" | "failed" };
 
@@ -73,4 +75,23 @@ export async function lastResults(input: { clientId: string; exerciseIds: string
       .filter((s) => !s.is_warmup)
       .map((s) => ({ reps: s.reps, weightKg: s.weight_kg, durationS: s.duration_s })),
   }));
+}
+
+/** A timestamp as the database returns it, microseconds kept: the cursor must equal the row it points at. */
+const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/;
+
+/** The place of a log list the viewer opened: their own diary, or a client's tab in a pair. */
+export type LogListPlace = { side: "client" } | { side: "trainer"; coachingId: string };
+
+/**
+ * "Показать ещё" under a log list: the page after `before` for the same place. The place is checked again for the
+ * signed-in user (placeClient), so a client id from the browser is never trusted.
+ */
+export async function moreLogs(input: { place: LogListPlace; before: LogCursor; locale: Locale }): Promise<LogListItem[] | null> {
+  const { place, before, locale } = input;
+  if (!isLocale(locale) || !isExerciseId(before.id) || !INSTANT.test(before.performedAt)) return null;
+  if (place.side !== "client" && !(place.side === "trainer" && isExerciseId(place.coachingId))) return null;
+  const client = await placeClient(place.side === "client" ? { side: "client" } : { side: "trainer", coachingId: place.coachingId });
+  if (!client) return null;
+  return loadLogs(client.clientId, locale, before);
 }
