@@ -47,6 +47,9 @@ const SCREENS: readonly Screen[] = [
   { slug: "trainer-delegated", path: "/trainer/clients/delegated", title: "Делегировано мне" },
   { slug: "trainer-money", path: "/trainer/money", title: "Деньги" },
   { slug: "trainer-more", path: "/trainer/more", title: "Ещё" },
+  // Signed out: the list of challenges for all clients is empty, a challenge is not found.
+  { slug: "trainer-challenges", path: "/trainer/challenges", title: "Челленджи" },
+  { slug: "trainer-challenge", path: "/trainer/challenges/00000000-0000-4000-8000-000000000000", title: "Челлендж" },
   { slug: "trainer-checkin-qr", path: "/trainer/checkin-qr", title: "QR для зала" },
   { slug: "trainer-exercises", path: "/trainer/exercises", title: "Упражнения" },
   { slug: "trainer-new-exercise", path: "/trainer/exercises/new", title: "Своё упражнение" },
@@ -85,6 +88,7 @@ const SCREENS: readonly Screen[] = [
   { slug: "client-activity", path: "/client/diary/activity", title: "Активность" },
   { slug: "client-shortcut", path: "/client/diary/activity/shortcut", title: "Шаги с iPhone" },
   { slug: "client-trainers", path: "/client/trainers", title: "Тренеры" },
+  { slug: "client-invite-trainer", path: "/client/invite-trainer", title: "Пригласить своего тренера" },
   { slug: "settings", path: "/settings", title: "Настройки" },
   { slug: "settings-plan", path: "/settings/plan", title: "Мой тариф" },
   { slug: "settings-notifications", path: "/settings/notifications", title: "Уведомления" },

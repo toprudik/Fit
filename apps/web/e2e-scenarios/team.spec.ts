@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expectAccessible, collectErrors } from "../e2e/support";
+import { expectAccessible, collectErrors, settle } from "../e2e/support";
 import { expectToast, grantPro, moscowAt, namedAdmin, namedTrainer, verifyTrainer } from "./support/admin";
 import { expect, test } from "./support/fixtures";
 import { joinTrainer, ok, type Persona } from "./support/personas";
@@ -78,6 +78,8 @@ test.describe("team and delegation", () => {
     await form.getByRole("checkbox", { name: "Полина Клиентская" }).click();
     await form.getByRole("button", { name: "Создать приглашение" }).click();
     const link = await inviteLinkPath(page);
+    // The form sheet fades out under the link sheet; under load axe can catch it half-transparent.
+    await settle(page);
     await expectAccessible(page);
     await page.keyboard.press("Escape");
     await expect(page.getByText("Приглашение ещё не приняли")).toBeVisible();

@@ -46,7 +46,7 @@ UK representative (UK GDPR Art. 27): [UK REPRESENTATIVE].
 
 3.1. DaFit is for people aged 18 or over, both trainers and clients. We do not knowingly collect data from anyone under 18. If you believe a minor uses DaFit, write to [CONTACT EMAIL] and we will delete the account.
 
-> Team: not in the product yet, see product-changes. The code has no age gate today; the nutrition calculator refuses users under 18, nothing else does.
+> Team: the consent screen has an "I am 18 or older" checkbox; "I'm under 18" schedules the account for deletion.
 
 ## 4. What data we collect
 
@@ -97,7 +97,7 @@ This table gives the legal bases under the EU GDPR and the UK GDPR. United State
 | Story cards and calendar feeds you create | What you pick | Contract, at your request (Art. 6(1)(b)) |
 | Verify trainers | Certificates and documents | Legitimate interests in letting clients trust trainer profiles (Art. 6(1)(f)) |
 | Invitations and trial-session links | Tokens, who invited whom | Contract (Art. 6(1)(b)) |
-| Understand how DaFit is used and improve it (counts of app openings, which bot buttons people use) | App usage | Legitimate interests in improving the Service (Art. 6(1)(f)). Aggregates only; our team does not read your health data for this |
+| Understand how DaFit is used and improve it (counts of app openings, which bot buttons people use) | App usage | Legitimate interests in improving the Service (Art. 6(1)(f)). Aggregates only; our team does not read your health data for this. You can switch it off in Settings, then "App opening count", and your past openings are deleted |
 | Support, feedback, bug fixing | Feedback, technical data, error reports | Legitimate interests (Art. 6(1)(f)) |
 | Security, abuse prevention, moderation, bans, audit log | Technical data, reports, audit log | Legitimate interests in a safe service (Art. 6(1)(f)); legal obligation where one applies (Art. 6(1)(c)) |
 | Emergency access by an admin (section 6.5) | Only the categories needed for the case | Legitimate interests (Art. 6(1)(f)); for health data, Art. 9(2)(f) (legal claims) or Art. 9(2)(c) (vital interests) where they apply |
@@ -112,9 +112,7 @@ This table gives the legal bases under the EU GDPR and the UK GDPR. United State
 
 ## 6. Health data and who sees what
 
-6.1. **Your consent comes first.** Health data is special-category data under the GDPR and consumer health data under several US state laws. We will ask for your explicit consent before you first enter it. You can withdraw consent at any time by deleting the entries or your account; withdrawing does not affect what we did before.
-
-> Team: not in the product yet, see product-changes. The code records only acceptance of the beta terms today (consent kind `beta_terms`); there is no separate health data consent screen.
+6.1. **Your consent comes first.** Health data is special-category data under the GDPR and consumer health data under several US state laws. We will ask for your explicit consent before you first enter it. You can withdraw consent at any time in Settings, then Consents ("Withdraw consent"). Trainers stop seeing the data at once and we delete it 30 days later; if you give consent again before then, nothing is deleted. Withdrawing does not affect what we did before.
 
 > Counsel: a separate, unticked health data consent at first entry, with the consent version stored, is a required product change. Health data must not be collected on the beta terms alone.
 
@@ -128,7 +126,7 @@ This table gives the legal bases under the EU GDPR and the UK GDPR. United State
 
 6.5. **Our team.** DaFit admins cannot read clients' nutrition, measurements, photos or questionnaires; admin analytics show only aggregates. Admins see trainers' certificates when checking them, reviews, and reports sent to us. In exceptional cases (for example a credible safety or legal matter) an admin can open time-limited emergency access. It requires a written reason, is recorded in the audit log, and you are notified.
 
-6.6. **Public data.** A trainer's showcase is public to anyone with the link. An avatar you upload is stored at a public link. A story card is visible to anyone who has its link, shows only what you chose and stops working after 30 days. On leaderboards you appear only if you opt in, under a pseudonym; challenge photos are seen only by you and the trainer.
+6.6. **Public data.** A trainer's showcase is public to anyone with the link and shows only what the trainer agreed to publish. An invitation, trial or referral link a trainer sends shows whoever opens it the trainer's name, photo, specialties and formats (online or in person); a trial link also shows the trial's title, description, price and place that the trainer set for it. An avatar you upload is stored at a public link. A story card is visible to anyone who has its link, shows only what you chose and stops working after 30 days. On leaderboards you appear only if you opt in, under a pseudonym; challenge photos are seen only by you and the trainer.
 
 6.7. **Calendar feed.** If you subscribe to your DaFit calendar in Google Calendar, Apple Calendar, Outlook or similar, that calendar provider fetches the feed and processes it under its own terms. Anyone with the secret link can see the feed, so keep it private; you can reissue the link in Settings, then Calendar, and the old link stops working at once.
 
@@ -205,7 +203,8 @@ We share personal data only as described here.
 | Choose what a trainer sees, or stop sharing | Your trainer's card, then "What your trainer sees". You can also end the pair |
 | Correct your data | Edit the entry. Your name and username come from Telegram: change them in Telegram and they update at your next sign-in, or set a display name in DaFit |
 | Stop notifications | Settings, then Notifications, per kind. Blocking the bot stops all messages |
-| Withdraw consent for health data | Delete the entries or your account |
+| Stop us counting your app openings | Settings, then App opening count. Past openings are deleted |
+| Withdraw consent for health data | Settings, then Consents, then "Withdraw consent". Trainers lose access at once; the data is deleted after 30 days |
 
 10.3. For anything else, write to [CONTACT EMAIL]. We may ask you to confirm the request from your Telegram account so that nobody else can make it in your name. We answer within one month; if a request is complex we can extend this by up to two more months and will tell you why within the first month. Requests are free unless they are clearly unfounded or excessive.
 

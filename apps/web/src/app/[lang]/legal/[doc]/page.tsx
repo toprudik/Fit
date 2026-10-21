@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { Suspense } from "react";
 import { DaMark } from "@/components/brand/da-mark";
 import { LegalDocument } from "@/components/legal/legal-document";
 import { getDictionary, getLocale } from "@/i18n/server";
@@ -18,11 +19,21 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/legal/[doc
   return { title: document?.title ?? t.legal.title, robots: { index: false, follow: false } };
 }
 
-/** One legal document in the user's language; a slug that language lacks is the app's 404. */
-export default async function LegalDocumentPage({ params }: PageProps<"/[lang]/legal/[doc]">) {
+/**
+ * The document itself. Behind <Suspense>: the known slugs are prerendered in full, and when the app's pages are
+ * revalidated (revalidatePath("/", "layout")) the shell of /legal/[doc] is rendered again without a slug, which
+ * may not wait for params outside a boundary, or it answers 500.
+ */
+async function LegalDocumentContent({ params }: { params: PageProps<"/[lang]/legal/[doc]">["params"] }) {
   const [t, locale, { doc }] = await Promise.all([getDictionary(), getLocale(), params]);
   const document = await loadLegalDocument(locale, doc);
   if (!document) notFound();
+  return <LegalDocument blocks={document.blocks} tableLabel={t.legal.table} />;
+}
+
+/** One legal document in the user's language; a slug that language lacks is the app's 404. */
+export default async function LegalDocumentPage({ params }: PageProps<"/[lang]/legal/[doc]">) {
+  const t = await getDictionary();
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-6 px-4 pt-[max(var(--safe-top),var(--space-6))] pb-[max(var(--safe-bottom),var(--space-6))]">
       <div className="flex items-center justify-between gap-3">
@@ -32,7 +43,9 @@ export default async function LegalDocumentPage({ params }: PageProps<"/[lang]/l
         </Link>
         <DaMark className="size-8" label="DaFit" />
       </div>
-      <LegalDocument blocks={document.blocks} tableLabel={t.legal.table} />
+      <Suspense fallback={null}>
+        <LegalDocumentContent params={params} />
+      </Suspense>
     </main>
   );
 }

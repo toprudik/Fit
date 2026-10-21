@@ -65,6 +65,11 @@ begin
   insert into public.profiles (id, telegram_id, first_name, language_code)
   values (v_id, v_tg, p_handle, p_language_code);
 
+  -- Story cards need a consent to publish (152-FZ art. 10.1); test users have given it.
+  insert into public.public_data_consents (user_id, scope, version) values (v_id, 'story', 'test');
+  -- Everyone gives the health data consent, as most people do; a test about its absence withdraws it.
+  insert into public.consents (user_id, kind, version) values (v_id, 'pd_health', 'tests');
+
   insert into tests.users (handle, id, telegram_id) values (p_handle, v_id, v_tg);
   return v_id;
 end;
@@ -193,10 +198,32 @@ as $$
 declare
   v_id uuid := tests.create_user(p_handle);
 begin
-  insert into public.trainer_profiles (user_id, slug)
-  values (v_id, coalesce(p_slug, replace(lower(p_handle), '_', '-')));
+  -- A test trainer has an open showcase with every field, as if they consented to publish (152-FZ art. 10.1).
+  -- Places are ticked one by one, so a test that adds some publishes them with tests.publish_locations.
+  insert into public.public_data_consents (user_id, scope, version, fields)
+  values (v_id, 'showcase', 'test', array['about', 'city', 'photo', 'prices']);
+  insert into public.trainer_profiles (user_id, slug, is_public)
+  values (v_id, coalesce(p_slug, replace(lower(p_handle), '_', '-')), true);
   return v_id;
 end;
+$$;
+
+-- The trainer's consent to publish now covers every place in use, as if they ticked them all.
+create or replace function tests.publish_locations(p_handle text)
+returns void
+language sql
+set search_path = ''
+as $$
+  update public.public_data_consents c
+  set location_ids = coalesce(
+        (select array_agg(l.id order by l.id) from public.locations l where l.trainer_id = c.user_id and l.archived_at is null),
+        '{}'),
+      -- "locations" goes with at least one place (public_data_consents_locations_check).
+      fields = (select coalesce(array_agg(distinct f order by f), '{}')
+                from unnest(array_remove(c.fields, 'locations') || array['locations']) f
+                where f <> 'locations'
+                   or exists (select 1 from public.locations l where l.trainer_id = c.user_id and l.archived_at is null))
+  where c.user_id = tests.user_id(p_handle) and c.scope = 'showcase' and c.revoked_at is null;
 $$;
 
 -- A pair. Triggers add data_shares (measurements and workouts shared, photos and intake not) and

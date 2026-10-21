@@ -233,6 +233,7 @@ create type public.share_category as enum ('nutrition', 'measurements', 'photos'
 | R70 | Возврат в завершённую пару | RPC сбрасывает `data_shares` и поля завершения | PRD 2.3 |
 | R71 | Обратная связь без входа | В волне 1 нет | RLS рассчитан на вошедших |
 | R72 | Ответ на обратную связь | Админ отвечает через `admin_reply_feedback`: последний ответ хранится в `feedback.reply`, автору уходит `feedback_reply` | ADM-10 |
+| R72a | Запрос о моих данных | `feedback.kind = 'data_request'` с `request_type` (access, export, correction, deletion, withdraw, objection, stop, appeal, other), у `withdraw` ещё `consent_kind` (processing, health, marketing, publication); триггер ставит `due_on` через 10 рабочих дней (пн–пт, по Москве), для отзыва согласия на публикацию через 3; `admin_extend_data_request` один раз добавляет 5 с причиной (публикацию не продлевает), автору уходит `feedback_reply` с `event = 'extended'`; в GitHub не уходит | 152-ФЗ ст. 9, 10.1, 20, 21; legal/product-changes 16 |
 | R73 | Грант для цели | Целевой пользователь видит весь грант | |
 | R74 | Детали вех | `achieved_at` = начало занятия; пробные и вставка сразу как `attended` считаются | PRD 2.6.2-7 |
 | R75 | Дедупликация outbox | Глобальный уникальный ключ с моментом цели | перенос занятия ставит новые напоминания |
@@ -369,6 +370,8 @@ create table public.user_roles (
 
 **`consents`**: согласия при первом входе (Q44, юр. правки А1, А2), append-only. Экран условий пишет `beta_terms`, `terms`, `privacy_policy` и `age_confirmed`, следующий экран `pd_general`; без них прокси не пускает дальше (`lib/consent/required.ts`). `pd_health` спрашивается отдельно, и без него приложение работает. В `text_hash` sha256 показанного текста документа (у `age_confirmed` и старых строк null); пользователь пишет его, но не читает (выдача select по колонкам). Прокси читает согласия на каждой странице и в API, cookie на устройстве не используется.
 
+**`health_erasures`**: удаление сведений о здоровье после отзыва `pd_health` (юр. право 5, consent-health-data.md 8.3). Когда у пользователя не остаётся действующего `pd_health`, триггер на `consents` сразу выключает все шесть категорий `data_shares` в его парах, удаляет `ingest_tokens` и выводит его из `challenge_participants`, а удаление ставит строкой с `scheduled_for` через 30 дней; новое согласие до этого срока удаляет несделанную строку. Маршрут privacy удаляет файлы фото прогресса, затем `purge_health_data` (только service_role) удаляет анкеты, цели, замеры, фото, питание, сон и шаги, тренировки и рекорды, недельную цель, отправленные тренеру отчёты и карточки сторис видов `records`, `weight`, `streak_*` (эти таблицы чистятся по отзыву согласия; клиенты-карточки тренера согласий не дают и не затрагиваются), ставит `done_at` и пишет `health_data.purge` в журнал админов. Пользователь читает свою строку, писать не может.
+
 ```sql
 create type public.consent_kind as enum ('beta_terms', 'privacy_policy', 'contact_share',
   'terms', 'pd_general', 'pd_health', 'age_confirmed');
@@ -383,6 +386,24 @@ create table public.consents (
 );
 create index on public.consents (user_id, kind);
 create unique index consents_one_active_uniq on public.consents (user_id, kind, version) where revoked_at is null;
+```
+
+**`public_data_consents`**: согласие на распространение (ст. 10.1 152-ФЗ, legal/ru/consent-public-data.md): витрина тренера с выбранными полями (`photo`, `about`, `city`, `locations`, `prices`; имя видно всегда) и карточки для сторис; места отмечаются по одному в `location_ids` (тренер видит адреса, домашний может не отмечать, новое место скрыто, пока его не отметят; `locations` в `fields` ровно тогда, когда отмечено хоть одно); запреты (`no_transfer`, `no_index`, `no_processing`) и своё условие. Новое согласие заменяет действующее, отзыв ставит `revoked_at`. Витрина включается только с согласием (триггер на `trainer_profiles.is_public`, по умолчанию `false`), карточка сторис создаётся только с согласием `story` (триггер на `story_cards`). `get_trainer_showcase` и `get_trainer_showcase_prices` отдают только выбранные поля, `get_showcase_terms(slug)` отдаёт запреты и условие для раздела «Условия обработки данных».
+
+```sql
+create table public.public_data_consents (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references public.profiles(id) on delete cascade,
+  scope       text not null check (scope in ('showcase', 'story')),
+  version     text not null,
+  fields      text[] not null default '{}',
+  bans        text[] not null default '{}',
+  condition   text,                          -- до 500 знаков
+  location_ids uuid[] not null default '{}',   -- места, отмеченные для витрины
+  accepted_at timestamptz not null default now(),
+  revoked_at  timestamptz
+);
+create unique index on public.public_data_consents (user_id, scope) where revoked_at is null;
 ```
 
 **`account_deletions`**, **`data_exports`**
@@ -1476,7 +1497,7 @@ create table public.milestones (                 -- зафиксированны
 #### Обратная связь, жалобы, аудит, аварийный доступ
 
 ```sql
-create type public.feedback_kind as enum ('bug', 'idea', 'other');               -- R46
+create type public.feedback_kind as enum ('bug', 'idea', 'other', 'data_request'); -- R46, R72a
 create type public.feedback_status as enum ('new', 'in_progress', 'closed');
 create table public.feedback (
   id               uuid primary key default gen_random_uuid(),
@@ -2118,6 +2139,8 @@ create table public.challenge_participants (
 
 Челлендж создаёт тренер группы с фичей `trainer.groups` через `create_challenge` (старт сегодня или позже, бот зовёт всех клиентов живых пар группы сообщением `challenge`); отменяет `cancel_challenge`. Клиент вступает сам через `join_challenge`: нужна открытая тренеру категория метрики (`workouts`, `steps`, для дневника и нормы `nutrition`), иначе ошибка `share_needed`; показ в лидерборде выключен, пока клиент его не включит (`set_challenge_leaderboard`, с псевдонимом); `leave_challenge` выходит. Счёт считается по дням клиента от `starts_on` до конца или сегодняшнего дня (дни в норме только прошедшие): тренировки как в серии, сумма шагов (ручные, иначе iOS), дни с дневником, дни в пределах ±10% нормы (`adherence_counts`). Закрытая категория замораживает счёт на последнем значении, лидерборд помечает его скрытым. `my_challenges()` отдаёт клиенту челленджи его групп с его участием. Каждый час `finish_challenges()` подводит итог челленджей, чей последний день у тренера прошёл: значок `challenge_joined` каждому участнику со счётом больше нуля, `challenge_done` за цель, `challenge_winner` первым трём местам со счётом больше нуля, если лидерборд включён. Пара, ушедшая из группы или завершённая, выходит из идущих челленджей тренера, значки остаются.
 
+Сезонный челлендж DaFit (маркетинг 12, `20261021003117_season_challenges.sql`): админ запускает челлендж месяца `admin_create_season_challenge(title, month)` (первый день месяца, этот или позже, один неотменённый на месяц, аудит `season_challenge.create`), отменяет незавершённый `admin_cancel_season_challenge` (аудит `season_challenge.cancel`), видит список с участниками и прошедшими через `admin_season_challenges()`. Таблицы `season_challenges` и `season_challenge_participants` закрыты для прямого чтения, кроме своих строк участия; клиент видит челлендж через `my_season_challenge()` (идущий, будущий или завершённый не раньше 14 дней назад, с посещениями) и вступает или выходит через `set_season_challenge_joined(id, joined)` до конца месяца в своём поясе. Считается только посещаемость по всем тренерам клиента (`private.season_attendance`): занятия месяца в поясе клиента, `attended`, пропуски (`no_show`, `late_cancelled`) и записанные вперёд. Каждый час `private.finish_season_challenges()` подводит итог через день после конца месяца по UTC: `done`, если было посещение и нет пропусков, иначе `missed`; прошедшим значок `season_done` (семейство `season`) с сообщением `badge`.
+
 Лидерборд не хранится в таблице: SECURITY DEFINER-функция `challenge_board(challenge_id)` возвращает место (по счёту среди всех участников), псевдоним или имя (`first_name`) и итоговый `score`. Тренер челленджа видит всех, участник видит показанных в лидерборде и себя, остальные ничего. Сырых данных (шагов по дням, питания) функция не отдаёт.
 
 Рефералка (миграция `20261017040300_referral_offers.sql`, волна 3 §3.1; бонусы тренерам за тренеров, §3.2, в `20261017090519_trainer_referrals.sql`, ниже):
@@ -2188,6 +2211,8 @@ create table public.bonuses (
 
 «Только после факта оплаты» (Q50): триггер `payments_referral` (`after insert or update of status on payments`) на `confirmed`-платеже `direction = 'in'` в паре приглашённого вызывает `private.qualify_referral`: если платёж подходит под условие акции (пакет оплаченного абонемента или сумма в валюте акции), реферал становится `qualified`, и каждой стороне `private.grant_referral_bonus` добавляет занятия в действующий абонемент её пары (§3.1-6, `20261017174813_referral_bonus_active_pass.sql`): `adjustment` с `note = 'referral_bonus'` и суммой 0, затем гашение долга. Абонемент выбирает `private.referral_bonus_pass`: обычный (не разовый, не старый `is_bonus`), `active` или `frozen` по `pass_balances`; у приглашённого первым идёт оплаченный абонемент, дальше тот, что действует дольше. Выручку бонус не меняет: абонемент зарабатывает цену за первые `sessions_total` занятий (`pass_share_minor`). Если действующего абонемента нет, бонус `pending` с `coaching_id` пары, а триггер `ledger_entries_referral_bonus` на `grant` следующего обычного абонемента этой пары добавляет его туда и ставит `granted`. Уведомление `referral_bonus` уходит в обоих случаях (`waiting: true`, когда ждёт; `applied: true`, когда дождался). Пригласившему не больше 10 бонусов на акцию, ждущие тоже считаются. Если этот платёж переведён в `voided` в течение 14 дней после `qualified_at`, `private.revoke_referral` забирает бонусы: ждущий становится `void`, у добавленного в абонемент снимается свободная часть (`least(sessions, available)`, `adjustment` с `note = 'referral_bonus_voided'`), полностью использованный остаётся `granted`; реферал становится `void` (wave-3 §3.1-7). Бонусные абонементы `is_bonus`, выданные до этой миграции, отменяются по-старому: без списаний и погашений `refund` остатка и `cancelled`. Завершение пары аннулирует её `pending`-рефералы с обеих сторон.
 
+Значок клиента «Друг по приглашению» (маркетинг 15, `20261020173917_referral_friend_badge.sql`): триггер `referrals_award_friend_badge` на переходе реферала `client_to_client` в `qualified` даёт пригласившему `referral_friend` (семейство `referral`) и ставит в очередь сообщение `badge` один раз; когда реферал перестаёт быть `qualified` и у пригласившего не осталось других `qualified`, значок снимается.
+
 Тренер приводит тренера (§3.2, `20261017090519_trainer_referrals.sql`):
 
 ```sql
@@ -2215,6 +2240,8 @@ create table public.trainer_referral_terms (       -- одна строка: б�
 Ссылка тренера ведёт на обычный экран погашения инвайта (`/onboarding/trainer?code=…`, в Mini App `startapp=ti_<code>`): `trainer_invite_status` отвечает `referral` на чужой реферальный код, `redeem_trainer_invite` принимает его так же, как инвайт, но многоразово: создаёт `trainer_profiles` (Free, `trainer_invite_id = null`), реферал `trainer_to_trainer` (`pending`) и бонус пригласившему по текущим `trainer_referral_terms` (`pending`). Покупки тарифа в бете нет (Q59), поэтому бонус остаётся `pending` (§3.2-11). Решение админа «Отклонить» по верификации приглашённого (триггер на `trainer_verifications`) делает реферал и бонус `void` с причиной `verification_rejected`; доступ и клиенты у тренера остаются (Q55). Тренер видит свой код и приглашённых через `my_trainer_referral()` (код создаётся при первом вызове), бонус читают тренеры и админы через `trainer_referral_terms()`, меняет админ `admin_set_trainer_referral_bonus(kind, percent)` (аудит `trainer_referral.set_bonus`, действует для новых приглашений).
 
 Счётчик приглашённых (бэклог маркетинга 6, `20261018135217_trainer_referral_counts.sql`): приглашённый тренер «работает», если за последние 7 дней у него 3 и больше проведённых занятий по `private.analytics_held_sessions` (то же определение, что в статистике владельца, Q26); это `private.trainer_is_active(trainer_id)`. `my_trainer_referral()` отдаёт `active` у каждого приглашённого, экран «Пригласить тренера» считает пришедших, работающих (без `void`) и ждущие бонусы. Админ видит то же по каждому пригласившему через `admin_trainer_referrers()` (имя, пришли, работают, бонусов ждёт и выдано) в /admin/invites.
+
+Бонус в бете (бэклог маркетинга 7, Q50 с поправкой 20.10.2026, `20261020152317_referral_bonus_beta.sql`): тариф в бете не покупают, поэтому бонус пригласившему (`plan_month`) становится положен, когда приглашённый активен 4 недели подряд. `private.trainer_active_weeks(trainer_id, since)` считает самую длинную серию целых 7-дневных недель от приглашения, в каждой из которых 3 и больше проведённых занятий (то же определение, Q26). Админ видит бонусы тренеров с обоими тренерами, неделями и признаком «положен» через `admin_trainer_referral_bonuses()` в /admin/referral-bonuses и выдаёт положенный через `admin_grant_referral_bonus(bonus_id, starts_on)`: выдача `plan_grants` (`trainer_pro`, `source = 'referral_bonus'`, причина «Бонус за приглашение тренера») на месяц с начала выбранного дня в поясе тренера, по умолчанию 1 февраля 2027, первый день после беты. Бонус становится `granted` и запоминает выдачу в `bonuses.plan_grant_id` (без внешнего ключа: `plan_grants` запрещает `truncate`), реферал `qualified`, аудит `referral_bonus.grant`, тренеру уходят `plan_granted` (с `starts_at`) и `plan_expiring` за три дня до конца. Скидка на тариф (`plan_discount`) ждёт покупок после беты (`bonus_kind_unsupported`).
 
 ```sql
 create type public.check_in_method as enum ('qr', 'trainer');
@@ -2517,12 +2544,14 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `notification_preferences` | сам | сам | сам (`enabled`) | сам |
 | `user_roles` | сам; A | никто (позже `admin_grant_role`, R13) | никто | никто (позже `admin_revoke_role`) |
 | `consents` | сам, без `text_hash`; A | сам (`user_id`, `kind`, `version`, `text_hash`) | сам: только `revoked_at`, один раз | никто |
+| `public_data_consents` | сам; A | S-RPC `give_public_data_consent` | S-RPC `revoke_public_data_consent` | никто |
 | `account_deletions` | сам; партнёры по паре в любом статусе (только даты, R10); A | S-RPC `request_account_deletion` | S-RPC `cancel_account_deletion` | S |
 | `data_exports` | сам | S-RPC `request_data_export` | S | S |
 | `trainer_profiles` | сам; его клиенты в любом статусе пары (R89); A; anon/прочие: **pub** `get_trainer_showcase(slug)` (при `verification_status = 'rejected'` отвечает «недоступна», R16, Q60); зона «Тренер» и `is_trainer()` доступны при наличии `trainer_profiles` (доступ не зависит от верификации и тарифа, Q55) | S-RPC `redeem_trainer_invite` | сам (кроме `verification_status`, `verified_at`, `trainer_invite_id`: колоночные гранты); A через `admin_decide_verification` | никто |
 | `trainer_certificates` | сам; A | сам (не больше 5, R53) | сам | сам |
 | `trainer_verifications` | сам; A | S-RPC `submit_trainer_verification` (подача), `admin_decide_verification` (решение) | никто | никто |
 | `trainer_honors` | никто напрямую; A через `admin_trainer_honors(trainer)` (с причиной); **pub** `get_trainer_honors(slug)` только у открытой витрины верифицированного тренера (Q55), без причин | S-RPC `admin_set_trainer_honor` (A, причина обязательна, аудит `trainer_honor.grant`) | никто | S-RPC `admin_set_trainer_honor(..., false, ...)` (A, аудит `trainer_honor.revoke`) |
+| `trainer_milestones` | T свои (вехи маркетинга 14: `clients_5`, `sessions_100`, `sessions_500`, `weeks_4`, `first_trial_client`) | S триггеры на `sessions` и `bookings` (проведённые занятия по Q26, как `private.analytics_held_sessions`: закончилось, не отменено, есть запись confirmed или attended; группа одно занятие), `coachings` (активные пары, пара по пробной ссылке) и `bookings` (посещаемость, отмеченная человеком, 4 недели подряд по поясу тренера); первая запись ставит в очередь `trainer_milestone`, тренер выключает его в настройках уведомлений | никто | каскад от `trainer_profiles` |
 | `trainer_invites` | A (без хеша кода); статус кода для экрана погашения: S-RPC `trainer_invite_status` | A через `admin_create_trainer_invite` | S-RPC `admin_revoke_trainer_invite` (A), `redeem_trainer_invite` | никто |
 | `client_invites` | T; **pub** по токену, по коду после входа (`resolve_client_invite`) | T; S-RPC `my_client_invite` (создаёт ссылку при первом открытии), `reissue_client_invite` | T; S-RPC `reissue_client_invite` (архивирует старые) | никто (архив) |
 | `trial_links` | T; **pub** `get_trial_link(token)` | T | T (вкл. `is_enabled`) | никто (архив) |

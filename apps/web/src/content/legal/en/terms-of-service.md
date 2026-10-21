@@ -52,7 +52,7 @@ These words mean the same in all DaFit legal documents. In running text we write
 
 3.3. If we learn that a user is under 18, we will close the account and delete its data in line with the [Privacy Policy](privacy-policy.md).
 
-> Team: not in the product yet, see product-changes. There is no 18+ confirmation at sign-up; only the nutrition target calculator refuses users under 18.
+> Team: the sign-up screen has an "I am 18" checkbox (self-declaration, stored in the database); the nutrition target calculator also refuses users under 18.
 
 > Counsel: consider whether the "actual knowledge" standard (US COPPA, UK Children's Code) needs a stronger signal than self-declaration for a service that stores health data.
 
@@ -314,7 +314,7 @@ If you use DaFit as a trainer for business purposes, you will compensate us for 
 
 24.4. The version you accepted applies to anything that happened before the new version took effect.
 
-> Team: not in the product yet, see product-changes. Today the app records acceptance of the beta terms only (consent kind `beta_terms`, version `2026-11-beta`); there is no re-acceptance of each new version of these terms.
+> Team: acceptance of these terms is recorded with a version and a hash of the text (#186); a new version sends everyone back to the acceptance screen. There is no advance bot notice of material changes yet.
 
 > Counsel: pick [CONSUMER NOTICE DAYS] (30 is common).
 

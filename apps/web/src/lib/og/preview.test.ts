@@ -16,6 +16,7 @@ describe("link previews", () => {
     expect(previewText(ru, { kind: "showcase", trainer: null }).title).toBe(ru.linkPreview.showcase.generic);
     expect(previewText(en, { kind: "client", trainer: TRAINER }).title).toBe("Анна Смирнова invites you to DaFit");
     expect(previewText(ru, { kind: "trainer-invite", trainer: null }).title).toBe(ru.linkPreview.trainerInvite.generic);
+    expect(previewText(ru, { kind: "for-trainers", trainer: null }).title).toBe(ru.linkPreview.forTrainers.generic);
   });
 
   it("adds a trial's length to the line above the title", () => {

@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 import { HEALTH_CONSENT, REQUIRED_CONSENTS } from "../../src/lib/consent/required";
+import { HEALTH_NOTICE_COOKIE, HEALTH_NOTICE_VERSION } from "../../src/lib/health-notice/notice";
 import type { Database } from "../../src/lib/supabase/database.types";
 import { BOT_TOKEN, supabaseEnv } from "./env";
 
@@ -86,6 +87,8 @@ export async function newPersona(browser: Browser, baseURL: string, { firstName,
     locale: locale === "ru" ? "ru-RU" : "en-US",
     timezoneId: "Europe/Moscow",
   });
+  // Read the health notice already, as on a device used before; the health-consent scenario shows it afresh.
+  await context.addCookies([{ name: HEALTH_NOTICE_COOKIE, value: HEALTH_NOTICE_VERSION, url: baseURL }]);
   const answer = await context.request.post("/api/auth/telegram/mini-app", {
     headers: { origin: new URL(baseURL).origin, "content-type": "application/json" },
     data: { initData: signedInitData({ id: telegramId, first_name: firstName, last_name: lastName, language_code: locale }) },

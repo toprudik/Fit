@@ -25,7 +25,8 @@ function cleanAlias(alias: unknown): string | null | undefined {
 }
 
 export type ChallengeInput = {
-  groupId: string;
+  /** Null for a challenge for all of the trainer's clients. */
+  groupId: string | null;
   title: string;
   metric: string;
   weeks: number;
@@ -34,11 +35,11 @@ export type ChallengeInput = {
   leaderboard: boolean;
 };
 
-/** "Новый челлендж" in a group (wave-3 §2.3-9). Returns the new challenge's id. */
+/** "Новый челлендж" in a group (wave-3 §2.3-9) or for all clients (groupId null). Returns the new challenge's id. */
 export async function createChallenge(input: ChallengeInput): Promise<{ ok: true; value: string } | { ok: false; reason: "invalid" | "plan" | "failed" }> {
   const title = typeof input.title === "string" ? input.title.trim() : "";
   if (
-    !isId(input.groupId) ||
+    (input.groupId !== null && !isId(input.groupId)) ||
     !title ||
     title.length > CHALLENGE_TITLE_MAX ||
     !isChallengeMetric(input.metric) ||
@@ -51,7 +52,8 @@ export async function createChallenge(input: ChallengeInput): Promise<{ ok: true
   }
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("create_challenge", {
-    p_group_id: input.groupId,
+    // The generated types know no nullable arguments; create_challenge takes null for all clients.
+    p_group_id: input.groupId as string,
     p_title: title,
     p_metric: input.metric,
     p_weeks: input.weeks,

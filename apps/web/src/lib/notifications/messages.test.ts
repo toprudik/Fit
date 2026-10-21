@@ -256,6 +256,26 @@ describe("feedback reply (ADM-10)", () => {
     expect(message?.text).toBe("Команда DaFit ответила на твоё обращение:\nFixed &lt;b&gt;it&lt;/b&gt;");
     expect(message?.buttons).toEqual([{ text: "Написать ещё", web_app: { url: "https://fit.example/feedback?source=feedback_reply" } }]);
   });
+
+  it("tells the author of a data request the new date and why, before the first one passes (152-FZ art. 20)", () => {
+    const message = renderMessage(
+      {
+        ...row,
+        kind: "feedback_reply",
+        payload: { feedback_id: "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b", kind: "data_request", event: "extended", reply: "Ждём <архив>", due_on: "2026-11-09" },
+      },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe("Нам нужно чуть больше времени на твой запрос о данных. Ответим до 9 ноября.\nПочему: Ждём &lt;архив&gt;");
+  });
+
+  it("falls back to the plain answer when the new date is malformed", () => {
+    const message = renderMessage(
+      { ...row, kind: "feedback_reply", payload: { kind: "data_request", event: "extended", reply: "Ждём", due_on: "9 ноября" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe("Команда DaFit ответила на твоё обращение:\nЖдём");
+  });
 });
 
 describe("break-glass access (ADM-14)", () => {
@@ -342,6 +362,27 @@ describe("plan messages", () => {
   it("says when a plan has no end, and opens My plan", () => {
     const message = renderMessage({ ...row, kind: "plan_granted", payload: { plan: "client_premium", expires_at: null } }, options);
     expect(message?.text).toBe("Тебе выдан тариф Premium без срока. Спасибо, что ты в бете DaFit.");
+    expect(message?.buttons).toEqual([
+      { text: "Открыть тариф", web_app: { url: "https://fit.example/settings/plan?source=plan_granted" } },
+    ]);
+  });
+
+  it("names a start that is still ahead at sending, and drops it once it has come (referral bonus)", () => {
+    const now = new Date("2026-12-15T09:00:00Z");
+    const later = { plan: "trainer_pro", starts_at: "2027-01-31T21:00:00Z", expires_at: "2027-02-28T21:00:00Z" };
+    expect(renderMessage({ ...row, kind: "plan_granted", payload: later }, { ...options, now })?.text).toBe(
+      "Тебе выдан тариф Pro с 1 февраля 2027 до 1 марта 2027. Спасибо, что ты в бете DaFit.",
+    );
+    expect(renderMessage({ ...row, kind: "plan_granted", locale: "en", payload: later }, { ...options, now })?.text).toBe(
+      "You get Pro from February 1, 2027 until March 1, 2027. Thanks for being in the DaFit beta.",
+    );
+    const started = { ...later, starts_at: "2026-12-01T21:00:00Z" };
+    expect(renderMessage({ ...row, kind: "plan_granted", payload: started }, { ...options, now })?.text).toBe(
+      "Тебе выдан тариф Pro до 1 марта 2027. Спасибо, что ты в бете DaFit.",
+    );
+    const open = { plan: "trainer_pro", starts_at: "2027-01-31T21:00:00Z", expires_at: null };
+    const message = renderMessage({ ...row, kind: "plan_granted", payload: open }, { ...options, now });
+    expect(message?.text).toBe("Тебе выдан тариф Pro с 1 февраля 2027. Спасибо, что ты в бете DaFit.");
     expect(message?.buttons).toEqual([
       { text: "Открыть тариф", web_app: { url: "https://fit.example/settings/plan?source=plan_granted" } },
     ]);
@@ -1244,6 +1285,9 @@ describe("review_prompt and report_resolution (wave-2 §11)", () => {
 
   it("confirms a report and an appeal as soon as they arrive", () => {
     expect(report({ event: "received" })).toBe("Жалобу получили. Посмотрим и напишем, что решили.");
+    expect(
+      renderMessage({ ...row, kind: "report_resolution", payload: { event: "received", target_type: "food_comment" } }, options)?.buttons,
+    ).toEqual([{ text: "Открыть DaFit", web_app: { url: "https://fit.example/reports?source=report_resolution" } }]);
     expect(report({ event: "appeal_received" })).toMatch(/другой человек из команды DaFit/);
   });
 
@@ -1273,5 +1317,26 @@ describe("review_prompt and report_resolution (wave-2 §11)", () => {
       options,
     );
     expect(en?.text).toBe("Someone reported something you wrote. We looked at it and hid it. Reason: “Rude”. You can appeal within six months.");
+  });
+});
+
+describe("invited trainer joined", () => {
+  const TRAINER = "7b1f2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
+  const options = { appUrl: "https://fit.example", group: false };
+
+  it("tells the inviter their trainer came, with a button to start training", () => {
+    const message = renderMessage(
+      { ...row, kind: "invited_trainer_joined", payload: { trainer_id: TRAINER, first_name: "<Ника>", last_name: "Петрова" } },
+      options,
+    );
+    expect(message?.text).toBe("&lt;Ника&gt; Петрова теперь в DaFit по твоему приглашению. Открой приглашения, чтобы начать заниматься в приложении.");
+    expect(message?.buttons).toEqual([
+      { text: "Начать занятия", web_app: { url: "https://fit.example/client/invite-trainer?source=invited_trainer_joined" } },
+    ]);
+  });
+
+  it("names nobody when the trainer has no name", () => {
+    const message = renderMessage({ ...row, kind: "invited_trainer_joined", locale: "en", payload: { trainer_id: TRAINER } }, options);
+    expect(message?.text).toBe("Your trainer joined DaFit by your invitation. Open your invitations to start training in the app.");
   });
 });

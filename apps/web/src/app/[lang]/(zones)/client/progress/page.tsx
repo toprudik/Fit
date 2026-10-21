@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { HealthConsentGate } from "@/components/consent/health-consent-gate";
 import { MonthlyReportEntry } from "@/components/monthly-report/entry";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
@@ -9,6 +10,7 @@ import { ClientNutritionEntry } from "@/components/nutrition/sections";
 import { ClientPhotos } from "@/components/progress/photo-sections";
 import { ClientMeasurements, ClientMilestones } from "@/components/progress/sections";
 import { ClientRecords } from "@/components/workouts/records";
+import { ClientSeasonChallenge } from "@/components/season-challenge/season-card";
 import { getDictionary } from "@/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -16,7 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.tabs.client.progress };
 }
 
-/** "Прогресс": last month's report, measurements, the goal and nutrition target, the latest photos, streaks and badges, milestones and the records from the workout logs. */
+/** "Прогресс": last month's report, the DaFit season challenge, measurements, the goal and nutrition target, the latest photos, streaks and badges, milestones and the records from the workout logs. */
 export default async function ClientProgressPage() {
   const t = await getDictionary();
   return (
@@ -25,14 +27,22 @@ export default async function ClientProgressPage() {
         <Suspense fallback={null}>
           <MonthlyReportEntry />
         </Suspense>
+        <Suspense fallback={null}>
+          <ClientSeasonChallenge />
+        </Suspense>
         <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
-          <ClientMeasurements />
-        </Suspense>
-        <Suspense fallback={<SkeletonRows rows={1} label={t.common.loading} />}>
-          <ClientNutritionEntry />
-        </Suspense>
-        <Suspense fallback={<SkeletonRows rows={2} label={t.common.loading} />}>
-          <ClientPhotos />
+          {/* Measurements, the nutrition target and photos are health data (право 3): one card asks for the consent. */}
+          <HealthConsentGate next="/client/progress">
+            <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
+              <ClientMeasurements />
+            </Suspense>
+            <Suspense fallback={<SkeletonRows rows={1} label={t.common.loading} />}>
+              <ClientNutritionEntry />
+            </Suspense>
+            <Suspense fallback={<SkeletonRows rows={2} label={t.common.loading} />}>
+              <ClientPhotos />
+            </Suspense>
+          </HealthConsentGate>
         </Suspense>
         <Suspense fallback={<SkeletonRows rows={2} label={t.common.loading} />}>
           <ClientGamificationEntry />

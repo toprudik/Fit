@@ -39,7 +39,7 @@ select is(
         where r.root = f.oid and g.def ~ 'auth\.uid\(\)')
     order by 1
   ),
-  array['get_trainer_honors', 'get_trainer_showcase_prices', 'story_card'],
+  array['get_showcase_terms', 'get_trainer_honors', 'get_trainer_showcase_prices', 'story_card'],
   'every definer RPC reads the caller (auth.uid()), directly or through what it calls, except the listed public lookups'
 );
 

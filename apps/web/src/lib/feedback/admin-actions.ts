@@ -3,11 +3,13 @@
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { MAX_EXTENSION_REASON } from "./data-requests";
 import { feedbackIssueTarget, fileFeedbackIssue, type FileIssueResult } from "./github";
 import { MAX_REPLY_LENGTH } from "./status";
 
 const statusInput = z.object({ id: z.uuid(), status: z.enum(["new", "in_progress", "closed"]) });
 const replyInput = z.object({ id: z.uuid(), body: z.string().trim().min(1).max(MAX_REPLY_LENGTH) });
+const extendInput = z.object({ id: z.uuid(), reason: z.string().trim().min(1).max(MAX_EXTENSION_REASON) });
 
 /**
  * Moves a feedback message through new → in_progress → closed in /admin/feedback (ADM-9). A plain update as the
@@ -56,4 +58,26 @@ export async function replyToFeedback(raw: { id: string; body: string }): Promis
   if (error) return { status: error.message === "author_deleted" ? "author_deleted" : "failed" };
   refresh();
   return { status: "sent" };
+}
+
+export type ExtendResult = { status: "extended" | "already" | "closed" | "author_deleted" | "invalid" | "failed" };
+
+/**
+ * "Продлить на 5 рабочих дней" for a data request (152-FZ arts. 20, 21): admin_extend_data_request checks the admin,
+ * moves the deadline once, logs it and tells the author the reason and the new date in the bot.
+ */
+export async function extendDataRequest(raw: { id: string; reason: string }): Promise<ExtendResult> {
+  const parsed = extendInput.safeParse(raw);
+  if (!parsed.success) return { status: "invalid" };
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("admin_extend_data_request", { p_feedback_id: parsed.data.id, p_reason: parsed.data.reason });
+  if (error) {
+    if (error.message === "already_extended") return { status: "already" };
+    if (error.message === "answered") return { status: "closed" };
+    if (error.message === "author_deleted") return { status: "author_deleted" };
+    if (error.code !== "22023") console.error("extending a data request failed", error.code);
+    return { status: error.code === "22023" ? "invalid" : "failed" };
+  }
+  refresh();
+  return { status: "extended" };
 }

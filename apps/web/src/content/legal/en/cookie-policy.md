@@ -12,7 +12,7 @@ This policy explains which cookies and similar storage the Service uses in the w
 
 ## 2. In short
 
-2.1. DaFit uses only its own (first-party) cookies and storage: to sign you in, keep you signed in safely, remember that you accepted the terms, remember settings you chose, and count app openings once per tab (section 4). We use no advertising cookies, no third-party analytics or tracking cookies, no social media pixels and no third-party cookies. Our fonts are our own, so no font service sets anything either.
+2.1. DaFit uses only its own (first-party) cookies and storage: to sign you in, keep you signed in safely, and remember settings you chose (section 4). We use no advertising cookies, no third-party analytics or tracking cookies, no social media pixels and no third-party cookies. Our fonts are our own, so no font service sets anything either.
 
 ## 3. Cookies we use
 
@@ -23,6 +23,7 @@ This policy explains which cookies and similar storage the Service uses in the w
 | `dafit-locale` | Remembers the language you chose (Russian or English) | 1 year | Functional (your preference) |
 | `dafit-theme` | Remembers the theme you chose (light, dark or system), so the page does not flash the wrong colours while loading | 1 year | Functional (your preference) |
 | `dafit-zone` | Remembers whether you last used DaFit as a trainer or as a client, so the app opens there | 1 year | Functional |
+| `dafit-health-notice` | Remembers that you read the health notice shown before your first nutrition target, so it is not shown again | 1 year | Functional |
 
 ## 4. Local and session storage
 
@@ -32,19 +33,18 @@ This policy explains which cookies and similar storage the Service uses in the w
 | Start link and language reload markers | Stop the app from following the same bot link or reloading for your language twice in one tab | Until you close the tab | Strictly necessary |
 | Time zone marker | Stops the app from sending your device's time zone to our server again on every screen | Until you close the tab | Functional |
 | Seen milestones | Remembers which milestone celebrations you have already seen, so each plays only once | Until you clear your browser data | Functional |
-| `dafit:app-open` | Lets us count one app opening per tab, and which bot button it came from | Until you close the tab | Statistics (first-party) |
 
-> Counsel: `dafit:app-open` serves statistics, not a service the user asked for. In the EU, Art. 5(3) of the ePrivacy Directive has no exemption for analytics, so it needs consent. In the UK, the Data (Use and Access) Act 2025 added a statistical-purposes exception to PECR (Schedule A1, para 5), but only with clear information and a free, simple way to object. The server already folds repeated openings within 30 minutes, so the simplest fix is to drop this key.
+Our server also records when you open the app and from which bot button, to see how DaFit is used. Nothing is stored on your device for this. You can switch it off in Settings, then "App opening count"; your past openings are deleted and new ones are not recorded.
 
-> Team: not in the product yet, see product-changes. `dafit:app-open` is still set; until it is dropped, the no-banner position in section 5 does not hold for EU users.
+> Counsel: the opening count no longer stores anything on the device, so Art. 5(3) of the ePrivacy Directive does not apply to it; the server-side record relies on legitimate interests with the opt-out above (privacy policy, section 5).
 
 ## 5. Why there is no cookie banner
 
 5.1. EU and UK law (Art. 5(3) of the ePrivacy Directive as implemented in each EU country, and regulation 6 of the UK Privacy and Electronic Communications Regulations 2003) requires consent before storing or reading information on your device, except where:
-- it is strictly necessary to provide the service you asked for. This covers the sign-in cookies, the security code during sign-in, the record of your acceptance of the terms, and the Telegram launch data;
+- it is strictly necessary to provide the service you asked for. This covers the sign-in cookies, the security code during sign-in, and the Telegram launch data;
 - it only remembers a choice you made about how the site looks or works, such as language or theme. EU regulators treat such user-interface preferences as part of the service you requested. In the UK, the 2025 reform added a specific exception for adapting a website to your preferences or improving its appearance or functionality, provided you get clear information (this policy) and can object (section 6).
 
-5.2. Apart from `dafit:app-open` (see the note in section 4), DaFit uses nothing beyond these, so we do not show a consent banner. If we ever want to use a cookie that is not covered by these exceptions, for example for analytics or advertising, we will update this policy and ask for your consent first, with "Accept" and "Reject" equally easy, and we will not set it until you agree.
+5.2. DaFit uses nothing beyond these, so we do not show a consent banner. If we ever want to use a cookie that is not covered by these exceptions, for example for analytics or advertising, we will update this policy and ask for your consent first, with "Accept" and "Reject" equally easy, and we will not set it until you agree.
 
 > Counsel: (1) `dafit-zone` is set automatically from the screen you open, not by an explicit choice; it is a functional convenience. Confirm that it falls under the strictly-necessary or UK appearance/functionality exception, or shorten its life. (2) The EU Digital Omnibus proposal would move cookie rules into the GDPR (new Art. 88a); it was still being negotiated in October 2026. Re-check before publication.
 

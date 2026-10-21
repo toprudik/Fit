@@ -51,24 +51,28 @@ function toChallenge(row: Row, state: ChallengeState): Challenge | null {
   };
 }
 
-async function boardOf(supabase: Supabase, challengeId: string): Promise<BoardRow[]> {
+/** A board row with what another participant reports an alias by (content reports): its challenge row, or null. */
+export type BoardEntry = BoardRow & { reportId: string | null };
+
+async function boardOf(supabase: Supabase, challengeId: string): Promise<BoardEntry[]> {
   const { data, error } = await supabase.rpc("challenge_board", { p_challenge_id: challengeId });
   if (error) throw new Error(`loading a challenge board failed: ${error.code}`);
-  return toBoardRows(data);
+  return toBoardRows(data).map((row, index) => ({ ...row, reportId: data[index].report_id ?? null }));
 }
 
 export type GroupChallenge = Challenge & { participants: number };
 
-/** The challenges of a trainer's group, newest first, with how many joined. Empty for anyone else. */
-export async function loadGroupChallenges(groupId: string): Promise<{ challenges: GroupChallenge[]; today: string } | null> {
-  if (!ID.test(groupId)) return null;
+/**
+ * The challenges of a trainer's group, or with groupId null their challenges for all clients, newest first, with
+ * how many joined. Empty for anyone else.
+ */
+export async function loadGroupChallenges(groupId: string | null): Promise<{ challenges: GroupChallenge[]; today: string } | null> {
+  if (groupId !== null && !ID.test(groupId)) return null;
   const supabase = await createSupabaseServerClient();
   const me = await viewer(supabase);
   if (!me) return null;
-  const { data, error } = await supabase
-    .from("challenges")
-    .select(COLUMNS)
-    .eq("group_id", groupId)
+  const base = supabase.from("challenges").select(COLUMNS);
+  const { data, error } = await (groupId === null ? base.is("group_id", null) : base.eq("group_id", groupId))
     .eq("trainer_id", me.id)
     .order("starts_on", { ascending: false })
     .order("created_at", { ascending: false });
@@ -88,7 +92,8 @@ export async function loadGroupChallenges(groupId: string): Promise<{ challenges
   return { challenges, today };
 }
 
-export type TrainerChallenge = { challenge: Challenge; groupId: string; groupName: string; board: BoardRow[] };
+/** groupId is null for a challenge for all clients. */
+export type TrainerChallenge = { challenge: Challenge; groupId: string | null; groupName: string; board: BoardEntry[] };
 
 /** One challenge of the signed-in trainer with its whole leaderboard. Null when it isn't theirs. */
 export async function loadTrainerChallenge(challengeId: string): Promise<TrainerChallenge | null> {
@@ -102,10 +107,10 @@ export async function loadTrainerChallenge(challengeId: string): Promise<Trainer
   const challenge = toChallenge(row, stateOf(row, todayIn(me.timeZone)));
   if (!challenge) return null;
   const [group, board] = await Promise.all([
-    supabase.from("groups").select("name").eq("id", row.group_id).maybeSingle(),
+    row.group_id ? supabase.from("groups").select("name").eq("id", row.group_id).maybeSingle() : null,
     boardOf(supabase, challengeId),
   ]);
-  return { challenge, groupId: row.group_id, groupName: group.data?.name ?? "", board };
+  return { challenge, groupId: row.group_id, groupName: group?.data?.name ?? "", board };
 }
 
 export type MyChallenge = Challenge & {
@@ -150,7 +155,7 @@ export async function loadMyChallenges(): Promise<MyChallenge[]> {
 }
 
 /** One challenge of the client's groups, with the leaderboard once they joined. Null when it isn't theirs. */
-export async function loadMyChallenge(challengeId: string): Promise<{ challenge: MyChallenge; board: BoardRow[] } | null> {
+export async function loadMyChallenge(challengeId: string): Promise<{ challenge: MyChallenge; board: BoardEntry[] } | null> {
   if (!ID.test(challengeId)) return null;
   const challenge = (await loadMyChallenges()).find((item) => item.id === challengeId);
   if (!challenge) return null;
