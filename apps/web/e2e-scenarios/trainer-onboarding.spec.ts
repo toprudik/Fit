@@ -115,6 +115,23 @@ test("a new person with an invite code goes through consent, preferences, the in
     page.getByRole("heading", { level: 1, name: "Где проходят занятия" }),
   ).toBeVisible();
   await expectAccessible(page);
+
+  // Going back shows what was saved, not the empty form the router kept, and "Далее" keeps it (QA B3).
+  await page.goBack();
+  await expectPath(page, "/onboarding/trainer/format");
+  await expect(page.getByRole("checkbox", { name: "Силовые" })).toBeChecked();
+  await expect(page.getByLabel("Город")).toHaveValue("Казань");
+  await page.goBack();
+  await expectPath(page, "/onboarding/trainer/profile");
+  await expect(page.getByLabel("Коротко о себе")).toHaveValue(
+    "Тренер по силовым, 5 лет в зале",
+  );
+  await page.getByRole("button", { name: "Далее" }).click();
+  await expectPath(page, "/onboarding/trainer/format");
+  await expect(page.getByRole("checkbox", { name: "Растяжка" })).toBeChecked();
+  await page.getByRole("button", { name: "Далее" }).click();
+  await expectPath(page, "/onboarding/trainer/locations");
+
   await page.getByLabel("Название").fill("Зал на Кремлёвской");
   await page.getByLabel("Адрес").fill("ул. Кремлёвская, 1");
   await page.getByRole("button", { name: "Добавить ещё" }).click();
