@@ -89,6 +89,8 @@ export function setMiniAppSignIn(send: (() => Promise<MiniAppSignInResult>) | nu
 export function signInToMiniApp(): Promise<MiniAppSignInResult> {
   if (pendingSignIn) return pendingSignIn;
   if (!sendInitData) return Promise.resolve("reopen");
+  // A reason belongs to one answer: lifted since, the block must not show an old one.
+  blockReason = null;
   setSignInStatus("pending");
   pendingSignIn = sendInitData().then((result) => {
     pendingSignIn = null;
@@ -105,6 +107,19 @@ export function signInToMiniApp(): Promise<MiniAppSignInResult> {
  */
 export function useMiniAppSignIn(): MiniAppSignInStatus | null {
   return useSyncExternalStore(subscribeSignIn, () => signInStatus, () => null);
+}
+
+/** The admin's reason for a `banned` answer (ADM-7); null when the admin left none or nothing is banned. */
+let blockReason: string | null = null;
+
+/** Called by the Telegram provider with what the server sent along with `banned`; only text is kept, at most 500 characters. */
+export function setMiniAppBlockReason(reason: unknown) {
+  blockReason = typeof reason === "string" && reason.trim() ? reason.trim().slice(0, 500) : null;
+}
+
+/** The reason of the block, shown on /login with the `banned` status (user agreement 15). */
+export function useMiniAppBlockReason(): string | null {
+  return useSyncExternalStore(subscribeSignIn, () => blockReason, () => null);
 }
 
 /** Answers another request may change; `reopen`, `blocked` and `banned` hold for the whole page load. */
@@ -307,6 +322,7 @@ export function resetMiniAppForTests() {
   detachClick?.();
   detachClick = null;
   signInStatus = null;
+  blockReason = null;
   sendInitData = null;
   pendingSignIn = null;
   answered = 0;

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { DaRing } from "@/components/brand/da-ring";
+import { MomentShare } from "@/components/moments/moment-share";
 import { Badge } from "@/components/ui/badge";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { useI18n } from "@/i18n/client";
@@ -12,7 +13,8 @@ export type BadgeRow = { code: BadgeCode; earnedOn: string | null; isNew: boolea
 
 /**
  * The badge list (§2.2): earned badges with the closed Da-ring and the date, the rest still ahead. New badges
- * play the Da-moment once (none with reduced motion) and are marked seen; only the client marks them.
+ * play the Da-moment once (none with reduced motion) and are marked seen; only the client marks them, and only the
+ * client can share an earned badge as a story card (marketing backlog 4).
  */
 export function BadgeList({ rows, header, markSeen }: { rows: BadgeRow[]; header: string; markSeen: boolean }) {
   const { t } = useI18n();
@@ -36,7 +38,12 @@ export function BadgeList({ rows, header, markSeen }: { rows: BadgeRow[]; header
             leading={<DaRing state="done" size={28} animate={markSeen && row.isNew} />}
             title={item.title}
             subtitle={row.earnedOn}
-            trailing={row.isNew ? <Badge tone="accent">{copy.new}</Badge> : undefined}
+            trailing={
+              <>
+                {row.isNew ? <Badge tone="accent">{copy.new}</Badge> : null}
+                {markSeen ? <MomentShare kind="badge" momentRef={row.code} label={item.title} /> : null}
+              </>
+            }
           />
         ) : (
           <ListRow

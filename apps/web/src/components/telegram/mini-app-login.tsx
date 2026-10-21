@@ -2,9 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { BlockedNotice } from "@/components/account/blocked-notice";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n/client";
-import { signInToMiniApp, useMiniAppSignInNow } from "@/lib/telegram/mini-app";
+import { signInToMiniApp, useMiniAppBlockReason, useMiniAppSignInNow } from "@/lib/telegram/mini-app";
 
 type MiniAppLoginProps = {
   /** Where to go once signed in: a path on this site. */
@@ -19,12 +20,13 @@ type MiniAppLoginProps = {
  * the page sends initData again (an earlier answer says nothing about the session now) and goes on
  * to `next` once that sign-in succeeds. A failed attempt gets a button to try again; initData that is
  * missing or too old can't be fixed from here, so the page asks to reopen the app, a browser that
- * drops the app's cookies gets sent to the Telegram app, and a blocked account is told so.
+ * drops the app's cookies gets sent to the Telegram app, and a blocked account is told so, with the admin's reason.
  */
 export function MiniAppLogin({ next, children }: MiniAppLoginProps) {
   const { t } = useI18n();
   const router = useRouter();
   const status = useMiniAppSignInNow();
+  const blockReason = useMiniAppBlockReason();
 
   useEffect(() => {
     if (status !== "signed-in") return;
@@ -47,8 +49,9 @@ export function MiniAppLogin({ next, children }: MiniAppLoginProps) {
       </>
     );
   }
-  if (status === "reopen" || status === "blocked" || status === "banned") {
-    const message = { reopen: t.telegram.signInExpired, blocked: t.telegram.cookiesBlocked, banned: t.telegram.accountBlocked }[status];
+  if (status === "banned") return <BlockedNotice reason={blockReason} />;
+  if (status === "reopen" || status === "blocked") {
+    const message = { reopen: t.telegram.signInExpired, blocked: t.telegram.cookiesBlocked }[status];
     return (
       <p role="alert" className="text-subhead text-danger">
         {message}

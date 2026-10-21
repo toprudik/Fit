@@ -154,6 +154,17 @@ test.describe("the client's progress", () => {
     await expect(page.getByText(/Получен/).first()).toBeVisible();
     await expect(page.getByText(/^1 из \d+$/).first()).toBeVisible();
     await checked(page);
+
+    // Marketing 4: the badge is shared as a story card; the first card asks for the consent to publish.
+    await page.getByRole("button", { name: "Поделиться: Первый рекорд" }).click();
+    await expect(page.getByRole("dialog", { name: "Согласие на публикацию" })).toBeVisible();
+    await page.getByRole("button", { name: "Даю согласие" }).click();
+    const card = page.getByRole("dialog", { name: "Карточки для сторис" }).getByRole("img", { name: "Карточка для сторис" });
+    await expect(card).toBeVisible();
+    const picture = await page.request.get((await card.getAttribute("src"))!);
+    expect(picture.status()).toBe(200);
+    expect(picture.headers()["content-type"]).toBe("image/png");
+    await checked(page);
   });
 });
 
@@ -184,6 +195,16 @@ test.describe("monthly reports", () => {
     await expect(page.getByRole("heading", { name: "Замеры" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Новые рекорды" })).toBeVisible();
     await checked(page);
+
+    // The story sheet of the report: consent first, then the picture (it shares its sheet with moment cards).
+    await page.getByRole("button", { name: /^Рекорды/ }).click();
+    await expect(page.getByRole("dialog", { name: "Согласие на публикацию" })).toBeVisible();
+    await page.getByRole("button", { name: "Даю согласие" }).click();
+    const story = page.getByRole("dialog", { name: "Карточки для сторис" });
+    await expect(story.getByRole("img", { name: "Карточка для сторис" })).toBeVisible();
+    await expect(story.getByRole("link", { name: "Сохранить картинку" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(story).toBeHidden();
 
     const forward = page.getByRole("button", { name: /Иван Тренеров/ });
     await expect(forward).toContainText("Отправить");

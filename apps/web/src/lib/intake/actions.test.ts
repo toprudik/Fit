@@ -46,11 +46,12 @@ vi.mock("@/lib/supabase/server", () => ({
   },
 }));
 
-const { decideIntakeShare, markIntakeSeen, remindIntake, setIntakeShare, submitIntake } = await import("./actions");
+const { decideShares, markIntakeSeen, remindIntake, setIntakeShare, submitIntake } = await import("./actions");
 
 const PAIR = "00000000-0000-4000-8000-000000000001";
 const NOW = "2026-10-18T09:00:00.000Z";
 const IDLE = { status: "idle" } as const;
+const ALL_CLOSED = { measurements: false, photos: false, workouts: false, nutrition: false, steps: false, intake: false };
 const broken = { data: null, error: { code: "XX000", message: "internal detail" } };
 
 function intakeForm(over: Record<string, string> = {}, goals = ["strength"]) {
@@ -117,37 +118,51 @@ describe("submitIntake", () => {
   });
 });
 
-describe("decideIntakeShare", () => {
-  it("stamps the decision and goes on to the intake while the client has none", async () => {
+describe("decideShares", () => {
+  it("writes every category with the time of the answer, then goes on to the intake while the client has none", async () => {
     db.answers = [{ data: [{ coaching_id: PAIR }], error: null }, { count: 0, error: null }];
-    await expect(decideIntakeShare(PAIR, true)).rejects.toThrow(`NEXT_REDIRECT /client/trainers/${PAIR}/intake`);
+    await expect(decideShares(PAIR, { ...ALL_CLOSED, nutrition: true, intake: true })).rejects.toThrow(
+      `NEXT_REDIRECT /client/trainers/${PAIR}/intake`,
+    );
     expect(db.calls).toEqual([
-      ["data_shares", "update", { intake: true, intake_decided_at: NOW }, "eq", "coaching_id", PAIR, "select", "coaching_id"],
+      [
+        "data_shares",
+        "update",
+        { ...ALL_CLOSED, nutrition: true, intake: true, intake_decided_at: NOW },
+        "eq",
+        "coaching_id",
+        PAIR,
+        "select",
+        "coaching_id",
+      ],
       ["intakes", "select", "id", { count: "exact", head: true }, "eq", "user_id", "client-1"],
     ]);
   });
 
-  it("goes back to the pair when the client already has an intake", async () => {
+  it("goes back to the pair when the intake stays hidden or the client already has one", async () => {
+    db.answers = [{ data: [{ coaching_id: PAIR }], error: null }];
+    await expect(decideShares(PAIR, ALL_CLOSED)).rejects.toThrow(`NEXT_REDIRECT /client/trainers/${PAIR}`);
+    expect(db.calls).toHaveLength(1);
     db.answers = [{ data: [{ coaching_id: PAIR }], error: null }, { count: 2, error: null }];
-    await expect(decideIntakeShare(PAIR, false)).rejects.toThrow(`NEXT_REDIRECT /client/trainers/${PAIR}`);
-    expect(next.redirect).toHaveBeenCalledWith(`/client/trainers/${PAIR}`);
-    expect(db.calls[0][2]).toEqual({ intake: false, intake_decided_at: NOW });
+    await expect(decideShares(PAIR, { ...ALL_CLOSED, intake: true })).rejects.toThrow(`NEXT_REDIRECT /client/trainers/${PAIR}`);
+    expect(next.redirect).toHaveBeenLastCalledWith(`/client/trainers/${PAIR}`);
   });
 
   it.each([
-    ["a malformed pair", ["p", true]],
-    ["a choice that is not a boolean", [PAIR, "yes"]],
+    ["a malformed pair", ["p", ALL_CLOSED]],
+    ["a category without an answer", [PAIR, { ...ALL_CLOSED, steps: undefined }]],
+    ["an answer that is not a boolean", [PAIR, { ...ALL_CLOSED, photos: "yes" }]],
   ])("refuses %s without a query", async (_label, args) => {
-    expect(await decideIntakeShare(...(args as [string, boolean]))).toEqual({ failed: true });
+    expect(await decideShares(...(args as Parameters<typeof decideShares>))).toEqual({ failed: true });
     expect(db.calls).toEqual([]);
     expect(next.redirect).not.toHaveBeenCalled();
   });
 
   it("stays put when nothing was updated (not the client's pair) or the update failed", async () => {
     db.answers = [{ data: [], error: null }];
-    expect(await decideIntakeShare(PAIR, true)).toEqual({ failed: true });
+    expect(await decideShares(PAIR, ALL_CLOSED)).toEqual({ failed: true });
     db.answers = [broken];
-    expect(await decideIntakeShare(PAIR, true)).toEqual({ failed: true });
+    expect(await decideShares(PAIR, ALL_CLOSED)).toEqual({ failed: true });
     expect(next.redirect).not.toHaveBeenCalled();
   });
 });

@@ -9,7 +9,7 @@ import { blockUser, unblockUser, type BlockResult } from "@/lib/admin/user-actio
 
 /**
  * "Заблокировать" / "Разблокировать" on the user card (ADM-7). Both ask for a reason first: it goes to the
- * card and the audit log, never to the user.
+ * card and the audit log, and a block's reason also to the blocked person at sign-in (user agreement 15).
  */
 export function BlockControls({ userId, blocked }: { userId: string; blocked: boolean }) {
   const { t } = useI18n();
@@ -52,7 +52,7 @@ export function BlockControls({ userId, blocked }: { userId: string; blocked: bo
   }
   return (
     <form action={submit} noValidate className="flex flex-col gap-3">
-      <TextField name="reason" label={copy.reasonLabel} hint={copy.reasonHint} error={reasonError} maxLength={500} autoComplete="off" autoFocus />
+      <TextField name="reason" label={copy.reasonLabel} hint={blocked ? copy.reasonHint : copy.blockReasonHint} error={reasonError} maxLength={500} autoComplete="off" autoFocus />
       <div className="flex flex-wrap gap-2">
         <Button type="submit" size="sm" variant={blocked ? "primary" : "destructive"} loading={pending}>
           {blocked ? copy.confirmUnblock : copy.confirm}

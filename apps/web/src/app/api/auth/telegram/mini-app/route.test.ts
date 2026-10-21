@@ -44,13 +44,18 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 const signInWithTelegram = vi.hoisted(() => vi.fn(async () => ({ userId: "user-42", newAccount: false })));
-/** Accounts an admin blocked (ADM-7). */
-const blocked = vi.hoisted(() => new Set<string>());
+/** Accounts an admin blocked (ADM-7), with the admin's reason. */
+const blocked = vi.hoisted(() => new Map<string, string | null>());
 const recordSignupSource = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("@/lib/attribution/record", () => ({ recordSignupSource }));
 vi.mock("@/lib/auth/sign-in-with-telegram", async () => {
-  class AccountBlockedError extends Error {}
-  return { AccountBlockedError, signInWithTelegram, isAccountBlocked: async (userId: string) => blocked.has(userId) };
+  class AccountBlockedError extends Error {
+    constructor(readonly reason: string | null) {
+      super("account blocked");
+    }
+  }
+  const readAccountBlock = async (userId: string) => (blocked.has(userId) ? { reason: blocked.get(userId) ?? null } : null);
+  return { AccountBlockedError, signInWithTelegram, readAccountBlock };
 });
 
 /** The fresh sign-in limit per Telegram account: whether it allows the next one, and what it counted. */
@@ -210,19 +215,21 @@ describe("CSRF and input (ADR 0004)", () => {
 describe("blocked accounts (ADM-7)", () => {
   it("answers 403 when sign-in finds the account blocked", async () => {
     const { AccountBlockedError } = await import("@/lib/auth/sign-in-with-telegram");
-    signInWithTelegram.mockRejectedValueOnce(new AccountBlockedError());
+    signInWithTelegram.mockRejectedValueOnce(new AccountBlockedError(null));
     const res = await post(initData(10));
 
     expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: "account_blocked" });
+    expect(await res.json()).toEqual({ error: "account_blocked", reason: null });
   });
 
   it("ends the session of an account blocked while it was signed in", async () => {
     session.claims = { sub: "user-42", app_metadata: { telegram_id: 42 } };
-    blocked.add("user-42");
+    blocked.set("user-42", "Spam in reviews");
     const res = await post(initData(MAX_AGE + 600));
 
     expect(res.status).toBe(403);
+    // The reason goes to the account it is about, whose initData proved who is asking.
+    expect(await res.json()).toEqual({ error: "account_blocked", reason: "Spam in reviews" });
     expect(session.signedOut).toBe(true);
     expect(signInWithTelegram).not.toHaveBeenCalled();
   });

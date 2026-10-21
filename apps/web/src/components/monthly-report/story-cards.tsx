@@ -11,7 +11,7 @@ import { useI18n } from "@/i18n/client";
 import { createStoryCard } from "@/lib/monthly-report/actions";
 import type { StoryKind, StoryOption } from "@/lib/monthly-report/report";
 import { useTheme } from "@/lib/theme/store";
-import { StoryImageSheet } from "./story-image-sheet";
+import { StoryImageSheet, storyImageUrl } from "./story-image-sheet";
 
 const ICONS = {
   sessions: CalendarCheck,
@@ -54,7 +54,7 @@ export function StoryCards({ month, options }: { month: string; options: StoryOp
         return;
       }
       setConfirmWeight(false);
-      setImage(`${window.location.origin}/api/story/${result.id}?theme=${theme}&lang=${locale}`);
+      setImage(storyImageUrl(result.id, theme, locale));
     });
   }
 
@@ -102,7 +102,7 @@ export function StoryCards({ month, options }: { month: string; options: StoryOp
         }}
       />
 
-      <StoryImageSheet image={image} onClose={() => setImage(null)} />
+      <StoryImageSheet image={image} text={copy.storyText} onClose={() => setImage(null)} />
     </>
   );
 }

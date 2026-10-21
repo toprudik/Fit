@@ -253,7 +253,7 @@ select is(
   (select row(nutrition, measurements, photos, steps, intake, workouts, intake_decided_at)::text
    from public.data_shares where coaching_id = tests.i('pair_ac')),
   row(true, true, false, true, false, true, null::timestamptz)::text,
-  'data_shares: defaults share everything except photos and intake, intake not decided'
+  'data_shares: the test pair shares the usual categories, intake not decided (real defaults: 980)'
 );
 select is(
   (select row(nutrition, measurements, photos, steps, intake, workouts)::text || ' ' || (intake_decided_at is not null)
