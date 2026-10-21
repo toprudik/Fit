@@ -300,6 +300,38 @@ test.describe("admin section", () => {
     await expect(page.getByRole("link", { name: new RegExp(body) })).toHaveCount(0);
   });
 
+  test("data requests: the log keeps open requests by deadline and the closed ones below", async ({ persona, client }) => {
+    const admin = await namedAdmin(persona);
+    const tag = uniqueLastName("");
+    const asked = `Какие данные обо мне хранятся ${tag}`;
+    const answered = `Исправьте мою фамилию ${tag}`;
+    for (const [body, type] of [[asked, "access"], [answered, "correction"]] as const) {
+      ok(
+        await client.db.from("feedback").insert({ user_id: client.userId, zone: "client", kind: "data_request", request_type: type, body, route: "/feedback" }),
+        "data request",
+      );
+    }
+
+    const { page } = admin;
+    await page.goto("/admin/feedback?status=requests");
+    const open = page.locator("section", { has: page.getByRole("heading", { name: "Открытые" }) });
+    await expect(open.getByRole("link", { name: new RegExp(asked) })).toContainText("Узнать, какие данные есть");
+    await expect(open.getByRole("link", { name: new RegExp(answered) })).toContainText("До ");
+    await expectAccessible(page);
+
+    await open.getByRole("link", { name: new RegExp(answered) }).click();
+    await page.getByRole("radio", { name: "Закрыто" }).click();
+    await expect(page.getByRole("radio", { name: "Закрыто" })).toHaveAttribute("aria-checked", "true");
+
+    // Closed requests stay in the log, under their own heading, with the status instead of the deadline.
+    await page.goto("/admin/feedback?status=requests");
+    const closed = page.locator("section", { has: page.getByRole("heading", { name: "Закрытые" }) });
+    await expect(closed.getByRole("link", { name: new RegExp(answered) })).toContainText("Закрыто");
+    await expect(open.getByRole("link", { name: new RegExp(answered) })).toHaveCount(0);
+    await expect(open.getByRole("link", { name: new RegExp(asked) })).toBeVisible();
+    await expectAccessible(page);
+  });
+
   test("reviews: a disputed review is hidden with a reason, and the empty filter says so", async ({ persona, trainer, client }) => {
     const admin = await namedAdmin(persona);
     for (const days of [9, 6, 3]) {
