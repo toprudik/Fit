@@ -209,6 +209,7 @@ export const en: Dictionary = {
   },
   profile: {
     title: "Profile",
+    open: "Account, mode and settings",
     signedOutText: "Sign in with Telegram to see your name and photo here.",
     signIn: "Sign in with Telegram",
     feedback: "Feedback",
@@ -393,7 +394,7 @@ export const en: Dictionary = {
           { q: "How are groups different from group sessions?", a: "Group sessions live in the schedule and work on any plan. Groups under “More” are client segments on Pro: a goal, a nutrition target template, analytics, challenges and broadcasts, up to 5 broadcasts a day. Clients don't see who else is in a group." },
           { q: "How do I add an assistant?", a: "On Pro open “More”, “Team” and tap “Add an assistant”. Choose what they can do, which clients they handle and until when. An assistant never sees passes, payments, debts or prices. Everything they do shows up in the “Assistants' log”, and you can revoke access at any time." },
           { q: "What does analytics show?", a: "On Pro: attendance, cancellations and no-shows, money earned and received, debts, passes running out, clients who may leave, and clients' progress and nutrition. There is also a price increase simulator and CSV export. The simulator only calculates, it doesn't change your prices in DaFit." },
-          { q: "How do I start a challenge?", a: "A challenge starts from a group on Pro. It can count workouts, steps, days with a diary or days on target, and weight and photos are never part of it. Clients join if they want to and appear on the leaderboard only when they turn it on themselves, under an alias if they like." },
+          { q: "How do I start a challenge?", a: "Challenges come with Pro. For all your clients at once, open “More”, then “Challenges” and “New challenge”: no group is needed, and the bot invites each of your clients. For one group, start the challenge from the group itself. It can count workouts, steps, days with a diary or days on target, and weight, measurements and photos are never part of it. Clients join if they want to and appear on the leaderboard only when they turn it on themselves, under an alias if they like." },
         ],
       },
       {
@@ -446,9 +447,10 @@ export const en: Dictionary = {
           { q: "How do I log my weight and measurements?", a: "Under “Progress” tap “Add measurement” and fill in what you measured. Weight is in kilograms, measurements in centimetres. Your trainer can add measurements too, and only the person who added an entry can change it." },
           { q: "Are progress photos safe?", a: "Your face is blurred right on your phone before upload, and only the blurred copy reaches the server. You can paint over anything else with the brush. Only you see the photos until you open “Progress photos” to a trainer." },
           { q: "How many photos can I upload?", a: "A set is photos from one date, up to three angles: front, side and back. For free you can start one new set a month. There is no limit on Premium or if your trainer is on Pro. In the beta Premium is free, tap “Request access”." },
-          { q: "What are streaks, badges and milestones?", a: "Streaks count weeks with workouts, days with a food diary and days on your step target. Badges come for sessions, streaks, records and challenges. Milestones mark 10, 25, 50 and 100 sessions with one trainer. All of it is under “Progress”, in “Streaks and badges”." },
-          { q: "What is the monthly summary?", a: "On the first of each month DaFit puts together last month: sessions, workouts, records, measurements, nutrition and activity. Only you see it, and “Send to your trainer” shares it. You can turn it into a story card: before the first one DaFit asks for a separate consent, which you can withdraw in “Settings”, “Consents”. Your weight appears on the card only if you confirm it yourself." },
-          { q: "How do I take part in a challenge?", a: "If your trainer starts a challenge for your group, the bot invites you, and you decide whether to tap “Join”. You appear on the leaderboard only if you turn on “Show me on the leaderboard”, under an alias if you like. With an alias other participants don't see your photo. You can leave at any time." },
+          { q: "What are streaks, badges and milestones?", a: "Streaks count weeks with workouts, days with a food diary and days on your step target. Badges come for sessions, streaks, records and challenges, and “Friend by invitation” comes for a friend who joined your trainer by your link and paid for sessions. If that payment is cancelled and you have no other such friends, the badge goes away. Milestones mark 10, 25, 50 and 100 sessions with one trainer. All of it is under “Progress”, in “Streaks and badges”." },
+          { q: "What is the monthly summary?", a: "On the first of each month DaFit puts together last month: sessions, workouts, records, measurements, nutrition and activity. Only you see it, and “Send to your trainer” shares it. You can turn it into a story card: before the first one DaFit asks for a separate consent, which you can withdraw in “Settings”, “Consents”. Once you withdraw it, cards you already shared stop opening right away. Your weight appears on the card only if you confirm it yourself." },
+          { q: "How do I take part in a challenge?", a: "If your trainer starts a challenge for all clients or for your group, the bot invites you, and you decide whether to tap “Join”. You appear on the leaderboard only if you turn on “Show me on the leaderboard”, under an alias if you like. With an alias other participants don't see your photo. You can leave at any time." },
+          { q: "What is the DaFit challenge of the month?", a: "Sometimes DaFit runs a month-long challenge for all clients. Its card appears in “Progress”: tap “Join” to take part, and “Leave the challenge” to drop out before the month ends. Only visits count: if you attend at least one session that month and miss none, you get the “Season with no misses” badge. A no-show or a late cancellation is a miss, cancelling in advance isn't. The result stays on the card for two weeks after the month ends." },
         ],
       },
       {
@@ -474,7 +476,7 @@ export const en: Dictionary = {
         title: "Reviews, friends and Premium",
         items: [
           { q: "How do I review my trainer?", a: "After three sessions that took place, “Leave a review” appears on the trainer's card: a rating and a few words. You, the trainer and the DaFit team see the review. You can edit or delete it." },
-          { q: "How do I bring a friend?", a: "If your trainer runs an offer, their card has “Bring a friend” with your own link. Bonus sessions are added after your friend's first payment." },
+          { q: "How do I bring a friend?", a: "If your trainer runs an offer, their card has “Bring a friend” with your own link. Bonus sessions are added after your friend's first payment, and the “Friend by invitation” badge appears in “Progress”." },
           { q: "What does Premium give?", a: "Right now Premium removes the limit on progress photos. Everything you need to work with a trainer is free: booking, passes, reminders, workouts, progress and the food diary. In the beta Premium is free with the “Request access” button." },
         ],
       },
@@ -5566,8 +5568,8 @@ export const en: Dictionary = {
       giveShowcase: "Turn on the showcase",
       revokeShowcaseConfirm: "Withdraw consent to publishing? The showcase turns off right away. You can turn it back on in the showcase section.",
       story: "Story cards",
-      storyHint: "We ask for this consent when you make your first card in the monthly recap. If you withdraw it, no new cards appear, and cards you already made keep opening until they expire.",
-      revokeStoryConfirm: "Withdraw consent to story cards? You won't be able to make new cards until you give it again.",
+      storyHint: "We ask for this consent when you make your first card in the monthly recap. If you withdraw it, links to all your cards stop opening right away, and no new cards appear.",
+      revokeStoryConfirm: "Withdraw consent to story cards? Links to your cards stop opening right away, and you won't be able to make new ones until you give it again.",
       givenOn: "Given on {date}",
       notGiven: "Not given",
       give: "Give consent",
@@ -5647,6 +5649,8 @@ export const en: Dictionary = {
   botMessages: {
     open: "Open DaFit",
     botTest: "Done, DaFit can now message you here. Session reminders and other notifications will come to this chat.",
+    documentsUpdate: "New editions of the DaFit documents take effect on {date}. Read what changes ahead of time. On that day the app will ask you to accept them. If you don't agree, you can download your data or delete your account.",
+    openDocuments: "Documents",
     newClient: "New client: {name}",
     /** Marketing 16: a trainer the user invited became a trainer by the user's link. */
     invitedTrainerJoined: "{name} joined DaFit by your invitation. Open your invitations to start training in the app.",

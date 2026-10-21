@@ -1,6 +1,9 @@
 "use client";
 
+import { User } from "lucide-react";
 import Link from "next/link";
+import { useAccount } from "@/components/account/account-store";
+import { PersonAvatar } from "@/components/ui/avatar";
 import { useI18n } from "@/i18n/client";
 import { tabsForZone, type Tab, type TabId, type Zone } from "@/lib/navigation/zones";
 import { cn } from "@/lib/utils";
@@ -16,6 +19,8 @@ type TabBarProps = {
   zone: Zone;
   /** Tab of the current screen; null when the screen belongs to none. */
   activeId: TabId | null;
+  /** Tab that shows the avatar and «Профиль» instead of its own icon and label (PROFILE_TAB). */
+  profileId?: TabId | null;
   onSelect?: TabSelectHandler;
 };
 
@@ -24,8 +29,10 @@ type TabBarProps = {
  * on the side menu takes its place. The links point at the tab roots, so they also work without
  * JavaScript and in a new browser tab.
  */
-export function TabBar({ zone, activeId, onSelect }: TabBarProps) {
+export function TabBar({ zone, activeId, profileId = null, onSelect }: TabBarProps) {
   const { t } = useI18n();
+  const account = useAccount();
+  const signedIn = account.status === "signed-in";
 
   return (
     <nav
@@ -39,6 +46,7 @@ export function TabBar({ zone, activeId, onSelect }: TabBarProps) {
         {tabsForZone(zone).map((tab) => {
           const Icon = TAB_ICONS[tab.icon];
           const active = tab.id === activeId;
+          const profile = tab.id === profileId;
           return (
             <li key={tab.id} className="min-w-0">
               <Link
@@ -54,18 +62,33 @@ export function TabBar({ zone, activeId, onSelect }: TabBarProps) {
                   active && "font-semibold text-ink",
                 )}
               >
-                <Icon
-                  aria-hidden
-                  size={24}
-                  strokeWidth={active ? 2.25 : 1.75}
-                  className={cn(
-                    "shrink-0 transition-transform duration-[var(--duration-instant)] ease-standard group-active:scale-90",
-                    "motion-reduce:transition-none motion-reduce:group-active:scale-100",
-                    active && "text-accent-ink",
-                  )}
-                />
+                {profile ? (
+                  <PersonAvatar
+                    name={signedIn ? account.name : ""}
+                    src={signedIn ? account.photoUrl : null}
+                    size={28}
+                    decorative
+                    fallbackIcon={account.status === "loading" ? undefined : User}
+                    className={cn(
+                      // 24px like the icons; the selected tab rings its avatar in the accent color.
+                      "size-6 text-[10px] ring-offset-2 ring-offset-surface-1",
+                      active && "ring-2 ring-accent-ink",
+                    )}
+                  />
+                ) : (
+                  <Icon
+                    aria-hidden
+                    size={24}
+                    strokeWidth={active ? 2.25 : 1.75}
+                    className={cn(
+                      "shrink-0 transition-transform duration-[var(--duration-instant)] ease-standard group-active:scale-90",
+                      "motion-reduce:transition-none motion-reduce:group-active:scale-100",
+                      active && "text-accent-ink",
+                    )}
+                  />
+                )}
                 {/* The ellipsis is a last resort for a longer label or a larger system font. */}
-                <span className="max-w-full truncate">{tabLabel(t, tab.id)}</span>
+                <span className="max-w-full truncate">{profile ? t.common.profile : tabLabel(t, tab.id)}</span>
               </Link>
             </li>
           );
