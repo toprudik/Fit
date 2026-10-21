@@ -474,6 +474,13 @@ const templates: Partial<Record<NotificationType, Template>> = {
     text: interpolateEscaped(t.exportReady, { date: planDate(locale, payload.expires_at, timeZone) }),
     buttons: [{ text: t.downloadExport, path: "/settings/export" }],
   }),
+  // Право 15: payload { effective_on } from announce_documents_update, ahead of a new edition of the documents.
+  documents_update: ({ t, locale, payload }) => ({
+    text: interpolateEscaped(t.documentsUpdate, {
+      date: typeof payload.effective_on === "string" && /^\d{4}-\d{2}-\d{2}$/.test(payload.effective_on) ? diaryDay(locale, payload.effective_on) : "",
+    }),
+    buttons: [{ text: t.openDocuments, path: "/legal" }],
+  }),
   // Wave-2 §1.3: payload { coaching_id, goal, previous_goal, first_name, last_name, group_id?, group_name? } from
   // set_client_goal, to a trainer whose own or group target is active; that target does not follow the goal.
   goal_changed: ({ t, payload }) => {

@@ -28,6 +28,11 @@ else
   report+=("apps/bot: uv sync failed, log in $logs/cloud-setup-bot.log")
 fi
 
+# Code graph for cheaper code questions (CLAUDE.md, "Code graph"). About 30 s, so
+# it runs in the background and the session does not wait for it.
+nohup setsid bash "$root/scripts/graphify-setup.sh" >"$logs/graphify-setup.log" 2>&1 </dev/null &
+report+=("graphify: building the code graph in the background, log in $logs/graphify-setup.log")
+
 # next build reads these at build time. The values match .github/workflows/ci.yml.
 # A value set on the cloud environment wins, so real keys can replace them there.
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
