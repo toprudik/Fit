@@ -59,6 +59,20 @@ jobs:
       - run: npm run build
       - name: First-load JS budget (docs/prd/quality.md)
         run: node scripts/perf-budget.mjs
+      # Lighthouse mobile on public pages (lighthouserc.json); help and the zones need a signed-in user.
+      # Warns only for now: once it has run quietly for two weeks, drop continue-on-error and set the
+      # assertions to "error". The is-crawlable audit is skipped: public/robots.txt closes the whole site
+      # during the beta. `next start` checks server secrets at boot, so it gets obvious fakes.
+      - name: Lighthouse (docs/prd/quality.md)
+        continue-on-error: true
+        env:
+          SUPABASE_SECRET_KEY: ci-placeholder
+          TELEGRAM_BOT_TOKEN: "1:ci-placeholder"
+          TELEGRAM_LOGIN_CLIENT_ID: ci-placeholder
+          TELEGRAM_LOGIN_CLIENT_SECRET: ci-placeholder
+        run: |
+          npx --yes @lhci/cli@0.15.1 autorun
+          node scripts/lighthouse-summary.mjs >>"$GITHUB_STEP_SUMMARY"
 
   # 500 browser tests take six minutes on one runner and decide how long CI takes, so they run in
   # three parallel shards. `web-e2e` keeps the check's name and passes only if every shard passed.
