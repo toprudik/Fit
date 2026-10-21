@@ -35,6 +35,8 @@ const { sendFeedback } = await import("./actions");
 const input = (screenshots: string[] = []) => ({
   id: ID,
   kind: "bug" as const,
+  requestType: null,
+  consentKind: null,
   body: "The button is grey",
   route: "/client",
   zone: "client" as const,

@@ -28,6 +28,8 @@ select tests.create_break_glass('admin_x', 'client_c', enum_range(null::public.s
 
 insert into public.account_deletions (user_id, scheduled_for) values (tests.user_id('client_c'), now() + interval '30 days');
 insert into public.data_exports (user_id) values (tests.user_id('client_c'));
+-- This test counts consents row by row: without the health data consent tests.create_user gives.
+delete from public.consents where version = 'tests';
 insert into public.consents (user_id, kind, version) values (tests.user_id('client_d'), 'beta_terms', '2026-11-beta');
 insert into public.notification_preferences (user_id, type, enabled)
 values (tests.user_id('client_d'), 'session_reminder', false);

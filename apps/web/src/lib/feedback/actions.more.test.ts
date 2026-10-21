@@ -117,6 +117,8 @@ describe("sendFeedback", () => {
   const input = (over: Partial<FeedbackInput> = {}): FeedbackInput => ({
     id: ID,
     kind: "bug",
+    requestType: null,
+    consentKind: null,
     body: "  Кнопка не нажимается  ",
     route: "/trainer/schedule",
     zone: "trainer",
@@ -136,6 +138,8 @@ describe("sendFeedback", () => {
           id: ID,
           user_id: USER,
           kind: "bug",
+          request_type: null,
+          consent_kind: null,
           body: "Кнопка не нажимается",
           route: "/trainer/schedule",
           zone: "trainer",
@@ -174,6 +178,12 @@ describe("sendFeedback", () => {
     ["an unknown locale", { locale: "de" as FeedbackInput["locale"] }],
     ["an unknown theme", { theme: "sepia" as FeedbackInput["theme"] }],
     ["four screenshots", { screenshots: [1, 2, 3, 1].map((n) => `${USER}/${ID}/${n}.png`) }],
+    ["a data request without a type", { kind: "data_request", screenshots: [] }],
+    ["a data request with screenshots", { kind: "data_request", requestType: "access" }],
+    ["a request type on other feedback", { requestType: "access" }],
+    ["a withdrawal without the consent", { kind: "data_request", requestType: "withdraw", screenshots: [] }],
+    ["a consent on another request", { kind: "data_request", requestType: "deletion", consentKind: "health", screenshots: [] }],
+    ["an unknown request type", { kind: "data_request", requestType: "delete" as FeedbackInput["requestType"], screenshots: [] }],
   ])("refuses %s without writing", async (_label, over) => {
     expect(await sendFeedback(input(over))).toEqual({ status: "invalid" });
     expect(db.inserts).toEqual([]);
@@ -191,6 +201,18 @@ describe("sendFeedback", () => {
   ])("refuses a screenshot in %s", async (_label, path) => {
     expect(await sendFeedback(input({ screenshots: [path] }))).toEqual({ status: "invalid" });
     expect(db.inserts).toEqual([]);
+  });
+
+  it("saves a data request with its type and never files an issue for it", async () => {
+    expect(await sendFeedback(input({ kind: "data_request", requestType: "correction", screenshots: [] }))).toEqual({ status: "sent" });
+    expect(db.inserts[0].values).toMatchObject({ kind: "data_request", request_type: "correction", consent_kind: null, attachment_paths: [] });
+    expect(next.after).not.toHaveBeenCalled();
+  });
+
+  it("saves which consent a withdrawal takes back", async () => {
+    const over: Partial<FeedbackInput> = { kind: "data_request", requestType: "withdraw", consentKind: "marketing", screenshots: [] };
+    expect(await sendFeedback(input(over))).toEqual({ status: "sent" });
+    expect(db.inserts[0].values).toMatchObject({ request_type: "withdraw", consent_kind: "marketing" });
   });
 
   it("asks a signed-out visitor to sign in", async () => {

@@ -14,6 +14,8 @@ type Admin = Parameters<typeof runPrivacyJob>[0];
  * An admin client with one due deletion: each table answers with `tables[name]` whatever the filters, so the test
  * pins what the job does with the answers, not the query text.
  */
+type DueFile = { kind: string; id: string; bucket: string; paths: string[] };
+
 function fakeAdmin(options: {
   purged?: string[] | null;
   telegramId?: number | null;
@@ -21,6 +23,8 @@ function fakeAdmin(options: {
   locale?: string;
   erasures?: string[];
   erased?: boolean;
+  due?: DueFile[];
+  removeFails?: boolean;
 }) {
   const tables: Record<string, unknown> = {
     account_deletions: options.purged === undefined ? [] : [{ user_id: USER }],
@@ -46,12 +50,19 @@ function fakeAdmin(options: {
   const deleted: string[] = [];
   const calls: string[] = [];
   const listed: string[] = [];
+  const removed: string[] = [];
+  const forgotten: string[] = [];
   const admin = {
     from: query,
-    rpc: async (fn: string, args?: { p_user?: string }) => {
+    rpc: async (fn: string, args?: { p_user?: string; p_kind?: string; p_id?: string }) => {
       calls.push(`${fn}(${args?.p_user ?? ""})`);
       if (fn === "purge_account") return { data: options.purged, error: null };
       if (fn === "purge_health_data") return { data: options.erased ?? true, error: null };
+      if (fn === "retention_due_files") return { data: options.due ?? [], error: null };
+      if (fn === "retention_forget") {
+        forgotten.push(`${args?.p_kind}:${args?.p_id}`);
+        return { data: true, error: null };
+      }
       return { data: [], error: null };
     },
     storage: {
@@ -60,7 +71,11 @@ function fakeAdmin(options: {
           listed.push(`${bucket}/${folder}`);
           return { data: [], error: null };
         },
-        remove: async () => ({ error: null }),
+        remove: async (paths: string[]) => {
+          if (options.removeFails) return { error: { name: "StorageApiError" } };
+          removed.push(...paths.map((path) => `${bucket}/${path}`));
+          return { error: null };
+        },
       }),
     },
     auth: {
@@ -72,7 +87,7 @@ function fakeAdmin(options: {
       },
     },
   };
-  return { admin: admin as unknown as Admin, deleted, calls, listed };
+  return { admin: admin as unknown as Admin, deleted, calls, listed, removed, forgotten };
 }
 
 describe("runPrivacyJob, due deletions (С5)", () => {
@@ -126,5 +141,26 @@ describe("runPrivacyJob, health data erasures (право 5)", () => {
   it("does not count an erasure the database found not due", async () => {
     const { admin } = fakeAdmin({ erasures: [USER], erased: false });
     expect((await runPrivacyJob(admin, 10_000)).healthErased).toBe(0);
+  });
+});
+
+describe("runPrivacyJob, files past their retention", () => {
+  const due: DueFile[] = [
+    { kind: "feedback", id: "f1", bucket: "feedback", paths: ["u/f1/1.png", "u/f1/2.png"] },
+    { kind: "certificate", id: "c1", bucket: "certificates", paths: ["t/c1.pdf"] },
+  ];
+
+  it("removes the files, then forgets the rows", async () => {
+    const { admin, removed, forgotten } = fakeAdmin({ purged: null, due });
+    const summary = await runPrivacyJob(admin, 10_000);
+    expect(removed).toEqual(["feedback/u/f1/1.png", "feedback/u/f1/2.png", "certificates/t/c1.pdf"]);
+    expect(forgotten).toEqual(["feedback:f1", "certificate:c1"]);
+    expect(summary.retained).toBe(2);
+  });
+
+  it("keeps the row when its files could not be removed", async () => {
+    const { admin, forgotten } = fakeAdmin({ purged: null, due, removeFails: true });
+    await expect(runPrivacyJob(admin, 10_000)).rejects.toThrow("removing from feedback failed");
+    expect(forgotten).toEqual([]);
   });
 });

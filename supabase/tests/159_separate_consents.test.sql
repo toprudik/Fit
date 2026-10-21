@@ -6,6 +6,8 @@ select plan(9);
 
 select tests.create_user('client_c');
 select tests.create_user('client_d');
+-- This test counts consents row by row: without the health data consent tests.create_user gives.
+delete from public.consents where version = 'tests';
 
 select ok(
   array['terms', 'pd_general', 'pd_health', 'age_confirmed']::text[]

@@ -46,7 +46,7 @@ vi.mock("@/lib/supabase/server", () => ({
   },
 }));
 
-const { fileFeedbackIssueNow, replyToFeedback, setFeedbackStatus } = await import("./admin-actions");
+const { extendDataRequest, fileFeedbackIssueNow, replyToFeedback, setFeedbackStatus } = await import("./admin-actions");
 
 const ID = "00000000-0000-4000-8000-000000000001";
 
@@ -152,6 +152,37 @@ describe("replyToFeedback", () => {
     expect(await replyToFeedback({ id: ID, body: "Ок" })).toEqual({ status: "author_deleted" });
     db.answers = [{ data: null, error: { code: "42501", message: "not_admin" } }];
     expect(await replyToFeedback({ id: ID, body: "Ок" })).toEqual({ status: "failed" });
+    expect(next.refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe("extendDataRequest", () => {
+  it("moves the deadline through admin_extend_data_request with the trimmed reason", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    db.answers = [{ data: "2026-11-09", error: null }];
+    expect(await extendDataRequest({ id: ID, reason: "  Собираем выгрузку  " })).toEqual({ status: "extended" });
+    expect(db.calls).toEqual([["rpc", "admin_extend_data_request", { p_feedback_id: ID, p_reason: "Собираем выгрузку" }]]);
+    expect(next.refresh).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["a malformed id", { id: "x", reason: "Причина" }],
+    ["a blank reason", { id: ID, reason: "  " }],
+    ["a reason over 1000 characters", { id: ID, reason: "a".repeat(1001) }],
+  ])("refuses %s without a call", async (_label, raw) => {
+    expect(await extendDataRequest(raw)).toEqual({ status: "invalid" });
+    expect(db.calls).toEqual([]);
+  });
+
+  it.each([
+    ["already_extended", "P0001", "already"],
+    ["answered", "P0001", "closed"],
+    ["author_deleted", "P0001", "author_deleted"],
+    ["not_found", "P0002", "failed"],
+  ])("maps %s", async (message, code, status) => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    db.answers = [{ data: null, error: { code, message } }];
+    expect(await extendDataRequest({ id: ID, reason: "Причина" })).toEqual({ status });
     expect(next.refresh).not.toHaveBeenCalled();
   });
 });
