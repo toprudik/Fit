@@ -1,4 +1,4 @@
--- «Что видит тренер» is closed by default, migration 20261021023847_shares_closed_by_default.sql: a pair made by
+-- «Что видит тренер» is closed by default, migration 20261021033917_shares_closed_by_default.sql: a pair made by
 -- a client link shares nothing and waits for the sharing step, a pair coming back after the end is closed again,
 -- and the client opens categories themselves.
 begin;
