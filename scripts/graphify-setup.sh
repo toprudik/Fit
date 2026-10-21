@@ -9,8 +9,13 @@ set -u
 root="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 version="0.9.93"
 
+venv="$HOME/.cache/graphify-venv"
 if ! graphify --version 2>/dev/null | grep -q "$version"; then
-  uv tool install --force --quiet "graphifyy[sql]==$version" || exit 1
+  # pip in a plain venv: `uv tool install` took minutes here, pip takes seconds.
+  python3 -m venv "$venv" &&
+    "$venv/bin/pip" install --quiet --disable-pip-version-check "graphifyy[sql]==$version" &&
+    mkdir -p "$HOME/.local/bin" &&
+    ln -sf "$venv/bin/graphify" "$HOME/.local/bin/graphify" || exit 1
 fi
 
 cd "$root" || exit 1

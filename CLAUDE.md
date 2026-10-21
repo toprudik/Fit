@@ -25,7 +25,7 @@ Working name DaFit (repo `fit`). Web app + Telegram Mini App (`apps/web`, Next.j
 
 Cloud sessions build a code graph of apps/web, apps/bot and supabase at start (`scripts/graphify-setup.sh`, in the background, about 30 s, no LLM, nothing leaves the container; log in `/tmp/graphify-setup.log`). It lives in `graphify-out/` (ignored) and rebuilds itself after every commit, checkout and merge. Use it to save tokens before grepping and reading files:
 
-- `graphify affected "bookSlot()"`: who calls a function or imports a module, two levels deep. Use it before changing a shared function instead of a series of greps.
+- `graphify affected "bookSlot()"`: who calls a function or imports a module, two levels deep. Use it before changing a shared function instead of a series of greps. Hubs such as `createSupabaseServerClient()` (`explain` shows a Degree above 50) return hundreds of lines: add `--depth 1` and `| head -40`, or count with `| wc -l` first.
 - `graphify explain "createSupabaseAdminClient()"` or `graphify explain "public.book_slot()"`: where a symbol is defined, what it calls, who uses it, with file and line.
 - `graphify path "A()" "B()" --undirected`: how two symbols are connected.
 - `graphify query "telegram initData session" --budget 800`: orientation in an unfamiliar area. Ask with code identifiers, not prose; prose matches noise. Then read only the lines it points to.
