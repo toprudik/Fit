@@ -76,6 +76,7 @@ This policy is written for the Washington My Health My Data Act (RCW 19.373), Ne
 | A trainer's assistants (including substitutes) | Only within what the trainer delegated; never money amounts |
 | Supabase, Inc. (United States) | Our processor: database and file storage |
 | Vercel Inc. (United States) | Our processor: hosting; data passes through its servers |
+| GitHub, Inc. (United States) | Our processor: stores encrypted database backups for 7 days. Photos are not in the backups |
 | Telegram (Telegram FZ-LLC, United Arab Emirates, and Telegram Messenger Inc.) | Delivers the bot messages you turned on. A reminder can mention, for example, a session or a homework task |
 | Functional Software, Inc. (Sentry, United States), only if error reporting is on | Our processor: error reports, with user details, request bodies, cookies, headers and query strings removed |
 | Authorities | Only when the law requires |
@@ -97,7 +98,7 @@ This policy is written for the Washington My Health My Data Act (RCW 19.373), Ne
 9.1. You have the right to:
 - confirm whether we collect, share or sell your consumer health data, and access it, including a list of all third parties and affiliates with whom we shared or sold it, with an active email address or other online contact for each;
 - withdraw consent to collection and to sharing;
-- have your consumer health data deleted. We delete it from our systems and tell our processors and anyone we shared it with to delete it. Deleted data leaves our backups when they expire, within [BACKUP RETENTION].
+- have your consumer health data deleted. We delete it from our systems and tell our processors and anyone we shared it with to delete it. Deleted data leaves our backups when they expire, within 7 days.
 
 9.2. We will not discriminate against you for using your rights.
 
