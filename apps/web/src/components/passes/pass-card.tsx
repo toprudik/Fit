@@ -8,6 +8,7 @@ import type { Dictionary } from "@/i18n/dictionaries";
 import { interpolate, plural } from "@/i18n/format";
 import { formatMoney } from "@/lib/money/format";
 import type { PassView } from "@/lib/passes/load";
+import { passLeftText } from "@/lib/passes/remaining";
 import { formatLocalDay, paymentState, type HistoryEntry, type PassStatus, type PaymentState } from "@/lib/passes/present";
 import { formatNoteTime } from "@/lib/pairs/format";
 
@@ -26,12 +27,9 @@ const PAYMENT_TONE: Record<PaymentState, "success" | "warning" | "danger" | "neu
   free: "neutral",
 };
 
-/** "Осталось 8 из 10", or "Истёк, не использовано 3" for an expired pass (PRD 2.8-8). */
-export function passLeft(t: Dictionary, pass: Pick<PassView, "status" | "remaining" | "sessionsTotal">): string {
-  const copy = t.money.passes;
-  return pass.status === "expired" && pass.remaining > 0
-    ? interpolate(copy.leftExpired, { remaining: pass.remaining })
-    : interpolate(copy.left, { remaining: pass.remaining, total: pass.sessionsTotal });
+/** "Осталось 8 из 10" with what future bookings hold, or "Истёк, не использовано 3" for an expired pass (PRD 2.8-8). */
+export function passLeft(t: Dictionary, pass: Pick<PassView, "status" | "remaining" | "available" | "sessionsTotal">): string {
+  return passLeftText(t, pass);
 }
 
 /** The lines under a pass title: what is left, the dates, the price and payments, the freeze extension. */

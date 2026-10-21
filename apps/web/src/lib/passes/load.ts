@@ -436,7 +436,15 @@ export type DebtItem = { coachingId: string; name: string; debt: Debt };
 /** A payment on the trainer's money screen, with whose it is. */
 export type MoneyPayment = PaymentView & { coachingId: string; name: string; passTitle: string | null };
 /** A pass that runs out soon: one session left or 7 days to go (К10, Т6). */
-export type EndingPass = { id: string; coachingId: string; name: string; title: string; available: number; lastDay: string | null };
+export type EndingPass = {
+  id: string;
+  coachingId: string;
+  name: string;
+  title: string;
+  remaining: number;
+  available: number;
+  lastDay: string | null;
+};
 
 export type TrainerMoney = {
   timeZone: string;
@@ -489,7 +497,7 @@ export async function loadTrainerMoney(): Promise<TrainerMoney | null> {
     supabase.from("payments").select("direction, amount_minor, currency, paid_at").eq("trainer_id", userId).eq("status", "confirmed").gte("paid_at", since),
     supabase
       .from("pass_balances")
-      .select("pass_id, coaching_id, title, available, effective_expires_at, status")
+      .select("pass_id, coaching_id, title, remaining, available, effective_expires_at, status")
       .eq("trainer_id", userId)
       .in("status", ["active", "frozen"]),
   ]);
@@ -542,6 +550,7 @@ export async function loadTrainerMoney(): Promise<TrainerMoney | null> {
         coachingId: row.coaching_id ?? "",
         name: nameOf(row.coaching_id),
         title: row.title ?? "",
+        remaining: row.remaining ?? 0,
         available: row.available ?? 0,
         lastDay: lastValidDay(row.effective_expires_at, timeZone),
       })),
