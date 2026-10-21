@@ -226,6 +226,8 @@ test.describe("booking a slot", () => {
     const loner = await persona({ firstName: "Вера", lastName: "Одна" });
     await gotoReady(loner.page, "/client/book");
     await expect(loner.page.getByRole("heading", { name: "Пока не к кому записаться" })).toBeVisible();
+    // Not a dead end: the trainer's code is one tap away (QA T2).
+    await expect(loner.page.getByRole("main").getByRole("link", { name: "Ввести код тренера" })).toHaveAttribute("href", "/join");
     await expectAccessible(loner.page);
 
     void trainer;
