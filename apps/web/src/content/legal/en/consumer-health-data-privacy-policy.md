@@ -60,13 +60,13 @@ This policy is written for the Washington My Health My Data Act (RCW 19.373), Ne
 
 5.2. **Sharing with your trainer.** Sharing is a separate choice. For each trainer, on the screen "What your trainer sees", you decide which categories that trainer may see: nutrition, measurements, photos, steps, workouts and the questionnaire. The questionnaire is shown only after you answer "Show" on a dedicated screen with no preselected answer.
 
-> Team: not in the product yet, see product-changes. Today nutrition, measurements, steps and workouts are visible to the trainer by default when a pair is created; only photos and the questionnaire start hidden.
+> Team: done in #234 (21.10.2026). A new pair shares nothing, and right after joining the client answers "Show" or "Don't show" for each category with nothing preselected.
 
 5.3. **Withdrawal.** You can withdraw consent to collection in Settings, then Consents ("Withdraw consent"): trainers lose access at once and the data is deleted 30 days later. You can also delete entries or your account. You withdraw and consent to sharing by turning categories off in "What your trainer sees" or by ending the pair. The trainer stops seeing that data straight away.
 
 5.4. Accepting our terms of service is not consent to collect or share consumer health data.
 
-> Counsel: the current code does not yet meet 5.1 and 5.2. (1) There is no separate health data consent before collection; only beta-terms acceptance is recorded. (2) Nutrition, measurements, steps and workouts are shared with the trainer by default when a pair is created; MHMDA and Nevada require consent by a clear affirmative act, obtained before sharing, separate from the collection consent. Unless a lawyer concludes that sharing with a trainer the user chose is "necessary to provide a product or service that the consumer requested" (RCW 19.373.030(1)(b)(ii); NRS 603A.500(2)), the product must ask for each category with no preselection. Do not publish this policy until both changes ship, or rewrite 5.1 and 5.2 to describe the actual flow.
+> Counsel: the current code does not yet meet 5.1 and 5.2. (1) The separate health consent exists (#186), but some screens still collect health data without it (see the team note under 5.1). (2) Sharing with the trainer now needs an answer per category with no preselection (#234); please confirm this counts as a clear affirmative act under MHMDA and Nevada. Do not publish this policy until point 1 is settled, or rewrite 5.1 to describe the actual flow.
 
 ## 6. Who receives consumer health data
 
