@@ -77,6 +77,8 @@ export type GroupMember = {
   primary: boolean;
   /** The pair sits in other groups of the trainer that have a template. */
   otherTemplateGroups: number;
+  /** The client has not given the health data consent, so their goal and numbers stay out of the group. */
+  noHealthConsent: boolean;
 };
 
 export type BroadcastRow = {
@@ -131,7 +133,7 @@ export async function loadGroup(groupId: string): Promise<GroupDetails | null> {
   if (error) fail("group", error);
   if (!group) return null;
 
-  const [access, pairs, memberships, templates, impact, analytics, history, today] = await Promise.all([
+  const [access, pairs, memberships, templates, impact, analytics, history, today, noConsent] = await Promise.all([
     loadAccess(owner),
     supabase.from("coachings").select("id, client_id, primary_nutrition_group_id").eq("trainer_id", userId).in("status", ["trial", "active"]),
     supabase.from("group_members").select("group_id, coaching_id, groups!inner(archived_at, trainer_id)").eq("groups.trainer_id", userId).is("groups.archived_at", null),
@@ -140,6 +142,7 @@ export async function loadGroup(groupId: string): Promise<GroupDetails | null> {
     supabase.rpc("group_analytics", { p_group_id: groupId }).single(),
     supabase.rpc("broadcast_history", { p_group_id: groupId }),
     supabase.rpc("broadcasts_today"),
+    supabase.rpc("my_clients_without_health_consent"),
   ]);
   if (pairs.error) fail("pairs", pairs.error);
   if (memberships.error) fail("memberships", memberships.error);
@@ -148,6 +151,8 @@ export async function loadGroup(groupId: string): Promise<GroupDetails | null> {
   if (analytics.error) fail("group analytics", analytics.error);
   if (history.error) fail("broadcasts", history.error);
   if (today.error) fail("broadcast count", today.error);
+  if (noConsent.error) fail("health consents", noConsent.error);
+  const withoutConsent = new Set(noConsent.data);
 
   const withTemplate = new Set(templates.data.map((row) => row.group_id));
   const ids = pairs.data.map((pair) => pair.id);
@@ -184,6 +189,7 @@ export async function loadGroup(groupId: string): Promise<GroupDetails | null> {
         goal: goalOf.get(pair.client_id) ?? null,
         primary: pair.primary_nutrition_group_id === groupId,
         otherTemplateGroups: otherTemplates(pair.id),
+        noHealthConsent: withoutConsent.has(pair.id),
       }))
       .sort(byName),
     candidates: pairs.data

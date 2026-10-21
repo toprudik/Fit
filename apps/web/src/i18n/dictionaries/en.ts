@@ -3004,6 +3004,7 @@ export const en: Dictionary = {
     member: {
       header: "Members",
       empty: "Nobody in the group yet",
+      noHealthConsent: "no health consent",
       add: "Add clients",
       addTitle: "Add to the group",
       addEmpty: "All your clients are in this group already",
