@@ -9,13 +9,23 @@ import { CancellationForm, CertificatesForm, FormatForm, LocationsForm, PaymentF
 /** Where the last step sends documents: the verification screen (built with trainer verification). */
 const CERTIFICATES_PATH = "/trainer/verification";
 
-/** "Europe/Moscow (GMT+3)", sorted as the runtime lists them. */
-function zoneOptions(): { id: string; label: string }[] {
+/**
+ * "Europe/Moscow (GMT+3)", sorted as the runtime lists them. A saved zone the list lacks (Etc/GMT-3 from a client's
+ * device, Europe/Kyiv on an older runtime) comes first, so "Сохранить" does not silently replace it.
+ */
+export function zoneOptions(saved?: string | null): { id: string; label: string }[] {
   const now = new Date();
-  return timeZones().map((id) => {
-    const offset = new Intl.DateTimeFormat("en-US", { timeZone: id, timeZoneName: "shortOffset" })
-      .formatToParts(now)
-      .find((part) => part.type === "timeZoneName")?.value;
+  const listed = timeZones();
+  const ids = saved && !listed.includes(saved) ? [saved, ...listed] : listed;
+  return ids.map((id) => {
+    let offset: string | undefined;
+    try {
+      offset = new Intl.DateTimeFormat("en-US", { timeZone: id, timeZoneName: "shortOffset" })
+        .formatToParts(now)
+        .find((part) => part.type === "timeZoneName")?.value;
+    } catch {
+      // A zone this runtime does not know still shows by its name.
+    }
     return { id, label: `${id.replaceAll("_", " ")}${offset ? ` (${offset})` : ""}` };
   });
 }
@@ -56,7 +66,7 @@ function StepForms({ step, data, locale, edit = false }: StepFieldsProps) {
     case "locations":
       return edit ? <LocationList locations={data.locations} canAdd /> : <LocationsForm locations={data.locations} onlineOnly={!trainer.works_offline} />;
     case "region":
-      return <RegionForm timeZone={data.timeZone} currency={trainer.default_currency} zones={zoneOptions()} edit={edit} />;
+      return <RegionForm timeZone={data.timeZone} currency={trainer.default_currency} zones={zoneOptions(data.timeZone)} edit={edit} />;
     case "cancellation":
       return <CancellationForm hours={trainer.cancellation_deadline_hours} noticeMinutes={trainer.min_booking_notice_minutes} edit={edit} />;
     case "payment":
