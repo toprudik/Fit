@@ -1,8 +1,8 @@
--- Trainer story cards (20261021012347_trainer_story_cards.sql, marketing backlog 5): the month in numbers, the
+-- Trainer story cards (20261021023817_trainer_story_cards.sql, marketing backlog 5): the month in numbers, the
 -- showcase card only while the showcase is open, and who may make them.
 begin;
 \ir _helpers.psql
-select plan(21);
+select plan(22);
 
 select tests.create_trainer('coach_s');
 select tests.create_trainer('coach_quiet');
@@ -94,7 +94,8 @@ select tests.create_pair('coach_c', 'client_c');
 select tests.create_booking(tests.create_session('coach_c', :'mid'::timestamptz), 'coach_c', 'client_c', 'attended');
 update public.public_data_consents set revoked_at = now() where user_id = tests.user_id('coach_c') and scope = 'story';
 select tests.authenticate_as('coach_c');
-select isnt(public.create_trainer_story_card('trainer_showcase'), null, 'the showcase card needs no consent to story cards');
+select public.create_trainer_story_card('trainer_showcase') as consent_card \gset
+select isnt(public.story_card(:'consent_card'), null, 'the showcase card needs no consent to story cards');
 select throws_ok(format($$ select public.create_trainer_story_card('trainer_month', %L) $$, :'last_month'),
   'P0001', 'consent_required', 'the month recap needs the consent to story cards');
 select tests.clear_authentication();
@@ -103,6 +104,7 @@ select tests.authenticate_as('coach_c');
 select throws_ok($$ select public.create_trainer_story_card('trainer_showcase') $$, 'P0001', null,
   'without the showcase consent there is no showcase card');
 select tests.clear_authentication();
+select is(public.story_card(:'consent_card'), null, 'and the one shared before closes with the consent');
 
 select * from finish();
 rollback;

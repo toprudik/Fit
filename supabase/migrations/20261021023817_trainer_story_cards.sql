@@ -117,7 +117,7 @@ revoke all on function public.create_trainer_story_card(text, date) from public,
 grant execute on function public.create_trainer_story_card(text, date) to authenticated;
 
 -- The image route reads a showcase card only while that showcase is still open: closed later, the old link answers
--- like an expired card instead of the name and QR. Other kinds as in 20261017101247_monthly_reports.sql.
+-- like an expired card instead of the name and QR. The consent check stays as in 20261021014013_story_cards_close_on_revoke.sql.
 create or replace function public.story_card(p_id uuid)
 returns jsonb
 language sql
@@ -128,7 +128,14 @@ as $$
   select pg_catalog.jsonb_build_object('kind', c.kind, 'month', c.month, 'data', c.data)
   from public.story_cards c
   where c.id = p_id and c.expires_at > now()
+    and (private.public_consent(c.user_id, case when c.kind = 'trainer_showcase' then 'showcase' else 'story' end)).id
+        is not null
     and (c.kind <> 'trainer_showcase' or exists (
       select 1 from public.trainer_profiles t
       where t.user_id = c.user_id and t.slug = c.data->>'slug' and private.showcase_is_open(t)))
 $$;
+
+comment on function public.story_card(uuid) is
+  'A story card by its id for the image route (wave-3 §4-4): kind, month and the frozen numbers; null when expired, '
+  'when its author has no consent to publish it in force (152-FZ art. 10.1), or for a showcase card once that '
+  'showcase is closed or moved to another address.';
