@@ -56,6 +56,7 @@ describe("ClientHomeView", () => {
     expect(screen.getByRole("link", { name: /Осталось 8 из 10/ }).getAttribute("href")).toBe("/client/passes/p1");
     expect(screen.queryByRole("link", { name: /Осталось 0 из 10/ })).toBeNull();
     expect(screen.getByRole("link", { name: /Долг/ }).getAttribute("href")).toBe("/client/passes");
+    expect(screen.getByRole("link", { name: "Записаться" }).getAttribute("href")).toBe("/client/book");
   });
 
   it("offers to book when nothing is planned and leaves the passes out when there are none", () => {
