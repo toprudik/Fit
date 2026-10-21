@@ -479,6 +479,36 @@ test.describe("admin section", () => {
     await expect(page.getByText("Проверка журнала", { exact: true })).toBeVisible();
   });
 
+  test("audit: emergency access is named in words and has its own filter", async ({ persona }) => {
+    const admin = await namedAdmin(persona);
+    const someone = await persona({ firstName: "Олег", lastName: uniqueLastName("Аварийный") });
+    ok(
+      await admin.db.rpc("admin_open_break_glass", { p_target_user: someone.userId, p_categories: ["steps"], p_reason: "Проверка аварийного доступа" }),
+      "break glass",
+    );
+    const { page } = admin;
+    await page.goto("/admin/audit");
+    await page.getByRole("navigation", { name: "Какие действия показать" }).getByRole("link", { name: "Аварийный доступ" }).click();
+    await expect(page).toHaveURL(/action=break_glass/);
+    const entry = page.locator("div").filter({ hasText: "Проверка аварийного доступа" }).last();
+    await expect(entry.getByText("Открыт аварийный доступ")).toBeVisible();
+    await expect(page.getByText("break_glass.open")).toHaveCount(0);
+  });
+
+  test("documents: today is refused before the confirmation", async ({ persona }) => {
+    const { page } = await namedAdmin(persona);
+    await page.goto("/admin");
+    const today = new Date();
+    const day = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    // A date typed before hydration is lost, so type and submit until the form answers.
+    await expect(async () => {
+      await page.getByLabel("Действуют с").fill(day);
+      await page.getByRole("button", { name: "Объявить новые редакции документов" }).click();
+      await expect(page.getByText("Выбери день не раньше завтрашнего")).toBeVisible({ timeout: 1000 });
+    }).toPass();
+    await expect(page.getByText("Отменить рассылку нельзя", { exact: false })).toHaveCount(0);
+  });
+
   test("audit: the log passes axe with a person linked in an entry", async ({ persona }) => {
     const admin = await namedAdmin(persona);
     const someone = await persona({ firstName: "Нина", lastName: uniqueLastName("Журналова") });
