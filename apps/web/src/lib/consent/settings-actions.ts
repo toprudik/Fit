@@ -32,8 +32,8 @@ export async function revokeHealthConsent(): Promise<RevokeState> {
 }
 
 /**
- * "Отозвать" for a consent to publish (152-FZ art. 10.1 parts 12, 13): the showcase closes at once, story cards are
- * not made any more; the cards already shared stay until they expire. Given again on the showcase or the month report.
+ * "Отозвать" for a consent to publish (152-FZ art. 10.1 parts 12 to 14): the showcase closes at once, the story cards
+ * already shared stop opening and no new ones are made. Given again on the showcase or the month report.
  */
 export async function revokePublicDataConsent(scope: PublicScope): Promise<RevokeState> {
   if (scope !== "showcase" && scope !== "story") return { failed: true };
