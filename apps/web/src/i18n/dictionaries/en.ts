@@ -1957,6 +1957,17 @@ export const en: Dictionary = {
     },
   },
   /** Goal and nutrition target (wave-2 §1–2; screens.md /client/diary/food/target, the trainer's «Питание» tab). */
+  /** «Карточки для сторис» of a trainer (marketing backlog 5): their month in numbers and the showcase with a QR. */
+  trainerStories: {
+    header: "Story cards",
+    footer: "The month card shows only the number of sessions and clients, no money and no names.",
+    month: "My month on DaFit: {month}",
+    showcase: "Showcase with a QR code",
+    make: "Make",
+    emptyMonth: "No sessions were held that month.",
+    closedShowcase: "Your showcase is closed, so there is no card for it.",
+    failed: "Couldn't make the card. Try again.",
+  },
   /** "Month in review": the client's finished month and its story cards (PRD wave-3 §4), /client/progress/reports/[month]. */
   monthlyReport: {
     title: "Month in review",
@@ -2045,6 +2056,11 @@ export const en: Dictionary = {
       streakDiary: { one: "day of food diary in a row", few: "days of food diary in a row", many: "days of food diary in a row", other: "days of food diary in a row" },
       streakSteps: { one: "day of step goal in a row", few: "days of step goal in a row", many: "days of step goal in a row", other: "days of step goal in a row" },
       badges: { one: "new badge", few: "new badges", many: "new badges", other: "new badges" },
+      trainerMonth: { one: "session held this month", few: "sessions held this month", many: "sessions held this month", other: "sessions held this month" },
+      trainerClients: "Clients at sessions: {n}",
+      trainerMilestones: "Reached 10, 25, 50 or 100 sessions: {n}",
+      trainerShowcase: "Trainer on DaFit",
+      trainerTrial: "Trial session via the link",
       weight: "weight this month",
       showcase: "Trainer showcase",
     },
@@ -4402,9 +4418,9 @@ export const en: Dictionary = {
     title: "Invite a trainer",
     moreText: "A bonus for colleagues who join by your link",
     lead: "Send the link to a trainer you know. The trainer zone opens right away, with no invite from an admin, on the free plan with up to 3 clients.",
-    bonusMonth: "Your bonus: a month of Pro once the invited trainer buys a plan.",
+    bonusMonth: "Your bonus: a month of Pro after the beta, once the invited trainer holds 3 or more sessions a week for 4 weeks in a row.",
     bonusDiscount: "Your bonus: {percent}% off a plan once the invited trainer buys one.",
-    betaNote: "Plans are not on sale during the beta, so bonuses are on hold for now.",
+    betaNote: "Everyone has Pro during the beta, so the bonus month starts after it. A plan discount waits until plans go on sale.",
     code: "Code to type in: {code}",
     shareText: "Join me on DaFit: clients, schedule and passes in one place",
     countsHeader: "Your invitations",

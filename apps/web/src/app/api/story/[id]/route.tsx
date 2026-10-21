@@ -23,7 +23,7 @@ const fonts = Promise.all(
 );
 
 /**
- * A story card of a monthly report as a 1080×1920 PNG (PRD wave-3 §4-4, §4-8): `GET /api/story/<id>?theme=dark&lang=ru`.
+ * A story card of a monthly report or a trainer's card (marketing backlog 5) as a 1080×1920 PNG (PRD wave-3 §4-4, §4-8): `GET /api/story/<id>?theme=dark&lang=ru`.
  * Telegram's story editor and the browser fetch it without a session; public.story_card() gives only what the
  * card prints, and an unknown or expired id answers 404.
  */
@@ -82,9 +82,11 @@ export async function GET(request: Request, context: RouteContext<"/api/story/[i
             backgroundColor: colors.surface,
           }}
         >
-          <div style={{ fontFamily: "Tektur Narrow", fontSize: text.figure.length > 6 ? 220 : 320, fontWeight: 700, color: colors.accent, lineHeight: 1 }}>
-            {text.figure}
-          </div>
+          {text.figure ? (
+            <div style={{ fontFamily: "Tektur Narrow", fontSize: text.figure.length > 6 ? 220 : 320, fontWeight: 700, color: colors.accent, lineHeight: 1 }}>
+              {text.figure}
+            </div>
+          ) : null}
           <div style={{ fontSize: 72, fontWeight: 700, lineHeight: 1.15 }}>{text.label}</div>
           {text.detail ? <div style={{ fontSize: 48, fontWeight: 500, color: colors.ink2, lineHeight: 1.25 }}>{text.detail}</div> : null}
         </div>
