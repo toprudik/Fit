@@ -146,5 +146,16 @@ function adminInviteDb(): Promise<Db> {
 /** The persona becomes a client of the trainer through the trainer's client link (join_by_invite). */
 export async function joinTrainer(client: Persona, trainer: Persona): Promise<string> {
   const invite = ok(await trainer.db.rpc("my_client_invite"), "client invite");
-  return ok(await client.db.rpc("join_by_invite", { p_token: invite[0].token }), "join by invite");
+  const coachingId = ok(await client.db.rpc("join_by_invite", { p_token: invite[0].token }), "join by invite");
+  // A new pair shares nothing until the client answers «Что видит тренер»; scenarios start from a client who opened
+  // what DaFit used to open by default (the sharing step itself stays unanswered).
+  ok(
+    await client.db
+      .from("data_shares")
+      .update({ nutrition: true, measurements: true, steps: true, workouts: true })
+      .eq("coaching_id", coachingId)
+      .select("coaching_id"),
+    "open shares",
+  );
+  return coachingId;
 }

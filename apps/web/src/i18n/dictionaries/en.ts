@@ -1708,7 +1708,7 @@ export const en: Dictionary = {
     signIn: "Sign in with Telegram",
     card: {
       title: "Intake form",
-      consent: "What the trainer sees",
+      consent: "Choose what the trainer sees",
       consentText: "Until you answer, the trainer sees nothing",
       notFilled: "Not filled in",
       filled: "Filled in",

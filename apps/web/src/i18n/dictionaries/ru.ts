@@ -1717,7 +1717,7 @@ export const ru = {
     signIn: "Войти через Telegram",
     card: {
       title: "Анкета",
-      consent: "Что видит тренер",
+      consent: "Выбрать, что видит тренер",
       consentText: "Пока ты не ответишь, тренер ничего не видит",
       notFilled: "Не заполнена",
       filled: "Заполнена",

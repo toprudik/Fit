@@ -458,12 +458,21 @@ test.describe("clients", () => {
     );
     const coachingId = new URL(page.url()).pathname.split("/")[3];
     await expect(
-      page.getByText(
-        "В анкете есть данные о здоровье. Показать её тренеру Иван Тренеров?",
-      ),
+      page.getByText(/^Выбери, что показывать тренеру Иван Тренеров\./),
     ).toBeVisible();
     await expectAccessible(page);
-    await page.getByRole("button", { name: "Показать", exact: true }).click();
+    // Every category waits for an answer: «Готово» without them points at the unanswered ones.
+    await page.getByRole("button", { name: "Готово" }).click();
+    await expect(page.getByText("Выбери ответ").first()).toBeVisible();
+    const categories = page.locator("fieldset");
+    const total = await categories.count();
+    expect(total).toBe(6);
+    for (let index = 0; index < total; index += 1)
+      await categories
+        .nth(index)
+        .getByRole("radio", { name: "Показать", exact: true })
+        .check();
+    await page.getByRole("button", { name: "Готово" }).click();
 
     await expectPath(page, `/client/trainers/${coachingId}/intake`);
     await expect(page.getByText("Шаг 1 из 3")).toBeVisible();
@@ -707,7 +716,7 @@ test.describe("the client's side of the pair", () => {
     ).toBeVisible();
     await expectAccessible(page);
 
-    await page.getByRole("link", { name: "Что видит тренер" }).click();
+    await page.getByRole("link", { name: "Что видит тренер", exact: true }).click();
     await expectPath(page, `${base}/sharing`);
     await expect(
       page.getByRole("heading", { level: 1, name: "Что видит тренер" }),

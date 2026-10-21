@@ -585,7 +585,7 @@ test.describe("activity", () => {
     expect(errors()).toEqual([]);
   });
 
-  test("the iPhone shortcut token: issue it, send steps with it, reissue and revoke", async ({ persona, baseURL }) => {
+  test("the iPhone shortcut token: issue it, send steps with it, reissue and revoke", async ({ persona }) => {
     const client = await persona({ firstName: "Вера" });
     const { page } = client;
     await open(page, "/client/diary/activity", "Активность");
@@ -595,7 +595,7 @@ test.describe("activity", () => {
     const card = page.getByRole("region", { name: "Твой токен" });
     await expect(card).toContainText("Токена пока нет");
     await expect(page.getByRole("heading", { name: "Как настроить" })).toBeVisible();
-    await expect(page.getByText(`${baseURL}/api/ingest/steps`).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Установить команду" })).toHaveAttribute("href", /^https:\/\/www\.icloud\.com\/shortcuts\//);
     await checked(page);
 
     await card.getByRole("button", { name: "Создать токен" }).click();
