@@ -70,9 +70,16 @@ const templates: Partial<Record<NotificationType, Template>> = {
       buttons: [{ text: t.openFeedback, path: id ? `/admin/feedback/${id}` : "/admin/feedback" }],
     };
   },
-  // ADM-10 to the author: payload { feedback_id, kind, reply } from admin_reply_feedback.
-  feedback_reply: ({ t, payload }) => ({
-    text: interpolateEscaped(t.feedbackReply, { reply: String(payload.reply ?? "") }),
+  // ADM-10 to the author: payload { feedback_id, kind, reply } from admin_reply_feedback. A data request whose
+  // deadline moved (admin_extend_data_request) has event "extended", the reason as reply and the new due_on.
+  feedback_reply: ({ t, locale, payload }) => ({
+    text:
+      payload.event === "extended" && typeof payload.due_on === "string" && /^\d{4}-\d{2}-\d{2}$/.test(payload.due_on)
+        ? interpolateEscaped(t.dataRequestExtended, {
+            date: diaryDay(locale, payload.due_on),
+            reason: String(payload.reply ?? ""),
+          })
+        : interpolateEscaped(t.feedbackReply, { reply: String(payload.reply ?? "") }),
     buttons: [{ text: t.writeAgain, path: "/feedback" }],
   }),
   // ADM-14 to the user: payload { grant_id, categories, reason, expires_at } from admin_open_break_glass.

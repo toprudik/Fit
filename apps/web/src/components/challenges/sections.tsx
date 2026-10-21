@@ -47,7 +47,7 @@ function NotFound({ t, side }: { t: Dictionary; side: "trainer" | "client" }) {
       title={copy.notFound}
       description={copy.notFoundText}
       action={
-        <Link href={side === "trainer" ? "/trainer/groups" : "/client/progress"} className={buttonVariants({ variant: "secondary" })}>
+        <Link href={side === "trainer" ? "/trainer/challenges" : "/client/progress"} className={buttonVariants({ variant: "secondary" })}>
           {copy.back}
         </Link>
       }
@@ -55,7 +55,7 @@ function NotFound({ t, side }: { t: Dictionary; side: "trainer" | "client" }) {
   );
 }
 
-/** The trainer's challenge (screens.md /trainer/groups/[groupId]/challenges/[challengeId]): every participant. */
+/** The trainer's challenge (screens.md /trainer/groups/[groupId]/challenges/[challengeId], /trainer/challenges/[challengeId]): every participant. */
 export async function TrainerChallengeView({ challengeId }: { challengeId: string }) {
   const [t, locale, data] = await Promise.all([getDictionary(), getLocale(), loadTrainerChallenge(challengeId)]);
   if (!data) return <NotFound t={t} side="trainer" />;
@@ -63,7 +63,7 @@ export async function TrainerChallengeView({ challengeId }: { challengeId: strin
   const { challenge } = data;
   return (
     <div className="flex flex-col gap-8">
-      <Heading t={t} locale={locale} challenge={challenge} by={interpolate(copy.trainer.group, { name: data.groupName })} />
+      <Heading t={t} locale={locale} challenge={challenge} by={data.groupId ? interpolate(copy.trainer.group, { name: data.groupName }) : copy.all.by} />
       <ChallengeBoard
         t={t}
         locale={locale}

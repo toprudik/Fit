@@ -233,6 +233,7 @@ create type public.share_category as enum ('nutrition', 'measurements', 'photos'
 | R70 | Возврат в завершённую пару | RPC сбрасывает `data_shares` и поля завершения | PRD 2.3 |
 | R71 | Обратная связь без входа | В волне 1 нет | RLS рассчитан на вошедших |
 | R72 | Ответ на обратную связь | Админ отвечает через `admin_reply_feedback`: последний ответ хранится в `feedback.reply`, автору уходит `feedback_reply` | ADM-10 |
+| R72a | Запрос о моих данных | `feedback.kind = 'data_request'` с `request_type` (access, export, correction, deletion, withdraw, objection, stop, appeal, other), у `withdraw` ещё `consent_kind` (processing, health, marketing, publication); триггер ставит `due_on` через 10 рабочих дней (пн–пт, по Москве), для отзыва согласия на публикацию через 3; `admin_extend_data_request` один раз добавляет 5 с причиной (публикацию не продлевает), автору уходит `feedback_reply` с `event = 'extended'`; в GitHub не уходит | 152-ФЗ ст. 9, 10.1, 20, 21; legal/product-changes 16 |
 | R73 | Грант для цели | Целевой пользователь видит весь грант | |
 | R74 | Детали вех | `achieved_at` = начало занятия; пробные и вставка сразу как `attended` считаются | PRD 2.6.2-7 |
 | R75 | Дедупликация outbox | Глобальный уникальный ключ с моментом цели | перенос занятия ставит новые напоминания |
@@ -1496,7 +1497,7 @@ create table public.milestones (                 -- зафиксированны
 #### Обратная связь, жалобы, аудит, аварийный доступ
 
 ```sql
-create type public.feedback_kind as enum ('bug', 'idea', 'other');               -- R46
+create type public.feedback_kind as enum ('bug', 'idea', 'other', 'data_request'); -- R46, R72a
 create type public.feedback_status as enum ('new', 'in_progress', 'closed');
 create table public.feedback (
   id               uuid primary key default gen_random_uuid(),
@@ -2207,6 +2208,8 @@ create table public.bonuses (
 **Лист ожидания тренеров** (бэклог маркетинга, пункт 10; миграция `20261018194917_trainer_waitlist.sql`). `trainer_waitlist`: имя, контакт (Telegram, телефон или почта как ввёл человек), сколько клиентов (`up_to_5`, `6_15`, `16_40`, `over_40`), язык, метка источника (`?src=` или `utm_source`, алфавит как у start-параметра, неподходящая отбрасывается), версия согласия и его время. Пишет только `join_trainer_waitlist` (доступна anon, как `resolve_referral`): со входом строка своя (`user_id`, уникальна, обновляется повторным вызовом, уходит с аккаунтом), без входа нужен контакт, второй раз тот же контакт ничего не меняет и ответ тот же, чтобы функция не выдавала, кто уже в списке; больше 30 записей без входа в минуту отклоняются (`waitlist_busy`). Читают админ (`/admin/waitlist`) и сам записавшийся со входом.
 
 «Только после факта оплаты» (Q50): триггер `payments_referral` (`after insert or update of status on payments`) на `confirmed`-платеже `direction = 'in'` в паре приглашённого вызывает `private.qualify_referral`: если платёж подходит под условие акции (пакет оплаченного абонемента или сумма в валюте акции), реферал становится `qualified`, и каждой стороне `private.grant_referral_bonus` добавляет занятия в действующий абонемент её пары (§3.1-6, `20261017174813_referral_bonus_active_pass.sql`): `adjustment` с `note = 'referral_bonus'` и суммой 0, затем гашение долга. Абонемент выбирает `private.referral_bonus_pass`: обычный (не разовый, не старый `is_bonus`), `active` или `frozen` по `pass_balances`; у приглашённого первым идёт оплаченный абонемент, дальше тот, что действует дольше. Выручку бонус не меняет: абонемент зарабатывает цену за первые `sessions_total` занятий (`pass_share_minor`). Если действующего абонемента нет, бонус `pending` с `coaching_id` пары, а триггер `ledger_entries_referral_bonus` на `grant` следующего обычного абонемента этой пары добавляет его туда и ставит `granted`. Уведомление `referral_bonus` уходит в обоих случаях (`waiting: true`, когда ждёт; `applied: true`, когда дождался). Пригласившему не больше 10 бонусов на акцию, ждущие тоже считаются. Если этот платёж переведён в `voided` в течение 14 дней после `qualified_at`, `private.revoke_referral` забирает бонусы: ждущий становится `void`, у добавленного в абонемент снимается свободная часть (`least(sessions, available)`, `adjustment` с `note = 'referral_bonus_voided'`), полностью использованный остаётся `granted`; реферал становится `void` (wave-3 §3.1-7). Бонусные абонементы `is_bonus`, выданные до этой миграции, отменяются по-старому: без списаний и погашений `refund` остатка и `cancelled`. Завершение пары аннулирует её `pending`-рефералы с обеих сторон.
+
+Значок клиента «Друг по приглашению» (маркетинг 15, `20261020173917_referral_friend_badge.sql`): триггер `referrals_award_friend_badge` на переходе реферала `client_to_client` в `qualified` даёт пригласившему `referral_friend` (семейство `referral`) и ставит в очередь сообщение `badge` один раз; когда реферал перестаёт быть `qualified` и у пригласившего не осталось других `qualified`, значок снимается.
 
 Тренер приводит тренера (§3.2, `20261017090519_trainer_referrals.sql`):
 

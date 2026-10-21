@@ -53,6 +53,12 @@ describe("createChallenge", () => {
     expect(next.refresh).toHaveBeenCalledOnce();
   });
 
+  it("sends a null group for a challenge for all clients", async () => {
+    db.answer = { data: CHALLENGE, error: null };
+    expect(await createChallenge({ ...valid, groupId: null })).toEqual({ ok: true, value: CHALLENGE });
+    expect(db.calls[0]?.[2]).toMatchObject({ p_group_id: null, p_title: "Шаги октября" });
+  });
+
   it("sends no goal when there is none", async () => {
     await createChallenge({ ...valid, goal: null, leaderboard: false });
     expect(db.calls[0]?.[2]).toMatchObject({ p_goal: undefined, p_leaderboard: false });
