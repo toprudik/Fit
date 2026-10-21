@@ -120,8 +120,16 @@ export function storyOptions(report: MonthlyReport): StoryOption[] {
   return options;
 }
 
+/** A trainer's cards (marketing backlog 5): the month in numbers and the showcase with its QR. */
+export const TRAINER_STORY_KINDS = ["trainer_month", "trainer_showcase"] as const;
+export type TrainerStoryKind = (typeof TRAINER_STORY_KINDS)[number];
+
+export function isTrainerStoryKind(value: unknown): value is TrainerStoryKind {
+  return (TRAINER_STORY_KINDS as readonly unknown[]).includes(value);
+}
+
 const cardSchema = z.object({
-  kind: z.enum(STORY_KINDS),
+  kind: z.enum([...STORY_KINDS, ...TRAINER_STORY_KINDS]),
   month: z.string().regex(/^\d{4}-\d{2}-01$/),
   data: z.object({
     count: number.optional(),
@@ -133,6 +141,11 @@ const cardSchema = z.object({
     code: z.string().optional(),
     /** The trainer's showcase address for the QR (§4-7): only while the trainer allows it and the showcase is open. */
     slug: z.string().refine(isShowcaseSlug).optional(),
+    /** The trainer's month: clients with a held session and clients who reached a milestone. */
+    clients: number.optional(),
+    milestones: number.optional(),
+    /** The showcase card: «Записаться на пробное» is on. */
+    trial: z.boolean().optional(),
   }),
 });
 
