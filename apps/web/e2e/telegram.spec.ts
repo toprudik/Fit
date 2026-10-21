@@ -203,7 +203,7 @@ test.describe("Telegram's buttons", () => {
     await answer("web_app_request_content_safe_area", "content_safe_area_changed", { top: 46, bottom: 0, left: 0, right: 0 });
     await answer("web_app_request_viewport", "viewport_changed", { height: 844, width: 390, is_expanded: true, is_state_stable: true });
 
-    const bar = page.locator('[data-slot="telegram-top-bar"]');
+    const bar = page.locator('[data-slot="screen-bar"]');
     const title = page.getByRole("heading", { level: 1, name: "Главная" });
     await expect(title).toBeVisible();
     const width = page.viewportSize()?.width ?? 0;

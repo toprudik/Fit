@@ -24,3 +24,6 @@ Thumbs.db
 
 # claude code: personal settings stay local, .claude/settings.json is shared
 .claude/settings.local.json
+
+# graphify: code graph, rebuilt locally in each session (scripts/graphify-setup.sh)
+graphify-out/
