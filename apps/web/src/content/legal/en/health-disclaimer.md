@@ -1,8 +1,8 @@
 # DaFit Health Disclaimer
 
-> **Draft of 18 October 2026. Do not publish without review by a qualified lawyer in each target jurisdiction.** Prepared from the DaFit codebase and laws in force in October 2026. Points for the lawyer are marked "Counsel:".
+> Edition for the DaFit closed beta. A lawyer will still review it; if the text changes, we will tell you in the bot.
 
-Effective date: [EFFECTIVE DATE]
+Effective date: 24 November 2026
 
 ## 1. DaFit is not medical advice
 
