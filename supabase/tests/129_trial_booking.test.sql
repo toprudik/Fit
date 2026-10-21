@@ -82,8 +82,8 @@ select throws_ok(format($$ select * from public.book_trial(%L, %L) $$, :'online'
 select tests.clear_authentication();
 update public.slots set allow_trial = false where id = :'slot11';
 insert into public.slots (trainer_id, starts_at, ends_at) values
-  (tests.user_id('trainer_a'), now() + interval '1 hour', now() + interval '2 hours');
-select s.id as slot_soon from public.slots s where s.trainer_id = tests.user_id('trainer_a') and s.starts_at < now() + interval '1 day' \gset
+  (tests.user_id('trainer_a'), now() + interval '1 hour', now() + interval '2 hours')
+returning id as slot_soon \gset
 select tests.authenticate_as('stranger_s');
 select throws_ok(format($$ select * from public.book_trial(%L, %L) $$, :'free', :'slot11'), 'P0001', 'slot_unavailable',
   'book: not a slot closed to trials');
