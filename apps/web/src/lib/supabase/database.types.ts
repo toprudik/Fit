@@ -4689,6 +4689,9 @@ isOneToOne: false
               "code": string,"created_at": string,"invite_id": string,"token": string,"uses_count": number
             }[]
                            },
+"my_clients_without_health_consent":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
 "my_delegations":
 { Args: Record<PropertyKey, never>; Returns: {
               "accepted_at": string,"all_clients": boolean,"clients": number,"created_at": string,"ends_at": string,"id": string,"kind": Database["public"]['Enums']["delegation_kind"],"other_id": string,"other_name": string,"scopes": (Database["public"]['Enums']["delegation_scope"])[],"session_id": string,"session_starts_at": string,"side": string,"starts_at": string,"status": Database["public"]['Enums']["delegation_status"]
