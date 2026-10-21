@@ -14,6 +14,7 @@ import { getDictionary, getLocale } from "@/i18n/server";
 import { personName } from "@/lib/admin/people";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { DUE_TONE, dueState, requestToday } from "@/lib/feedback/data-requests";
+import { isDataRequestType } from "@/lib/feedback/input";
 import { FEEDBACK_STATUSES, isFeedbackStatus, STATUS_TONE, type FeedbackStatus } from "@/lib/feedback/status";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -23,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const PAGE = 100;
 const href = (status: FeedbackStatus | null) => (status ? `/admin/feedback?status=${status}` : "/admin/feedback");
-/** Open data requests, nearest deadline first (152-FZ arts. 20, 21). */
+/** The data request log (152-FZ arts. 20, 21): open ones by nearest deadline, then the closed ones, newest first. */
 const REQUESTS = "requests";
 
 async function Inbox({ searchParams }: { searchParams: PageProps<"/[lang]/admin/feedback">["searchParams"] }) {
@@ -35,10 +36,12 @@ async function Inbox({ searchParams }: { searchParams: PageProps<"/[lang]/admin/
   const { supabase, timeZone } = await requireAdmin();
   let query = supabase
     .from("feedback")
-    .select("id, kind, body, status, due_on, created_at, github_issue_url, author:profiles!feedback_user_id_fkey(first_name, last_name, username)")
+    .select(
+      "id, kind, request_type, body, status, due_on, created_at, github_issue_url, author:profiles!feedback_user_id_fkey(first_name, last_name, username)",
+    )
+    .order("created_at", { ascending: false })
     .limit(PAGE);
-  if (requests) query = query.eq("kind", "data_request").neq("status", "closed").order("due_on", { ascending: true });
-  else query = query.order("created_at", { ascending: false });
+  if (requests) query = query.eq("kind", "data_request");
   if (status) query = query.eq("status", status);
   const { data: rows, error } = await query;
   if (error) throw new Error(`loading feedback failed: ${error.code}`);
@@ -54,6 +57,26 @@ async function Inbox({ searchParams }: { searchParams: PageProps<"/[lang]/admin/
     }
     return <Badge tone={STATUS_TONE[row.status]}>{copy.statuses[row.status]}</Badge>;
   };
+  const list = (items: typeof rows, header?: string) => (
+    <ListGroup header={header}>
+      {items.map((row) => (
+        <ListRow
+          key={row.id}
+          href={`/admin/feedback/${row.id}`}
+          title={<span className="line-clamp-2">{row.body}</span>}
+          subtitle={[
+            isDataRequestType(row.request_type) ? t.feedback.dataRequest.types[row.request_type] : t.feedback.kinds[row.kind],
+            row.author ? personName(row.author, copy.noName) : copy.deleted,
+            date.format(new Date(row.created_at)),
+          ].join(" · ")}
+          trailing={badge(row)}
+        />
+      ))}
+    </ListGroup>
+  );
+  // The log keeps every request, closed ones too, so the team can show what was asked and when it was answered.
+  const open = requests ? rows.filter((row) => row.status !== "closed").sort((a, b) => (a.due_on ?? "").localeCompare(b.due_on ?? "")) : [];
+  const closed = requests ? rows.filter((row) => row.status === "closed") : [];
 
   return (
     <div className="flex flex-col gap-4">
@@ -72,30 +95,21 @@ async function Inbox({ searchParams }: { searchParams: PageProps<"/[lang]/admin/
       </ChipRow>
       {rows.length === 0 ? (
         <EmptyState icon={MessageSquareText} title={copy.emptyTitle} description={requests ? copy.request.emptyText : copy.emptyText} />
+      ) : requests ? (
+        <>
+          {open.length > 0 ? list(open, copy.request.openHeader) : null}
+          {closed.length > 0 ? list(closed, copy.request.closedHeader) : null}
+        </>
       ) : (
-        <ListGroup>
-          {rows.map((row) => (
-            <ListRow
-              key={row.id}
-              href={`/admin/feedback/${row.id}`}
-              title={<span className="line-clamp-2">{row.body}</span>}
-              subtitle={[
-                t.feedback.kinds[row.kind],
-                row.author ? personName(row.author, copy.noName) : copy.deleted,
-                date.format(new Date(row.created_at)),
-              ].join(" · ")}
-              trailing={badge(row)}
-            />
-          ))}
-        </ListGroup>
+        list(rows)
       )}
     </div>
   );
 }
 
 /**
- * The feedback inbox (screens.md "/admin/feedback", ADM-9): messages by status, newest first, and the open data
- * requests by deadline.
+ * The feedback inbox (screens.md "/admin/feedback", ADM-9): messages by status, newest first, and the log
+ * of data requests: open ones by deadline, then the closed ones.
  */
 export default async function AdminFeedbackPage({ searchParams }: PageProps<"/[lang]/admin/feedback">) {
   const t = await getDictionary();

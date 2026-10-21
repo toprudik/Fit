@@ -50,8 +50,8 @@ select throws_ok(format($$ select * from public.book_slot(%L) $$, :'slot10'), 'P
 select tests.clear_authentication();
 
 insert into public.slots (trainer_id, starts_at, ends_at) values
-  (tests.user_id('trainer_a'), now() + interval '1 hour', now() + interval '2 hours');
-select s.id as slot_soon from public.slots s where s.trainer_id = tests.user_id('trainer_a') and s.starts_at < now() + interval '1 day' \gset
+  (tests.user_id('trainer_a'), now() + interval '1 hour', now() + interval '2 hours')
+returning id as slot_soon \gset
 select tests.authenticate_as('client_c');
 select throws_ok(format($$ select * from public.book_slot(%L) $$, :'slot_soon'), 'P0001', 'too_late',
   'book: not sooner than the trainer''s booking notice');
