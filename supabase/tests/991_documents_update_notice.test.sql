@@ -1,4 +1,4 @@
--- The bot message ahead of new editions of the documents, migration 20261021004943_documents_update_notice.sql
+-- The bot message ahead of new editions of the documents, migration 20261021020217_documents_update_notice.sql
 -- (право 15): an admin announces the day, everyone with an account gets one message, once.
 begin;
 \ir _helpers.psql
