@@ -27,6 +27,7 @@ function toStatus(value: string | null): InviteStatus | null {
   if (value === "already_trainer") return "alreadyTrainer";
   return value === "valid" ||
     value === "referral" ||
+    value === "invited" ||
     value === "invalid" ||
     value === "redeemed" ||
     value === "expired" ||
@@ -117,7 +118,8 @@ async function InviteStep({ searchParams }: { searchParams: PageProps<"/[lang]/o
     );
   }
   // "referral" is another trainer's referral code (PRD wave-3 §3.2-9): it always works and opens the zone the same way.
-  if (status === "valid" || status === "referral") {
+  // "invited" is a person's code for inviting their own trainer (marketing backlog 16): the same, without a bonus.
+  if (status === "valid" || status === "referral" || status === "invited") {
     return (
       <div className="flex flex-col gap-6">
         <StatusText t={t} status={status} />

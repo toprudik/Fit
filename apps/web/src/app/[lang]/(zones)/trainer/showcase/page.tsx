@@ -3,7 +3,8 @@ import { ListChecks, Store, UserRound } from "lucide-react";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { Suspense } from "react";
-import { ShowcaseAddressForm, ShowcaseVisibilityForm, StoryCardsSwitch } from "@/components/showcase/showcase-forms";
+import { ShowcaseConsent } from "@/components/public-data/showcase-consent";
+import { ShowcaseAddressForm, StoryCardsSwitch } from "@/components/showcase/showcase-forms";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { ShareClientLink } from "@/components/trainer-wizard/share-client-link";
@@ -14,6 +15,7 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { clientEnv } from "@/env/client";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getDictionary } from "@/i18n/server";
+import { loadMyPlaces, loadMyPublicConsent } from "@/lib/public-data/load";
 import { showcasePath, showcaseUrl } from "@/lib/showcase/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { editPath, PROFILE_EDIT_PATH } from "@/lib/trainer-wizard/steps";
@@ -89,11 +91,15 @@ async function ShowcaseEditor() {
     );
   }
 
-  const { data: trainer, error } = await supabase
-    .from("trainer_profiles")
-    .select("slug, is_public, verification_status, headline, specialties, story_card_showcase")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const [{ data: trainer, error }, consent, places] = await Promise.all([
+    supabase
+      .from("trainer_profiles")
+      .select("slug, is_public, verification_status, headline, specialties, story_card_showcase")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    loadMyPublicConsent("showcase"),
+    loadMyPlaces(),
+  ]);
   if (error) console.error("loading the showcase failed", error.code);
   if (!trainer) return <EmptyState icon={Store} title={copy.title} description={error ? copy.failed : copy.notTrainer} />;
 
@@ -119,7 +125,7 @@ async function ShowcaseEditor() {
       </ListGroup>
       <ShowcaseAddressForm slug={trainer.slug} />
       <StoryCardsSwitch enabled={trainer.story_card_showcase} />
-      <ShowcaseVisibilityForm visible={trainer.is_public} />
+      <ShowcaseConsent visible={trainer.is_public} consent={consent} places={places} />
     </div>
   );
 }

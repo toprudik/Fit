@@ -5,7 +5,8 @@ type FeedbackRow = Pick<
   "id" | "kind" | "body" | "zone" | "route" | "platform" | "app_version" | "locale" | "theme" | "attachment_paths"
 >;
 
-const KIND_TITLE = { bug: "Bug", idea: "Idea", other: "Feedback" } as const;
+// A data request never becomes an issue (lib/feedback/actions.ts); the title is only for completeness.
+const KIND_TITLE = { bug: "Bug", idea: "Idea", data_request: "Data request", other: "Feedback" } as const;
 
 /**
  * The GitHub issue for one feedback message (PRD wave-1 §2.13-4, FDBK-2): the text and the context the form

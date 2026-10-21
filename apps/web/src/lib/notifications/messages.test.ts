@@ -256,6 +256,26 @@ describe("feedback reply (ADM-10)", () => {
     expect(message?.text).toBe("Команда DaFit ответила на твоё обращение:\nFixed &lt;b&gt;it&lt;/b&gt;");
     expect(message?.buttons).toEqual([{ text: "Написать ещё", web_app: { url: "https://fit.example/feedback?source=feedback_reply" } }]);
   });
+
+  it("tells the author of a data request the new date and why, before the first one passes (152-FZ art. 20)", () => {
+    const message = renderMessage(
+      {
+        ...row,
+        kind: "feedback_reply",
+        payload: { feedback_id: "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b", kind: "data_request", event: "extended", reply: "Ждём <архив>", due_on: "2026-11-09" },
+      },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe("Нам нужно чуть больше времени на твой запрос о данных. Ответим до 9 ноября.\nПочему: Ждём &lt;архив&gt;");
+  });
+
+  it("falls back to the plain answer when the new date is malformed", () => {
+    const message = renderMessage(
+      { ...row, kind: "feedback_reply", payload: { kind: "data_request", event: "extended", reply: "Ждём", due_on: "9 ноября" } },
+      { appUrl: "https://fit.example", group: false },
+    );
+    expect(message?.text).toBe("Команда DaFit ответила на твоё обращение:\nЖдём");
+  });
 });
 
 describe("break-glass access (ADM-14)", () => {
@@ -1297,5 +1317,26 @@ describe("review_prompt and report_resolution (wave-2 §11)", () => {
       options,
     );
     expect(en?.text).toBe("Someone reported something you wrote. We looked at it and hid it. Reason: “Rude”. You can appeal within six months.");
+  });
+});
+
+describe("invited trainer joined", () => {
+  const TRAINER = "7b1f2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
+  const options = { appUrl: "https://fit.example", group: false };
+
+  it("tells the inviter their trainer came, with a button to start training", () => {
+    const message = renderMessage(
+      { ...row, kind: "invited_trainer_joined", payload: { trainer_id: TRAINER, first_name: "<Ника>", last_name: "Петрова" } },
+      options,
+    );
+    expect(message?.text).toBe("&lt;Ника&gt; Петрова теперь в DaFit по твоему приглашению. Открой приглашения, чтобы начать заниматься в приложении.");
+    expect(message?.buttons).toEqual([
+      { text: "Начать занятия", web_app: { url: "https://fit.example/client/invite-trainer?source=invited_trainer_joined" } },
+    ]);
+  });
+
+  it("names nobody when the trainer has no name", () => {
+    const message = renderMessage({ ...row, kind: "invited_trainer_joined", locale: "en", payload: { trainer_id: TRAINER } }, options);
+    expect(message?.text).toBe("Your trainer joined DaFit by your invitation. Open your invitations to start training in the app.");
   });
 });

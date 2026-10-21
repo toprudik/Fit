@@ -165,7 +165,7 @@ revoke all on function private.purge_expired_rows() from public;
 
 select cron.schedule('retention', '41 3 * * *', 'select private.purge_expired_rows()');
 
--- The privacy route also runs when files are due (body from 20261017023500_account_privacy.sql).
+-- The privacy route also runs when files are due (body from 20261020162057_health_data_erasure.sql).
 create or replace function private.dispatch_privacy()
 returns bigint
 language plpgsql
@@ -180,6 +180,7 @@ begin
                    or (e.status = 'processing' and e.updated_at < pg_catalog.now() - interval '15 minutes')
                    or (e.status = 'ready' and e.expires_at <= pg_catalog.now()))
      and not exists (select 1 from public.account_deletions d where d.cancelled_at is null and d.scheduled_for <= pg_catalog.now())
+     and not exists (select 1 from public.health_erasures h where h.done_at is null and h.scheduled_for <= pg_catalog.now())
      and not exists (select 1 from public.retention_due_files(1))
   then
     return null;

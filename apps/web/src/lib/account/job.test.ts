@@ -17,15 +17,18 @@ type Admin = Parameters<typeof runPrivacyJob>[0];
 type DueFile = { kind: string; id: string; bucket: string; paths: string[] };
 
 function fakeAdmin(options: {
-  purged: string[] | null;
+  purged?: string[] | null;
   telegramId?: number | null;
   botBlocked?: boolean;
   locale?: string;
+  erasures?: string[];
+  erased?: boolean;
   due?: DueFile[];
   removeFails?: boolean;
 }) {
   const tables: Record<string, unknown> = {
-    account_deletions: [{ user_id: USER }],
+    account_deletions: options.purged === undefined ? [] : [{ user_id: USER }],
+    health_erasures: (options.erasures ?? []).map((user_id) => ({ user_id })),
     data_exports: [],
     profiles: [],
   };
@@ -45,22 +48,29 @@ function fakeAdmin(options: {
     return builder;
   };
   const deleted: string[] = [];
+  const calls: string[] = [];
+  const listed: string[] = [];
   const removed: string[] = [];
   const forgotten: string[] = [];
   const admin = {
     from: query,
-    rpc: async (fn: string, args: { p_kind?: string; p_id?: string }) => {
+    rpc: async (fn: string, args?: { p_user?: string; p_kind?: string; p_id?: string }) => {
+      calls.push(`${fn}(${args?.p_user ?? ""})`);
       if (fn === "purge_account") return { data: options.purged, error: null };
+      if (fn === "purge_health_data") return { data: options.erased ?? true, error: null };
       if (fn === "retention_due_files") return { data: options.due ?? [], error: null };
       if (fn === "retention_forget") {
-        forgotten.push(`${args.p_kind}:${args.p_id}`);
+        forgotten.push(`${args?.p_kind}:${args?.p_id}`);
         return { data: true, error: null };
       }
       return { data: [], error: null };
     },
     storage: {
       from: (bucket: string) => ({
-        list: async () => ({ data: [], error: null }),
+        list: async (folder: string) => {
+          listed.push(`${bucket}/${folder}`);
+          return { data: [], error: null };
+        },
         remove: async (paths: string[]) => {
           if (options.removeFails) return { error: { name: "StorageApiError" } };
           removed.push(...paths.map((path) => `${bucket}/${path}`));
@@ -77,7 +87,7 @@ function fakeAdmin(options: {
       },
     },
   };
-  return { admin: admin as unknown as Admin, deleted, removed, forgotten };
+  return { admin: admin as unknown as Admin, deleted, calls, listed, removed, forgotten };
 }
 
 describe("runPrivacyJob, due deletions (С5)", () => {
@@ -116,6 +126,21 @@ describe("runPrivacyJob, due deletions (С5)", () => {
     expect([refused.purged, thrown.purged]).toEqual([1, 1]);
     expect(error.mock.calls.flat().join(" ")).not.toContain(String(CHAT));
     error.mockRestore();
+  });
+});
+
+describe("runPrivacyJob, health data erasures (право 5)", () => {
+  it("removes the progress photo files, then erases the rows of each due erasure", async () => {
+    const { admin, calls, listed } = fakeAdmin({ erasures: [USER] });
+    const summary = await runPrivacyJob(admin, 10_000);
+    expect(listed).toContain(`progress-photos/${USER}`);
+    expect(calls).toContain(`purge_health_data(${USER})`);
+    expect(summary.healthErased).toBe(1);
+  });
+
+  it("does not count an erasure the database found not due", async () => {
+    const { admin } = fakeAdmin({ erasures: [USER], erased: false });
+    expect((await runPrivacyJob(admin, 10_000)).healthErased).toBe(0);
   });
 });
 

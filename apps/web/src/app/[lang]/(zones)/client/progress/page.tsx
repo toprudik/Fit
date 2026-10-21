@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { HealthConsentGate } from "@/components/consent/health-consent-gate";
 import { MonthlyReportEntry } from "@/components/monthly-report/entry";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
@@ -26,13 +27,18 @@ export default async function ClientProgressPage() {
           <MonthlyReportEntry />
         </Suspense>
         <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
-          <ClientMeasurements />
-        </Suspense>
-        <Suspense fallback={<SkeletonRows rows={1} label={t.common.loading} />}>
-          <ClientNutritionEntry />
-        </Suspense>
-        <Suspense fallback={<SkeletonRows rows={2} label={t.common.loading} />}>
-          <ClientPhotos />
+          {/* Measurements, the nutrition target and photos are health data (право 3): one card asks for the consent. */}
+          <HealthConsentGate next="/client/progress">
+            <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
+              <ClientMeasurements />
+            </Suspense>
+            <Suspense fallback={<SkeletonRows rows={1} label={t.common.loading} />}>
+              <ClientNutritionEntry />
+            </Suspense>
+            <Suspense fallback={<SkeletonRows rows={2} label={t.common.loading} />}>
+              <ClientPhotos />
+            </Suspense>
+          </HealthConsentGate>
         </Suspense>
         <Suspense fallback={<SkeletonRows rows={2} label={t.common.loading} />}>
           <ClientGamificationEntry />

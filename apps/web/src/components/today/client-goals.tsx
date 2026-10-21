@@ -1,5 +1,6 @@
 import { getDictionary, getLocale } from "@/i18n/server";
 import { loadMyActivity } from "@/lib/activity/load";
+import { healthConsentPath, mayOpenHealthSections } from "@/lib/consent/health";
 import { loadMyGamification } from "@/lib/gamification/load";
 import { loadClientHomework } from "@/lib/homework/load";
 import { totalsOf } from "@/lib/nutrition/diary";
@@ -9,11 +10,12 @@ import { ClientGoalsView } from "./client-goals-view";
 /** Loads today's goals for the signed-in client; renders nothing when signed out. */
 export async function ClientTodayGoals() {
   const [t, locale] = await Promise.all([getDictionary(), getLocale()]);
-  const [food, activity, homework, gamification] = await Promise.all([
+  const [food, activity, homework, gamification, health] = await Promise.all([
     loadMyFoodDay(),
     loadMyActivity(),
     loadClientHomework(locale),
     loadMyGamification(),
+    mayOpenHealthSections(),
   ]);
   if (!food || !activity) return null;
   const target = food.target && "macros" in food.target ? food.target.macros.kcal : null;
@@ -30,6 +32,7 @@ export async function ClientTodayGoals() {
         steps: { done: activity.days[0]?.activity.steps?.value ?? 0, goal: activity.goals.steps },
         homework: open,
         streaks: gamification?.streaks ?? null,
+        healthConsentHref: health ? null : healthConsentPath("/client"),
       }}
     />
   );

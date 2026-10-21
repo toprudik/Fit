@@ -37,6 +37,12 @@ describe("monthly report", () => {
     expect(reportFrom(report)?.streaks).toBeUndefined();
   });
 
+  it("reads a report closed without the health data consent and offers no health cards", () => {
+    const closed = reportFrom({ month: "2026-09-01", sessions: report.sessions, health_closed: true });
+    expect(closed?.health_closed).toBe(true);
+    expect(closed && storyOptions(closed).map((option) => option.kind)).toEqual(["sessions", "trainer", "trainer"]);
+  });
+
   it("turns months into URL parts and back", () => {
     expect(monthFromParam("2026-09")).toBe("2026-09-01");
     expect(monthFromParam("2026-13")).toBeNull();

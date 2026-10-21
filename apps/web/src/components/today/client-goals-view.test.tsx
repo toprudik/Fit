@@ -13,6 +13,7 @@ const goals: ClientGoals = {
   steps: { done: 4300, goal: 8000 },
   homework: 2,
   streaks: { workouts: 3, weekGoal: 3, weekDone: 1, diary: 5, steps: null },
+  healthConsentHref: null,
 };
 
 function view(over: Partial<ClientGoals> = {}) {
@@ -35,5 +36,16 @@ describe("ClientGoalsView", () => {
     expect(screen.getByText("900 ккал")).toBeTruthy();
     expect(screen.queryByRole("link", { name: new RegExp(ru.homework.open) })).toBeNull();
     expect(screen.queryByRole("list", { name: ru.gamification.streaks.header })).toBeNull();
+  });
+
+  it("without the health data consent shows no calories, steps or quick weight, only the way to the consent", () => {
+    view({ healthConsentHref: "/onboarding/consent?step=health&next=%2Fclient" });
+    expect(screen.queryByText(/ккал/)).toBeNull();
+    expect(screen.queryByText(/из 8\s000/)).toBeNull();
+    expect(screen.queryByText("вес за 2026-10-18")).toBeNull();
+    expect(screen.getByRole("link", { name: new RegExp(ru.healthConsentGate.title) }).getAttribute("href")).toBe(
+      "/onboarding/consent?step=health&next=%2Fclient",
+    );
+    expect(screen.getByRole("link", { name: /Питание/ }).getAttribute("href")).toBe("/client/diary/food");
   });
 });

@@ -8,6 +8,7 @@ import { formatSessionTime } from "@/lib/pairs/format";
 import { DEFAULT_TIME_ZONE, formatPlanDate, isPlanCode } from "@/lib/plans/plans";
 import { isButtonUrl } from "@/lib/groups/rules";
 import { isBadgeCode } from "@/lib/gamification/gamification";
+import { isTrainerMilestoneKind } from "@/lib/trainer-milestones/milestones";
 import { bookingDecisionData, claimAnswerData, contactDeclineData } from "@/lib/bot-actions/callback-data";
 import { isChallengeMetric } from "@/lib/challenges/challenges";
 import { invitePath, isInviteToken } from "@/lib/delegations/rules";
@@ -69,9 +70,16 @@ const templates: Partial<Record<NotificationType, Template>> = {
       buttons: [{ text: t.openFeedback, path: id ? `/admin/feedback/${id}` : "/admin/feedback" }],
     };
   },
-  // ADM-10 to the author: payload { feedback_id, kind, reply } from admin_reply_feedback.
-  feedback_reply: ({ t, payload }) => ({
-    text: interpolateEscaped(t.feedbackReply, { reply: String(payload.reply ?? "") }),
+  // ADM-10 to the author: payload { feedback_id, kind, reply } from admin_reply_feedback. A data request whose
+  // deadline moved (admin_extend_data_request) has event "extended", the reason as reply and the new due_on.
+  feedback_reply: ({ t, locale, payload }) => ({
+    text:
+      payload.event === "extended" && typeof payload.due_on === "string" && /^\d{4}-\d{2}-\d{2}$/.test(payload.due_on)
+        ? interpolateEscaped(t.dataRequestExtended, {
+            date: diaryDay(locale, payload.due_on),
+            reason: String(payload.reply ?? ""),
+          })
+        : interpolateEscaped(t.feedbackReply, { reply: String(payload.reply ?? "") }),
     buttons: [{ text: t.writeAgain, path: "/feedback" }],
   }),
   // ADM-14 to the user: payload { grant_id, categories, reason, expires_at } from admin_open_break_glass.
@@ -141,6 +149,12 @@ const templates: Partial<Record<NotificationType, Template>> = {
       typeof id === "number" && Number.isSafeInteger(id) ? `<a href="tg://user?id=${id}">${escapeHtml(name)}</a>` : escapeHtml(name);
     return { text: interpolate(escapeHtml(t.contactShared), { name: link, phone: escapeHtml(phone) }), buttons: [button] };
   },
+  // Marketing 16: payload { trainer_id, first_name, last_name } from redeem_trainer_invite, to the person whose
+  // inviter code the trainer used. The pair starts from /client/invite-trainer, where the consent steps follow.
+  invited_trainer_joined: ({ t, payload }) => ({
+    text: interpolateEscaped(t.invitedTrainerJoined, { name: personName(payload) || t.invitedTrainerUnnamed }),
+    buttons: [{ text: t.openInvitedTrainers, path: "/client/invite-trainer" }],
+  }),
   // Wave-3 §2.2-7: payload { badge } from private.award_badges, the code of the new badge. Its title and text
   // come from the recipient's dictionary.
   badge: ({ t, locale, payload }) => {
@@ -149,6 +163,16 @@ const templates: Partial<Record<NotificationType, Template>> = {
     return {
       text: item ? interpolateEscaped(t.badge, { title: item.title, text: item.text }) : escapeHtml(t.badgeUnknown),
       buttons: [{ text: t.openBadges, path: "/client/progress/badges" }],
+    };
+  },
+  // Marketing 14: payload { milestone } from private.grant_trainer_milestone, the kind the trainer reached. Its
+  // title and text come from the recipient's dictionary.
+  trainer_milestone: ({ t, locale, payload }) => {
+    const items = dictionaries[locale].trainerMilestones.items;
+    const item = isTrainerMilestoneKind(payload.milestone) ? items[payload.milestone] : null;
+    return {
+      text: item ? interpolateEscaped(t.trainerMilestone, { title: item.title, text: item.text }) : escapeHtml(t.trainerMilestoneUnknown),
+      buttons: [{ text: t.openTrainerMilestones, path: "/trainer/milestones" }],
     };
   },
   // Wave-3 §2.3-11: payload { challenge_id, title, metric, starts_on, ends_on, trainer_name } from

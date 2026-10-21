@@ -233,6 +233,7 @@ create type public.share_category as enum ('nutrition', 'measurements', 'photos'
 | R70 | Возврат в завершённую пару | RPC сбрасывает `data_shares` и поля завершения | PRD 2.3 |
 | R71 | Обратная связь без входа | В волне 1 нет | RLS рассчитан на вошедших |
 | R72 | Ответ на обратную связь | Админ отвечает через `admin_reply_feedback`: последний ответ хранится в `feedback.reply`, автору уходит `feedback_reply` | ADM-10 |
+| R72a | Запрос о моих данных | `feedback.kind = 'data_request'` с `request_type` (access, export, correction, deletion, withdraw, objection, stop, appeal, other), у `withdraw` ещё `consent_kind` (processing, health, marketing, publication); триггер ставит `due_on` через 10 рабочих дней (пн–пт, по Москве), для отзыва согласия на публикацию через 3; `admin_extend_data_request` один раз добавляет 5 с причиной (публикацию не продлевает), автору уходит `feedback_reply` с `event = 'extended'`; в GitHub не уходит | 152-ФЗ ст. 9, 10.1, 20, 21; legal/product-changes 16 |
 | R73 | Грант для цели | Целевой пользователь видит весь грант | |
 | R74 | Детали вех | `achieved_at` = начало занятия; пробные и вставка сразу как `attended` считаются | PRD 2.6.2-7 |
 | R75 | Дедупликация outbox | Глобальный уникальный ключ с моментом цели | перенос занятия ставит новые напоминания |
@@ -369,6 +370,8 @@ create table public.user_roles (
 
 **`consents`**: согласия при первом входе (Q44, юр. правки А1, А2), append-only. Экран условий пишет `beta_terms`, `terms`, `privacy_policy` и `age_confirmed`, следующий экран `pd_general`; без них прокси не пускает дальше (`lib/consent/required.ts`). `pd_health` спрашивается отдельно, и без него приложение работает. В `text_hash` sha256 показанного текста документа (у `age_confirmed` и старых строк null); пользователь пишет его, но не читает (выдача select по колонкам). Прокси читает согласия на каждой странице и в API, cookie на устройстве не используется.
 
+**`health_erasures`**: удаление сведений о здоровье после отзыва `pd_health` (юр. право 5, consent-health-data.md 8.3). Когда у пользователя не остаётся действующего `pd_health`, триггер на `consents` сразу выключает все шесть категорий `data_shares` в его парах, удаляет `ingest_tokens` и выводит его из `challenge_participants`, а удаление ставит строкой с `scheduled_for` через 30 дней; новое согласие до этого срока удаляет несделанную строку. Маршрут privacy удаляет файлы фото прогресса, затем `purge_health_data` (только service_role) удаляет анкеты, цели, замеры, фото, питание, сон и шаги, тренировки и рекорды, недельную цель, отправленные тренеру отчёты и карточки сторис видов `records`, `weight`, `streak_*` (эти таблицы чистятся по отзыву согласия; клиенты-карточки тренера согласий не дают и не затрагиваются), ставит `done_at` и пишет `health_data.purge` в журнал админов. Пользователь читает свою строку, писать не может.
+
 ```sql
 create type public.consent_kind as enum ('beta_terms', 'privacy_policy', 'contact_share',
   'terms', 'pd_general', 'pd_health', 'age_confirmed');
@@ -383,6 +386,24 @@ create table public.consents (
 );
 create index on public.consents (user_id, kind);
 create unique index consents_one_active_uniq on public.consents (user_id, kind, version) where revoked_at is null;
+```
+
+**`public_data_consents`**: согласие на распространение (ст. 10.1 152-ФЗ, legal/ru/consent-public-data.md): витрина тренера с выбранными полями (`photo`, `about`, `city`, `locations`, `prices`; имя видно всегда) и карточки для сторис; места отмечаются по одному в `location_ids` (тренер видит адреса, домашний может не отмечать, новое место скрыто, пока его не отметят; `locations` в `fields` ровно тогда, когда отмечено хоть одно); запреты (`no_transfer`, `no_index`, `no_processing`) и своё условие. Новое согласие заменяет действующее, отзыв ставит `revoked_at`. Витрина включается только с согласием (триггер на `trainer_profiles.is_public`, по умолчанию `false`), карточка сторис создаётся только с согласием `story` (триггер на `story_cards`). `get_trainer_showcase` и `get_trainer_showcase_prices` отдают только выбранные поля, `get_showcase_terms(slug)` отдаёт запреты и условие для раздела «Условия обработки данных».
+
+```sql
+create table public.public_data_consents (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references public.profiles(id) on delete cascade,
+  scope       text not null check (scope in ('showcase', 'story')),
+  version     text not null,
+  fields      text[] not null default '{}',
+  bans        text[] not null default '{}',
+  condition   text,                          -- до 500 знаков
+  location_ids uuid[] not null default '{}',   -- места, отмеченные для витрины
+  accepted_at timestamptz not null default now(),
+  revoked_at  timestamptz
+);
+create unique index on public.public_data_consents (user_id, scope) where revoked_at is null;
 ```
 
 **`account_deletions`**, **`data_exports`**
@@ -1476,7 +1497,7 @@ create table public.milestones (                 -- зафиксированны
 #### Обратная связь, жалобы, аудит, аварийный доступ
 
 ```sql
-create type public.feedback_kind as enum ('bug', 'idea', 'other');               -- R46
+create type public.feedback_kind as enum ('bug', 'idea', 'other', 'data_request'); -- R46, R72a
 create type public.feedback_status as enum ('new', 'in_progress', 'closed');
 create table public.feedback (
   id               uuid primary key default gen_random_uuid(),
@@ -2188,6 +2209,8 @@ create table public.bonuses (
 
 «Только после факта оплаты» (Q50): триггер `payments_referral` (`after insert or update of status on payments`) на `confirmed`-платеже `direction = 'in'` в паре приглашённого вызывает `private.qualify_referral`: если платёж подходит под условие акции (пакет оплаченного абонемента или сумма в валюте акции), реферал становится `qualified`, и каждой стороне `private.grant_referral_bonus` добавляет занятия в действующий абонемент её пары (§3.1-6, `20261017174813_referral_bonus_active_pass.sql`): `adjustment` с `note = 'referral_bonus'` и суммой 0, затем гашение долга. Абонемент выбирает `private.referral_bonus_pass`: обычный (не разовый, не старый `is_bonus`), `active` или `frozen` по `pass_balances`; у приглашённого первым идёт оплаченный абонемент, дальше тот, что действует дольше. Выручку бонус не меняет: абонемент зарабатывает цену за первые `sessions_total` занятий (`pass_share_minor`). Если действующего абонемента нет, бонус `pending` с `coaching_id` пары, а триггер `ledger_entries_referral_bonus` на `grant` следующего обычного абонемента этой пары добавляет его туда и ставит `granted`. Уведомление `referral_bonus` уходит в обоих случаях (`waiting: true`, когда ждёт; `applied: true`, когда дождался). Пригласившему не больше 10 бонусов на акцию, ждущие тоже считаются. Если этот платёж переведён в `voided` в течение 14 дней после `qualified_at`, `private.revoke_referral` забирает бонусы: ждущий становится `void`, у добавленного в абонемент снимается свободная часть (`least(sessions, available)`, `adjustment` с `note = 'referral_bonus_voided'`), полностью использованный остаётся `granted`; реферал становится `void` (wave-3 §3.1-7). Бонусные абонементы `is_bonus`, выданные до этой миграции, отменяются по-старому: без списаний и погашений `refund` остатка и `cancelled`. Завершение пары аннулирует её `pending`-рефералы с обеих сторон.
 
+Значок клиента «Друг по приглашению» (маркетинг 15, `20261020173917_referral_friend_badge.sql`): триггер `referrals_award_friend_badge` на переходе реферала `client_to_client` в `qualified` даёт пригласившему `referral_friend` (семейство `referral`) и ставит в очередь сообщение `badge` один раз; когда реферал перестаёт быть `qualified` и у пригласившего не осталось других `qualified`, значок снимается.
+
 Тренер приводит тренера (§3.2, `20261017090519_trainer_referrals.sql`):
 
 ```sql
@@ -2519,12 +2542,14 @@ create policy "coaching_notes: trainer, or client when visible, reads" on public
 | `notification_preferences` | сам | сам | сам (`enabled`) | сам |
 | `user_roles` | сам; A | никто (позже `admin_grant_role`, R13) | никто | никто (позже `admin_revoke_role`) |
 | `consents` | сам, без `text_hash`; A | сам (`user_id`, `kind`, `version`, `text_hash`) | сам: только `revoked_at`, один раз | никто |
+| `public_data_consents` | сам; A | S-RPC `give_public_data_consent` | S-RPC `revoke_public_data_consent` | никто |
 | `account_deletions` | сам; партнёры по паре в любом статусе (только даты, R10); A | S-RPC `request_account_deletion` | S-RPC `cancel_account_deletion` | S |
 | `data_exports` | сам | S-RPC `request_data_export` | S | S |
 | `trainer_profiles` | сам; его клиенты в любом статусе пары (R89); A; anon/прочие: **pub** `get_trainer_showcase(slug)` (при `verification_status = 'rejected'` отвечает «недоступна», R16, Q60); зона «Тренер» и `is_trainer()` доступны при наличии `trainer_profiles` (доступ не зависит от верификации и тарифа, Q55) | S-RPC `redeem_trainer_invite` | сам (кроме `verification_status`, `verified_at`, `trainer_invite_id`: колоночные гранты); A через `admin_decide_verification` | никто |
 | `trainer_certificates` | сам; A | сам (не больше 5, R53) | сам | сам |
 | `trainer_verifications` | сам; A | S-RPC `submit_trainer_verification` (подача), `admin_decide_verification` (решение) | никто | никто |
 | `trainer_honors` | никто напрямую; A через `admin_trainer_honors(trainer)` (с причиной); **pub** `get_trainer_honors(slug)` только у открытой витрины верифицированного тренера (Q55), без причин | S-RPC `admin_set_trainer_honor` (A, причина обязательна, аудит `trainer_honor.grant`) | никто | S-RPC `admin_set_trainer_honor(..., false, ...)` (A, аудит `trainer_honor.revoke`) |
+| `trainer_milestones` | T свои (вехи маркетинга 14: `clients_5`, `sessions_100`, `sessions_500`, `weeks_4`, `first_trial_client`) | S триггеры на `sessions` и `bookings` (проведённые занятия по Q26, как `private.analytics_held_sessions`: закончилось, не отменено, есть запись confirmed или attended; группа одно занятие), `coachings` (активные пары, пара по пробной ссылке) и `bookings` (посещаемость, отмеченная человеком, 4 недели подряд по поясу тренера); первая запись ставит в очередь `trainer_milestone`, тренер выключает его в настройках уведомлений | никто | каскад от `trainer_profiles` |
 | `trainer_invites` | A (без хеша кода); статус кода для экрана погашения: S-RPC `trainer_invite_status` | A через `admin_create_trainer_invite` | S-RPC `admin_revoke_trainer_invite` (A), `redeem_trainer_invite` | никто |
 | `client_invites` | T; **pub** по токену, по коду после входа (`resolve_client_invite`) | T; S-RPC `my_client_invite` (создаёт ссылку при первом открытии), `reissue_client_invite` | T; S-RPC `reissue_client_invite` (архивирует старые) | никто (архив) |
 | `trial_links` | T; **pub** `get_trial_link(token)` | T | T (вкл. `is_enabled`) | никто (архив) |
@@ -2780,5 +2805,5 @@ erDiagram
 35. **W4-гео**: бадди хранит только центр ячейки сетки ~2 км; клубы хранят точную точку (публичные места). PostGIS включается в W4.
 36. **Студии**: столбцы `studio_id` не создаются заранее (добавление nullable-столбца в Postgres мгновенно и ничего не переписывает), но владение везде выражено через `trainer_id`, а проверки идут через `is_coaching_trainer`, которую достаточно расширить.
 37. **Поиск по названиям** упражнений и продуктов идёт через `pg_trgm` (расширение включает базовая миграция).
-38. **Хранение outbox**: 90 дней для обработанных строк; экспорт хранится 7 дней. Сроки хранения остального (право 8, `20261020154517_retention.sql`, политика конфиденциальности §5.1): `app_opens` 13 месяцев; упавшие и зависшие строки outbox 90 дней после срока доставки; обратная связь 3 года с отправки, вместе со скриншотами; жалобы 3 года после решения, вместе с апелляциями (открытые ждут решения); журнал администратора 3 года (append-only, удалять может только задача хранения и только строки старше 3 лет); сертификаты тренера 1 год после решения админа по заявке, вместе с файлами. Строки без файлов удаляет ежедневная pg_cron-задача `retention` (`private.purge_expired_rows`), строки с файлами снимает маршрут приватности: `retention_due_files` → удалить файлы через Storage API → `retention_forget`.
+38. **Хранение outbox**: 90 дней для обработанных строк; экспорт хранится 7 дней. Сроки хранения остального (право 8, `20261021002917_retention.sql`, политика конфиденциальности §5.1): `app_opens` 13 месяцев; упавшие и зависшие строки outbox 90 дней после срока доставки; обратная связь 3 года с отправки, вместе со скриншотами; жалобы 3 года после решения, вместе с апелляциями (открытые ждут решения); журнал администратора 3 года (append-only, удалять может только задача хранения и только строки старше 3 лет); сертификаты тренера 1 год после решения админа по заявке, вместе с файлами. Строки без файлов удаляет ежедневная pg_cron-задача `retention` (`private.purge_expired_rows`), строки с файлами снимает маршрут приватности: `retention_due_files` → удалить файлы через Storage API → `retention_forget`.
 39. **Карточка клиента без аккаунта**: профиль без входа (пользователь Auth без `telegram_id`, заблокирован), а не nullable `client_id`; так все политики и журнал работают без изменений, а слияние сводится к одному переносу `client_id`. Подсказка совпадения при переходе ищет по имени; слияние необратимо.

@@ -56,9 +56,14 @@ async function HomeContent() {
         title={copy.noTrainerTitle}
         description={copy.noTrainerText}
         action={
-          <Button asChild>
-            <Link href="/join">{copy.noTrainerAction}</Link>
-          </Button>
+          <div className="flex flex-col items-center gap-2">
+            <Button asChild>
+              <Link href="/join">{copy.noTrainerAction}</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/client/invite-trainer">{copy.inviteTrainerAction}</Link>
+            </Button>
+          </div>
         }
       />
     );

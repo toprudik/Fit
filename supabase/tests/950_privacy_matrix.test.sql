@@ -56,6 +56,7 @@ begin
   insert into public.trial_links (trainer_id, title, currency) values (v_trainer, 'Trial', 'RUB');
   insert into public.trainer_certificates (trainer_id, title, storage_path) values (v_trainer, 'Diploma', v_trainer::text || '/diploma.pdf');
   insert into public.trainer_honors (trainer_id, honor, reason) values (v_trainer, 'founder', 'Beta');
+  insert into public.trainer_milestones (trainer_id, kind) values (v_trainer, 'clients_5');
   insert into public.exercises (id, source, owner_id, name) values (v_exercise, 'custom', v_trainer, 'Move of ' || p_trainer);
   insert into public.exercise_translations (exercise_id, locale, name) values (v_exercise, 'en', 'Move');
   insert into public.workout_templates (owner_id, title) values (v_trainer, 'Template') returning id into v_workout;
@@ -201,6 +202,9 @@ values (tests.user_id('client_c'), 'daily_digest', 'digest:c', '{}', now(), now(
 insert into public.story_cards (user_id, month, kind, data) values (tests.user_id('client_c'), '2026-09-01', 'sessions', '{"count": 2}');
 insert into public.signup_sources (user_id, source, entry) values (tests.user_id('client_c'), 'vk', 'mini_app');
 insert into public.app_open_opt_outs (user_id) values (tests.user_id('client_c'));
+insert into public.health_erasures (user_id) values (tests.user_id('client_c'));
+insert into public.trainer_inviter_codes (user_id, code) values (tests.user_id('client_c'), 'ABCDEFGHJKLM');
+insert into public.invited_trainers (trainer_id, inviter_id) values (tests.user_id('trainer_a'), tests.user_id('client_c'));
 insert into public.monthly_report_shares (coaching_id, month, client_id, report) values (tests.pair_id('trainer_a', 'client_c'), '2026-09-01', tests.user_id('client_c'), '{"month": "2026-09-01"}');
 -- A reported payment of C (the client may still edit it).
 insert into public.payments (coaching_id, amount_minor, currency, method, paid_at, status, note)
@@ -278,7 +282,7 @@ insert into tests.personal_tables values
   ('workout_log_exercises'), ('workout_sets'), ('personal_records'), ('data_exports'), ('calendar_feeds'),
   ('client_goals'), ('body_profiles'), ('nutrition_targets'), ('food_diary_entries'), ('food_day_comments'),
   ('food_dish_items'), ('food_favorites'), ('activity_entries'), ('ingest_tokens'),
-  ('user_badges'), ('workout_week_goals'), ('challenge_participants');
+  ('user_badges'), ('workout_week_goals'), ('challenge_participants'), ('health_erasures');
 
 -- What the admin may read without break-glass (data-model §4.2); every other public table and view must give
 -- the admin 0 rows. exercises and foods are listed for the catalogs; own exercises and foods are checked separately.
@@ -287,7 +291,7 @@ insert into tests.admin_readable values
   ('profiles'), ('public_profiles'), ('user_roles'), ('consents'), ('account_deletions'), ('trainer_profiles'),
   ('trainer_certificates'), ('trainer_verifications'), ('trainer_invites'), ('feedback'), ('reports'),
   ('admin_audit_log'), ('break_glass_grants'), ('plan_grants'), ('access_requests'), ('plans'), ('exercises'), ('foods'),
-  ('badges'), ('reviews'), ('review_revisions'), ('trainer_waitlist');
+  ('badges'), ('reviews'), ('review_revisions'), ('trainer_waitlist'), ('public_data_consents');
 create table tests.admin_checked as
 select c.relname::text as tbl
 from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
