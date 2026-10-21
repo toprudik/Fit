@@ -4275,6 +4275,8 @@ export const en: Dictionary = {
       emptyText: "When a client without a fitting pass picks a time, the request shows up here.",
       detailTitle: "Booking request",
       ownerHeader: "{name}'s clients",
+      confirmFor: "Confirm booking: {name}",
+      listHint: "Without a pass the booking goes into debt. Open a request to decline it or confirm it as a single session.",
       client: "Client",
       passLine: "Charged to a pass, free sessions: {count}.",
       debtLine: "No pass fits, so the session goes to debt when charged.",
