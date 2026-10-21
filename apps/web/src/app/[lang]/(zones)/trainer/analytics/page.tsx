@@ -6,6 +6,7 @@ import { TierLock } from "@/components/plans/tier-lock";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { DismissChurn } from "@/components/trainer-analytics/dismiss-churn";
+import { TrainerStoryCards } from "@/components/trainer-stories/trainer-story-cards";
 import { PriceSimulatorSection } from "@/components/trainer-analytics/price-simulator-section";
 import { Chip, ChipRow } from "@/components/ui/chip";
 import { ListGroup, ListRow } from "@/components/ui/list";
@@ -16,11 +17,13 @@ import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { formatMoney } from "@/lib/money/format";
 import { formatValue, fromMetric, unitOf, unitSystem } from "@/lib/progress/measurements";
+import { formatMonth, monthFromParam } from "@/lib/monthly-report/report";
 import { loadNutritionClients } from "@/lib/nutrition/adherence-load";
 import { addDays } from "@/lib/schedule/time";
 import { EXPORT_KINDS } from "@/lib/trainer-analytics/csv";
 import { loadTrainerAnalytics, type FinanceRow, type TrainerAnalytics } from "@/lib/trainer-analytics/load";
 import { change, PERIOD_KINDS, periodKind, periodOffset, type PeriodKind } from "@/lib/trainer-analytics/period";
+import { previousMonth } from "@/lib/trainer-stories/month";
 import { cn } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -278,6 +281,7 @@ async function Analytics({ searchParams }: { searchParams: PageProps<"/[lang]/tr
     return <TierLock plan="trainer_pro" title={copy.lockTitle} description={copy.lockText} feature="trainer.analytics" requested={access.requested} />;
   }
 
+  const storyMonth = previousMonth(analytics.timeZone);
   const base = data.finance
     ? data.finance.base.filter((row) => row.earned_minor > 0).map((row) => ({ currency: row.currency, monthlyMinor: Math.round(row.earned_minor / 3) }))
     : [];
@@ -317,6 +321,7 @@ async function Analytics({ searchParams }: { searchParams: PageProps<"/[lang]/tr
       ) : (
         <TierLock plan="trainer_pro" title={copy.csv.lockTitle} description={copy.csv.lockText} feature="trainer.export" requested={access.requested} />
       )}
+      <TrainerStoryCards month={{ param: storyMonth, name: formatMonth(locale, monthFromParam(storyMonth) ?? "") }} />
     </div>
   );
 }

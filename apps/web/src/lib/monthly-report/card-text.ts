@@ -1,12 +1,12 @@
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
-import { formatNumber, plural } from "@/i18n/format";
+import { formatNumber, interpolate, plural } from "@/i18n/format";
 import { isBadgeCode } from "@/lib/gamification/gamification";
 import { formatRecord } from "@/lib/workouts/present";
 import { fromKg, weightUnit } from "@/lib/workouts/units";
 import { formatMonth, type StoryCard } from "./report";
 
-/** What a story card prints: the month, the big figure, the line under it and an optional detail line. */
+/** What a story card prints: the month (what happened, on a moment card), the big figure, the line under it and an optional detail line. */
 export type CardText = { month: string; figure: string; label: string; detail: string | null };
 
 const MINUS = "−";
@@ -42,6 +42,22 @@ export function cardText(t: Dictionary, locale: Locale, card: StoryCard): CardTe
       const detail = isBadgeCode(code) ? t.gamification.badges.items[code].title : null;
       return { month, figure: formatNumber(locale, count), label: label(copy.badges), detail };
     }
+    // Moment cards say what happened on top instead of the month; the trainer's name goes on its own line.
+    case "milestone":
+      return { month: copy.milestoneTop, figure: formatNumber(locale, count), label: label(copy.milestone), detail: card.data.name?.trim() || null };
+    case "badge": {
+      const code = card.data.code;
+      const detail = isBadgeCode(code) ? t.gamification.badges.items[code].title : null;
+      return { month: copy.badgeTop, figure: formatNumber(locale, count), label: label(copy.badgeHeld), detail };
+    }
+    case "trainer_month": {
+      const lines = [interpolate(copy.trainerClients, { n: formatNumber(locale, card.data.clients ?? 0) })];
+      if (card.data.milestones) lines.push(interpolate(copy.trainerMilestones, { n: formatNumber(locale, card.data.milestones) }));
+      return { month, figure: formatNumber(locale, count), label: label(copy.trainerMonth), detail: lines.join(" · ") };
+    }
+    case "trainer_showcase":
+      // No big figure: the trainer's name is the headline, the QR under it opens the showcase.
+      return { month: copy.trainerShowcase, figure: "", label: card.data.name?.trim() || copy.showcase, detail: card.data.trial ? copy.trainerTrial : null };
     case "weight": {
       const unit = weightUnit(locale);
       const change = card.data.change ?? 0;

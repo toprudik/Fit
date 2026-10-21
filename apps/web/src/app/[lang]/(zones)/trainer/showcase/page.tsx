@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { Suspense } from "react";
 import { ShowcaseConsent } from "@/components/public-data/showcase-consent";
 import { ShowcaseAddressForm, StoryCardsSwitch } from "@/components/showcase/showcase-forms";
+import { TrainerStoryCards } from "@/components/trainer-stories/trainer-story-cards";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { ShareClientLink } from "@/components/trainer-wizard/share-client-link";
@@ -125,6 +126,7 @@ async function ShowcaseEditor() {
       </ListGroup>
       <ShowcaseAddressForm slug={trainer.slug} />
       <StoryCardsSwitch enabled={trainer.story_card_showcase} />
+      {open ? <TrainerStoryCards showcase /> : null}
       <ShowcaseConsent visible={trainer.is_public} consent={consent} places={places} />
     </div>
   );

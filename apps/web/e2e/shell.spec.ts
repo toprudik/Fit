@@ -538,6 +538,28 @@ test.describe("focus and the bars", () => {
     }, y);
   const scrollY = (page: Page) => page.evaluate(() => window.scrollY);
 
+  test("the header bar: the title in the middle, the avatar on the right, Back on the left", async ({ page }) => {
+    await page.goto("/client", { waitUntil: "networkidle" });
+    const width = page.viewportSize()?.width ?? 0;
+    const title = await page.getByRole("heading", { level: 1, name: "Главная" }).boundingBox();
+    const avatar = await page.getByRole("button", { name: "Профиль", exact: true }).boundingBox();
+    expect(title && avatar).toBeTruthy();
+    if (title && avatar) {
+      expect(Math.abs(title.x + title.width / 2 - width / 2)).toBeLessThan(2);
+      expect(avatar.x).toBeGreaterThan(width / 2);
+      // One row: the avatar sits level with the title, in the bar.
+      expect(Math.abs(avatar.y + avatar.height / 2 - (title.y + title.height / 2))).toBeLessThan(12);
+    }
+    // The title stays in the bar while the page scrolls.
+    await tallScreen(page, 1200);
+    await expect(page.getByRole("heading", { level: 1, name: "Главная" })).toBeInViewport();
+
+    await page.goto("/settings", { waitUntil: "networkidle" });
+    const back = await page.getByRole("button", { name: "Назад" }).boundingBox();
+    expect(back && back.x + back.width).toBeLessThan(width / 2);
+    await expect(page.getByRole("button", { name: "Профиль", exact: true })).toHaveCount(0);
+  });
+
   test("focusing the header bar's own buttons doesn't scroll the page", async ({ page }) => {
     await page.goto("/trainer", { waitUntil: "networkidle" });
     await tallScreen(page, 1200);
