@@ -4420,6 +4420,9 @@ isOneToOne: false
               "session_id": string,"starts_at": string,"title": string
             }[]
                            },
+"coaching_notes_writable":
+{ Args: { "p_coaching_id": string }; Returns: boolean
+                           },
 "complete_data_export":
 { Args: { "p_id": string,"p_storage_path": string }; Returns: undefined
                            },

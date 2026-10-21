@@ -11,9 +11,11 @@ import {
   TRAINER_DPA_VERSION,
 } from "./clients";
 
-export type PairActionResult = { ok: true } | { ok: false; reason: "invalid" | "failed" };
+/** "forbidden": RLS refused the write, e.g. an assistant whose access was revoked meanwhile. */
+export type PairActionResult = { ok: true } | { ok: false; reason: "invalid" | "forbidden" | "failed" };
 
 function done(what: string, error: { code: string } | null, rows?: unknown[] | null): PairActionResult {
+  if (error?.code === "42501") return { ok: false, reason: "forbidden" };
   if (error) {
     console.error(`${what} failed`, error.code);
     return { ok: false, reason: "failed" };

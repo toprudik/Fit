@@ -29,15 +29,18 @@ export function NoteComposer({ coachingId, autoFocus = false }: { coachingId: st
   const [error, setError] = useState<string | undefined>();
   const [pending, startTransition] = useTransition();
 
-  function submit(formData: FormData) {
-    const body = String(formData.get("body") ?? "");
+  // onSubmit rather than a form action: React resets a form after its action, which lost the text on a refusal.
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const body = String(new FormData(event.currentTarget).get("body") ?? "");
     const problem = bodyError(body, copy);
     setError(problem);
     if (problem) return;
     startTransition(async () => {
       const result = await addNote({ coachingId, body, visibleToClient: visible });
       if (!result.ok) {
-        toast.error(t.pairs.failed);
+        if (result.reason === "forbidden") setError(copy.noAccess);
+        else toast.error(t.pairs.failed);
         return;
       }
       formRef.current?.reset();
@@ -47,7 +50,7 @@ export function NoteComposer({ coachingId, autoFocus = false }: { coachingId: st
   }
 
   return (
-    <form ref={formRef} id="new-note" action={submit} noValidate className="flex flex-col gap-3">
+    <form ref={formRef} id="new-note" onSubmit={submit} noValidate className="flex flex-col gap-3">
       <TextArea name="body" label={copy.newLabel} error={error} maxLength={NOTE_MAX_LENGTH + 100} autoFocus={autoFocus} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Chip icon={Eye} selected={visible} onClick={() => setVisible((current) => !current)}>
