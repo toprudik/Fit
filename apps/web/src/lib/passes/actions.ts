@@ -67,7 +67,7 @@ function failed(what: string, error: { code?: string; message?: string } | null)
 export async function sellPass(input: SellInput): Promise<SellResult> {
   const parsed = sellInput.safeParse(input);
   if (!parsed.success) return { status: "invalid", fields: invalidFields(parsed.error) };
-  const { coachingId, startsOn, note, source, payment } = parsed.data;
+  const { coachingId, startsOn, note, source, payment, requestId } = parsed.data;
   const supabase = await createSupabaseServerClient();
   const user = await me(supabase);
   if (!user) return { status: "failed" };
@@ -82,6 +82,7 @@ export async function sellPass(input: SellInput): Promise<SellResult> {
     p_coaching_id: coachingId,
     p_starts_on: startsOn,
     p_note: note ?? undefined,
+    p_request_id: requestId,
     ...(source.kind === "package"
       ? { p_package_id: source.packageId }
       : {

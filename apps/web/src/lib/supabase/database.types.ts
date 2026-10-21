@@ -2225,14 +2225,14 @@ isOneToOne: false
                   ]
                 },"passes": {
                   Row: {
-                    "applies_to": Database["public"]['Enums']["package_applies_to"],"cancel_reason": string | null,"cancelled_at": string | null,"cancelled_by": string | null,"client_id": string,"coaching_id": string,"created_at": string,"currency": string,"expires_at": string | null,"id": string,"is_bonus": boolean,"is_drop_in": boolean,"note": string | null,"package_id": string | null,"price_minor": number,"sessions_total": number,"sold_by": string | null,"starts_on": string,"status": Database["public"]['Enums']["pass_status"],"title": string,"trainer_id": string,"updated_at": string
+                    "applies_to": Database["public"]['Enums']["package_applies_to"],"cancel_reason": string | null,"cancelled_at": string | null,"cancelled_by": string | null,"client_id": string,"coaching_id": string,"created_at": string,"currency": string,"expires_at": string | null,"id": string,"is_bonus": boolean,"is_drop_in": boolean,"note": string | null,"package_id": string | null,"price_minor": number,"request_id": string | null,"sessions_total": number,"sold_by": string | null,"starts_on": string,"status": Database["public"]['Enums']["pass_status"],"title": string,"trainer_id": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "applies_to"?: Database["public"]['Enums']["package_applies_to"],"cancel_reason"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"client_id": string,"coaching_id": string,"created_at"?: string,"currency": string,"expires_at"?: string | null,"id"?: string,"is_bonus"?: boolean,"is_drop_in"?: boolean,"note"?: string | null,"package_id"?: string | null,"price_minor": number,"sessions_total": number,"sold_by"?: string | null,"starts_on": string,"status"?: Database["public"]['Enums']["pass_status"],"title": string,"trainer_id": string,"updated_at"?: string
+                    "applies_to"?: Database["public"]['Enums']["package_applies_to"],"cancel_reason"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"client_id": string,"coaching_id": string,"created_at"?: string,"currency": string,"expires_at"?: string | null,"id"?: string,"is_bonus"?: boolean,"is_drop_in"?: boolean,"note"?: string | null,"package_id"?: string | null,"price_minor": number,"request_id"?: string | null,"sessions_total": number,"sold_by"?: string | null,"starts_on": string,"status"?: Database["public"]['Enums']["pass_status"],"title": string,"trainer_id": string,"updated_at"?: string
                   }
                   Update: {
-                    "applies_to"?: Database["public"]['Enums']["package_applies_to"],"cancel_reason"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"client_id"?: string,"coaching_id"?: string,"created_at"?: string,"currency"?: string,"expires_at"?: string | null,"id"?: string,"is_bonus"?: boolean,"is_drop_in"?: boolean,"note"?: string | null,"package_id"?: string | null,"price_minor"?: number,"sessions_total"?: number,"sold_by"?: string | null,"starts_on"?: string,"status"?: Database["public"]['Enums']["pass_status"],"title"?: string,"trainer_id"?: string,"updated_at"?: string
+                    "applies_to"?: Database["public"]['Enums']["package_applies_to"],"cancel_reason"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"client_id"?: string,"coaching_id"?: string,"created_at"?: string,"currency"?: string,"expires_at"?: string | null,"id"?: string,"is_bonus"?: boolean,"is_drop_in"?: boolean,"note"?: string | null,"package_id"?: string | null,"price_minor"?: number,"request_id"?: string | null,"sessions_total"?: number,"sold_by"?: string | null,"starts_on"?: string,"status"?: Database["public"]['Enums']["pass_status"],"title"?: string,"trainer_id"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -4452,7 +4452,7 @@ isOneToOne: false
 { Args: { "p_kind": string,"p_ref": string }; Returns: string
                            },
 "create_pass":
-{ Args: { "p_applies_to"?: Database["public"]['Enums']["package_applies_to"],"p_coaching_id": string,"p_currency"?: string,"p_note"?: string,"p_package_id"?: string,"p_paid_at"?: string,"p_payment_method"?: Database["public"]['Enums']["payment_method"],"p_payment_minor"?: number,"p_price_minor"?: number,"p_sessions"?: number,"p_starts_on"?: string,"p_title"?: string,"p_validity_days"?: number }; Returns: {
+{ Args: { "p_applies_to"?: Database["public"]['Enums']["package_applies_to"],"p_coaching_id": string,"p_currency"?: string,"p_note"?: string,"p_package_id"?: string,"p_paid_at"?: string,"p_payment_method"?: Database["public"]['Enums']["payment_method"],"p_payment_minor"?: number,"p_price_minor"?: number,"p_request_id"?: string,"p_sessions"?: number,"p_starts_on"?: string,"p_title"?: string,"p_validity_days"?: number }; Returns: {
               "pass_id": string,"settled": number
             }[]
                            },

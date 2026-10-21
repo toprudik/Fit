@@ -55,6 +55,8 @@ export const sellInput = z.object({
     }),
   ]),
   payment: paymentInput.nullable(),
+  /** Made once per open form: a repeated submit (double tap, retry after a lost answer) sells nothing new. */
+  requestId: uuid.optional(),
 });
 export type SellInput = z.input<typeof sellInput>;
 
