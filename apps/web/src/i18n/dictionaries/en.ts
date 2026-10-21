@@ -224,7 +224,7 @@ export const en: Dictionary = {
   clientLinks: {
     landing: {
       title: "Trainer invite",
-      lead: "Your trainer invites you to DaFit. Here you book and move sessions and see what's left on your pass.",
+      lead: "Your trainer invites you to DaFit. Here you book and reschedule sessions and see what's left on your pass.",
       verified: "Verified",
       offline: "In person",
       online: "Online",
@@ -4370,7 +4370,7 @@ export const en: Dictionary = {
     title: "Invite your trainer",
     lead: "Is your trainer not on DaFit yet? Send them the link. They get the trainer zone right away on the free plan, and you can book with them and see what's left on your pass in the app.",
     code: "Code to type in: {code}",
-    shareText: "Let's run my training in DaFit: I book myself in Telegram and my pass updates after every session",
+    shareText: "Let's run my training in DaFit: I book sessions in Telegram and my pass updates after every session",
     listHeader: "Came by your link",
     empty: "Nobody has come by your link yet. When your trainer opens it, the DaFit bot will message you.",
     since: "On DaFit since {date}",

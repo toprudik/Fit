@@ -50,7 +50,7 @@ test.describe("Analytics", () => {
   test("a Free trainer gets the Pro lock instead of analytics", async ({ trainer }) => {
     await trainer.page.goto("/trainer/analytics");
     await expect(trainer.page.getByRole("heading", { level: 1, name: "Аналитика" }).first()).toBeVisible();
-    await expect(trainer.page.getByText("Посещаемость, отмены, выручка, долги и клиенты, которые могут уйти, в одном месте.")).toBeVisible();
+    await expect(trainer.page.getByText("Посещаемость, отмены, выручка, долги и клиенты, которые могут уйти, на одном экране.")).toBeVisible();
     await expect(trainer.page.getByRole("button", { name: "Запросить доступ" })).toBeVisible();
     await expect(trainer.page.getByRole("heading", { name: "Посещаемость" })).toHaveCount(0);
     await expectAccessible(trainer.page);
