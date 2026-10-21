@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Locale } from "@/i18n/config";
 import { ZONES, type TabId, type Zone } from "@/lib/navigation/zones";
 import { renderWithProviders } from "@/test/render";
-import { SideNav } from "./side-nav";
+import { fittingMoreItems, SideNav } from "./side-nav";
 import { EXPECTED_TABS, SECTIONS_LABEL } from "./tabs.fixture";
 
 const push = vi.fn();
@@ -139,5 +139,22 @@ describe("SideNav", () => {
     act(() => setAccount({ status: "signed-in", name: "Давид Петров", photoUrl: null, isTrainer: false, isAdmin: false, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" }));
     fireEvent.click(screen.getByRole("button", { name: "Давид Петров" }));
     expect(onOpenProfile).toHaveBeenCalledOnce();
+  });
+});
+
+describe("fittingMoreItems", () => {
+  it("shows every «Ещё» section when they all fit, with no «Ещё» row", () => {
+    // 4 sections + 16 more = 20 rows of 46px, the last without its 2px gap.
+    expect(fittingMoreItems(20 * 46 - 2, 4, 16)).toBe(16);
+  });
+
+  it("keeps the last row for «Ещё» when some don't fit", () => {
+    expect(fittingMoreItems(20 * 46 - 3, 4, 16)).toBe(14);
+    expect(fittingMoreItems(10 * 46, 4, 16)).toBe(5);
+  });
+
+  it("shows none when only the sections and «Ещё» fit", () => {
+    expect(fittingMoreItems(5 * 46, 4, 16)).toBe(0);
+    expect(fittingMoreItems(100, 4, 16)).toBe(0);
   });
 });
