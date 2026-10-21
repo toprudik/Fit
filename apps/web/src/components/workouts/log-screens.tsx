@@ -14,18 +14,14 @@ import { loadClientOccurrence } from "@/lib/homework/load";
 import { localDay, todayIn } from "@/lib/passes/present";
 import { loadTrainerShares } from "@/lib/sharing/load";
 import { draftFromLog, type LogDraft } from "@/lib/workouts/log";
-import { loadBookingStart, loadLog, loadLogs, loadWorkoutPair, viewerId, viewerTimeZone } from "@/lib/workouts/logs";
-import { loadSubstituteParticipant, substitutePath } from "@/lib/workouts/substitute";
+import { loadBookingStart, loadLog, loadLogs, viewerTimeZone } from "@/lib/workouts/logs";
+import { type LogPlace, type PlaceClient, placeClient } from "@/lib/workouts/place";
+import { substitutePath } from "@/lib/workouts/substitute";
 import { weightUnit } from "@/lib/workouts/units";
 import { LogEditor } from "./log-editor";
 import { LogList } from "./log-list";
 import { LogView } from "./log-view";
 
-/**
- * Where the screens of one side live: the trainer's pair tab, the client's diary, or a participant of the
- * session a substitute runs (PRD wave-3 §1 "Подмена" rule 4: the log of that session only).
- */
-export type LogPlace = { side: "trainer"; coachingId: string } | { side: "client" } | { side: "substitute"; sessionId: string; bookingId: string };
 
 function listHref(place: LogPlace): string {
   if (place.side === "trainer") return `/trainer/clients/${place.coachingId}/workouts`;
@@ -42,32 +38,6 @@ function hrefBase(place: LogPlace): string {
 /** The trainer's view of a log, for the substitute too. */
 const viewSide = (place: LogPlace) => (place.side === "client" ? "client" : "trainer");
 
-type PlaceClient = {
-  clientId: string;
-  canWrite: boolean;
-  /** A substitute's booking: the only session its logs may belong to, with the session's start. */
-  booking?: { id: string; coachingId: string; startsAt: string };
-};
-
-/** Whose logs the place shows and whether the viewer may write one there; null when it is not theirs. */
-async function placeClient(place: LogPlace): Promise<PlaceClient | null> {
-  if (place.side === "client") {
-    const me = await viewerId();
-    return me ? { clientId: me, canWrite: true } : null;
-  }
-  if (place.side === "substitute") {
-    const participant = await loadSubstituteParticipant(place.sessionId, place.bookingId);
-    if (!participant) return null;
-    return {
-      clientId: participant.clientId,
-      canWrite: participant.live,
-      booking: { id: participant.bookingId, coachingId: participant.coachingId, startsAt: participant.startsAt },
-    };
-  }
-  const pair = await loadWorkoutPair(place.coachingId);
-  if (!pair?.viewerIsTrainer) return null;
-  return { clientId: pair.clientId, canWrite: pair.live };
-}
 
 /** A log the place may show: the client's, and at a substitute's place only the log of its booking. */
 const belongs = (client: PlaceClient, log: { clientId: string; bookingId: string | null }) =>
@@ -121,6 +91,7 @@ export async function LogListSection({ place }: { place: LogPlace }) {
         hrefBase={hrefBase(place)}
         side={viewSide(place)}
         empty={{ ...empty, action: logs?.length ? undefined : action }}
+        more={place.side === "trainer" ? { side: "trainer", coachingId: place.coachingId } : place.side === "client" ? { side: "client" } : undefined}
       />
     </div>
   );

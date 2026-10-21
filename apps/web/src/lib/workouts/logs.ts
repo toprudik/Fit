@@ -31,19 +31,27 @@ export type LogListItem = {
   exercises: string[];
 };
 
+/** Logs per page of the list; "Показать ещё" loads the next page. */
+export const LOG_PAGE = 50;
+
+/** The last log shown: the next page starts right after it (newest first, ties by id). */
+export type LogCursor = { performedAt: string; id: string };
+
 /**
  * Logs of a client the signed-in user can read, newest first (RLS: the client sees all own logs, the trainer
- * the pair logs and, while shared, the self logs, PRD 2.10-10). `coachingId` narrows to one pair's trainer view.
+ * the pair logs and, while shared, the self logs, PRD 2.10-10), a page at a time: `before` is the last log shown.
  */
-export async function loadLogs(clientId: string, locale: Locale, limit = 50): Promise<LogListItem[] | null> {
+export async function loadLogs(clientId: string, locale: Locale, before?: LogCursor): Promise<LogListItem[] | null> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("workout_logs")
     .select("id, title, performed_at, local_date, coaching_id, workout_log_exercises(exercise_id, position)")
-    .eq("client_id", clientId)
+    .eq("client_id", clientId);
+  if (before) query = query.or(`performed_at.lt."${before.performedAt}",and(performed_at.eq."${before.performedAt}",id.lt.${before.id})`);
+  const { data, error } = await query
     .order("performed_at", { ascending: false })
     .order("id", { ascending: false })
-    .limit(limit);
+    .limit(LOG_PAGE);
   if (error) {
     console.error("loading workout logs failed", error.code);
     return null;
