@@ -1,99 +1,133 @@
+<div align="center">
+
+<img src="docs/design/assets/Brand/app-icon.svg" width="96" height="96" alt="DaFit">
+
 # DaFit
 
-Working name DaFit (repo `fit`). Web app + Telegram Mini App + Telegram bot [@fitconnection_bot](https://t.me/fitconnection_bot).
-Sign-in with Telegram only; backend on Supabase.
+**Приложение для персонального тренера и его клиентов**
+
+Расписание, абонементы, тренировки, питание и прогресс в одном месте: в браузере и прямо в Telegram.
+
+**Русский** · [English](README.en.md)
+
+[![CI](https://github.com/toprudik/Fit/actions/workflows/ci.yml/badge.svg)](https://github.com/toprudik/Fit/actions/workflows/ci.yml)
+![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres_17-3ECF8E?logo=supabase&logoColor=white)
+![Telegram Mini App](https://img.shields.io/badge/Telegram-Mini_App-26A5E4?logo=telegram&logoColor=white)
+![Python 3.13](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)
+
+[Открыть DaFit](https://dafit-web-eight.vercel.app) · [Бот @fitconnection_bot](https://t.me/fitconnection_bot)
+
+</div>
+
+## Что это
+
+Тренер обычно держит клиентов в тетрадке, таблице и переписках: кто когда придёт, кто сколько должен, у кого какой прогресс. DaFit собирает всё это в одно приложение, которым пользуются и тренер, и его клиенты.
+
+Тренер ведёт своих клиентов в DaFit, а клиент видит свои занятия, абонементы и прогресс и сам решает, какие свои данные открыть тренеру. Один человек может быть и тренером, и клиентом: в приложении две зоны, «Тренер» и «Клиент», между ними можно переключаться. Вход только через Telegram.
+
+Сейчас DaFit готовится к закрытой бете, которая стартует 24.11.2026. Название рабочее, репозиторий называется `fit`.
+
+## Возможности
+
+**Для тренера**
+
+- Расписание: слоты, повторы, шаблон недели, групповые занятия, офлайн и онлайн, запись и запросы, отмены и переносы, синхронизация с календарём.
+- Абонементы и оплаты: пакеты, ценовая сетка, долг, заморозка, разовые занятия.
+- Клиенты: карточки, заметки, анкета клиента, карточки для тех, кто ещё не зашёл в DaFit (потом они переходят к человеку вместе с историей).
+- Витрина тренера с QR, ссылка для клиентов и ссылка на пробное занятие.
+- Аналитика и финансы, группы и рассылки, помощники и подмена.
+
+**Для клиента**
+
+- Свои занятия, абонементы и напоминания от бота.
+- Лог тренировок с упражнениями из wger, шаблонами и рекордами.
+- Питание: норма, дневник, поиск по Open Food Facts и штрихкоду.
+- Прогресс: замеры, фото «до и после» с размытием лица прямо на устройстве, шаги, вода и сон.
+- Серии, значки, челленджи и итоги месяца с карточками для сторис.
+
+**Приватность**
+
+- Всё личное живёт внутри пары «тренер и клиент». Тренер видит только своих клиентов и только то, что клиент ему открыл.
+- Админ не видит личные данные клиентов.
+- Экспорт своих данных и удаление аккаунта есть в самом приложении.
+
+## На чём сделано
+
+| Часть | Технологии |
+|---|---|
+| Веб и Telegram Mini App (`apps/web`) | Next.js 16, React 19, Tailwind CSS v4, shadcn/ui, motion |
+| Бот (`apps/bot`) | Python 3.13, aiogram 3, работает через вебхук |
+| База и вход | Supabase: Postgres с RLS, миграции и тесты pgTAP; вход через Telegram |
+| Хостинг | Vercel (веб и бот), уведомления уходят из очереди в базе по pg_cron |
+
+Подробнее о стеке: [ADR 0003](docs/adr/0003-stack-and-runtime.md).
+
+## Устройство репозитория
 
 ```
-apps/web     Next.js 16 · Tailwind v4 · shadcn/ui · motion · Telegram Mini App SDK
-apps/bot     Python 3.13 · aiogram 3
-supabase/    SQL migrations and pgTAP tests
-docs/adr/    Architecture decisions
+apps/web/     веб-приложение и Telegram Mini App (Next.js)
+apps/bot/     Telegram-бот (aiogram)
+supabase/     SQL-миграции и pgTAP-тесты
+docs/         решения, PRD, архитектура, дизайн, ADR
+scripts/      служебные скрипты для CI и разработки
 ```
 
-## Run locally (Docker)
+## Как запустить локально
 
-Local runs need your own dev bot: create one in @BotFather (`/newbot`) and put its token into `.env.local`, for the web and the bot alike. Never use @fitconnection_bot locally: the bot container refuses to start with it, or with any bot that has a webhook (ADR 0002 §5). If your dev bot has a webhook, for example after you ran `docker-compose.prod.yml` with it, open `https://api.telegram.org/bot<dev bot token>/deleteWebhook` in a browser to remove it, or create another dev bot.
+Нужен Docker и свой тестовый бот. Создай его в @BotFather (`/newbot`) и впиши токен в `.env.local`, он нужен и вебу, и боту. Боевой @fitconnection_bot локально не подойдёт: контейнер бота не запустится с ним, как и с любым ботом, у которого настроен вебхук (ADR 0002 §5). Если у тестового бота остался вебхук, например после запуска `docker-compose.prod.yml`, открой в браузере `https://api.telegram.org/bot<токен тестового бота>/deleteWebhook` или заведи другого бота.
 
-1. `cp .env.example .env.local` and fill in the empty values (see comments in the file).
-2. `docker compose up --build` → web on http://localhost:3000, bot in polling mode.
+1. `cp .env.example .env.local` и заполни пустые значения (подсказки есть в комментариях файла).
+2. `docker compose up --build`: веб откроется на http://localhost:3000, бот запустится в режиме polling.
 
-### Open the Mini App inside Telegram
+### Mini App внутри Telegram
 
-Telegram needs a public HTTPS URL:
+Telegram открывает Mini App только по публичному HTTPS-адресу:
 
-1. `docker compose --profile tunnel up` and copy the `https://….trycloudflare.com` URL from the `tunnel` logs.
-2. In `.env.local` set `NEXT_PUBLIC_APP_URL` and `WEBAPP_URL` to that URL; restart (`docker compose up`).
-3. Send `/start` to your dev bot and press **Открыть DaFit** (**Open DaFit** if your Telegram is in English).
+1. `docker compose --profile tunnel up` и скопируй адрес `https://….trycloudflare.com` из логов `tunnel`.
+2. В `.env.local` впиши этот адрес в `NEXT_PUBLIC_APP_URL` и `WEBAPP_URL` и перезапусти `docker compose up`.
+3. Отправь `/start` своему тестовому боту и нажми **Открыть DaFit** (**Open DaFit**, если Telegram на английском).
 
-### Website login with Telegram
+### Вход на сайте через Telegram
 
-In @BotFather → your bot → **Login Widget**: add the site origin and `<origin>/auth/telegram/callback`
-to Allowed URLs, then put the shown Client ID / Client Secret into `.env.local`.
+В @BotFather → твой бот → **Login Widget** добавь адрес сайта и `<адрес>/auth/telegram/callback` в Allowed URLs, а показанные Client ID и Client Secret впиши в `.env.local`.
 
-## Deployed environments
-
-The web app is the Vercel project `dafit-web` (https://dafit-web-eight.vercel.app). The bot is the Vercel project `dafit-bot` with Root Directory `apps/bot`: a Python function in webhook mode (ADR 0006). Both deploy production from `main`, and only `main`, because the Hobby plan allows 100 builds a day and pushes to PR branches used them up: `apps/web/vercel.json` turns off automatic builds of other branches, and `dafit-bot` has no automatic builds at all. Bot setup calls its Deploy Hook (repository secret `BOT_DEPLOY_HOOK`) after a push to `main` that changes `apps/bot`, so a merge that leaves the bot alone costs one build, not two. CI checks every PR without Vercel. Previews sit behind Vercel Authentication, so Telegram only reaches production domains. Notifications go out from a database outbox: Supabase pg_cron calls the web route `POST /api/cron/notifications` every minute when messages are due (ADR 0006). Docker is for local development; `docker-compose.prod.yml` is the self-hosting option for after the beta.
-
-### Bot
-
-The bot function has two routes. `GET /healthz` shows whether its settings are valid, the commit it runs, its Vercel environment and the bot's public id (`bot_id`). `POST /telegram/webhook` takes updates from Telegram and checks the secret header before it reads the update.
-
-In Vercel, `dafit-bot` Production has `TELEGRAM_BOT_TOKEN` (@fitconnection_bot, the same token as `dafit-web` Production) and `WEBAPP_URL`. Preview and Development have no Telegram variables, so a preview never talks to Telegram; the `/healthz` of a deployment without a token shows `"bot_id": null`. The webhook secret is derived from the token. `TELEGRAM_WEBHOOK_SECRET` overrides it, and then it belongs next to the token in `dafit-bot` Production and in the repository secrets.
-
-The workflow `Bot setup` registers the webhook `https://<bot domain>/telegram/webhook` and syncs the bot's commands, descriptions, name and menu button. Before it writes anything, it checks that the token belongs to @fitconnection_bot and that the deployed function holds the same bot's token and accepts the secret. It runs after each push to `main` that changes `apps/bot`, once Vercel serves that commit, and checks the bot every morning. It needs one repository secret, `TELEGRAM_BOT_TOKEN`, and also reads `TELEGRAM_WEBHOOK_SECRET` when you set the override; the bot and web URLs are written in the workflow. Start it by hand with mode `setup` after you change the token, or with mode `check` to only look. Its log shows the webhook URL, pending updates and the last delivery error, never a secret. Vercel deployments never register webhooks themselves. If GitHub emails you that `Bot setup` failed, forward the email to Claude.
-
-#### First setup
-
-Once, after the bot code is on `main`:
-
-1. Get the token of @fitconnection_bot: @BotFather → `/mybots` → @fitconnection_bot → API Token. Copy it and do not revoke it.
-2. In the Vercel team that holds `dafit-web`: Add New → Project → import `toprudik/Fit`. Project Name `dafit-bot`, Framework Preset Python (if Vercel did not pick it), Root Directory `apps/bot`. Leave the build settings and environment variables empty and deploy. This first build works, but the bot has no settings yet.
-3. In `dafit-bot` → Settings → Environment Variables, tick Automatically expose System Environment Variables if it is off. Add `TELEGRAM_BOT_TOKEN` with the token, only Production ticked and Sensitive on. Add `WEBAPP_URL` with `https://dafit-web-eight.vercel.app`, also Production only. Do not add `TELEGRAM_WEBHOOK_SECRET`.
-4. Deployments → the latest Production deployment → ⋯ → Redeploy. Leave Deployment Protection as it is.
-5. If the production domain of `dafit-bot` is not `https://dafit-bot.vercel.app`, tell Claude, who changes `BOT_WEBHOOK_URL` in `.github/workflows/bot-setup.yml`.
-6. In GitHub, `toprudik/Fit` → Settings → Secrets and variables → Actions → New repository secret: `TELEGRAM_BOT_TOKEN`, the same token.
-7. Run `Bot setup` with mode `setup` (Actions → Bot setup → Run workflow) and read its log.
-8. In @BotFather → `/mybots` → @fitconnection_bot: Bot Settings → Configure Mini App, turn it on and send `https://dafit-web-eight.vercel.app` without `?source`, so `t.me/fitconnection_bot?startapp=…` links work. Then Edit Bot → Edit Botpic and send the PNG that Claude gives you (`docs/design/assets/Brand/app-icon.svg` at 640 px). BotFather accepts the avatar only as a photo, so the SVG file itself does not work.
-9. On a phone, send `/start` to @fitconnection_bot. The answer comes in your Telegram language with an **Открыть DaFit** (**Open DaFit**) button that opens DaFit and signs you in. `/help` and any text get an answer with the same button; a sticker gets none.
-
-#### Rotating secrets
-
-To rotate the bot token, revoke the token of @fitconnection_bot in @BotFather. Put the new one into `dafit-web` Production, `dafit-bot` Production and the repository secret `TELEGRAM_BOT_TOKEN`, redeploy both Vercel projects and run `Bot setup`. Until then the bot does not answer, and Telegram keeps the updates for up to 24 hours. The webhook secret changes with the token.
-
-To rotate only the webhook secret, set `TELEGRAM_WEBHOOK_SECRET` (16 to 256 letters, digits, `_` or `-`) in `dafit-bot` Production and as a repository secret, redeploy `dafit-bot` and run `Bot setup`.
-
-## Checks
+## Проверки
 
 ```bash
 cd apps/web && npm run lint && npm run typecheck && npm test && npm run build
-cd apps/web && npm run e2e   # after build: Playwright + axe, phone and desktop, both themes
+cd apps/web && npm run e2e   # после build: Playwright и axe, телефон и десктоп, обе темы
 cd apps/bot && uv run ruff check . && uv run ruff format --check . && uv run pytest
 ```
 
-CI runs the same plus the database checks below, a gitleaks secret scan and Docker image builds.
+CI запускает то же самое, а ещё проверки базы, поиск секретов gitleaks и сборку Docker-образов.
 
-### Database
+### База данных
 
-The schema lives in `supabase/migrations/` and its tests in `supabase/tests/` (pgTAP: RLS, column grants, triggers, constraints). You need Docker and Supabase CLI 2.121.0, the version CI pins. Run from the repo root:
+Схема лежит в `supabase/migrations/`, тесты к ней в `supabase/tests/` (pgTAP: RLS, права на столбцы, триггеры, ограничения). Нужны Docker и Supabase CLI 2.121.0, та же версия, что в CI. Команды запускаются из корня репозитория:
 
 ```bash
-supabase db start      # local Postgres 17, every migration applied from scratch
-supabase test db       # all pgTAP tests
+supabase db start      # локальный Postgres 17, все миграции с нуля
+supabase test db       # все pgTAP-тесты
 supabase db lint --local --schema public,private --fail-on error   # plpgsql_check
-supabase db advisors --local --type all --fail-on warn            # security and performance advisors
+supabase db advisors --local --type all --fail-on warn            # советы по безопасности и скорости
 supabase gen types typescript --local > apps/web/src/lib/supabase/database.types.ts
-supabase stop          # when done
+supabase stop          # когда закончил
 ```
 
-After you add or edit a migration, `supabase db reset` rebuilds the database from all migrations. Commit the regenerated `database.types.ts` as the CLI wrote it, without reformatting: CI fails when it differs from the schema.
+После новой или изменённой миграции `supabase db reset` пересобирает базу из всех миграций. Перегенерированный `database.types.ts` коммить как есть, без форматирования: CI падает, если файл расходится со схемой.
 
-Migrations reach the hosted project `fit` only through `main`: when a push to `main` changes `supabase/migrations/`, the workflow `Database deploy` runs `supabase db push` and the advisors against it (it can also be started by hand). It reads one repository secret, `SUPABASE_DB_URL`: the Session pooler connection string from the Supabase dashboard (Connect), with the password percent-encoded. Never edit the hosted schema by hand.
+В рабочий проект Supabase миграции попадают только через `main`: когда push в `main` меняет `supabase/migrations/`, workflow `Database deploy` выполняет `supabase db push` и проверки советника. Он читает один секрет репозитория, `SUPABASE_DB_URL`. Рабочую схему руками не правим.
 
-## Docs
+## Деплой
 
-- `CLAUDE.md`: rules for coding agents
-- `docs/decisions.md`: product decisions; `CONTEXT.md`: domain glossary
-- `docs/prd/`: what to build per wave; `docs/architecture/`: data model and screens; `docs/plan.md`: plan to the 24.11.2026 beta
-- `docs/adr/`: architectural decisions
-- `docs/design.md`: design system and key-screen mockups (links), design decisions; `docs/design/`: token snapshot and fonts
-- `docs/writing.md`: how DaFit texts are written and proofread (UI copy, bot, docs)
+Веб и бот работают на Vercel и выкатываются в продакшен только из `main`. Как устроены окружения, как настроить бота с нуля и как менять секреты, описано в [docs/deployment.md](docs/deployment.md) (на английском).
+
+## Документация
+
+- [CLAUDE.md](CLAUDE.md): правила для агентов, которые пишут код
+- [docs/decisions.md](docs/decisions.md): продуктовые решения; [CONTEXT.md](CONTEXT.md): словарь терминов
+- [docs/prd/](docs/prd/): что строим в каждой волне; [docs/architecture/](docs/architecture/): модель данных и экраны; [docs/plan.md](docs/plan.md): план до беты 24.11.2026
+- [docs/adr/](docs/adr/): архитектурные решения
+- [docs/design.md](docs/design.md): дизайн-система и макеты; [docs/design/](docs/design/): токены и шрифты
+- [docs/writing.md](docs/writing.md): как мы пишем тексты DaFit
