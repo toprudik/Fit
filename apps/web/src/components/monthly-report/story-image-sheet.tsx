@@ -9,13 +9,20 @@ import { safely, safelyAsync, useInTelegram } from "@/lib/telegram/mini-app";
 
 const FILE_NAME = "dafit-story.png";
 
+/** The picture of a story card from the app's route, in the app's theme and language. */
+export function storyImageUrl(id: string, theme: string, locale: string): string {
+  return `${window.location.origin}/api/story/${id}?theme=${theme}&lang=${locale}`;
+}
+
 /**
- * A made story card (PRD wave-3 §4-8): the 1080×1920 picture with "Выложить в сторис" in Telegram, or sharing and
- * saving elsewhere. The client's monthly cards and the trainer's cards (marketing backlog 5) both open it.
+ * A made story card (PRD wave-3 §4-8): the 1080×1920 picture with "Выложить в сторис" in Telegram, or the system
+ * share sheet elsewhere, and saving the picture. The client's monthly and moment cards (marketing backlog 4) and the
+ * trainer's cards (backlog 5) all open it; `text` goes with the story or the share, «Мой месяц в DaFit» by default.
  */
-export function StoryImageSheet({ image, onClose }: { image: string | null; onClose: () => void }) {
+export function StoryImageSheet({ image, text: shareText, onClose }: { image: string | null; text?: string; onClose: () => void }) {
   const { t } = useI18n();
   const copy = t.monthlyReport.stories;
+  const text = shareText ?? copy.storyText;
   const inTelegram = useInTelegram();
 
   async function share(url: string) {
@@ -23,14 +30,14 @@ export function StoryImageSheet({ image, onClose }: { image: string | null; onCl
       const blob = await (await fetch(url)).blob();
       const file = new File([blob], FILE_NAME, { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], text: copy.storyText });
+        await navigator.share({ files: [file], text });
         return;
       }
     } catch {
       // A cancelled share sheet throws too; nothing to report.
       return;
     }
-    await navigator.share({ url, text: copy.storyText }).catch(() => undefined);
+    await navigator.share({ url, text }).catch(() => undefined);
   }
 
   const storyAvailable = inTelegram && safely(() => shareStory.isAvailable()) === true;
@@ -45,7 +52,7 @@ export function StoryImageSheet({ image, onClose }: { image: string | null; onCl
         image ? (
           <>
             {storyAvailable ? (
-              <Button block icon={Share2} onClick={() => safely(() => shareStory(image, { text: copy.storyText }))}>
+              <Button block icon={Share2} onClick={() => safely(() => shareStory(image, { text }))}>
                 {copy.shareStory}
               </Button>
             ) : typeof navigator !== "undefined" && typeof navigator.share === "function" ? (

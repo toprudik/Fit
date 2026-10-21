@@ -7,7 +7,7 @@ import { clientEnv } from "@/env/client";
 import { isLocale } from "@/i18n/config";
 import { dictionaries } from "@/i18n/dictionaries";
 import { cardText } from "@/lib/monthly-report/card-text";
-import { isCardId, storyCardFrom } from "@/lib/monthly-report/report";
+import { isCardId, isMomentKind, storyCardFrom } from "@/lib/monthly-report/report";
 import { showcaseUrl } from "@/lib/showcase/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -23,7 +23,8 @@ const fonts = Promise.all(
 );
 
 /**
- * A story card of a monthly report or a trainer's card (marketing backlog 5) as a 1080×1920 PNG (PRD wave-3 §4-4, §4-8): `GET /api/story/<id>?theme=dark&lang=ru`.
+ * A story card of a monthly report, a milestone or badge (marketing backlog 4) or a trainer's card (backlog 5) as
+ * a 1080×1920 PNG (PRD wave-3 §4-4, §4-8): `GET /api/story/<id>?theme=dark&lang=ru`.
  * Telegram's story editor and the browser fetch it without a session; public.story_card() gives only what the
  * card prints, and an unknown or expired id answers 404.
  */
@@ -102,7 +103,9 @@ export async function GET(request: Request, context: RouteContext<"/api/story/[i
             </div>
           </div>
         ) : (
-          <div style={{ fontSize: 40, fontWeight: 500, color: colors.ink2 }}>{t.monthlyReport.stories.storyText}</div>
+          <div style={{ fontSize: 40, fontWeight: 500, color: colors.ink2 }}>
+            {isMomentKind(card.kind) ? t.monthlyReport.card.momentText : t.monthlyReport.stories.storyText}
+          </div>
         )}
       </div>
     ),

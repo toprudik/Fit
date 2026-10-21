@@ -3179,17 +3179,29 @@ isOneToOne: false
                   ]
                 },"story_cards": {
                   Row: {
-                    "created_at": string,"data": NonNullable<Json>,"expires_at": string,"id": string,"kind": string,"month": string,"user_id": string
+                    "created_at": string,"data": NonNullable<Json>,"expires_at": string,"id": string,"kind": string,"month": string,"trainer_id": string | null,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"data": NonNullable<Json>,"expires_at"?: string,"id"?: string,"kind": string,"month": string,"user_id": string
+                    "created_at"?: string,"data": NonNullable<Json>,"expires_at"?: string,"id"?: string,"kind": string,"month": string,"trainer_id"?: string | null,"user_id": string
                   }
                   Update: {
-                    "created_at"?: string,"data"?: NonNullable<Json>,"expires_at"?: string,"id"?: string,"kind"?: string,"month"?: string,"user_id"?: string
+                    "created_at"?: string,"data"?: NonNullable<Json>,"expires_at"?: string,"id"?: string,"kind"?: string,"month"?: string,"trainer_id"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "story_cards_trainer_id_fkey"
+      columns: ["trainer_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "story_cards_trainer_id_fkey"
+      columns: ["trainer_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "story_cards_user_id_fkey"
       columns: ["user_id"]
 isOneToOne: false
@@ -4435,6 +4447,9 @@ isOneToOne: false
                            },
 "create_managed_client":
 { Args: { "p_contact"?: string,"p_display_name": string,"p_note"?: string }; Returns: string
+                           },
+"create_moment_card":
+{ Args: { "p_kind": string,"p_ref": string }; Returns: string
                            },
 "create_pass":
 { Args: { "p_applies_to"?: Database["public"]['Enums']["package_applies_to"],"p_coaching_id": string,"p_currency"?: string,"p_note"?: string,"p_package_id"?: string,"p_paid_at"?: string,"p_payment_method"?: Database["public"]['Enums']["payment_method"],"p_payment_minor"?: number,"p_price_minor"?: number,"p_sessions"?: number,"p_starts_on"?: string,"p_title"?: string,"p_validity_days"?: number }; Returns: {
