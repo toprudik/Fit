@@ -87,6 +87,9 @@ export async function expectOpaque(locator: Locator) {
 
 /** Fails with one readable line per violation: rule, impact, what to fix and where. */
 export async function expectAccessible(page: Page) {
+  // After a navigation or a server action the streamed metadata may put <title> back a moment later;
+  // a page that never gets one still fails on document-title below.
+  await page.waitForFunction(() => document.title !== "", undefined, { timeout: 5_000 }).catch(() => undefined);
   const { violations } = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
   const report = violations.map(
     (violation) => `${violation.id} (${violation.impact}): ${violation.help} at ${violation.nodes.map((node) => node.target.join(" ")).join(", ")}`,
