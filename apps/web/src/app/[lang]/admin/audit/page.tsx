@@ -29,6 +29,9 @@ const FILTERS: Record<Filter, Action[]> = {
   trainer_invite: ["trainer_invite.create", "trainer_invite.revoke"],
   verification: ["verification.decide"],
   user: ["user.block", "user.unblock"],
+  report: ["report.decide", "report.dismiss", "review.decide"],
+  break_glass: ["break_glass.open", "break_glass.revoke"],
+  documents: ["documents.update_announced"],
   plan: ["plan.grant", "plan.revoke", "access_request.decline"],
 };
 const isFilter = (value: unknown): value is Filter => typeof value === "string" && Object.hasOwn(FILTERS, value);
