@@ -562,7 +562,16 @@ test.describe("client groups (Pro)", () => {
     await page.keyboard.press("Escape");
     await expect(page.getByText("В группе никого")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Убрать Анна Клиентова из группы" })).toBeVisible();
-    void client;
+    await expect(page.getByText("нет согласия на сведения о здоровье")).toHaveCount(0);
+
+    // Without the health consent the client stays in the group, and the trainer sees why their numbers are missing.
+    ok(
+      await client.db.from("consents").update({ revoked_at: new Date().toISOString() }).eq("user_id", client.userId).eq("kind", "pd_health"),
+      "revoke health consent",
+    );
+    await gotoReady(page, page.url());
+    await expect(page.getByText("нет согласия на сведения о здоровье")).toBeVisible();
+    await expectAccessible(page);
     expect(errors()).toEqual([]);
   });
 });

@@ -44,6 +44,7 @@ function Members({ copy, details }: { copy: Copy; details: GroupDetails }) {
             title={<Link href={`/trainer/clients/${member.coachingId}`}>{member.name}</Link>}
             subtitle={[
               member.goal ? copy.goals[member.goal] : null,
+              member.noHealthConsent ? copy.member.noHealthConsent : null,
               details.template && member.otherTemplateGroups > 0 ? (member.primary ? copy.member.primary : copy.member.otherPrimary) : null,
             ]
               .filter(Boolean)
