@@ -11,6 +11,8 @@ export type Shell = {
   zone: Zone | null;
   /** Opens the profile sheet: account, zone switch, settings. */
   openProfile: () => void;
+  /** The screen is the root of the tab that holds the profile (PROFILE_TAB), in the Mini App at fullscreen. */
+  onProfileTab?: boolean;
 };
 
 /** Provided by AppShell around every screen in the (zones) group. Kept apart so headers don't pull in the whole shell. */

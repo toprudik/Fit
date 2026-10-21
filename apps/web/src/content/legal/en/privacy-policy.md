@@ -177,18 +177,22 @@ We share personal data only as described here.
 | Trainer's records about a client who deleted their account (sessions, bookings, passes, ledger, payments) | Kept by the trainer for their accounting, but linked to "Deleted client" with no name and no contact |
 | A trainer's account | Deleted in the same way. With the trainer profile we delete the trainer's pairs, client cards, passes and notes |
 | Data export archive | The download link works for 7 days |
-| Bot notifications, including messages carrying a phone number for a contact request | Deleted 90 days after sending |
+| Bot notifications, including messages carrying a phone number for a contact request | Deleted 90 days after sending. Messages that were never sent are deleted 90 days after they were due |
 | Contact requests | Expire after 7 days; we keep only the status |
 | Story card link | 30 days |
 | Links to view a progress photo | 300 seconds |
-| Feedback and reports | [FEEDBACK RETENTION]. After account deletion they stay without any link to you |
-| App usage records | [APP USAGE RETENTION, proposed 13 months] |
-| Admin audit log | [AUDIT LOG RETENTION]. After your account is deleted it keeps only the fact of deletion, with no personal data |
+| Feedback, with screenshots | 3 years after you send it. After account deletion it stays without any link to you |
+| Reports and appeals | 3 years after the decision; open reports stay until decided. After account deletion they stay without any link to you |
+| Trainer certificates and diplomas, with files | Until the application is decided and 1 year after |
+| App usage records | 13 months. You can switch this off in Settings, which deletes past records |
+| Admin audit log | 3 years. After your account is deleted it keeps only the fact of deletion, with no personal data |
 | Hosting request logs (Vercel) | [VERCEL LOG RETENTION] |
 | Database backups (Supabase) | [BACKUP RETENTION]. Deleted data disappears from backups when they expire |
 | Consent records | While the account exists and for [LIMITATION PERIOD] after, to prove consent |
 
-> Counsel: retention for feedback, app usage, the audit log, hosting logs and backups is not set in the code. The owner must choose periods and the code must enforce them before publication.
+When a period ends, the data is deleted automatically by a daily job.
+
+> Counsel: the owner confirmed the periods for feedback, reports, app usage, the audit log, certificates and notifications on 20.10.2026, and the code enforces them. Hosting logs and backups still have no set period.
 
 ## 10. Your rights and how to use them
 

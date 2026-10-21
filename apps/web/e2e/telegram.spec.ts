@@ -187,6 +187,52 @@ test.describe("Telegram's buttons", () => {
     await expect.poll(() => pathname(page)).toBe("/trainer/clients");
     await expect.poll(() => lastPosted(page, "web_app_trigger_haptic_feedback")).toEqual({ type: "impact", impact_style: "light" });
   });
+
+  test("fullscreen: the title sits between Telegram's buttons, the profile moves to the tab bar", async ({ page }, testInfo) => {
+    test.skip(!isPhone(testInfo), "Fullscreen is the phone's");
+    const errors = collectErrors(page);
+    await openInTelegram(page, "/client");
+    await expectMiniAppReady(page);
+    // A notched phone: the status bar, then the row with «Закрыть» and «⌄ ⋯». The viewport asks for
+    // the insets one after another and takes each answer only after asking.
+    const answer = async (request: string, event: string, data: Record<string, unknown>) => {
+      await expect.poll(async () => (await posted(page)).some(([type]) => type === request)).toBe(true);
+      await receive(page, event, data);
+    };
+    await answer("web_app_request_safe_area", "safe_area_changed", { top: 59, bottom: 34, left: 0, right: 0 });
+    await answer("web_app_request_content_safe_area", "content_safe_area_changed", { top: 46, bottom: 0, left: 0, right: 0 });
+    await answer("web_app_request_viewport", "viewport_changed", { height: 844, width: 390, is_expanded: true, is_state_stable: true });
+
+    const bar = page.locator('[data-slot="telegram-top-bar"]');
+    const title = page.getByRole("heading", { level: 1, name: "Главная" });
+    await expect(title).toBeVisible();
+    const width = page.viewportSize()?.width ?? 0;
+    const box = await title.boundingBox();
+    expect(box).not.toBeNull();
+    if (box) {
+      // Inside Telegram's row, clear of its buttons on both sides.
+      expect(box.y).toBeGreaterThanOrEqual(59);
+      expect(box.y + box.height).toBeLessThanOrEqual(59 + 46);
+      expect(box.x).toBeGreaterThanOrEqual(116);
+      expect(box.x + box.width).toBeLessThanOrEqual(width - 96);
+    }
+    // The date stays under the title; the avatar is not in the row, nothing sits between the row and the content.
+    await expect(bar).toContainText(/\d/);
+    await expect(bar.getByRole("button")).toHaveCount(0);
+    await expect(page.locator('[data-slot="screen-title"]')).toBeHidden();
+
+    // Scrolling keeps the row as it is.
+    await page.mouse.wheel(0, 600);
+    await expect(title).toBeVisible();
+
+    // The last tab is «Профиль» now; its screen starts with the row that opens the profile sheet.
+    await page.getByRole("link", { name: "Профиль", exact: true }).click();
+    await expect.poll(() => pathname(page)).toBe("/client/trainers");
+    await expect(page.getByRole("heading", { level: 1, name: "Профиль" })).toBeVisible();
+    await page.getByRole("button", { name: /Аккаунт, режим и настройки/ }).click();
+    await expect(page.getByRole("dialog", { name: "Профиль" })).toBeVisible();
+    expect(errors()).toEqual([]);
+  });
 });
 
 test.describe("sign-in inside Telegram", () => {
