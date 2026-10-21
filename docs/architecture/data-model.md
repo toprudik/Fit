@@ -233,6 +233,7 @@ create type public.share_category as enum ('nutrition', 'measurements', 'photos'
 | R70 | Возврат в завершённую пару | RPC сбрасывает `data_shares` и поля завершения | PRD 2.3 |
 | R71 | Обратная связь без входа | В волне 1 нет | RLS рассчитан на вошедших |
 | R72 | Ответ на обратную связь | Админ отвечает через `admin_reply_feedback`: последний ответ хранится в `feedback.reply`, автору уходит `feedback_reply` | ADM-10 |
+| R72a | Запрос о моих данных | `feedback.kind = 'data_request'` с `request_type` (access, export, correction, deletion, withdraw, objection, stop, appeal, other), у `withdraw` ещё `consent_kind` (processing, health, marketing, publication); триггер ставит `due_on` через 10 рабочих дней (пн–пт, по Москве), для отзыва согласия на публикацию через 3; `admin_extend_data_request` один раз добавляет 5 с причиной (публикацию не продлевает), автору уходит `feedback_reply` с `event = 'extended'`; в GitHub не уходит | 152-ФЗ ст. 9, 10.1, 20, 21; legal/product-changes 16 |
 | R73 | Грант для цели | Целевой пользователь видит весь грант | |
 | R74 | Детали вех | `achieved_at` = начало занятия; пробные и вставка сразу как `attended` считаются | PRD 2.6.2-7 |
 | R75 | Дедупликация outbox | Глобальный уникальный ключ с моментом цели | перенос занятия ставит новые напоминания |
@@ -1496,7 +1497,7 @@ create table public.milestones (                 -- зафиксированны
 #### Обратная связь, жалобы, аудит, аварийный доступ
 
 ```sql
-create type public.feedback_kind as enum ('bug', 'idea', 'other');               -- R46
+create type public.feedback_kind as enum ('bug', 'idea', 'other', 'data_request'); -- R46, R72a
 create type public.feedback_status as enum ('new', 'in_progress', 'closed');
 create table public.feedback (
   id               uuid primary key default gen_random_uuid(),
