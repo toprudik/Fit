@@ -140,6 +140,7 @@ We share personal data only as described here.
 |---|---|---|---|
 | Supabase, Inc. | Processor: database, sign-in, file storage | All data stored in DaFit | United States (us-east-1) |
 | Vercel Inc. | Processor: hosting of the web app and the bot | Requests passing through, request logs (IP address, browser, URL) | United States |
+| GitHub, Inc. | Processor: stores encrypted nightly backups of the database for 7 days | An encrypted copy of the database (files such as photos are not included) | United States |
 | Telegram (Telegram FZ-LLC, UAE, and Telegram Messenger Inc.) | Independent controller | Sign-in data it gives us, bot messages we send you (which may include names, times and places of sessions and, for contact requests, a phone number), the Mini App platform, profile photos at t.me | United Arab Emirates and Telegram's other locations |
 | Functional Software, Inc. (Sentry), only if we turn error reporting on | Processor: error reports | Error type and message, technical context. We switch off user details, request bodies, cookies, headers and query strings | United States |
 | Open Food Facts | Food database | Search words and barcodes, sent from our server. No personal data | France |
@@ -156,11 +157,12 @@ We share personal data only as described here.
 
 ## 8. International transfers
 
-8.1. We store DaFit data in the United States with Supabase and Vercel. If you are in the EEA, the UK or Switzerland, your data travels outside your country.
+8.1. We store DaFit data in the United States with Supabase and Vercel, and encrypted backups with GitHub. If you are in the EEA, the UK or Switzerland, your data travels outside your country.
 
 8.2. Safeguards:
 - **Vercel** states that it is certified under the EU-U.S. Data Privacy Framework, including the UK Extension and the Swiss-U.S. framework, and its Data Processing Addendum also includes the EU Standard Contractual Clauses and the UK Addendum.
 - **Supabase** transfers data under the EU Standard Contractual Clauses (Commission Implementing Decision (EU) 2021/914) included in its Data Processing Addendum, with the UK Addendum for UK data. [Counsel to confirm.]
+- **GitHub** states that it is certified under the EU-U.S. Data Privacy Framework, and its Data Protection Agreement includes the EU Standard Contractual Clauses. [Counsel to confirm.]
 - **Sentry**, if enabled: [DPF certification or SCCs, to be confirmed].
 - We have assessed the laws of the United States for these transfers, including the measures in the Data Privacy Framework that also benefit transfers under the SCCs.
 
@@ -187,12 +189,12 @@ We share personal data only as described here.
 | App usage records | 13 months. You can switch this off in Settings, which deletes past records |
 | Admin audit log | 3 years. After your account is deleted it keeps only the fact of deletion, with no personal data |
 | Hosting request logs (Vercel) | [VERCEL LOG RETENTION] |
-| Database backups (Supabase) | [BACKUP RETENTION]. Deleted data disappears from backups when they expire |
+| Database backups (encrypted, stored with GitHub) | 7 days. Deleted data, including data deleted after you withdraw consent, is gone from backups within 7 days |
 | Consent records | While the account exists and for [LIMITATION PERIOD] after, to prove consent |
 
 When a period ends, the data is deleted automatically by a daily job.
 
-> Counsel: the owner confirmed the periods for feedback, reports, app usage, the audit log, certificates and notifications on 20.10.2026, and the code enforces them. Hosting logs and backups still have no set period.
+> Counsel: the owner confirmed the periods for feedback, reports, app usage, the audit log, certificates and notifications on 20.10.2026, and the code enforces them. Hosting logs still have no set period. Nightly encrypted backups (AES-256, kept 7 days as GitHub Actions artifacts) started on 21.10.2026; the key is a GitHub repository secret, so GitHub is treated as a processor. The repository is public, so any signed-in GitHub user can download the encrypted copy but cannot read it without the key.
 
 ## 10. Your rights and how to use them
 
