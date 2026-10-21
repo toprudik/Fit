@@ -789,6 +789,7 @@ export const ru = {
       allReached: "Все вехи пройдены: 100 занятий вместе",
     },
     write: "Написать",
+    book: "Записаться",
     tabsLabel: "Разделы",
     tabs: {
       overview: "Обзор",
