@@ -456,6 +456,31 @@ test.describe("profile, settings and back", () => {
     await expect(menu).toBeVisible();
     await expect(page.locator('a[aria-current="page"]:visible')).toHaveCount(0);
   });
+
+  test("a trainer's «Ещё» sections fill the side menu, the rest wait under «Ещё»", async ({ page }, testInfo) => {
+    test.skip(isPhone(testInfo), "the side menu is the layout from 768px");
+    const menu = page.getByRole("navigation", { name: NAV_LABEL.ru, exact: true });
+
+    // Tall enough for every section: no «Ещё» at all, each section one click away.
+    await page.setViewportSize({ width: 1280, height: 1300 });
+    await page.goto("/trainer", { waitUntil: "networkidle" });
+    await expect(menu.getByRole("link", { name: "Помощь", exact: true })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Ещё", exact: true })).toHaveCount(0);
+
+    // A short window: what doesn't fit is listed when the pointer rests on «Ещё».
+    await page.setViewportSize({ width: 1280, height: 640 });
+    const more = menu.getByRole("link", { name: "Ещё", exact: true });
+    await expect(more).toBeVisible();
+    await expect(menu.getByRole("link", { name: "QR и ссылка", exact: true })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Помощь", exact: true })).toHaveCount(0);
+    await more.hover();
+    const help = page.getByRole("link", { name: "Помощь", exact: true });
+    await expect(help).toBeVisible();
+    await help.click();
+    await expect(page).toHaveURL(/\/trainer\/help$/);
+    // The open section hides under «Ещё», so «Ещё» is the current item.
+    await expect(more).toHaveAttribute("aria-current", "page");
+  });
 });
 
 test.describe("push and pop", () => {

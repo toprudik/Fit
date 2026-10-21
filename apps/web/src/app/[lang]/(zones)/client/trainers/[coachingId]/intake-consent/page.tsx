@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
-import { IntakeConsent } from "@/components/intake/intake-consent";
 import { IntakeSignedOut } from "@/components/intake/intake-signed-out";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
+import { SharingStep } from "@/components/sharing/sharing-step";
 import { Skeleton } from "@/components/ui/skeleton";
 import { interpolate } from "@/i18n/format";
 import { getDictionary } from "@/i18n/server";
@@ -30,7 +30,7 @@ async function Consent({ params }: { params: PageProps<"/[lang]/client/trainers/
   return (
     <div className="flex flex-col gap-6">
       <p className="text-body">{interpolate(copy.text, { name: intake.trainerName })}</p>
-      <IntakeConsent coachingId={intake.coachingId} />
+      <SharingStep coachingId={intake.coachingId} />
       <p className="text-footnote text-ink-2">{copy.hint}</p>
     </div>
   );
@@ -42,8 +42,8 @@ async function Header({ params }: { params: PageProps<"/[lang]/client/trainers/[
 }
 
 /**
- * "Показать анкету тренеру <Имя>?" (screens.md "Согласие на анкету", flow 4a): shown after a new pair starts,
- * before the intake. Until it is answered the intake stays hidden from this trainer.
+ * «Что видит тренер» (screens.md "Согласие на анкету", flow 4a; legal product-changes А4): shown after a new pair
+ * starts, before the intake. Until it is answered this trainer sees none of the categories.
  */
 export default async function IntakeConsentPage(props: PageProps<"/[lang]/client/trainers/[coachingId]/intake-consent">) {
   const t = await getDictionary();

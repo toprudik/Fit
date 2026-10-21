@@ -6,7 +6,7 @@ import { deviceCookies, setPreferenceCookies, syncPreferences } from "@/lib/acco
 import { recordSignupSource } from "@/lib/attribution/record";
 import { parseSourceCookie, SOURCE_COOKIE, sourceFromStartParam } from "@/lib/attribution/source";
 import { isSameOrigin } from "@/lib/auth/same-origin";
-import { AccountBlockedError, isAccountBlocked, signInWithTelegram } from "@/lib/auth/sign-in-with-telegram";
+import { AccountBlockedError, readAccountBlock, signInWithTelegram } from "@/lib/auth/sign-in-with-telegram";
 import { readCookie } from "@/lib/preferences";
 import { RATE_LIMITS, withinRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -62,9 +62,10 @@ export async function POST(request: Request) {
     const claims = data?.claims;
     if (claims?.app_metadata?.telegram_id === identity.telegramId) {
       // A block ends the session at the next page load, not only when its access token expires (ADM-7).
-      if (await isAccountBlocked(claims.sub)) {
+      const block = await readAccountBlock(claims.sub);
+      if (block) {
         await supabase.auth.signOut({ scope: "local" });
-        throw new AccountBlockedError();
+        throw new AccountBlockedError(block.reason);
       }
       return await respond(request, supabase, { identity, userId: claims.sub, newAccount: false, fresh: false });
     }
@@ -85,7 +86,8 @@ export async function POST(request: Request) {
     return await respond(request, supabase, { identity, userId, newAccount, fresh: true });
   } catch (error) {
     if (error instanceof InitDataError) return NextResponse.json({ error: "invalid_init_data" }, { status: 401 });
-    if (error instanceof AccountBlockedError) return NextResponse.json({ error: "account_blocked" }, { status: 403 });
+    // The admin's reason goes only to the account it is about: initData proved who is asking.
+    if (error instanceof AccountBlockedError) return NextResponse.json({ error: "account_blocked", reason: error.reason }, { status: 403 });
     console.error("mini-app sign-in failed", error instanceof Error ? error.message : "unknown");
     return NextResponse.json({ error: "sign_in_failed" }, { status: 500 });
   }

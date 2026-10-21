@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { Award, ChartColumn, CircleHelp, ClipboardList, Dumbbell, Gift, Handshake, QrCode, Salad, ScanLine, Star, Store, Trophy, UserPlus, UserRound, Users } from "lucide-react";
-import { helpPath } from "@/components/help/path";
 import { Screen } from "@/components/shell/screen";
+import { TRAINER_HELP_ITEM, TRAINER_MORE_ITEMS } from "@/components/shell/nav-items";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { getDictionary } from "@/i18n/server";
@@ -18,29 +17,19 @@ export default async function TrainerMorePage() {
     <Screen header={<ScreenHeader title={t.tabs.trainer.more} />}>
       <div className="flex w-full max-w-2xl flex-col gap-6 pt-4 md:pt-0">
         <ListGroup footer={copy.later}>
-          <ListRow icon={UserRound} title={t.trainerWizard.edit.open} subtitle={t.trainerWizard.edit.openText} href="/trainer/profile" />
-          <ListRow icon={QrCode} iconTone="accent" title={copy.links} subtitle={copy.linksText} href="/trainer/links" />
-          <ListRow icon={Store} title={copy.showcase} subtitle={copy.showcaseText} href="/trainer/showcase" />
-          <ListRow icon={Award} title={t.trainerMilestones.title} subtitle={t.trainerMilestones.moreText} href="/trainer/milestones" />
-          <ListRow icon={Star} title={t.reviews.trainer.title} subtitle={t.reviews.trainer.moreText} href="/trainer/reviews" />
-          <ListRow icon={Dumbbell} title={copy.exercises} subtitle={copy.exercisesText} href="/trainer/exercises" />
-          <ListRow icon={ClipboardList} title={copy.templates} subtitle={copy.templatesText} href="/trainer/templates" />
-          <ListRow icon={Trophy} title={t.challenges.title} subtitle={t.challenges.all.moreText} href="/trainer/challenges" />
-          <ListRow icon={Users} title={copy.groups} subtitle={copy.groupsText} href="/trainer/groups" />
-          <ListRow icon={Handshake} title={copy.team} subtitle={copy.teamText} href="/trainer/team" />
-          <ListRow icon={ChartColumn} title={copy.analytics} subtitle={copy.analyticsText} href="/trainer/analytics" />
-          <ListRow icon={Salad} title={t.adherence.title} subtitle={t.adherence.moreText} href="/trainer/nutrition" />
-          <ListRow icon={ScanLine} title={t.checkIn.placesTitle} subtitle={t.checkIn.placesRowText} href="/trainer/checkin-qr" />
-          <ListRow icon={Gift} title={t.referrals.title} subtitle={t.referrals.moreText} href="/trainer/referrals" />
-          <ListRow
-            icon={UserPlus}
-            title={t.trainerReferrals.title}
-            subtitle={t.trainerReferrals.moreText}
-            href="/trainer/invite-trainers"
-          />
+          {TRAINER_MORE_ITEMS.map((item) => (
+            <ListRow
+              key={item.href}
+              icon={item.icon}
+              iconTone={item.accent ? "accent" : undefined}
+              title={item.title(t)}
+              subtitle={item.subtitle(t)}
+              href={item.href}
+            />
+          ))}
         </ListGroup>
         <ListGroup>
-          <ListRow icon={CircleHelp} title={t.help.title} subtitle={t.help.moreText} href={helpPath("trainer")} />
+          <ListRow icon={TRAINER_HELP_ITEM.icon} title={TRAINER_HELP_ITEM.title(t)} subtitle={TRAINER_HELP_ITEM.subtitle(t)} href={TRAINER_HELP_ITEM.href} />
         </ListGroup>
       </div>
     </Screen>

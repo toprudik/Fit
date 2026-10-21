@@ -27,6 +27,7 @@ import {
   type MiniAppSignInResult,
   safely,
   safelyAsync,
+  setMiniAppBlockReason,
   setMiniAppSignIn,
   signInToMiniApp,
   useTelegramVerticalSwipeLock,
@@ -199,10 +200,15 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
       } else if (res.status === 401) {
         // initData too old or not genuine. Sending it again won't help, only a new launch will.
         result = "reopen";
-      } else if (res.status === 403 && ((await res.json().catch(() => null)) as { error?: string } | null)?.error === "account_blocked") {
-        // An admin blocked the account; the server ended any session it had, so the screen re-reads who is in.
-        result = "banned";
-        router.refresh();
+      } else if (res.status === 403) {
+        const body = (await res.json().catch(() => null)) as { error?: string; reason?: unknown } | null;
+        if (body?.error === "account_blocked") {
+          // An admin blocked the account; the server ended any session it had, so the screen re-reads who is in.
+          // /login shows the admin's reason with it.
+          setMiniAppBlockReason(body.reason);
+          result = "banned";
+          router.refresh();
+        }
       }
     } catch {
       // Network or a malformed answer: another try may work.

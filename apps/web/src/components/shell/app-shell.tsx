@@ -223,6 +223,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SideNav
           zone={zone}
           activeId={tabId}
+          segment={routeZone ? (rest[0] ?? null) : null}
           settingsActive={first === SETTINGS_SEGMENT}
           onSelect={selectTab}
           onSelectSettings={selectSettings}
