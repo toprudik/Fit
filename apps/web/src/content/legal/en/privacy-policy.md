@@ -194,7 +194,7 @@ We share personal data only as described here.
 
 When a period ends, the data is deleted automatically by a daily job.
 
-> Counsel: the owner confirmed the periods for feedback, reports, app usage, the audit log, certificates and notifications on 20.10.2026, and the code enforces them. Hosting logs still have no set period. Nightly encrypted backups (AES-256, kept 7 days as GitHub Actions artifacts) started on 21.10.2026; the key is a GitHub repository secret, so GitHub is treated as a processor. The repository is public, so any signed-in GitHub user can download the encrypted copy but cannot read it without the key.
+> Counsel: the owner confirmed the periods for feedback, reports, app usage, the audit log, certificates and notifications on 20.10.2026, and the code enforces them. Hosting logs still have no set period. Nightly encrypted backups (AES-256, kept 7 days as GitHub Actions artifacts) started on 21.10.2026. They are stored in a separate private repository that only the owner and the Claude GitHub app used for development can access. Check whether Anthropic needs a mention. The key is also kept at GitHub as a repository secret, so GitHub is treated as a processor.
 
 ## 10. Your rights and how to use them
 
