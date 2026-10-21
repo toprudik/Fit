@@ -263,7 +263,7 @@ test.describe("Inviting trainers", () => {
     const { page } = trainer;
     await page.goto("/trainer/invite-trainers");
     await expect(page.getByRole("heading", { level: 1, name: "Пригласить тренера" }).first()).toBeVisible();
-    await expect(page.getByText("В бете тарифы не продаются, поэтому бонусы пока копятся и ждут.")).toBeVisible();
+    await expect(page.getByText("В бете Pro и так открыт всем, поэтому бонусный месяц начнётся после беты.", { exact: false })).toBeVisible();
     await expect(page.getByText("По твоей ссылке пока никто не пришёл.")).toBeVisible();
     await expect(page.getByText(/^Код для ввода вручную: /)).toBeVisible();
     await expectAccessible(page);
