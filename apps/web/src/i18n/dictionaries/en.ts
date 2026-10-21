@@ -3997,6 +3997,7 @@ export const en: Dictionary = {
       moveRequested: "Request for the new time sent to your trainer",
       errors: {
         slot_unavailable: "Someone has just taken this time, pick another one.",
+        own_slot: "You already have a booking at this time.",
         too_late: "It's too late to book this time, pick another one.",
         debt_limit: "You already have a booking that isn't paid for. To book more, buy a pass or talk to your trainer.",
         failed: "Something went wrong, please try again.",
