@@ -124,7 +124,8 @@ test.describe("admin section", () => {
       });
     const refused = await signIn(someone.context.request);
     expect(refused.status()).toBe(403);
-    expect(await refused.json()).toEqual({ error: "account_blocked" });
+    // The person sees why: the reason the admin gave comes back with the refusal (#235).
+    expect(await refused.json()).toEqual({ error: "account_blocked", reason: "Спам в отзывах" });
 
     // The list marks the person blocked.
     await page.goto(`/admin/users?q=${encodeURIComponent(lastName)}`);
