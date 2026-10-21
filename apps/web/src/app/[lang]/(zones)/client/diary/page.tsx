@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { HealthConsentGate } from "@/components/consent/health-consent-gate";
 import { ActivityDiaryEntry } from "@/components/activity/sections";
 import { FoodDiaryEntry } from "@/components/nutrition/food-day";
 import { Screen } from "@/components/shell/screen";
@@ -22,7 +23,9 @@ export default async function ClientDiaryPage() {
         <FoodDiaryEntry t={t} />
         <ActivityDiaryEntry t={t} />
         <Suspense fallback={<SkeletonRows rows={4} label={t.common.loading} />}>
-          <LogListSection place={{ side: "client" }} />
+          <HealthConsentGate next="/client/diary">
+            <LogListSection place={{ side: "client" }} />
+          </HealthConsentGate>
         </Suspense>
       </div>
     </Screen>

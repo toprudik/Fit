@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ADMIN_SECTIONS } from "@/components/admin/admin-nav";
+import { DocumentsAnnounce } from "@/components/admin/documents-announce";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { ListGroup, ListRow } from "@/components/ui/list";
@@ -40,8 +41,8 @@ async function Counts() {
 
 /**
  * The admin's start page, «Обзор беты» (screens.md §3.5): counts of the beta as of now. Activity metrics
- * (WAU trainers, opens from reminders, NPS) need sessions and feedback, which come in later waves. On a
- * phone, where there is no side menu, it also lists the sections.
+ * (WAU trainers, opens from reminders, NPS) need sessions and feedback, which come in later waves. Below them,
+ * «Объявить новые редакции документов» (право 15). On a phone, where there is no side menu, it also lists the sections.
  */
 export default async function AdminOverviewPage() {
   const t = await getDictionary();
@@ -52,6 +53,13 @@ export default async function AdminOverviewPage() {
         <Suspense fallback={<SkeletonRows rows={7} label={t.common.loading} />}>
           <Counts />
         </Suspense>
+        <section aria-labelledby="documents-update" className="flex flex-col gap-3">
+          <h2 id="documents-update" className="px-1 text-headline">
+            {copy.documents.header}
+          </h2>
+          <p className="px-1 text-callout text-ink-2">{copy.documents.lead}</p>
+          <DocumentsAnnounce />
+        </section>
         <ListGroup header={copy.overview.sections} headingLevel={2} className="md:hidden">
           {ADMIN_SECTIONS.filter((section) => section.segment !== null).map(({ id, href, icon }) => (
             <ListRow key={id} icon={icon} title={copy.sections[id]} href={href} />
