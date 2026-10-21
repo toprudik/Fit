@@ -35,6 +35,26 @@ test.describe("health sections behind the health data consent", () => {
     expect(errors()).toEqual([]);
   });
 
+  test("without the consent steps and sleep, own workouts and the intake ask for it", async ({ client }) => {
+    const { page, db, userId } = client;
+    const errors = collectErrors(page);
+    ok(await db.from("consents").update({ revoked_at: new Date().toISOString() }).eq("user_id", userId).eq("kind", "pd_health"), "revoke");
+
+    await page.goto("/client/diary");
+    await expect(page.getByRole("heading", { level: 2, name: "Нужно согласие на данные о здоровье" })).toBeVisible();
+    await expectAccessible(page);
+
+    await page.goto("/client/diary/activity");
+    await expect(page.getByRole("heading", { level: 1, name: "Активность" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Нужно согласие на данные о здоровье" })).toBeVisible();
+    await expectAccessible(page);
+
+    await page.goto("/client/diary/workouts/new");
+    await expect(page.getByRole("heading", { level: 1, name: "Новая тренировка" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Дать согласие" })).toHaveAttribute("href", /next=%2Fclient%2Fdiary%2Fworkouts%2Fnew/);
+    expect(errors()).toEqual([]);
+  });
+
   test("the nutrition target shows the health notice first, then the calculator after «Понятно»", async ({ client }) => {
     const { page, context } = client;
     const errors = collectErrors(page);
