@@ -1,6 +1,6 @@
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
-import { formatNumber, plural } from "@/i18n/format";
+import { formatNumber, interpolate, plural } from "@/i18n/format";
 import { isBadgeCode } from "@/lib/gamification/gamification";
 import { formatRecord } from "@/lib/workouts/present";
 import { fromKg, weightUnit } from "@/lib/workouts/units";
@@ -50,6 +50,14 @@ export function cardText(t: Dictionary, locale: Locale, card: StoryCard): CardTe
       const detail = isBadgeCode(code) ? t.gamification.badges.items[code].title : null;
       return { month: copy.badgeTop, figure: formatNumber(locale, count), label: label(copy.badgeHeld), detail };
     }
+    case "trainer_month": {
+      const lines = [interpolate(copy.trainerClients, { n: formatNumber(locale, card.data.clients ?? 0) })];
+      if (card.data.milestones) lines.push(interpolate(copy.trainerMilestones, { n: formatNumber(locale, card.data.milestones) }));
+      return { month, figure: formatNumber(locale, count), label: label(copy.trainerMonth), detail: lines.join(" · ") };
+    }
+    case "trainer_showcase":
+      // No big figure: the trainer's name is the headline, the QR under it opens the showcase.
+      return { month: copy.trainerShowcase, figure: "", label: card.data.name?.trim() || copy.showcase, detail: card.data.trial ? copy.trainerTrial : null };
     case "weight": {
       const unit = weightUnit(locale);
       const change = card.data.change ?? 0;

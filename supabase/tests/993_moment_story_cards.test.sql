@@ -1,4 +1,4 @@
--- Story cards of a milestone or a badge (marketing backlog 4), migration 20261021014513_moment_story_cards.sql, and
+-- Story cards of a milestone or a badge (marketing backlog 4), migration 20261021030817_moment_story_cards.sql, and
 -- the trainer's name on a client's card only with the trainer's own consent to publish (152-FZ art. 10.1 part 8).
 begin;
 \ir _helpers.psql

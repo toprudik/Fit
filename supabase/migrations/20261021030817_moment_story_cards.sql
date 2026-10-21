@@ -16,7 +16,7 @@
 alter table public.story_cards drop constraint story_cards_kind_check;
 alter table public.story_cards add constraint story_cards_kind_check
   check (kind in ('sessions', 'trainer', 'records', 'weight', 'streak_workouts', 'streak_diary', 'streak_steps', 'badges',
-                  'milestone', 'badge'));
+                  'trainer_month', 'trainer_showcase', 'milestone', 'badge'));
 
 alter table public.story_cards
   add column trainer_id uuid references public.profiles (id) on delete cascade;
@@ -239,9 +239,12 @@ as $$
   where c.id = p_id and c.expires_at > now()
     and (private.public_consent(c.user_id, case when c.kind = 'trainer_showcase' then 'showcase' else 'story' end)).id
         is not null
+    and (c.kind <> 'trainer_showcase' or exists (
+      select 1 from public.trainer_profiles t
+      where t.user_id = c.user_id and t.slug = c.data->>'slug' and private.showcase_is_open(t)))
     and (c.trainer_id is null or (private.public_consent(c.trainer_id, 'showcase')).id is not null)
 $$;
 comment on function public.story_card(uuid) is
   'A story card by its id for the image route (wave-3 §4-4): kind, month and the frozen numbers; null when expired, '
-  'when its author has no consent to publish it in force, or when the trainer whose name it prints has none '
-  '(152-FZ art. 10.1).';
+  'when its author has no consent to publish it in force, when the trainer whose name it prints has none (152-FZ '
+  'art. 10.1), or for a showcase card once that showcase is closed or moved to another address.';

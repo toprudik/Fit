@@ -15,12 +15,14 @@ export function storyImageUrl(id: string, theme: string, locale: string): string
 }
 
 /**
- * A made story card (PRD wave-3 §4-8, marketing backlog 4): the 1080×1920 picture with "Выложить в сторис" in
- * Telegram, or the system share sheet elsewhere, and saving the picture. `text` goes with the story or the share.
+ * A made story card (PRD wave-3 §4-8): the 1080×1920 picture with "Выложить в сторис" in Telegram, or the system
+ * share sheet elsewhere, and saving the picture. The client's monthly and moment cards (marketing backlog 4) and the
+ * trainer's cards (backlog 5) all open it; `text` goes with the story or the share, «Мой месяц в DaFit» by default.
  */
-export function StoryImageSheet({ image, text, onClose }: { image: string | null; text: string; onClose: () => void }) {
+export function StoryImageSheet({ image, text: shareText, onClose }: { image: string | null; text?: string; onClose: () => void }) {
   const { t } = useI18n();
   const copy = t.monthlyReport.stories;
+  const text = shareText ?? copy.storyText;
   const inTelegram = useInTelegram();
 
   async function share(url: string) {
