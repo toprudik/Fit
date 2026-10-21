@@ -75,6 +75,7 @@ This Data Processing Addendum ("DPA") forms part of the agreement between [OPERA
 |---|---|---|---|
 | Supabase, Inc. | Database, sign-in, file storage | United States (us-east-1) | EU SCCs (2021/914) in Supabase's DPA; UK Addendum [to confirm] |
 | Vercel Inc. | Hosting of the web app and the bot | United States | EU-U.S. Data Privacy Framework (with UK Extension and Swiss framework); EU SCCs and UK Addendum in Vercel's DPA |
+| GitHub, Inc. | Encrypted nightly database backups, kept 7 days | United States | EU-U.S. Data Privacy Framework; EU SCCs in GitHub's Data Protection Agreement [to confirm] |
 | Functional Software, Inc. (Sentry), only if error reporting is on | Error reports, with user details, request bodies, cookies, headers and query strings removed | United States | [to confirm] |
 
 6.2. Telegram (Telegram FZ-LLC, United Arab Emirates, and Telegram Messenger Inc.) delivers bot messages and is an independent controller for its platform, not our subprocessor. Open Food Facts (France) receives only food search words and barcodes from our server; it receives no Trainer Data.
@@ -127,7 +128,7 @@ This Data Processing Addendum ("DPA") forms part of the agreement between [OPERA
 
 11.1. You can export your records at any time (Settings, then Export, and the trainer exports of clients and passes as CSV) and delete them in the app.
 
-11.2. When you delete your trainer account, after the 30-day period in which you can cancel, we delete your trainer profile together with your pairs, client cards, passes and notes. Deleted data leaves our backups when they expire, within [BACKUP RETENTION].
+11.2. When you delete your trainer account, after the 30-day period in which you can cancel, we delete your trainer profile together with your pairs, client cards, passes and notes. Deleted data leaves our backups when they expire, within 7 days.
 
 11.3. We keep Trainer Data after that only where the law requires us to, and then only for that purpose.
 
@@ -185,7 +186,7 @@ This Data Processing Addendum ("DPA") forms part of the agreement between [OPERA
 - Subprocessors publish their own security attestations, such as SOC 2 Type 2 reports [to confirm per subprocessor, including whether each holds ISO 27001].
 
 **Availability and recovery**
-- Managed backups by Supabase, kept for [BACKUP RETENTION]; hosting by Vercel.
+- Nightly database backups, encrypted with AES-256 before they leave the backup job and kept for 7 days with GitHub; each run restores the copy into an empty database and checks it. Files in storage are not in the backups. Hosting by Vercel.
 
 **Incident response**
 - A documented procedure to assess and contain incidents, and to notify controllers within the target in section 5.1.
