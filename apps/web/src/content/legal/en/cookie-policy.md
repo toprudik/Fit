@@ -1,8 +1,8 @@
 # DaFit Cookie Policy
 
-> **Draft of 18 October 2026. Do not publish without review by a qualified lawyer in each target jurisdiction.** Prepared from the DaFit codebase and laws in force in October 2026. Points for the lawyer are marked "Counsel:".
+> Edition for the DaFit closed beta. A lawyer will still review it; if the text changes, we will tell you in the bot.
 
-Effective date: [EFFECTIVE DATE]
+Effective date: 24 November 2026
 
 This policy explains which cookies and similar storage the Service uses in the web app at [DOMAIN] and in the Telegram Mini App. The Service is run by [OPERATOR FULL NAME], an individual, at [ADDRESS] ("DaFit", "we", "us"; contact: [CONTACT EMAIL]). For everything else about personal data, see the [Privacy Policy](privacy-policy.md).
 
