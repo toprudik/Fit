@@ -1397,6 +1397,7 @@ export const en: Dictionary = {
         sold: "Pass sold",
         soldSettled: "Pass sold, debt paid off: {debt}",
         ended: "This client has stopped training with you, so no new pass can be sold.",
+        alreadySold: "A pass from this form was already sold on other terms. Close the form and check the list.",
       },
       freezeForm: {
         title: "Freeze the pass",

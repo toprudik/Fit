@@ -132,6 +132,8 @@ describe("sellPass", () => {
     await actions.sellPass({ ...fromPackage, requestId });
     expect(rpcs()[0]?.[2]).toMatchObject({ p_request_id: requestId });
     expect(await actions.sellPass({ ...fromPackage, requestId: "again" })).toEqual({ status: "invalid", fields: ["requestId"] });
+    db.answers["rpc:create_pass"] = { data: null, error: { message: "request_reused", code: "P0001" } };
+    expect(await actions.sellPass({ ...fromPackage, requestId })).toEqual({ status: "stale" });
   });
 
   it("sends no validity for a pass without expiry", async () => {

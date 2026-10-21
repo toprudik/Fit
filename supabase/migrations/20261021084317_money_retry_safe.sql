@@ -1,8 +1,9 @@
 -- Money actions that a double tap or a retry after a lost answer must not repeat (docs/qa/production-readiness.md §3).
 -- create_pass takes a request key from the form: the same key in the same pair returns the pass already sold, with
--- no second grant or payment. record_past_session returns the session the pair already has at that start instead of
--- a second session and a second charge. settle_debt rechecks each charge after locking it, so a sale that meets a
--- waiver of the same debt in flight skips that charge instead of failing with ledger_invalid.
+-- no second grant or payment; the same key with other terms raises request_reused. record_past_session returns the
+-- personal session (not cancelled) the pair already has at that start instead of a second session and a second
+-- charge. settle_debt rechecks each charge after locking it, so a sale that meets a waiver of the same debt in flight
+-- skips that charge instead of failing with ledger_invalid.
 
 alter table public.passes add column request_id uuid;
 comment on column public.passes.request_id is
@@ -107,9 +108,23 @@ begin
           p_request_id)
   on conflict (coaching_id, request_id) where request_id is not null do nothing
   returning id into v_pass;
-  -- The key sold a pass already (a double tap, or a retry after a lost answer): answer with that pass.
+  -- The key sold a pass already (a double tap, or a retry after a lost answer): answer with that pass. The same
+  -- key with other terms is a mistake, not a retry.
   if v_pass is null then
-    select p.id into v_pass from public.passes p where p.coaching_id = v_pair.id and p.request_id = p_request_id;
+    select p.id into v_pass
+    from public.passes p
+    where p.coaching_id = v_pair.id and p.request_id = p_request_id
+      and p.package_id is not distinct from v_package.id and p.title = v_title and p.sessions_total = v_sessions
+      and p.price_minor = v_price and p.currency = v_currency and p.applies_to = v_applies and p.starts_on = v_starts
+      and p.note is not distinct from v_note
+      and case when p_payment_minor is null
+            then not exists (select 1 from public.payments y where y.pass_id = p.id)
+            else exists (select 1 from public.payments y where y.pass_id = p.id and y.amount_minor = p_payment_minor
+                         and y.method = p_payment_method)
+          end;
+    if v_pass is null then
+      raise exception 'request_reused' using errcode = 'P0001';
+    end if;
     return query select v_pass, 0;
     return;
   end if;
@@ -133,7 +148,8 @@ comment on function public.create_pass(uuid, uuid, text, integer, bigint, text, 
   'The trainer sells a pass to the client of a live pair, from a package or custom: the pass, its grant, the '
   'settlement of the debt it fits and an optional confirmed payment, in one transaction. Returns the pass id '
   'and the settled debt sessions; a repeated request key returns the pass sold with it and 0. Raises '
-  'coaching_not_found, coaching_ended, package_not_found, pass_invalid, note_too_long or payment_invalid.';
+  'coaching_not_found, coaching_ended, package_not_found, pass_invalid, note_too_long, payment_invalid or '
+  'request_reused (the key sold a pass on other terms).';
 revoke all on function public.create_pass(uuid, uuid, text, integer, bigint, text, integer, public.package_applies_to,
   date, text, bigint, public.payment_method, timestamptz, uuid) from public, anon;
 grant execute on function public.create_pass(uuid, uuid, text, integer, bigint, text, integer, public.package_applies_to,
@@ -240,7 +256,7 @@ begin
   select s.id, b.id into v_session, v_booking
   from public.bookings b
   join public.sessions s on s.id = b.session_id
-  where b.coaching_id = v_pair.id and s.kind = 'personal' and s.starts_at = p_starts_at
+  where b.coaching_id = v_pair.id and s.kind = 'personal' and s.status <> 'cancelled' and s.starts_at = p_starts_at
     and b.status in ('requested', 'confirmed', 'attended', 'no_show')
   order by b.created_at
   limit 1;

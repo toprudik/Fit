@@ -100,6 +100,7 @@ export async function sellPass(input: SellInput): Promise<SellResult> {
   const sold = data?.[0];
   if (error || !sold) {
     if (error?.message === "coaching_ended") return { status: "refused", reason: "ended" };
+    if (error?.message === "request_reused") return { status: "stale" };
     if (error?.message === "pass_invalid" || error?.message === "package_not_found") return { status: "invalid", fields: ["source"] };
     return failed("selling a pass", error) as SellResult;
   }

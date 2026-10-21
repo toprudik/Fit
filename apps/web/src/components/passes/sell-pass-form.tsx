@@ -88,6 +88,7 @@ export function SellPassForm({
         toast.success(result.settled > 0 ? interpolateDebt(copy.soldSettled, plural(locale, result.settled, t.pairs.debtSessions)) : copy.sold);
         onDone();
       } else if (result.status === "refused") toast.error(copy.ended);
+      else if (result.status === "stale") toast.error(copy.alreadySold);
       else toast.error(t.money.passes.failed);
     });
   }
