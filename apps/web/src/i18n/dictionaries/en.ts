@@ -1188,7 +1188,7 @@ export const en: Dictionary = {
       hide: "Turn the showcase off",
       hideHint: "Nobody sees a showcase that's off. Your clients and links stay.",
       storyCards: "Name and QR on clients' cards",
-      storyCardsHint: "Clients share their month in stories. Their sessions-with-a-trainer card will show your name and showcase QR.",
+      storyCardsHint: "Clients share their month and milestones in stories. The card shows your name and showcase QR.",
       storyCardsFailed: "Couldn't save, try again",
       toggleFailed: "That didn't work. Try again.",
       checklist: {
