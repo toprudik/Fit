@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { HealthNotice } from "@/components/health/health-notice";
 import { formatIntakeDate } from "@/components/intake/format";
 import { IntakeForm } from "@/components/intake/intake-form";
 import { IntakeSignedOut } from "@/components/intake/intake-signed-out";
@@ -10,6 +11,7 @@ import { ScreenHeader } from "@/components/shell/screen-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
+import { hasSeenHealthNotice } from "@/lib/health-notice/seen";
 import { toValues } from "@/lib/intake/form";
 import { loadClientIntake, SIGNED_OUT } from "@/lib/intake/load";
 import { clientIntakePath, clientPairPath } from "@/lib/intake/paths";
@@ -27,7 +29,13 @@ type Params = PageProps<"/[lang]/client/trainers/[coachingId]/intake">["params"]
 
 async function Intake({ params }: { params: Params }) {
   const { coachingId } = await params;
-  const [t, locale, intake, goal] = await Promise.all([getDictionary(), getLocale(), loadClientIntake(coachingId), loadOwnGoal()]);
+  const [t, locale, intake, goal, noticeSeen] = await Promise.all([
+    getDictionary(),
+    getLocale(),
+    loadClientIntake(coachingId),
+    loadOwnGoal(),
+    hasSeenHealthNotice(),
+  ]);
   if (intake === SIGNED_OUT) return <IntakeSignedOut t={t} next={clientIntakePath(coachingId)} />;
   if (!intake) notFound();
   const copy = t.intake.form;
@@ -40,11 +48,16 @@ async function Intake({ params }: { params: Params }) {
         </p>
       ) : null}
       {intake.live ? <IntakeShareToggle coachingId={intake.coachingId} shared={intake.shared} trainerName={intake.trainerName} /> : null}
-      <IntakeForm
-        coachingId={intake.coachingId}
-        initial={intake.latest ? toValues(intake.latest) : null}
-        goalHref={goal ? null : clientGoalPath(intake.coachingId)}
-      />
+      {/* The health notice comes before the first intake (legal health-disclaimer §2, product change 8). */}
+      {noticeSeen ? (
+        <IntakeForm
+          coachingId={intake.coachingId}
+          initial={intake.latest ? toValues(intake.latest) : null}
+          goalHref={goal ? null : clientGoalPath(intake.coachingId)}
+        />
+      ) : (
+        <HealthNotice />
+      )}
     </div>
   );
 }
