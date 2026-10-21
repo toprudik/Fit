@@ -6,7 +6,7 @@ import { formatRecord } from "@/lib/workouts/present";
 import { fromKg, weightUnit } from "@/lib/workouts/units";
 import { formatMonth, type StoryCard } from "./report";
 
-/** What a story card prints: the month, the big figure, the line under it and an optional detail line. */
+/** What a story card prints: the month (what happened, on a moment card), the big figure, the line under it and an optional detail line. */
 export type CardText = { month: string; figure: string; label: string; detail: string | null };
 
 const MINUS = "−";
@@ -41,6 +41,14 @@ export function cardText(t: Dictionary, locale: Locale, card: StoryCard): CardTe
       const code = card.data.code;
       const detail = isBadgeCode(code) ? t.gamification.badges.items[code].title : null;
       return { month, figure: formatNumber(locale, count), label: label(copy.badges), detail };
+    }
+    // Moment cards say what happened on top instead of the month; the trainer's name goes on its own line.
+    case "milestone":
+      return { month: copy.milestoneTop, figure: formatNumber(locale, count), label: label(copy.milestone), detail: card.data.name?.trim() || null };
+    case "badge": {
+      const code = card.data.code;
+      const detail = isBadgeCode(code) ? t.gamification.badges.items[code].title : null;
+      return { month: copy.badgeTop, figure: formatNumber(locale, count), label: label(copy.badgeHeld), detail };
     }
     case "weight": {
       const unit = weightUnit(locale);

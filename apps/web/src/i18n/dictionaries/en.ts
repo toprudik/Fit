@@ -2045,6 +2045,11 @@ export const en: Dictionary = {
       streakSteps: { one: "day of step goal in a row", few: "days of step goal in a row", many: "days of step goal in a row", other: "days of step goal in a row" },
       badges: { one: "new badge", few: "new badges", many: "new badges", other: "new badges" },
       weight: "weight this month",
+      milestoneTop: "New milestone",
+      milestone: { one: "session together", few: "sessions together", many: "sessions together", other: "sessions together" },
+      badgeTop: "New badge",
+      badgeHeld: { one: "badge collected", few: "badges collected", many: "badges collected", other: "badges collected" },
+      momentText: "My progress on DaFit",
       showcase: "Trainer showcase",
     },
   },
@@ -2331,7 +2336,7 @@ export const en: Dictionary = {
   publicData: {
     title: "Consent to publish",
     showcaseText: "Anyone with the link can see your showcase, even without signing in to DaFit. Choose what it shows.",
-    storyText: "Anyone with the link can open the card for 30 days, without signing in to DaFit. It shows only what you pick in your monthly summary, and not your name.",
+    storyText: "Anyone with the link can open the card for 30 days, without signing in to DaFit. It shows only what you choose to share from your monthly summary, a milestone or a badge, and never your name.",
     fieldsLabel: "What the showcase shows",
     fields: {
       photo: "Photo",
