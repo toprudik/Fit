@@ -56,7 +56,7 @@ function transitionBetween(before: Shown, after: Shown, intent: "tab" | "pop" | 
 type Playback = ReturnType<typeof animate>;
 
 /**
- * Plays a transition on the element: crossfades over duration-base (zone) or duration-fast (tab);
+ * Plays a transition on the element: crossfades over duration-base (zone);
  * push brings the screen in from 30% of its width on the right and pop from 30% on the left, with a
  * fade, over duration-slow and without a spring (brand.md "Движение"). With reduced motion every one
  * is a fade of 100ms. The outgoing screen's parallax (it shifts a third aside and dims) is not done:
@@ -65,12 +65,8 @@ type Playback = ReturnType<typeof animate>;
 function play(element: HTMLElement, transition: Transition): Playback {
   const reduced = prefersReducedMotion();
   const controls =
-    reduced || transition === "zone" || transition === "tab"
-      ? animate(
-          element,
-          { opacity: [0, 1] },
-          { duration: reduced ? DURATION.instant : transition === "zone" ? DURATION.base : DURATION.fast, ease: EASE_STANDARD },
-        )
+    reduced || transition === "zone"
+      ? animate(element, { opacity: [0, 1] }, { duration: reduced ? DURATION.instant : DURATION.base, ease: EASE_STANDARD })
       : animate(
           element,
           // Ends at `none`, not translateX(0): motion may commit the final value inline after the
@@ -150,6 +146,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     intent.current = "tab";
   };
 
+  // The tapped tab lights up at once, before its screen arrives: a screen not fetched yet can take a
+  // second or more, and an unlit tab reads as a lost tap. The next route clears it.
+  const [pendingTab, setPendingTab] = useState<{ id: TabId; from: string } | null>(null);
+  if (pendingTab !== null && pendingTab.from !== route) setPendingTab(null);
+  const shownTabId = pendingTab?.id ?? tabId;
+
   const selectTab: TabSelectHandler = (tab, event) => {
     event.preventDefault();
     if (tab.id === tabId) {
@@ -169,6 +171,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     pendingScroll.current = saved?.scrollY ?? 0;
     intent.current = "tab";
     hapticImpact();
+    setPendingTab({ id: tab.id, from: route });
     router.push(saved?.href ?? tab.href, { scroll: false });
   };
 
@@ -193,7 +196,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     intent.current = null;
     const transition = transitionBetween(before, shown.current, asked);
     const target = transition === "zone" ? frameRef.current : screenRef.current;
-    if (!transition || !target) return;
+    // Another tab shows at once: a fade from transparent read as a blink of the whole screen, the
+    // header's title included (QA in Telegram, 21.10).
+    if (!transition || transition === "tab" || !target) return;
     // Finishing the previous transition first guarantees nothing is left half transparent or shifted.
     // Only one still running: complete() on finished controls would restart a filled animation.
     running.current?.complete();
@@ -222,7 +227,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div ref={frameRef} className="min-h-dvh pr-[var(--safe-right)] pl-[var(--safe-left)] md:flex">
         <SideNav
           zone={zone}
-          activeId={tabId}
+          activeId={shownTabId}
           segment={routeZone ? (rest[0] ?? null) : null}
           settingsActive={first === SETTINGS_SEGMENT}
           onSelect={selectTab}
@@ -246,7 +251,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div ref={screenRef}>{children}</div>
         </main>
         {/* Settings and the profile page are pushed screens on a phone: no tab bar there. */}
-        {routeZone ? <TabBar zone={routeZone} activeId={tabId} profileId={profileTabId} onSelect={selectTab} /> : null}
+        {routeZone ? <TabBar zone={routeZone} activeId={shownTabId} profileId={profileTabId} onSelect={selectTab} /> : null}
       </div>
       <ProfileSheet open={profileOpen} onOpenChange={setProfileOpen} />
     </ShellContext>
