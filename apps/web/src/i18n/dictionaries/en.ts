@@ -209,6 +209,7 @@ export const en: Dictionary = {
   },
   profile: {
     title: "Profile",
+    open: "Account, mode and settings",
     signedOutText: "Sign in with Telegram to see your name and photo here.",
     signIn: "Sign in with Telegram",
     feedback: "Feedback",

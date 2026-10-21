@@ -1,4 +1,4 @@
-import { backButton, hapticFeedback, openLink, swipeBehavior } from "@tma.js/sdk-react";
+import { backButton, hapticFeedback, openLink, swipeBehavior, viewport } from "@tma.js/sdk-react";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
 /**
@@ -21,6 +21,25 @@ function subscribeReady(listener: () => void) {
 /** True inside the Telegram Mini App (after the SDK mounted); false on the website and on the server. */
 export function useInTelegram(): boolean {
   return useSyncExternalStore(subscribeReady, () => ready, () => false);
+}
+
+function subscribeTopControls(listener: () => void) {
+  return safely(() => viewport.contentSafeAreaInsetTop.sub(listener)) ?? (() => {});
+}
+
+function topControlsShown() {
+  return (safely(() => viewport.contentSafeAreaInsetTop()) ?? 0) > 0;
+}
+
+/**
+ * True while Telegram draws its own buttons over the top of the app: fullscreen on a phone, with
+ * «Закрыть» (or «Назад») on the left and «⌄ ⋯» on the right. Their row is the top content safe
+ * area inset, `--tg-viewport-content-safe-area-inset-top` in CSS. False on the website and at full height.
+ */
+export function useTelegramTopControls(): boolean {
+  const inTelegram = useInTelegram();
+  const shown = useSyncExternalStore(subscribeTopControls, topControlsShown, () => false);
+  return inTelegram && shown;
 }
 
 /**

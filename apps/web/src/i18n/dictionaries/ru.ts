@@ -212,6 +212,7 @@ export const ru = {
   },
   profile: {
     title: "Профиль",
+    open: "Аккаунт, режим и настройки",
     signedOutText: "Войди через Telegram, и здесь появятся твоё имя и фото.",
     signIn: "Войти через Telegram",
     feedback: "Обратная связь",
