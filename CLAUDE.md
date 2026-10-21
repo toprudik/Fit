@@ -21,6 +21,18 @@ Working name DaFit (repo `fit`). Web app + Telegram Mini App (`apps/web`, Next.j
 - **apps/bot**: thin; it answers commands and opens the Mini App; no business logic. Outgoing notifications are sent from the notification outbox, not by bot code (ADR 0006). Bot strings live in `src/fit_bot/texts.py` (RU and EN). Deployed as a webhook with a secret token; on Vercel the webhook and bot profile are set only by `python -m fit_bot setup` (workflow `Bot setup`), never by a deployment (the self-hosted `docker-compose.prod.yml` registers its own on start). Local polling needs your own dev bot.
 - **Checks before committing**: web `npm run lint && npm run typecheck && npm test && npm run build` (UI changes: also `npm run e2e`, Playwright + axe at 390 and 1280 px in both themes); bot `uv run ruff check . && uv run ruff format --check . && uv run pytest`; database (repo root, Docker, Supabase CLI 2.121.0) `supabase db start` (`supabase db reset` after editing migrations), then `supabase test db && supabase db lint --local --schema public,private --fail-on error && supabase db advisors --local --type all --fail-on warn`, and after DDL changes `supabase gen types typescript --local > apps/web/src/lib/supabase/database.types.ts` (commit it unformatted; CI diffs it).
 
+## Code graph (Graphify)
+
+Cloud sessions build a code graph of apps/web, apps/bot and supabase at start (`scripts/graphify-setup.sh`, in the background, about 30 s, no LLM, nothing leaves the container; log in `/tmp/graphify-setup.log`). It lives in `graphify-out/` (ignored) and rebuilds itself after every commit, checkout and merge. Use it to save tokens before grepping and reading files:
+
+- `graphify affected "bookSlot()"`: who calls a function or imports a module, two levels deep. Use it before changing a shared function instead of a series of greps.
+- `graphify explain "createSupabaseAdminClient()"` or `graphify explain "public.book_slot()"`: where a symbol is defined, what it calls, who uses it, with file and line.
+- `graphify path "A()" "B()" --undirected`: how two symbols are connected.
+- `graphify query "telegram initData session" --budget 800`: orientation in an unfamiliar area. Ask with code identifiers, not prose; prose matches noise. Then read only the lines it points to.
+- Plain grep stays the right tool for exact strings (dictionary keys, copy, SQL grants). Don't read `graphify-out/GRAPH_REPORT.md` (about 70 KB) or `graph.json`.
+- After large uncommitted edits run `graphify update .` (seconds, no LLM) before asking the graph again. If `graphify-out/graph.json` is missing, the build is still running or failed: check the log and fall back to grep.
+- Docs and the project folder are not in the graph on purpose: docs are read by name from the list above, and indexing them would need an LLM.
+
 ## Infrastructure
 
 - **Hosting**: web on Vercel project `dafit-web` (https://dafit-web-eight.vercel.app), team `rudiks-projects-1924b04c`; bot on Vercel project `dafit-bot` (Root Directory `apps/bot`, webhook), registered by the workflow `Bot setup`; notifications via a DB outbox processed by pg_cron (ADR 0006). `docker-compose.prod.yml` is the post-beta self-hosting path.
