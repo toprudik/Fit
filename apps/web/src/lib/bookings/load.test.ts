@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient: vi.fn() }));
 
-const { loadClientBookings } = await import("./load");
+const { freeCancelUntil, loadClientBookings } = await import("./load");
 
 const CLIENT = "00000000-0000-4000-8000-000000000001";
 const TRAINER = "00000000-0000-4000-8000-000000000002";
@@ -85,5 +85,22 @@ describe("loadClientBookings", () => {
     await loadClientBookings(owner);
     const chunks = calls.filter((call) => call.table === "sessions" && call.method === "in").map((call) => (call.args[1] as string[]).length);
     expect(chunks).toEqual([100, 100, 50]);
+  });
+});
+
+describe("freeCancelUntil", () => {
+  const startsAt = "2026-10-22T15:00:00.000Z";
+
+  it("ends the trainer's deadline before the start", () => {
+    expect(freeCancelUntil({ status: "confirmed", startsAt, substitute: null }, 24)).toBe("2026-10-21T15:00:00.000Z");
+  });
+
+  it("lasts until the start when a substitute runs the session (QA B5)", () => {
+    expect(freeCancelUntil({ status: "confirmed", startsAt, substitute: "Сергей" }, 24)).toBe(startsAt);
+    expect(freeCancelUntil({ status: "confirmed", startsAt, substitute: "" }, 24)).toBe(startsAt);
+  });
+
+  it("is none for a booking that is not confirmed", () => {
+    expect(freeCancelUntil({ status: "cancelled", startsAt, substitute: null }, 24)).toBeNull();
   });
 });
