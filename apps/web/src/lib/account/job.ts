@@ -119,7 +119,7 @@ async function eraseHealthData(admin: Admin, summary: PrivacySummary, hasTime: (
 
 /**
  * Feedback screenshots and certificates past their retention (privacy policy §5.1 rows 9 and 15,
- * 20261021002917_retention.sql): the files go first, then the row, so a failure leaves the row due for the next run.
+ * 20261021010217_retention.sql): the files go first, then the row, so a failure leaves the row due for the next run.
  */
 async function forgetRetainedFiles(admin: Admin, summary: PrivacySummary, hasTime: () => boolean) {
   const { data, error } = await admin.rpc("retention_due_files", { p_limit: 20 });

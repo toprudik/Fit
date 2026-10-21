@@ -1,4 +1,4 @@
--- Retention with automatic clean-up (20261021002917_retention.sql, legal item 8): what the daily job deletes, what
+-- Retention with automatic clean-up (20261021010217_retention.sql, legal item 8): what the daily job deletes, what
 -- it keeps, the audit log's narrow exception and the rows the privacy route clears after their files.
 begin;
 \ir _helpers.psql
