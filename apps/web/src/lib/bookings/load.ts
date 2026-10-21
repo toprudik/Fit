@@ -3,6 +3,7 @@ import { displayName } from "@/lib/pairs/clients";
 import type { ScheduleOwner } from "@/lib/schedule/load";
 import { clientNames } from "@/lib/schedule/load";
 import type { Database } from "@/lib/supabase/database.types";
+import { readAllPages, readByIds } from "@/lib/supabase/paging";
 
 export type BookingStatus = Database["public"]["Enums"]["booking_status"];
 type Supabase = ScheduleOwner["supabase"];
@@ -12,7 +13,7 @@ export const BOOKING_DAYS = 14;
 
 const PERSON_COLUMNS = "id, first_name, last_name, display_name, username";
 
-function fail(what: string, error: { code: string }): never {
+function fail(what: string, error: { code?: string }): never {
   throw new Error(`loading ${what} failed: ${error.code}`);
 }
 
@@ -198,20 +199,26 @@ export async function findSessionBooking(owner: ScheduleOwner, sessionId: string
 
 export async function loadClientBookings(owner: ScheduleOwner, bookingId?: string): Promise<ClientBooking[]> {
   const { supabase, userId } = owner;
-  let query = supabase
-    .from("bookings")
-    .select("id, status, source, session_id, trainer_id, cancel_reason")
-    .eq("client_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(300);
-  if (bookingId) query = query.eq("id", bookingId);
-  const { data: bookings, error } = await query;
+  // Every booking, page by page: a client of several years keeps the past ones (PostgREST returns 1000 rows at most).
+  const { data: bookings, error } = await readAllPages((from, to) => {
+    let query = supabase
+      .from("bookings")
+      .select("id, status, source, session_id, trainer_id, cancel_reason")
+      .eq("client_id", userId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to);
+    if (bookingId) query = query.eq("id", bookingId);
+    return query;
+  });
   if (error) fail("bookings", error);
   if (bookings.length === 0) return [];
 
   const sessionIds = [...new Set(bookings.map((booking) => booking.session_id))];
   const [sessions, people, substitutes] = await Promise.all([
-    supabase.from("sessions").select("id, status, kind, starts_at, ends_at, mode, title, location_id, cancel_reason").in("id", sessionIds),
+    readByIds(sessionIds, (chunk) =>
+      supabase.from("sessions").select("id, status, kind, starts_at, ends_at, mode, title, location_id, cancel_reason").in("id", chunk),
+    ),
     trainerPeople(
       supabase,
       bookings.map((booking) => booking.trainer_id),
