@@ -19,6 +19,8 @@ export type Account =
       botBlocked: boolean;
       /** The bot's chat, t.me/<bot>: on the website the banner sends the user there to start it. */
       botUrl: string;
+      /** The account's time zone (user_settings), the one its screens count days in. */
+      timeZone?: string;
     };
 
 const LOADING: Account = { status: "loading" };
@@ -35,7 +37,7 @@ function subscribe(listener: () => void) {
 
 function sameAccount(a: Account, b: Account): boolean {
   if (a.status !== "signed-in" || b.status !== "signed-in") return a.status === b.status;
-  return a.name === b.name && a.photoUrl === b.photoUrl && a.isTrainer === b.isTrainer && a.isAdmin === b.isAdmin && a.botBlocked === b.botBlocked && a.botUrl === b.botUrl;
+  return a.name === b.name && a.photoUrl === b.photoUrl && a.isTrainer === b.isTrainer && a.isAdmin === b.isAdmin && a.botBlocked === b.botBlocked && a.botUrl === b.botUrl && a.timeZone === b.timeZone;
 }
 
 /** Replaces the account. A refresh that brings the same data re-renders nothing. */
