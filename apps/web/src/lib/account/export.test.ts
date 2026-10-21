@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { checkInRows, delegationRows, referralRows, reviewRows } = await import("./export");
+const { checkInRows, delegationRows, pageOrder, referralRows, reviewRows } = await import("./export");
 
 const ME = "00000000-0000-4000-8000-000000000001";
 const FRIEND = "00000000-0000-4000-8000-000000000002";
@@ -85,5 +85,14 @@ describe("export rows of other people's data", () => {
     const [row] = reviewRows([{ id: "r1", coaching_id: "c1", client_id: ME, trainer_id: TRAINER, rating: 5, trainer_reply: "Спасибо" }]);
     expect(row).toMatchObject({ id: "r1", coaching_id: "c1", rating: 5, trainer_reply: "Спасибо" });
     expect(strings(row)).not.toContain(TRAINER);
+  });
+});
+
+describe("export page order", () => {
+  it("reads every table in primary key order, so pages neither repeat nor skip rows", () => {
+    expect(pageOrder("bookings")).toEqual(["id"]);
+    expect(pageOrder("data_shares")).toEqual(["coaching_id"]);
+    expect(pageOrder("food_favorites")).toEqual(["user_id", "food_id"]);
+    expect(pageOrder("personal_records")).toEqual(["client_id", "exercise_id", "record_type"]);
   });
 });
