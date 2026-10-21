@@ -1,6 +1,6 @@
 import "server-only";
 import { displayName } from "@/lib/pairs/clients";
-import { moneyDetails, type MoneyChange } from "@/lib/passes/money-changes-present";
+import { moneyDetails, moneyLabel, type MoneyChange } from "@/lib/passes/money-changes-present";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -32,6 +32,7 @@ export async function loadMoneyChanges(supabase: Supabase, passIds: string[], ti
     id: row.id,
     passId: row.pass_id,
     action: row.action,
+    label: moneyLabel(row.action, values(row.new_values)),
     details: moneyDetails(row.action, values(row.old_values), values(row.new_values), timeZone),
     role: row.actor_role,
     actor: (row.actor_id && names.get(row.actor_id)) || null,

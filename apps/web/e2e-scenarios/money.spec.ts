@@ -298,6 +298,12 @@ test.describe("Marking a payment", () => {
     await sheet.getByRole("button", { name: "Я оплатил" }).click();
     await expect(client.page.getByText("Тренер получит сообщение", { exact: true })).toBeVisible();
     await expect(client.page.getByRole("listitem").filter({ hasText: "Ждёт подтверждения" })).toBeVisible();
+    // A second «Я оплатил» waits for the first one (QA B1), and the history does not call the report a payment (B11).
+    await client.page.reload();
+    await expect(client.page.getByText(/^Ты уже сообщил об оплате/)).toBeVisible();
+    await expect(client.page.getByRole("button", { name: "Я оплатил" })).toHaveCount(0);
+    await expect(client.page.getByText("Сообщение об оплате", { exact: true })).toBeVisible();
+    await expect(client.page.getByText("Внесена оплата", { exact: true })).toHaveCount(0);
 
     const { page } = trainer;
     await page.goto("/trainer/money");

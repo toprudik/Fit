@@ -68,6 +68,9 @@ function ReportForm({ data, onDone }: { data: ClientPass; onDone: () => void }) 
             hapticSuccess();
             toast.success(copy.reportDone);
             onDone();
+          } else if (result.status === "already") {
+            toast.error(copy.reportAlready);
+            onDone();
           } else if (result.status !== "invalid") toast.error(t.money.passes.failed);
         });
       }}
@@ -121,6 +124,8 @@ export function ClientPassDetail({ data }: { data: ClientPass }) {
   const [reporting, setReporting] = useState(false);
   const { pass } = data;
   const owes = pass.status !== "cancelled" && pass.unpaidMinor > 0;
+  // One report waits for the trainer at a time (QA B1): instead of a second «Я оплатил», say it is on its way.
+  const waiting = data.payments.some((payment) => payment.reported && payment.status === "reported");
 
   return (
     <div className="flex flex-col gap-6">
@@ -156,9 +161,13 @@ export function ClientPassDetail({ data }: { data: ClientPass }) {
           ) : (
             <p className="text-subhead text-ink-2">{copy.noLinks}</p>
           )}
-          <Button variant="secondary" size="lg" block icon={Wallet} onClick={() => setReporting(true)}>
-            {copy.report}
-          </Button>
+          {waiting ? (
+            <p className="text-subhead text-ink-2">{copy.reportWaiting}</p>
+          ) : (
+            <Button variant="secondary" size="lg" block icon={Wallet} onClick={() => setReporting(true)}>
+              {copy.report}
+            </Button>
+          )}
         </section>
       ) : null}
 
