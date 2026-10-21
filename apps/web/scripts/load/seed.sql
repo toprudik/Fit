@@ -87,9 +87,15 @@ begin
     end loop;
   end loop;
 
-  -- Everyone accepted the beta terms in force, otherwise every page would send them to that screen.
+  -- Everyone gave the consents in force (lib/consent/required.ts), otherwise every page would send them to
+  -- /onboarding/consent and the run would measure redirects. The health consent too, so the nutrition and
+  -- progress screens render their full blocks.
   insert into public.consents (user_id, kind, version)
-  select u.id, 'beta_terms', '2026-11-beta' from tests.users u where u.handle like 'load\_%';
+  select u.id, c.kind::public.consent_kind, c.version
+  from tests.users u
+  cross join (values ('beta_terms', '2026-11-beta'), ('terms', '2026-11'), ('privacy_policy', '2026-11'),
+                     ('age_confirmed', '2026-11'), ('pd_general', '2026-11'), ('pd_health', '2026-11')) c (kind, version)
+  where u.handle like 'load\_%';
 
   -- What the nutrition-days cron job (every 5 minutes) would have written by now: past days keep their target.
   perform private.freeze_nutrition_days(30);
