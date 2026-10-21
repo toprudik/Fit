@@ -583,6 +583,16 @@ test.describe("focus and the bars", () => {
     const back = await page.getByRole("button", { name: "Назад" }).boundingBox();
     expect(back && back.x + back.width).toBeLessThan(width / 2);
     await expect(page.getByRole("button", { name: "Профиль", exact: true })).toHaveCount(0);
+
+    // A long title gives way to Back: it is cut, never drawn under the button.
+    await page.goto("/trainer/clients/new", { waitUntil: "networkidle" });
+    const backButton = await page.getByRole("button", { name: "Назад" }).boundingBox();
+    const longTitle = await page.getByRole("heading", { level: 1, name: "Добавить клиента вручную" }).first().boundingBox();
+    expect(backButton && longTitle).toBeTruthy();
+    if (backButton && longTitle) {
+      expect(backButton.x + backButton.width).toBeLessThanOrEqual(longTitle.x);
+      expect(longTitle.x + longTitle.width).toBeLessThanOrEqual(width);
+    }
   });
 
   test("focusing the header bar's own buttons doesn't scroll the page", async ({ page }) => {
