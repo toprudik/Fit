@@ -59,10 +59,10 @@ test("a new person with an invite code goes through consent, preferences, the in
 
   await expectPath(page, "/onboarding/trainer");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Инвайт тренера" }),
+    page.getByRole("heading", { level: 1, name: "Приглашение тренера" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Инвайт действует" }),
+    page.getByRole("heading", { name: "Приглашение действует" }),
   ).toBeVisible();
   await expect(page.getByText(grouped(code))).toBeVisible();
   await expectAccessible(page);
@@ -309,7 +309,7 @@ test("an unknown invite code says there is no such invite", async ({
   const { page } = someone;
   await page.goto("/onboarding/trainer?code=ZZZZ-ZZZZ-ZZZZ");
   await expect(
-    page.getByRole("heading", { name: "Такого инвайта нет" }),
+    page.getByRole("heading", { name: "Такого приглашения нет" }),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Связаться с DaFit" }),
@@ -337,14 +337,14 @@ test("an empty code asks for one and a typed code is checked", async ({
   // The field is required: the browser keeps the form, the screen stays as it is.
   await expect(page).toHaveURL(/\/onboarding\/trainer$/);
   await page
-    .getByLabel("Код инвайта")
+    .getByLabel("Код приглашения")
     .fill(code.toLowerCase().replace(/(.{4})/g, "$1 "));
   await page.getByRole("button", { name: "Проверить код" }).click();
   await expect(
-    page.getByRole("heading", { name: "Инвайт действует" }),
+    page.getByRole("heading", { name: "Приглашение действует" }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Ввести другой код" }).click();
-  await expect(page.getByLabel("Код инвайта")).toBeVisible();
+  await expect(page.getByLabel("Код приглашения")).toBeVisible();
 });
 
 test("a used invite says so to the next person, and its owner is told they are a trainer already", async ({
@@ -371,9 +371,9 @@ test("a used invite says so to the next person, and its owner is told they are a
   const second = await persona({ firstName: "Нина" });
   await second.page.goto(`/onboarding/trainer?code=${code}`);
   await expect(
-    second.page.getByRole("heading", { name: "Инвайт уже использован" }),
+    second.page.getByRole("heading", { name: "Приглашение уже использовано" }),
   ).toBeVisible();
-  await expect(second.page.getByLabel("Код инвайта")).toBeVisible();
+  await expect(second.page.getByLabel("Код приглашения")).toBeVisible();
   await expectAccessible(second.page);
 });
 
@@ -383,7 +383,7 @@ test("a person who is not a trainer is sent from the wizard back to the invite s
   const someone = await persona({ firstName: "Вера" });
   await someone.page.goto("/onboarding/trainer/format");
   await expectPath(someone.page, "/onboarding/trainer");
-  await expect(someone.page.getByLabel("Код инвайта")).toBeVisible();
+  await expect(someone.page.getByLabel("Код приглашения")).toBeVisible();
 });
 
 test("an unknown wizard step is not found", async ({ trainer }) => {
