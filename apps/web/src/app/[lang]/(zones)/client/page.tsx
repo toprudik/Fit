@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { TodayDate } from "@/components/shell/today-date";
+import { ClientSignedOut } from "@/components/passes/client-signed-out";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ClientTodayGoals } from "@/components/today/client-goals";
@@ -49,6 +50,7 @@ function now(): Date {
 async function HomeContent() {
   const [t, locale, trains] = await Promise.all([getDictionary(), getLocale(), hasTrainer()]);
   const copy = t.screens.client.home;
+  if (trains === null) return <ClientSignedOut t={t} title={copy.signedOut} text={copy.signedOutText} next="/client" />;
   if (trains === false) {
     return (
       <EmptyState

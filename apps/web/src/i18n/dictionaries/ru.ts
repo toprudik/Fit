@@ -167,6 +167,8 @@ export const ru = {
     },
     client: {
       home: {
+        signedOut: "Нужно войти",
+        signedOutText: "Войди через Telegram, и здесь появятся твои занятия и абонементы.",
         emptyTitle: "Ближайших занятий нет",
         emptyText: "Выбери свободное время у тренера и запишись.",
         book: "Записаться",
@@ -1625,6 +1627,8 @@ export const ru = {
     /** The client's side: /client/passes and /client/passes/[passId]. */
     client: {
       title: "Абонементы",
+      signedOut: "Нужно войти",
+      signedOutText: "Войди через Telegram, чтобы увидеть свои абонементы.",
       emptyTitle: "Абонементов нет",
       emptyText: "Спроси тренера о пакетах. Когда он оформит тебе абонемент, ты увидишь его здесь.",
       trainer: "Тренер {name}",
