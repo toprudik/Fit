@@ -94,6 +94,10 @@ begin
   insert into public.waitlist_entries (session_id, coaching_id, client_id, trainer_id)
   values (v_session, v_pair, v_client, v_trainer);
   insert into public.app_opens (user_id, source) values (v_client, 'session_reminder');
+  insert into public.season_challenges (title, month) values ('Season 2030', date '2030-01-01') on conflict do nothing;
+  insert into public.season_challenge_participants (challenge_id, user_id)
+  select c.id, v_client from public.season_challenges c where c.month = date '2030-01-01' and c.cancelled_at is null
+  on conflict do nothing;
   insert into public.trainer_churn_dismissals (coaching_id, hidden_until) values (v_pair, now() + interval '30 days');
   v_pass := tests.create_pass(p_trainer, p_client, 10, 10000);
   insert into public.pass_freezes (pass_id, period, reason)
