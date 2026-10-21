@@ -652,7 +652,7 @@ test.describe("language", () => {
 
   test("choosing English in settings switches the app", async ({ page, context }, testInfo) => {
     await page.goto("/settings");
-    await page.getByRole("radio", { name: "English", exact: true }).click();
+    await pick(page, "English");
 
     await expect(html(page)).toHaveAttribute("lang", "en");
     await expect(page.getByRole("radio", { name: "English", exact: true })).toHaveAttribute("aria-checked", "true");
@@ -680,12 +680,21 @@ test.describe("language", () => {
   });
 });
 
+/** Picks a settings radio; a click while the page hydrates can be lost, so it retries until the radio is checked. */
+async function pick(page: Page, name: string) {
+  const radio = page.getByRole("radio", { name, exact: true });
+  await expect(async () => {
+    await radio.click();
+    await expect(radio).toHaveAttribute("aria-checked", "true", { timeout: 2000 });
+  }).toPass();
+}
+
 test.describe("theme", () => {
   test.use({ colorScheme: "dark" });
 
   test("choosing Светлая pins light, and it survives a reload", async ({ page, context }) => {
     await page.goto("/settings");
-    await page.getByRole("radio", { name: "Светлая", exact: true }).click();
+    await pick(page, "Светлая");
 
     await expect(html(page)).toHaveAttribute("data-theme", "light");
     expect((await context.cookies()).find((cookie) => cookie.name === "dafit-theme")?.value).toBe("light");
@@ -704,7 +713,7 @@ test.describe("theme", () => {
     await page.goto("/settings");
     await expect(html(page)).toHaveAttribute("data-theme", "light");
 
-    await page.getByRole("radio", { name: "Тёмная", exact: true }).click();
+    await pick(page, "Тёмная");
     await expect(html(page)).toHaveAttribute("data-theme", "dark");
 
     await page.reload();
@@ -713,8 +722,8 @@ test.describe("theme", () => {
 
   test("Авто follows the system scheme, live", async ({ page }) => {
     await page.goto("/settings");
-    await page.getByRole("radio", { name: "Светлая", exact: true }).click();
-    await page.getByRole("radio", { name: "Авто", exact: true }).click();
+    await pick(page, "Светлая");
+    await pick(page, "Авто");
     await expect(page.getByRole("radio", { name: "Авто", exact: true })).toHaveAttribute("aria-checked", "true");
     await expect(html(page)).toHaveAttribute("data-theme", "dark");
 

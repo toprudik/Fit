@@ -116,7 +116,8 @@ test.describe("team and delegation", () => {
     await expectAccessible(helper);
     await helper.getByRole("link", { name: "Полина Клиентская" }).click();
     await expect(helper).toHaveURL(new RegExp(`/trainer/clients/delegated/${coachingId}`));
-    await expect(helper.getByText(`Клиент тренера ${ownerName}`)).toBeVisible();
+    // The phone bar and the wide title row both carry the subtitle; one of them is hidden.
+    await expect(helper.getByText(`Клиент тренера ${ownerName}`).filter({ visible: true })).toBeVisible();
     await expect(helper.getByRole("heading", { name: "Занятия" })).toBeVisible();
     await expect(helper.getByRole("heading", { name: "Заметки" })).toBeVisible();
     const card = await helper.getByRole("main").innerText();
