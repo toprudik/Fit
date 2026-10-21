@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAccount } from "@/components/account/account-store";
 import { PersonAvatar } from "@/components/ui/avatar";
@@ -37,7 +37,7 @@ function BackButton({ onBack, className }: { onBack: () => void; className?: str
   );
 }
 
-function ProfileButton({ onOpen, className }: { onOpen: () => void; className?: string }) {
+function ProfileButton({ onOpen }: { onOpen: () => void }) {
   const { t } = useI18n();
   const account = useAccount();
   const signedIn = account.status === "signed-in";
@@ -47,7 +47,7 @@ function ProfileButton({ onOpen, className }: { onOpen: () => void; className?: 
       onClick={onOpen}
       aria-label={t.common.profile}
       // 44px hit area around the 32px avatar, which lines up with the screen padding.
-      className={cn(pressable, "-ml-1.5 size-11 shrink-0 justify-center rounded-full", className)}
+      className={cn(pressable, "-ml-1.5 size-11 justify-center rounded-full")}
     >
       <PersonAvatar
         name={signedIn ? account.name : ""}
@@ -70,9 +70,10 @@ function ProfileButton({ onOpen, className }: { onOpen: () => void; className?: 
  * row on `bg` with the actions.
  *
  * In the Telegram Mini App at fullscreen Telegram draws «Закрыть» and «⌄ ⋯» over the top of the app.
- * There the phone bar is that row: the avatar, the title and the subtitle sit between Telegram's
- * buttons, the title stays put while the page scrolls, and the actions get a row of their own under it.
- * A subtitle too long for the row is cut with an ellipsis.
+ * There the phone bar is that row: the title and the subtitle sit between Telegram's buttons and stay
+ * put while the page scrolls, and the actions get a row of their own under it. A subtitle too long
+ * for the row is cut with an ellipsis. The avatar moves to the tab bar (PROFILE_TAB), and the root of
+ * that tab is titled «Профиль» and starts with a row that opens the profile sheet.
  *
  * Render it as the first child of the screen's column: the bar sticks only within its parent.
  */
@@ -106,7 +107,7 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
         title={title}
         subtitle={subtitle}
         actions={actions}
-        onOpenProfile={!back && shell ? shell.openProfile : undefined}
+        onOpenProfile={!back && shell?.onProfileTab ? shell.openProfile : undefined}
       />
     );
   }
@@ -184,7 +185,13 @@ function TelegramTopBar({
   subtitle,
   actions,
   onOpenProfile,
-}: Pick<ScreenHeaderProps, "title" | "subtitle" | "actions"> & { onOpenProfile?: () => void }) {
+}: Pick<ScreenHeaderProps, "title" | "subtitle" | "actions"> & {
+  /** Set on the root of the profile tab: the bar says «Профиль» and the profile row opens the sheet. */
+  onOpenProfile?: () => void;
+}) {
+  const { t } = useI18n();
+  const barTitle = onOpenProfile ? t.common.profile : title;
+  const band = Boolean(actions || onOpenProfile);
   return (
     <>
       <div
@@ -195,23 +202,23 @@ function TelegramTopBar({
         style={TELEGRAM_BUTTONS}
       >
         <div data-slot="telegram-top-bar" className="flex h-[var(--tg-viewport-content-safe-area-inset-top)] items-center justify-center">
-          <div className="flex min-w-0 items-center gap-1.5">
-            {onOpenProfile ? <ProfileButton onOpen={onOpenProfile} className="ml-0" /> : null}
-            <div className={cn("min-w-0", !onOpenProfile && "text-center")}>
-              <h1 className="truncate text-headline">{title}</h1>
-              {subtitle ? <div className="truncate text-footnote text-ink-2">{subtitle}</div> : null}
-            </div>
+          <div className="min-w-0 text-center">
+            <h1 className="truncate text-headline">{barTitle}</h1>
+            {subtitle ? <div className="truncate text-footnote text-ink-2">{subtitle}</div> : null}
           </div>
         </div>
       </div>
 
       <div aria-hidden className="h-[var(--safe-top)] md:hidden" />
-      {/* From 768px the header is the usual title row; on a phone only the actions stay here. */}
+      {/* From 768px the header is the usual title row; on a phone only the profile row and the actions stay here. */}
+      {onOpenProfile ? <ProfileRow onOpen={onOpenProfile} /> : null}
       <header
         data-slot="screen-title"
         className={cn(
           "flex items-center justify-between gap-4 md:pt-6 md:pb-6",
-          actions ? "max-md:material max-md:-mx-4 max-md:justify-end max-md:px-4 max-md:pb-1.5" : "max-md:hidden",
+          band ? "max-md:material max-md:-mx-4 max-md:justify-end max-md:px-4 max-md:pb-1.5" : "max-md:hidden",
+          // The profile row above already ends the band; with no actions there is nothing more for a phone.
+          onOpenProfile && !actions && "max-md:hidden",
         )}
       >
         <div className="min-w-0 max-md:hidden">
@@ -221,5 +228,34 @@ function TelegramTopBar({
         {actions ? <div className="-mr-2.5 flex shrink-0 items-center gap-1 md:mr-0 md:gap-2">{actions}</div> : null}
       </header>
     </>
+  );
+}
+
+/** The first row of the profile tab's root under Telegram's buttons: who is signed in; opens the profile sheet. */
+function ProfileRow({ onOpen }: { onOpen: () => void }) {
+  const { t } = useI18n();
+  const account = useAccount();
+  const signedIn = account.status === "signed-in";
+  return (
+    <div className="material -mx-4 px-4 pt-1 pb-3 md:hidden">
+      <button
+        type="button"
+        onClick={onOpen}
+        className={cn(pressable, "w-full gap-3 rounded-lg bg-surface-2 px-3 py-2.5 text-left")}
+      >
+        <PersonAvatar
+          name={signedIn ? account.name : ""}
+          src={signedIn ? account.photoUrl : null}
+          size={40}
+          decorative
+          fallbackIcon={account.status === "loading" ? undefined : User}
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-headline">{signedIn && account.name ? account.name : t.common.profile}</span>
+          <span className="block truncate text-footnote text-ink-2">{t.profile.open}</span>
+        </span>
+        <ChevronRight aria-hidden size={20} className="shrink-0 text-ink-3" />
+      </button>
+    </div>
   );
 }
