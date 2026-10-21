@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { SHARE_CATEGORIES, type Shares } from "@/lib/sharing/categories";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { INTAKE_FORM_VERSION, intakeValues, parseIntake, type IntakeValues } from "./form";
 import { clientIntakePath, clientPairPath } from "./paths";
@@ -53,14 +54,24 @@ async function saveIntakeShare(coachingId: string, show: boolean) {
 }
 
 /**
- * The consent step (decisions Q38): "Показать" or "Не показывать" for this pair's trainer. Either answer is
- * final for the step and stamps intake_decided_at. Goes on to the intake while the client has none, otherwise
- * back to the pair.
+ * The sharing step after a new pair starts (decisions Q38, legal product-changes А4): the client answers every
+ * category of «Что видит тренер» at once, nothing chosen in advance, and the answer is stamped in
+ * intake_decided_at. Goes on to the intake when it is shown and the client has none yet, otherwise to the pair.
  */
-export async function decideIntakeShare(coachingId: string, show: boolean): Promise<{ failed: true }> {
-  if (!z.uuid().safeParse(coachingId).success || typeof show !== "boolean") return { failed: true };
-  const { supabase, saved } = await saveIntakeShare(coachingId, show);
-  if (!saved) return { failed: true };
+export async function decideShares(coachingId: string, shares: Shares): Promise<{ failed: true }> {
+  if (!z.uuid().safeParse(coachingId).success || !SHARE_CATEGORIES.every((category) => typeof shares?.[category] === "boolean")) {
+    return { failed: true };
+  }
+  const supabase = await createSupabaseServerClient();
+  const answer = Object.fromEntries(SHARE_CATEGORIES.map((category) => [category, shares[category]])) as Shares;
+  const { data, error } = await supabase
+    .from("data_shares")
+    .update({ ...answer, intake_decided_at: new Date().toISOString() })
+    .eq("coaching_id", coachingId)
+    .select("coaching_id");
+  if (error) console.error("saving the sharing step failed", error.code);
+  if (error || !data?.length) return { failed: true };
+  if (!answer.intake) redirect(clientPairPath(coachingId));
   const { data: session } = await supabase.auth.getClaims();
   const { count } = await supabase
     .from("intakes")
