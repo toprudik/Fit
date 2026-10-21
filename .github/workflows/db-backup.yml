@@ -1,0 +1,71 @@
+name: Database backup
+
+# Nightly copy of the hosted database (project "fit"), because the Supabase free plan keeps none. The copy is
+# encrypted on the runner with the repository secret DB_BACKUP_PASSPHRASE before it is stored, since anyone
+# signed in to GitHub can download artifacts of a public repository; without the passphrase it cannot be opened.
+# Kept 7 days, as Supabase Pro would. Each run also restores the copy into an empty local Supabase and checks the
+# row counts, so a copy that cannot be restored turns the run red. Storage files (uploads) are not in the copy.
+# Restore by hand: scripts/db-backup/restore.sh. The connection comes from SUPABASE_DB_URL (see db-deploy.yml).
+
+on:
+  schedule:
+    - cron: "37 0 * * *" # nightly, 03:37 MSK
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    if: github.repository == 'toprudik/Fit'
+    runs-on: ubuntu-latest
+    environment: supabase-fit
+    timeout-minutes: 30
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      DB_BACKUP_PASSPHRASE: ${{ secrets.DB_BACKUP_PASSPHRASE }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
+        with:
+          version: 2.121.0
+      - name: Check the secrets
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::Repository secret SUPABASE_DB_URL is not set (Supabase dashboard → Connect → Session pooler)."
+            exit 1
+          fi
+          if [ "${#DB_BACKUP_PASSPHRASE}" -lt 20 ]; then
+            echo "::error::Repository secret DB_BACKUP_PASSPHRASE is missing or shorter than 20 characters."
+            exit 1
+          fi
+      - name: Make the encrypted copy
+        id: copy
+        run: |
+          name="dafit-db-$(date -u +%Y-%m-%d)"
+          scripts/db-backup/backup.sh "$RUNNER_TEMP/backup/$name.tar.gpg"
+          echo "name=$name" >>"$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ steps.copy.outputs.name }}
+          path: ${{ runner.temp }}/backup/${{ steps.copy.outputs.name }}.tar.gpg
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+      # An empty project: this repository's Supabase config without its migrations, as a new hosted project would be.
+      - name: Start an empty Supabase
+        run: |
+          mkdir -p "$RUNNER_TEMP/restore/supabase"
+          cp supabase/config.toml "$RUNNER_TEMP/restore/supabase/"
+          supabase start --workdir "$RUNNER_TEMP/restore" \
+            -x studio,edge-runtime,logflare,vector,supavisor,mailpit,realtime,imgproxy,postgrest,postgres-meta
+      - name: Restore the copy and compare row counts
+        run: |
+          image=$(docker ps --filter name=supabase_db_ --format '{{.Image}}' | head -n 1)
+          PSQL="docker run --rm -i --network host --entrypoint psql $image" \
+            scripts/db-backup/restore.sh "$RUNNER_TEMP/backup/${{ steps.copy.outputs.name }}.tar.gpg" \
+            "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
