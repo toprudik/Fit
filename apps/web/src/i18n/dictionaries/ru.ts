@@ -3628,6 +3628,7 @@ export const ru = {
         confirmUnblock: "Разблокировать",
         cancel: "Отмена",
         reasonLabel: "Причина",
+        blockReasonHint: "Её увидят админы в карточке и в журнале, а пользователь при входе",
         reasonHint: "Её увидят только админы, в карточке и в журнале",
         reasonEmpty: "Напиши причину",
         blocked: "Пользователь заблокирован",
@@ -5594,6 +5595,14 @@ export const ru = {
     action: "Войти через Telegram",
     cookies: "Мы ставим только свои cookie: чтобы ты оставался в аккаунте и приложение помнило твои настройки. Рекламных и чужих cookie нет.",
     cookiesLink: "Подробнее о cookie",
+    /** ADM-7: what a blocked person sees at sign-in, with the admin's reason (user agreement 15). */
+    blockedNotice: {
+      title: "Твой аккаунт в DaFit заблокирован.",
+      reason: "Причина: {reason}",
+      noReason: "Так бывает, если нарушены правила сервиса.",
+      appeal: "Если не согласен, напиши нам. Адрес есть в пользовательском соглашении, в разделе о блокировке.",
+      terms: "Открыть соглашение",
+    },
     errors: {
       expired: "Время входа истекло, попробуй ещё раз.",
       denied: "Вход отменён в Telegram, попробуй ещё раз.",

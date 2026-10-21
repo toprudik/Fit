@@ -3595,6 +3595,7 @@ export const en: Dictionary = {
         confirmUnblock: "Unblock",
         cancel: "Cancel",
         reasonLabel: "Reason",
+        blockReasonHint: "Admins see it on the card and in the log, and the user sees it when signing in",
         reasonHint: "Only admins see it, on the card and in the log",
         reasonEmpty: "Write the reason",
         blocked: "User blocked",
@@ -5513,6 +5514,13 @@ export const en: Dictionary = {
     action: "Sign in with Telegram",
     cookies: "We only use our own cookies, to keep you signed in and remember your settings. No advertising or third-party cookies.",
     cookiesLink: "About cookies",
+    blockedNotice: {
+      title: "Your DaFit account is blocked.",
+      reason: "Reason: {reason}",
+      noReason: "This happens when the rules of the service are broken.",
+      appeal: "If you disagree, write to us. The address is in the terms of service, in the section on restricting accounts.",
+      terms: "Open the terms",
+    },
     errors: {
       expired: "Sign-in took too long. Try again.",
       denied: "Sign-in was cancelled in Telegram. Try again.",
