@@ -11,7 +11,7 @@ export const en: Dictionary = {
       title: "{name}, a trainer on DaFit",
       generic: "A trainer on DaFit",
       kicker: "Trainer page",
-      description: "Specialties, prices and a trial session to book. Your schedule, passes and progress then stay in one place.",
+      description: "Specialties, prices and a trial session to book. After that you book with the trainer and track your pass right in Telegram.",
     },
     trial: {
       title: "Trial session with {name}",
@@ -24,19 +24,19 @@ export const en: Dictionary = {
       title: "Join {name} on DaFit",
       generic: "Join a trainer on DaFit",
       kicker: "Invite from a friend",
-      description: "A friend invites you to train with their trainer. Your schedule, pass and progress stay in one place.",
+      description: "A friend invites you to train with their trainer. You book sessions and see what's left on your pass right in Telegram.",
     },
     client: {
       title: "{name} invites you to DaFit",
       generic: "A trainer invites you to DaFit",
       kicker: "Trainer invite",
-      description: "Become a client on DaFit: your schedule, pass and progress stay in one place.",
+      description: "Become a client on DaFit: book sessions and see what's left on your pass right in Telegram.",
     },
     forTrainers: {
       title: "DaFit for trainers",
       generic: "DaFit for trainers",
       kicker: "Beta waitlist",
-      description: "Schedule, passes and client progress in one place, in Telegram and on the web. Join the beta waitlist.",
+      description: "Personal trainers run their schedule, passes and client progress in DaFit, in Telegram and on the web. Join the beta waitlist.",
     },
     trainerInvite: {
       title: "You're invited to coach on DaFit",
@@ -224,7 +224,7 @@ export const en: Dictionary = {
   clientLinks: {
     landing: {
       title: "Trainer invite",
-      lead: "Your trainer invites you to DaFit: your schedule, pass and progress in one place.",
+      lead: "Your trainer invites you to DaFit. Here you book and move sessions and see what's left on your pass.",
       verified: "Verified",
       offline: "In person",
       online: "Online",
@@ -3113,7 +3113,7 @@ export const en: Dictionary = {
   trainerAnalytics: {
     title: "Analytics",
     lockTitle: "Analytics",
-    lockText: "Attendance, cancellations, revenue, debts and clients who may leave, in one place.",
+    lockText: "Attendance, cancellations, revenue, debts and clients who may leave, on one screen.",
     period: "Period",
     periods: { week: "Week", month: "Month", quarter: "Quarter", year: "Year" },
     previous: "Previous period",
@@ -4366,9 +4366,9 @@ export const en: Dictionary = {
   /** /client/invite-trainer: a person invites their own trainer to DaFit (marketing backlog 16). */
   trainerInviter: {
     title: "Invite your trainer",
-    lead: "Is your trainer not on DaFit yet? Send them the link. They get the trainer zone right away on the free plan, and you can train with them in the app: bookings, pass and progress in one place.",
+    lead: "Is your trainer not on DaFit yet? Send them the link. They get the trainer zone right away on the free plan, and you can book with them and see what's left on your pass in the app.",
     code: "Code to type in: {code}",
-    shareText: "Let's run my training in DaFit: schedule, pass and progress in one place",
+    shareText: "Let's run my training in DaFit: I book myself in Telegram and my pass updates after every session",
     listHeader: "Came by your link",
     empty: "Nobody has come by your link yet. When your trainer opens it, the DaFit bot will message you.",
     since: "On DaFit since {date}",
@@ -4449,7 +4449,7 @@ export const en: Dictionary = {
     bonusDiscount: "Your bonus: {percent}% off a plan once the invited trainer buys one.",
     betaNote: "Everyone has Pro during the beta, so the bonus month starts after it. A plan discount waits until plans go on sale.",
     code: "Code to type in: {code}",
-    shareText: "Join me on DaFit: clients, schedule and passes in one place",
+    shareText: "Join me on DaFit: clients book in Telegram and passes update on their own",
     countsHeader: "Your invitations",
     countsInvited: "Joined by your link",
     countsActive: "Working",
@@ -5392,7 +5392,7 @@ export const en: Dictionary = {
   },
   forTrainers: {
     title: "For trainers",
-    description: "Schedule, passes and client progress in one place, in Telegram and on the web. Join the beta waitlist.",
+    description: "Personal trainers run their schedule, passes and client progress in DaFit, in Telegram and on the web. Join the beta waitlist.",
     openApp: "Open DaFit",
     hero: {
       eyebrow: "For personal trainers",
@@ -5405,9 +5405,9 @@ export const en: Dictionary = {
       title: "What DaFit takes off your plate",
       items: {
         passes: { title: "Passes count themselves", text: "Mark a session and the balance updates. Debts show up right away." },
-        reminders: { title: "Reminders go out on their own", text: "Clients get session reminders on their own, with quiet hours." },
+        reminders: { title: "Reminders go out on their own", text: "The bot reminds clients about sessions. During quiet hours the reminders come silently." },
         cancellations: { title: "Cancellations by your rules", text: "Set cancellation and charge rules once. Forgive a charge in one tap." },
-        money: { title: "Income and clients who might leave", text: "Income by week, month and year, and a list of clients who might leave." },
+        money: { title: "Income and clients who might leave", text: "Income by week, month and year, next to a list of clients who might leave." },
         progress: { title: "Clients see their progress", text: "Streaks, badges, milestones at 10, 25, 50 and 100 sessions and a monthly report." },
         growth: { title: "New clients", text: "A showcase with a QR code and a trial session link, plus a refer-a-friend offer." },
       },
