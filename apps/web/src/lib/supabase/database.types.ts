@@ -4842,6 +4842,14 @@ isOneToOne: false
               "coaching_id": string,"first_name": string,"headline": string,"last_name": string,"photo_url": string,"referee_sessions": number,"referrer_first_name": string,"specialties": (string)[],"status": string,"trainer_id": string,"verified": boolean,"works_offline": boolean,"works_online": boolean
             }[]
                            },
+"retention_due_files":
+{ Args: { "p_limit": number }; Returns: {
+              "bucket": string,"id": string,"kind": string,"paths": (string)[]
+            }[]
+                           },
+"retention_forget":
+{ Args: { "p_id": string,"p_kind": string }; Returns: boolean
+                           },
 "review_eligibility":
 { Args: { "p_coaching_id": string }; Returns: {
               "attended": number,"eligible": boolean
