@@ -34,7 +34,7 @@ jobs:
       - name: Check the connection secret
         run: |
           if [ -z "$SUPABASE_DB_URL" ]; then
-            echo "::error::Repository secret SUPABASE_DB_URL is not set (Supabase dashboard → Connect → Session pooler)."
+            echo "::error::Secret SUPABASE_DB_URL is not set in the environment supabase-fit (Supabase dashboard → Connect → Session pooler)."
             exit 1
           fi
       # No --include-all on purpose: threads often redefine the same function in separate migrations, so applying
