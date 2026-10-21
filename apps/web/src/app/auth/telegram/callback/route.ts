@@ -6,6 +6,7 @@ import { negotiateLocale } from "@/i18n/config";
 import { deviceCookies, setPreferenceCookies, syncPreferences } from "@/lib/account-preferences";
 import { recordSignupSource } from "@/lib/attribution/record";
 import { parseSourceCookie, SOURCE_COOKIE } from "@/lib/attribution/source";
+import { BLOCKED_COOKIE, blockedCookieOptions, blockedCookieValue } from "@/lib/auth/blocked-cookie";
 import { AccountBlockedError, signInWithTelegram } from "@/lib/auth/sign-in-with-telegram";
 import { OIDC_COOKIE, oidcCookieOptions, parseOidcCookie, redirectUri, safeNext } from "@/lib/auth/oidc-cookie";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -54,7 +55,12 @@ export async function GET(request: NextRequest) {
     });
     signedIn = await signInWithTelegram(identity);
   } catch (error) {
-    if (error instanceof AccountBlockedError) return fail("blocked");
+    if (error instanceof AccountBlockedError) {
+      // /login shows the admin's reason to the person it is about: the id_token proved who is signing in.
+      const res = fail("blocked");
+      res.cookies.set(BLOCKED_COOKIE, blockedCookieValue(error.reason), blockedCookieOptions);
+      return res;
+    }
     console.error("telegram oidc sign-in failed", error instanceof Error ? error.message : "unknown");
     return fail("failed");
   }

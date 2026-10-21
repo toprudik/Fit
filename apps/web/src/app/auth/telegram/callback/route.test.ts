@@ -30,7 +30,11 @@ const signInWithTelegram = vi.hoisted(() =>
   vi.fn<(identity: unknown) => Promise<{ userId: string; newAccount: boolean }>>(async () => ({ userId: "user-42", newAccount: false })),
 );
 vi.mock("@/lib/auth/sign-in-with-telegram", () => {
-  class AccountBlockedError extends Error {}
+  class AccountBlockedError extends Error {
+    constructor(readonly reason: string | null) {
+      super("account blocked");
+    }
+  }
   return { AccountBlockedError, signInWithTelegram };
 });
 
@@ -227,11 +231,26 @@ describe("GET /auth/telegram/callback", () => {
 
   it("answers blocked for an account an admin blocked, without a session", async () => {
     const { AccountBlockedError } = await import("@/lib/auth/sign-in-with-telegram");
-    signInWithTelegram.mockRejectedValueOnce(new AccountBlockedError());
+    signInWithTelegram.mockRejectedValueOnce(new AccountBlockedError(null));
     const res = await get({ code: "code-1", state: STATE });
 
     expect(res.headers.get("location")).toBe(`${APP_URL}/login?error=blocked`);
     expectCookieCleared(res);
     expect(preferenceCookies(res)).toEqual({});
+  });
+
+  it("leaves the admin's reason for /login in a short-lived cookie, never in the address", async () => {
+    const { AccountBlockedError } = await import("@/lib/auth/sign-in-with-telegram");
+    signInWithTelegram.mockRejectedValueOnce(new AccountBlockedError("Спам в отзывах"));
+    const res = await get({ code: "code-1", state: STATE });
+
+    const location = res.headers.get("location") ?? "";
+    expect(location).toBe(`${APP_URL}/login?error=blocked`);
+    const cookie = res.headers.getSetCookie().find((line) => line.startsWith("fit_blocked="));
+    expect(cookie).toMatch(/HttpOnly/i);
+    expect(cookie).toMatch(/Path=\/login/);
+    expect(cookie).toMatch(/Max-Age=600/);
+    const value = cookie?.split(";")[0].slice("fit_blocked=".length) ?? "";
+    expect(Buffer.from(value, "base64url").toString("utf8")).toBe("Спам в отзывах");
   });
 });
