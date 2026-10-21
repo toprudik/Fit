@@ -1,51 +1,74 @@
 name: Database backup
 
-# Nightly copy of the hosted database (project "fit"), because the Supabase free plan keeps none. The copy is
-# encrypted on the runner with the repository secret DB_BACKUP_PASSPHRASE before it is stored, since anyone
-# signed in to GitHub can download artifacts of a public repository; without the passphrase it cannot be opened.
-# Kept 7 days, as Supabase Pro would. Each run also restores the copy into an empty local Supabase and checks the
-# row counts, so a copy that cannot be restored turns the run red. Storage files (uploads) are not in the copy.
-# Restore by hand: scripts/db-backup/restore.sh. The connection comes from SUPABASE_DB_URL (see db-deploy.yml).
+# Nightly copy of the hosted database (project "fit"), because the Supabase free plan keeps none. Runs only when
+# called from the PRIVATE backup repository (its workflow does `uses: toprudik/Fit/.github/workflows/db-backup.yml@main`
+# on a schedule), never in this public repository: here anyone signed in to GitHub could download and keep the
+# artifact, so a 7-day retention would mean nothing. The run, its secrets and the artifact all belong to the caller.
+# The copy is encrypted on the runner with DB_BACKUP_PASSPHRASE before it is stored; without it the copy cannot be
+# opened. Kept 7 days, as Supabase Pro would. Each run also restores the copy into an empty local Supabase and checks
+# the row counts, so a copy that cannot be restored turns the run red. Storage files (uploads) are not in the copy.
+# Restore by hand: scripts/db-backup/restore.sh. The caller's workflow: scripts/db-backup/private-repo-workflow.yml.
 
-# Paused: artifacts of a public repository can be downloaded and kept by anyone signed in to GitHub, so the
-# 7-day retention would not bind copies already downloaded. The schedule ("37 0 * * *", 03:37 MSK) comes back
-# once it is decided where the copies live.
 on:
-  workflow_dispatch:
+  workflow_call:
+    secrets:
+      SUPABASE_DB_URL:
+        description: Session pooler connection string (Supabase dashboard → Connect → Session pooler).
+        required: true
+      DB_BACKUP_PASSPHRASE:
+        description: Passphrase the copy is encrypted with, one line of at least 20 characters.
+        required: true
 
 permissions:
   contents: read
 
-concurrency:
-  group: db-backup
-  cancel-in-progress: false
-
 jobs:
   backup:
-    if: github.repository == 'toprudik/Fit'
     runs-on: ubuntu-latest
-    environment: supabase-fit
     timeout-minutes: 30
-    env:
-      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      DB_BACKUP_PASSPHRASE: ${{ secrets.DB_BACKUP_PASSPHRASE }}
     steps:
+      - name: Refuse to run in a public repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(gh api "repos/$GITHUB_REPOSITORY" --jq .private)" != true ]; then
+            echo "::error::$GITHUB_REPOSITORY is not private, so its artifacts are public. Call this workflow only from the private backup repository."
+            exit 1
+          fi
+      # The scripts come from this repository; the caller's checkout would not have them. Same ref as the caller's @main.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: toprudik/Fit
+          ref: main
+          persist-credentials: false
       - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
         with:
           version: 2.121.0
       - name: Check the secrets
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DB_BACKUP_PASSPHRASE: ${{ secrets.DB_BACKUP_PASSPHRASE }}
         run: |
           if [ -z "$SUPABASE_DB_URL" ]; then
-            echo "::error::Repository secret SUPABASE_DB_URL is not set (Supabase dashboard → Connect → Session pooler)."
+            echo "::error::Secret SUPABASE_DB_URL is not set (Supabase dashboard → Connect → Session pooler)."
             exit 1
           fi
+          # gpg reads only the first line of the passphrase, so a second line would silently not count.
+          case "$DB_BACKUP_PASSPHRASE" in
+            *$'\n'* | *$'\r'*)
+              echo "::error::Secret DB_BACKUP_PASSPHRASE contains a line break; it must be one line."
+              exit 1
+              ;;
+          esac
           if [ "${#DB_BACKUP_PASSPHRASE}" -lt 20 ]; then
-            echo "::error::Repository secret DB_BACKUP_PASSPHRASE is missing or shorter than 20 characters."
+            echo "::error::Secret DB_BACKUP_PASSPHRASE is missing or shorter than 20 characters."
             exit 1
           fi
       - name: Make the encrypted copy
         id: copy
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DB_BACKUP_PASSPHRASE: ${{ secrets.DB_BACKUP_PASSPHRASE }}
         run: |
           name="dafit-db-$(date -u +%Y-%m-%d)"
           scripts/db-backup/backup.sh "$RUNNER_TEMP/backup/$name.tar.gpg"
@@ -65,6 +88,8 @@ jobs:
           supabase start --workdir "$RUNNER_TEMP/restore" \
             -x studio,edge-runtime,logflare,vector,supavisor,mailpit,realtime,imgproxy,postgrest,postgres-meta
       - name: Restore the copy and compare row counts
+        env:
+          DB_BACKUP_PASSPHRASE: ${{ secrets.DB_BACKUP_PASSPHRASE }}
         run: |
           image=$(docker ps --filter name=supabase_db_ --format '{{.Image}}' | head -n 1)
           PSQL="docker run --rm -i --network host --entrypoint psql $image" \

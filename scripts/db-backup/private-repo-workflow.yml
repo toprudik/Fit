@@ -1,0 +1,23 @@
+# Copy of .github/workflows/backup.yml in the private backup repository (not a workflow of this repository).
+# It runs the reusable .github/workflows/db-backup.yml from here, so the run, its two secrets and the encrypted
+# artifact all stay in the private repository. Secrets there: SUPABASE_DB_URL and DB_BACKUP_PASSPHRASE.
+name: Database backup
+
+on:
+  schedule:
+    - cron: "37 0 * * *" # nightly, 03:37 MSK
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    uses: toprudik/Fit/.github/workflows/db-backup.yml@main
+    secrets:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      DB_BACKUP_PASSPHRASE: ${{ secrets.DB_BACKUP_PASSPHRASE }}
