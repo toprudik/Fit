@@ -155,6 +155,8 @@ describe("consentRedirect", () => {
   it("leaves the terms screen and the login screen open", () => {
     expect(consentRedirect("/onboarding/consent", "?next=%2Fclient")).toBeNull();
     expect(consentRedirect("/login", "?next=%2Fclient")).toBeNull();
+    expect(consentRedirect("/settings/export", "")).toBeNull();
+    expect(consentRedirect("/settings/delete", "")).toBeNull();
   });
 
   it("leaves the legal documents open, but not a look-alike path", () => {
