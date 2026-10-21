@@ -247,7 +247,7 @@ begin
     case when p_status = 'ended' then now() end
   )
   returning id into v_id;
-  -- A new pair shares nothing (20261020143917_shares_closed_by_default.sql); tests start from a client who opened
+  -- A new pair shares nothing (20261021023847_shares_closed_by_default.sql); tests start from a client who opened
   -- the usual categories, with the sharing step itself still unanswered. A card pair already shares everything.
   update public.data_shares d
   set nutrition = true, measurements = true, steps = true, workouts = true
