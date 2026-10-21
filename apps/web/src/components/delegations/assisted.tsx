@@ -104,7 +104,19 @@ function sessionWhen(locale: Locale, timeZone: string) {
   });
 }
 
-function SessionRow({ t, session, when, marks }: { t: Dictionary; session: AssistedSession; when: Intl.DateTimeFormat; marks?: React.ReactNode }) {
+function SessionRow({
+  t,
+  session,
+  when,
+  marks,
+  href,
+}: {
+  t: Dictionary;
+  session: AssistedSession;
+  when: Intl.DateTimeFormat;
+  marks?: React.ReactNode;
+  href?: string;
+}) {
   const statuses = t.team.session.statuses;
   const status = session.status in statuses ? statuses[session.status as keyof typeof statuses] : undefined;
   const line = [session.title ? when.format(new Date(session.startsAt)) : null, session.mode === "online" ? t.delegatedZone.online : session.place, marks ? null : status]
@@ -112,6 +124,7 @@ function SessionRow({ t, session, when, marks }: { t: Dictionary; session: Assis
     .join(", ");
   return (
     <ListRow
+      href={href}
       icon={session.mode === "online" ? Video : CalendarDays}
       title={session.title ?? when.format(new Date(session.startsAt))}
       // The marks go under the date: two buttons beside it leave no room for the date on a phone.
@@ -145,7 +158,14 @@ async function Sessions({ t, locale, pair }: { t: Dictionary; locale: Locale; pa
       <ListGroup header={copy.upcoming} headingLevel={3}>
         {upcoming.length === 0 ? <ListRow title={copy.upcomingEmpty} /> : null}
         {upcoming.map((session) => (
-          <SessionRow key={session.bookingId} t={t} session={session} when={when} />
+          <SessionRow
+            key={session.bookingId}
+            t={t}
+            session={session}
+            when={when}
+            // A request opens where the assistant confirms or declines it.
+            href={canSchedule && session.status === "requested" ? `/trainer/requests/${session.bookingId}` : undefined}
+          />
         ))}
       </ListGroup>
       {canSchedule ? <NewAssistedSession coachingId={pair.coachingId} ownerName={pair.ownerName} locations={locations} /> : null}

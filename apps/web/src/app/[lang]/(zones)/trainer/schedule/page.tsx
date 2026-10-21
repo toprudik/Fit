@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
-import { DayList, WeekGrid, type DayLabel } from "@/components/schedule/week-view";
+import { DayList, scheduleHref, WeekGrid, type DayLabel } from "@/components/schedule/week-view";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -13,9 +13,11 @@ import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { countTrainerRequests } from "@/lib/bookings/load";
+import { loadScheduleAssists, type ScheduleAssist } from "@/lib/delegations/assistant";
 import { clientNames, loadScheduleOwner } from "@/lib/schedule/load";
 import { addDays, localToUtc, parseDay, today as todayIn, weekDays, weekStart } from "@/lib/schedule/time";
 import { buildWeek, type SessionRow, type SlotRow } from "@/lib/schedule/week";
+import { cn } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
@@ -28,6 +30,44 @@ const TAKEN = ["confirmed", "attended", "no_show"] as const;
 /** Request time, outside the component so rendering stays pure. */
 function requestTime(): Date {
   return new Date();
+}
+
+/** «Моё / <тренер>» (screens.md В3 rule 21): shown to a trainer who assists someone with the schedule. */
+function WhoseSchedule({
+  assists,
+  current,
+  copy,
+}: {
+  assists: ScheduleAssist[];
+  current: string | undefined;
+  copy: Awaited<ReturnType<typeof getDictionary>>["schedule"];
+}) {
+  const options = [{ id: undefined, label: copy.mine }, ...assists.map((assist) => ({ id: assist.ownerId, label: assist.ownerName }))];
+  return (
+    <nav aria-label={copy.whose}>
+      <ul className="flex flex-wrap gap-2">
+        {options.map(({ id, label }) => {
+          const selected = id === current;
+          return (
+            <li key={id ?? "mine"}>
+              <Link
+                href={id ? `/trainer/schedule?trainer=${id}` : "/trainer/schedule"}
+                aria-current={selected ? "page" : undefined}
+                className={cn(
+                  "inline-flex h-9 items-center rounded-full px-4 text-subhead font-medium select-none",
+                  "transition-[background-color] duration-[var(--duration-instant)] motion-reduce:transition-none",
+                  // Selection is inverse (design.md).
+                  selected ? "bg-inverse text-on-inverse" : "bg-surface-1 text-ink hover:bg-surface-3",
+                )}
+              >
+                {label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
 }
 
 async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer/schedule">["searchParams"] }) {
@@ -50,6 +90,10 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
   }
 
   const { supabase, userId, timeZone } = owner;
+  const assists = await loadScheduleAssists(owner);
+  // The week of a trainer the caller assists, read-only here: RLS shows only what the delegation covers.
+  const assisted = assists.find((assist) => assist.ownerId === params.trainer);
+  const trainerId = assisted?.ownerId ?? userId;
   const today = todayIn(timeZone);
   const selected = parseDay(params.date) ?? today;
   const monday = weekStart(selected);
@@ -61,7 +105,7 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
     supabase
       .from("slots")
       .select("id, starts_at, ends_at, status, mode, template_item_id")
-      .eq("trainer_id", userId)
+      .eq("trainer_id", trainerId)
       .lt("starts_at", to)
       .gt("ends_at", from)
       .order("starts_at")
@@ -69,14 +113,14 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
     supabase
       .from("sessions")
       .select("id, kind, title, starts_at, ends_at, mode, capacity, status")
-      .eq("trainer_id", userId)
+      .eq("trainer_id", trainerId)
       .neq("status", "cancelled")
       .lt("starts_at", to)
       .gt("ends_at", from)
       .order("starts_at")
       .returns<SessionRow[]>(),
-    supabase.from("week_templates").select("id").eq("trainer_id", userId).eq("is_active", true).maybeSingle(),
-    countTrainerRequests(owner, requestTime()),
+    supabase.from("week_templates").select("id").eq("trainer_id", trainerId).eq("is_active", true).maybeSingle(),
+    countTrainerRequests(owner, requestTime(), [trainerId]),
   ]);
   if (slots.error || sessions.error) {
     console.error("loading the schedule failed", slots.error?.code ?? sessions.error?.code);
@@ -124,10 +168,11 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
     .replace(/\s?г\.$/, "");
 
   const empty = week.every((day) => day.items.length === 0 && !day.closed);
-  const link = (day: string) => `/trainer/schedule?date=${day}`;
+  const link = (day: string) => scheduleHref(day, assisted?.ownerId);
 
   return (
     <div className="flex flex-col gap-4">
+      {assists.length > 0 ? <WhoseSchedule assists={assists} current={assisted?.ownerId} copy={copy} /> : null}
       <div className="flex items-center gap-1">
         <p className="me-auto text-headline tabular-nums" aria-live="polite">
           <span className="sr-only">{copy.weekLabel} </span>
@@ -141,25 +186,32 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
         </IconButton>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button asChild size="sm" icon={Plus}>
-          <Link href={`/trainer/sessions/new?date=${selected < today ? today : selected}`}>{copy.newSession}</Link>
-        </Button>
+        {assisted ? null : (
+          <Button asChild size="sm" icon={Plus}>
+            <Link href={`/trainer/sessions/new?date=${selected < today ? today : selected}`}>{copy.newSession}</Link>
+          </Button>
+        )}
         {requests > 0 ? (
           <Link href="/trainer/requests" className={buttonVariants({ variant: "secondary", size: "sm" })}>
             {interpolate(copy.requests.open, { count: requests })}
           </Link>
         ) : null}
-        <Link href="/trainer/schedule" className={buttonVariants({ variant: "secondary", size: "sm" })}>
+        <Link href={assisted ? link(today) : "/trainer/schedule"} className={buttonVariants({ variant: "secondary", size: "sm" })}>
           {copy.today}
         </Link>
-        <Link href="/trainer/schedule/template" className={buttonVariants({ variant: "secondary", size: "sm" })}>
-          {copy.template}
-        </Link>
-        <Link href="/trainer/schedule/slots" className={buttonVariants({ variant: "secondary", size: "sm" })}>
-          {copy.slots}
-        </Link>
+        {assisted ? null : (
+          <>
+            <Link href="/trainer/schedule/template" className={buttonVariants({ variant: "secondary", size: "sm" })}>
+              {copy.template}
+            </Link>
+            <Link href="/trainer/schedule/slots" className={buttonVariants({ variant: "secondary", size: "sm" })}>
+              {copy.slots}
+            </Link>
+          </>
+        )}
       </div>
-      {empty && !template.data ? (
+      {assisted ? <p className="px-1 text-footnote text-ink-2">{interpolate(copy.assistedNote, { name: assisted.ownerName })}</p> : null}
+      {empty && !template.data && !assisted ? (
         <EmptyState
           icon={CalendarDays}
           title={copy.emptyWeekTitle}
@@ -172,8 +224,8 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
         />
       ) : (
         <>
-          <DayList week={week} labels={labels} selected={selected} today={today} copy={copy} names={names} />
-          <WeekGrid week={week} labels={labels} today={today} copy={copy} names={names} />
+          <DayList week={week} labels={labels} selected={selected} today={today} copy={copy} names={names} trainer={assisted?.ownerId} />
+          <WeekGrid week={week} labels={labels} today={today} copy={copy} names={names} trainer={assisted?.ownerId} />
         </>
       )}
     </div>
