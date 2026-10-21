@@ -7,6 +7,8 @@ select plan(8);
 select tests.create_trainer('trainer_a');
 select tests.create_user('client_e');
 select tests.create_pair('trainer_a', 'client_e');
+-- E starts without the health data consent tests.create_user gives.
+delete from public.consents where user_id = tests.user_id('client_e') and kind = 'pd_health';
 
 -- September 2026 of E (Moscow): an attended session, weight 80 -> 79, a day in the food diary and a day of steps.
 select tests.create_booking(tests.create_session('trainer_a', '2026-09-10 07:00+00'), 'trainer_a', 'client_e', 'attended');
