@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { Suspense } from "react";
+import { BlockedNotice } from "@/components/account/blocked-notice";
 import { DaMark } from "@/components/brand/da-mark";
 import { MiniAppLogin } from "@/components/telegram/mini-app-login";
 import { Button } from "@/components/ui/button";
 import { clientEnv } from "@/env/client";
 import { getDictionary } from "@/i18n/server";
+import { BLOCKED_COOKIE, parseBlockedCookie } from "@/lib/auth/blocked-cookie";
 import { safeNext } from "@/lib/auth/oidc-cookie";
 import { LEGAL_PATH } from "@/lib/legal/documents";
 
@@ -19,14 +22,17 @@ type ErrorKey = (typeof ERROR_KEYS)[number];
 const isErrorKey = (value: unknown): value is ErrorKey => typeof value === "string" && (ERROR_KEYS as readonly string[]).includes(value);
 
 async function LoginAction({ searchParams }: { searchParams: PageProps<"/[lang]/login">["searchParams"] }) {
-  const [t, { error, next }] = await Promise.all([getDictionary(), searchParams]);
+  const [t, { error, next }, jar] = await Promise.all([getDictionary(), searchParams, cookies()]);
   const nextPath = typeof next === "string" ? next : null;
   const href = `/auth/telegram/login${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`;
 
   return (
     // Inside Telegram the OIDC page does not load: the Mini App signs in from initData instead.
     <MiniAppLogin next={safeNext(nextPath, clientEnv.NEXT_PUBLIC_APP_URL)}>
-      {isErrorKey(error) ? (
+      {error === "blocked" ? (
+        // The callback left the admin's reason in a short-lived cookie; without it, the block alone.
+        <BlockedNotice reason={parseBlockedCookie(jar.get(BLOCKED_COOKIE)?.value) ?? null} />
+      ) : isErrorKey(error) ? (
         <p role="alert" className="text-subhead text-danger">
           {t.login.errors[error]}
         </p>

@@ -280,7 +280,7 @@ If you use DaFit as a trainer for business purposes, you will compensate us for 
 
 22.2. **Statement of reasons.** When we restrict your content or account, we tell you through the bot or in the app what we did, the facts and the rule behind it, whether the decision was automated (today all are made by people), and how you can appeal. We may skip this only where the law forbids telling you or where the content is spam sent in bulk.
 
-> Team: not in the product yet, see product-changes. The admin log records bans and report decisions, but the app does not yet send the user a statement of reasons.
+> Team: partly in the product. The admin log records bans and report decisions, and a blocked user who tries to sign in sees the reason the admin gave. The app does not send a full statement (facts, rule, how to appeal) through the bot yet.
 
 22.3. **Notice for trainers.** If you are a trainer using DaFit for business purposes and we plan to close your account for good, we give you at least 30 days' notice with reasons, unless the law requires immediate action, you have repeatedly broken these terms, or there is a serious risk to users or the Service.
 

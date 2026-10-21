@@ -11,6 +11,7 @@ const admin = vi.hoisted(() => ({
   upsertError: null as { code: string } | null,
   createError: null as { code: string } | null,
   blockedAt: null as string | null,
+  blockedReason: null as string | null,
 }));
 vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: () => ({
@@ -25,7 +26,7 @@ vi.mock("@/lib/supabase/admin", () => ({
       },
     },
     from: (table: string) => ({
-      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { blocked_at: admin.blockedAt }, error: null }) }) }),
+      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { blocked_at: admin.blockedAt, blocked_reason: admin.blockedReason }, error: null }) }) }),
       upsert: async (row: Record<string, unknown>, options: unknown) => {
         admin.upserts.push({ table, row, options });
         return { error: admin.upsertError };
@@ -53,6 +54,7 @@ beforeEach(() => {
   admin.upsertError = null;
   admin.createError = null;
   admin.blockedAt = null;
+  admin.blockedReason = null;
   verifyOtp.mockClear();
   vi.useFakeTimers({ now: new Date("2026-10-15T09:30:00.000Z"), toFake: ["Date"] });
 });
@@ -101,8 +103,12 @@ describe("signInWithTelegram", () => {
   it("gives a blocked account no session and leaves its profile as it is (ADM-7)", async () => {
     admin.createError = { code: "email_exists" };
     admin.blockedAt = "2026-10-15T09:00:00.000Z";
+    admin.blockedReason = "  Spam in reviews ";
 
-    await expect(signInWithTelegram(identity)).rejects.toBeInstanceOf(AccountBlockedError);
+    const error = await signInWithTelegram(identity).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(AccountBlockedError);
+    // The admin's reason travels with the error, for the person it is about.
+    expect((error as { reason: string | null }).reason).toBe("Spam in reviews");
     expect(admin.upserts).toEqual([]);
     expect(verifyOtp).not.toHaveBeenCalled();
   });

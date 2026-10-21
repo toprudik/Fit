@@ -20,6 +20,7 @@ This policy explains which cookies and similar storage the Service uses in the w
 |---|---|---|---|
 | `sb-<project>-auth-token` (may be split into several parts: `.0`, `.1` …) | Keeps you signed in. Holds your session from our sign-in system (Supabase). Readable only by our server | Up to 400 days, renewed while you use DaFit; removed when you sign out | Strictly necessary |
 | `fit_tg_oidc` | Holds a one-time security code while you sign in with Telegram on the website, so the sign-in cannot be hijacked. Readable only by our server, used only on the sign-in pages | 10 minutes | Strictly necessary |
+| `fit_blocked` | If your account is blocked, carries the reason the admin gave to the sign-in page so we can show it to you. Readable only by our server, used only on the sign-in page | 10 minutes | Strictly necessary |
 | `dafit-locale` | Remembers the language you chose (Russian or English) | 1 year | Functional (your preference) |
 | `dafit-theme` | Remembers the theme you chose (light, dark or system), so the page does not flash the wrong colours while loading | 1 year | Functional (your preference) |
 | `dafit-zone` | Remembers whether you last used DaFit as a trainer or as a client, so the app opens there | 1 year | Functional |

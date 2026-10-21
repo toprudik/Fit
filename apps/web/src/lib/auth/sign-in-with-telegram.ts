@@ -11,22 +11,25 @@ import { isTelegramAccount } from "./telegram-account";
  */
 export const telegramEmail = (telegramId: number) => `tg${telegramId}@users.fit.invalid`;
 
-/** An admin blocked this account (ADM-7): it gets no session, whatever Telegram says. */
+/**
+ * An admin blocked this account (ADM-7): it gets no session, whatever Telegram says. `reason` is what the admin
+ * wrote; the blocked person sees it at sign-in (user agreement 15).
+ */
 export class AccountBlockedError extends Error {
-  constructor() {
+  constructor(readonly reason: string | null) {
     super("account blocked");
     this.name = "AccountBlockedError";
   }
 }
 
 /**
- * Whether an admin blocked the account. blocked_at is never granted to users, so this reads it with the
- * secret key; it returns a yes or no and nothing else.
+ * The admin's block of the account, null when there is none. blocked_at and blocked_reason are never granted
+ * to users, so this reads them with the secret key; callers show the reason only to the account itself.
  */
-export async function isAccountBlocked(userId: string): Promise<boolean> {
-  const { data, error } = await createSupabaseAdminClient().from("profiles").select("blocked_at").eq("id", userId).maybeSingle();
+export async function readAccountBlock(userId: string): Promise<{ reason: string | null } | null> {
+  const { data, error } = await createSupabaseAdminClient().from("profiles").select("blocked_at, blocked_reason").eq("id", userId).maybeSingle();
   if (error) throw new Error(`reading the block failed: ${error.code}`);
-  return Boolean(data?.blocked_at);
+  return data?.blocked_at ? { reason: data.blocked_reason?.trim() || null } : null;
 }
 
 /**
@@ -71,7 +74,8 @@ export async function signInWithTelegram(identity: TelegramIdentity): Promise<{ 
   if (!isTelegramAccount(link.data.user.app_metadata, identity.telegramId)) {
     throw new Error("Supabase user does not belong to this Telegram account");
   }
-  if (await isAccountBlocked(userId)) throw new AccountBlockedError();
+  const block = await readAccountBlock(userId);
+  if (block) throw new AccountBlockedError(block.reason);
 
   // Keep profile fresh on every sign-in (names/photo change in Telegram). The first insert also creates
   // the user_settings row (database trigger profiles_create_settings), so nothing else is written here.

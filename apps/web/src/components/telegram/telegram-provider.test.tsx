@@ -3,7 +3,7 @@ import { act, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LOCALE_COOKIE } from "@/i18n/config";
-import { resetMiniAppForTests, signInToMiniApp, useInTelegram, useMiniAppSignIn } from "@/lib/telegram/mini-app";
+import { resetMiniAppForTests, signInToMiniApp, useInTelegram, useMiniAppBlockReason, useMiniAppSignIn } from "@/lib/telegram/mini-app";
 import { THEME_BG } from "@/lib/theme/colors";
 import { resetThemeStoreForTests, setThemePreference } from "@/lib/theme/store";
 import { ThemeSync } from "@/lib/theme/theme-sync";
@@ -114,11 +114,13 @@ function Probe() {
     <>
       <p>{useInTelegram() ? "telegram" : "website"}</p>
       <p>sign-in: {signIn ?? "none"}</p>
+      <p>reason: {useMiniAppBlockReason() ?? "none"}</p>
     </>
   );
 }
 
 const signInStatus = () => screen.getByText(/^sign-in: /).textContent?.replace("sign-in: ", "");
+const blockReason = () => screen.getByText(/^reason: /).textContent?.replace("reason: ", "");
 
 /** As in the root layout: ThemeSync sits next to the provider and starts the theme store first. */
 function renderApp(options: { strict?: boolean } = {}) {
@@ -488,6 +490,19 @@ describe("sign-in", () => {
     await waitFor(() => expect(signInStatus()).toBe("banned"));
     expect(router.refresh).toHaveBeenCalledOnce();
     expect(toast.error).toHaveBeenCalledExactlyOnceWith("Твой аккаунт в DaFit заблокирован.");
+  });
+
+  it("keeps the admin's reason for /login as plain text, and none when the answer has none", async () => {
+    launch();
+    signInResponse({ error: "account_blocked", reason: "  Спам в отзывах  " }, false, 403);
+    renderApp();
+    await waitFor(() => expect(signInStatus()).toBe("banned"));
+    expect(blockReason()).toBe("Спам в отзывах");
+
+    // Another sign-in starts without the old reason; an answer without text keeps none.
+    signInResponse({ error: "account_blocked", reason: { html: "<b>x</b>" } }, false, 403);
+    await act(() => signInToMiniApp());
+    expect(blockReason()).toBe("none");
   });
 
   it("leaves the toast out on /login, which shows the outcome on the page", async () => {
