@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAccount } from "@/components/account/account-store";
 import { PersonAvatar } from "@/components/ui/avatar";
 import { useI18n } from "@/i18n/client";
-import { useInTelegram, useTelegramBackButton } from "@/lib/telegram/mini-app";
+import { useInTelegram, useTelegramBackButton, useTelegramTopControls } from "@/lib/telegram/mini-app";
 import { cn } from "@/lib/utils";
 import { useBack } from "./navigation-tracker";
 import { useOptionalShell } from "./shell-context";
@@ -37,7 +37,7 @@ function BackButton({ onBack, className }: { onBack: () => void; className?: str
   );
 }
 
-function ProfileButton({ onOpen }: { onOpen: () => void }) {
+function ProfileButton({ onOpen, className }: { onOpen: () => void; className?: string }) {
   const { t } = useI18n();
   const account = useAccount();
   const signedIn = account.status === "signed-in";
@@ -47,7 +47,7 @@ function ProfileButton({ onOpen }: { onOpen: () => void }) {
       onClick={onOpen}
       aria-label={t.common.profile}
       // 44px hit area around the 32px avatar, which lines up with the screen padding.
-      className={cn(pressable, "-ml-1.5 size-11 justify-center rounded-full")}
+      className={cn(pressable, "-ml-1.5 size-11 shrink-0 justify-center rounded-full", className)}
     >
       <PersonAvatar
         name={signedIn ? account.name : ""}
@@ -69,6 +69,11 @@ function ProfileButton({ onOpen }: { onOpen: () => void }) {
  * From 768px on there is no bar: the side menu holds the avatar, and the title is a plain `title-1`
  * row on `bg` with the actions.
  *
+ * In the Telegram Mini App at fullscreen Telegram draws «Закрыть» and «⌄ ⋯» over the top of the app.
+ * There the phone bar is that row: the avatar, the title and the subtitle sit between Telegram's
+ * buttons, the title stays put while the page scrolls, and the actions get a row of their own under it.
+ * A subtitle too long for the row is cut with an ellipsis.
+ *
  * Render it as the first child of the screen's column: the bar sticks only within its parent.
  */
 export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderProps) {
@@ -78,6 +83,7 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
   // In the Mini App, Telegram's own BackButton replaces ours (screens.md §1.5).
   useTelegramBackButton(back ? goBack : null);
   const showBack = back !== undefined && !inTelegram;
+  const underTelegramButtons = useTelegramTopControls();
 
   const titleEdgeRef = useRef<HTMLSpanElement>(null);
   const [titleHidden, setTitleHidden] = useState(false);
@@ -93,6 +99,17 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
     observer.observe(titleEdge);
     return () => observer.disconnect();
   }, []);
+
+  if (underTelegramButtons) {
+    return (
+      <TelegramTopBar
+        title={title}
+        subtitle={subtitle}
+        actions={actions}
+        onOpenProfile={!back && shell ? shell.openProfile : undefined}
+      />
+    );
+  }
 
   const leading = showBack ? <BackButton onBack={goBack} /> : !back && shell ? <ProfileButton onOpen={shell.openProfile} /> : null;
 
@@ -150,6 +167,58 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
           {subtitle ? <div className="mt-0.5 text-subhead text-ink-2">{subtitle}</div> : null}
         </div>
         {actions ? <div className="hidden shrink-0 items-center gap-2 md:flex">{actions}</div> : null}
+      </header>
+    </>
+  );
+}
+
+/*
+ * Room for Telegram's buttons: «Закрыть» ends 111px from the left edge and «⌄ ⋯» starts 88px from
+ * the right (Telegram does not report their size). The row keeps clear of both, so it sits a few
+ * pixels right of center, which leaves the date more room than a centered row would.
+ */
+const TELEGRAM_BUTTONS = { "--tg-buttons-left": "7.25rem", "--tg-buttons-right": "6rem" } as React.CSSProperties;
+
+function TelegramTopBar({
+  title,
+  subtitle,
+  actions,
+  onOpenProfile,
+}: Pick<ScreenHeaderProps, "title" | "subtitle" | "actions"> & { onOpenProfile?: () => void }) {
+  return (
+    <>
+      <div
+        className={cn(
+          "material fixed inset-x-0 top-0 z-[var(--z-header)] md:hidden",
+          "pt-[var(--tg-viewport-safe-area-inset-top,0px)] pr-[calc(var(--safe-right)+var(--tg-buttons-right))] pl-[calc(var(--safe-left)+var(--tg-buttons-left))]",
+        )}
+        style={TELEGRAM_BUTTONS}
+      >
+        <div data-slot="telegram-top-bar" className="flex h-[var(--tg-viewport-content-safe-area-inset-top)] items-center justify-center">
+          <div className="flex min-w-0 items-center gap-1.5">
+            {onOpenProfile ? <ProfileButton onOpen={onOpenProfile} className="ml-0" /> : null}
+            <div className={cn("min-w-0", !onOpenProfile && "text-center")}>
+              <h1 className="truncate text-headline">{title}</h1>
+              {subtitle ? <div className="truncate text-footnote text-ink-2">{subtitle}</div> : null}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div aria-hidden className="h-[var(--safe-top)] md:hidden" />
+      {/* From 768px the header is the usual title row; on a phone only the actions stay here. */}
+      <header
+        data-slot="screen-title"
+        className={cn(
+          "flex items-center justify-between gap-4 md:pt-6 md:pb-6",
+          actions ? "max-md:material max-md:-mx-4 max-md:justify-end max-md:px-4 max-md:pb-1.5" : "max-md:hidden",
+        )}
+      >
+        <div className="min-w-0 max-md:hidden">
+          <h1 className="text-title-1 text-balance break-words hyphens-auto">{title}</h1>
+          {subtitle ? <div className="mt-0.5 text-subhead text-ink-2">{subtitle}</div> : null}
+        </div>
+        {actions ? <div className="-mr-2.5 flex shrink-0 items-center gap-1 md:mr-0 md:gap-2">{actions}</div> : null}
       </header>
     </>
   );

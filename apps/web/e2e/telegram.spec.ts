@@ -187,6 +187,44 @@ test.describe("Telegram's buttons", () => {
     await expect.poll(() => pathname(page)).toBe("/trainer/clients");
     await expect.poll(() => lastPosted(page, "web_app_trigger_haptic_feedback")).toEqual({ type: "impact", impact_style: "light" });
   });
+
+  test("fullscreen: the avatar and the title sit between Telegram's buttons", async ({ page }, testInfo) => {
+    test.skip(!isPhone(testInfo), "Fullscreen is the phone's");
+    const errors = collectErrors(page);
+    await openInTelegram(page, "/client");
+    await expectMiniAppReady(page);
+    // A notched phone: the status bar, then the row with «Закрыть» and «⌄ ⋯». The viewport asks for
+    // the insets one after another and takes each answer only after asking.
+    const answer = async (request: string, event: string, data: Record<string, unknown>) => {
+      await expect.poll(async () => (await posted(page)).some(([type]) => type === request)).toBe(true);
+      await receive(page, event, data);
+    };
+    await answer("web_app_request_safe_area", "safe_area_changed", { top: 59, bottom: 34, left: 0, right: 0 });
+    await answer("web_app_request_content_safe_area", "content_safe_area_changed", { top: 46, bottom: 0, left: 0, right: 0 });
+    await answer("web_app_request_viewport", "viewport_changed", { height: 844, width: 390, is_expanded: true, is_state_stable: true });
+
+    const title = page.getByRole("heading", { level: 1, name: "Главная" });
+    await expect(title).toBeVisible();
+    const avatar = page.getByRole("button", { name: "Профиль", exact: true });
+    const width = page.viewportSize()?.width ?? 0;
+    for (const box of [await title.boundingBox(), await avatar.boundingBox()]) {
+      expect(box).not.toBeNull();
+      if (!box) continue;
+      // Inside Telegram's row, clear of its buttons on both sides.
+      expect(box.y).toBeGreaterThanOrEqual(59);
+      expect(box.y + box.height).toBeLessThanOrEqual(59 + 46);
+      expect(box.x).toBeGreaterThanOrEqual(116);
+      expect(box.x + box.width).toBeLessThanOrEqual(width - 96);
+    }
+    // The date stays, under the title in the same row; nothing else sits between the row and the content.
+    await expect(page.locator('[data-slot="telegram-top-bar"]')).toContainText(/\d/);
+    await expect(page.locator('[data-slot="screen-title"]')).toBeHidden();
+
+    // Scrolling keeps the row as it is.
+    await page.mouse.wheel(0, 600);
+    await expect(title).toBeVisible();
+    expect(errors()).toEqual([]);
+  });
 });
 
 test.describe("sign-in inside Telegram", () => {
