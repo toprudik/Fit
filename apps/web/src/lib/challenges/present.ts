@@ -3,6 +3,11 @@ import type { Dictionary } from "@/i18n/dictionaries";
 import { interpolate, plural } from "@/i18n/format";
 import type { ChallengeMetric } from "./challenges";
 
+/** The trainer's page of a challenge: inside its group, or /trainer/challenges for one for all clients. */
+export function trainerChallengePath(groupId: string | null, challengeId: string): string {
+  return groupId ? `/trainer/groups/${groupId}/challenges/${challengeId}` : `/trainer/challenges/${challengeId}`;
+}
+
 /** "19 октября" / "October 19" from a "YYYY-MM-DD" day. */
 export function challengeDay(locale: Locale, day: string): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${day}T00:00:00Z`));
