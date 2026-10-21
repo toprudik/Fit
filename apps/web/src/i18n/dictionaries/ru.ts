@@ -1964,6 +1964,17 @@ export const ru = {
     },
   },
   /** Goal and nutrition target (wave-2 §1–2; screens.md /client/diary/food/target, the trainer's «Питание» tab). */
+  /** «Карточки для сторис» of a trainer (marketing backlog 5): their month in numbers and the showcase with a QR. */
+  trainerStories: {
+    header: "Карточки для сторис",
+    footer: "На карточке месяца только число занятий и клиентов, без денег и имён.",
+    month: "Мой месяц в DaFit: {month}",
+    showcase: "Витрина с QR-кодом",
+    make: "Сделать",
+    emptyMonth: "В том месяце не было проведённых занятий.",
+    closedShowcase: "Витрина закрыта, карточку сделать нельзя.",
+    failed: "Не получилось сделать карточку, попробуй ещё раз.",
+  },
   /** "Итоги месяца": the client's finished month and its story cards (PRD wave-3 §4), /client/progress/reports/[month]. */
   monthlyReport: {
     title: "Итоги месяца",
@@ -2068,6 +2079,16 @@ export const ru = {
         other: "дня подряд с нормой шагов",
       } as PluralForms,
       badges: { one: "новый значок", few: "новых значка", many: "новых значков", other: "новых значка" } as PluralForms,
+      trainerMonth: {
+        one: "проведённое занятие за месяц",
+        few: "проведённых занятия за месяц",
+        many: "проведённых занятий за месяц",
+        other: "проведённого занятия за месяц",
+      } as PluralForms,
+      trainerClients: "Клиентов на занятиях: {n}",
+      trainerMilestones: "Дошли до 10, 25, 50 или 100 занятий: {n}",
+      trainerShowcase: "Тренер в DaFit",
+      trainerTrial: "Пробное занятие по ссылке",
       weight: "вес за месяц",
       showcase: "Витрина тренера",
     },
@@ -4429,9 +4450,9 @@ export const ru = {
     title: "Пригласить тренера",
     moreText: "Бонус за коллег, которые придут по твоей ссылке",
     lead: "Отправь ссылку знакомому тренеру. Зона «Тренер» откроется сразу, без инвайта от админа, на бесплатном тарифе до 3 клиентов.",
-    bonusMonth: "Твой бонус: месяц Pro, когда приглашённый тренер купит тариф.",
+    bonusMonth: "Твой бонус: месяц Pro после беты, когда приглашённый тренер 4 недели подряд проводит от 3 занятий в неделю.",
     bonusDiscount: "Твой бонус: скидка {percent}% на тариф, когда приглашённый тренер купит свой.",
-    betaNote: "В бете тарифы не продаются, поэтому бонусы пока копятся и ждут.",
+    betaNote: "В бете Pro и так открыт всем, поэтому бонусный месяц начнётся после беты. Скидка на тариф дождётся, когда тарифы появятся в продаже.",
     code: "Код для ввода вручную: {code}",
     shareText: "Зову тебя в DaFit: клиенты, расписание и абонементы в одном месте",
     countsHeader: "Твои приглашения",

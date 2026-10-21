@@ -4451,6 +4451,9 @@ isOneToOne: false
               "delegation_id": string,"token": string
             }[]
                            },
+"create_trainer_story_card":
+{ Args: { "p_kind": string,"p_month"?: string }; Returns: string
+                           },
 "decide_booking":
 { Args: { "p_accept": boolean,"p_booking_id": string,"p_reason"?: string,"p_single"?: boolean,"p_single_title"?: string }; Returns: Database["public"]['Enums']["booking_status"]
                            },
