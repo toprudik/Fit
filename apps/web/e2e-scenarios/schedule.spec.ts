@@ -118,6 +118,7 @@ test.describe("week template and slots", () => {
     await tap(page.getByRole("button", { name: "Сохранить шаблон" }));
     await expect(page.getByText("Шаблон сохранён, новых слотов: 2")).toBeVisible();
     await expect(page.getByText("Есть несохранённые изменения")).toHaveCount(0);
+    await expect(page.getByRole("status").filter({ hasText: "Все изменения сохранены" })).toBeVisible();
     expect(await openSlots(trainer)).toHaveLength(2);
 
     await gotoReady(page, "/trainer/schedule/slots");

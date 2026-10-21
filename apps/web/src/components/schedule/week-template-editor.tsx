@@ -196,6 +196,8 @@ export function WeekTemplateEditor({
   const [draft, setDraft] = useState<TemplateWindow | null>(null);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  // Stays under the button after a save, so the trainer sees it went through even when the toast is missed (QA T17).
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const placeName = new Map(locations.map((location) => [location.id, location.name]));
@@ -203,6 +205,7 @@ export function WeekTemplateEditor({
   const edit = (next: () => void) => {
     next();
     setDirty(true);
+    setSaved(false);
     setError(null);
   };
 
@@ -227,6 +230,7 @@ export function WeekTemplateEditor({
       const result = await saveWeekTemplate({ windows: toSave, horizonWeeks, bufferMin });
       if (result.status === "done") {
         setDirty(false);
+        setSaved(true);
         toast.success(toSave.length === 0 ? copy.savedEmpty : interpolate(copy.saved, { count: result.slots }));
       } else {
         setError(result.status === "overlap" ? copy.overlap : result.status === "invalid" ? copy.windowInvalid : copy.failed);
@@ -330,6 +334,10 @@ export function WeekTemplateEditor({
           </p>
         ) : dirty ? (
           <p className="px-1 text-footnote text-ink-2">{copy.unsaved}</p>
+        ) : saved ? (
+          <p role="status" className="px-1 text-footnote text-ink-2">
+            {copy.allSaved}
+          </p>
         ) : null}
         <Button type="button" size="lg" block loading={pending} onClick={save}>
           {copy.save}
