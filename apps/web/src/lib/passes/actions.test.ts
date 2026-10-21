@@ -563,6 +563,14 @@ describe("reportPayment", () => {
     db.answers.payments = { error: UNKNOWN };
     expect(await actions.reportPayment(input)).toEqual({ status: "failed" });
   });
+
+  it("says a report already waits when the database refuses a second one (QA B1)", async () => {
+    db.userId = "client-1";
+    db.answers.passes = { data: { coaching_id: PAIR, trainer_id: "trainer-1", currency: "RUB" } };
+    db.answers.payments = { error: { code: "P0001", message: "payment_already_reported" } };
+    expect(await actions.reportPayment(input)).toEqual({ status: "already" });
+    expect(next.refresh).not.toHaveBeenCalled();
+  });
 });
 
 describe("withdrawReport", () => {

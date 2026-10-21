@@ -55,3 +55,24 @@ export function serverEnv(): ServerEnv {
   cached = parsed.data;
   return cached;
 }
+
+const legalSchema = z.object({
+  LEGAL_OPERATOR_NAME: optional(z.string().trim().min(3).max(200)),
+  LEGAL_OPERATOR_ADDRESS: optional(z.string().trim().min(5).max(300)),
+  LEGAL_CONTACT_EMAIL: optional(z.string().trim().email()),
+});
+
+export type LegalOperatorEnv = z.infer<typeof legalSchema>;
+
+/**
+ * The operator's details for the legal texts. Kept out of the repository (it is public) and out of serverEnv(), so
+ * the documents can be built without the other secrets. Unset values leave the placeholder in the text.
+ */
+export function legalOperatorEnv(): LegalOperatorEnv {
+  const parsed = legalSchema.safeParse(process.env);
+  if (!parsed.success) {
+    const names = [...new Set(parsed.error.issues.map((i) => i.path.join(".")))];
+    throw new Error(`Invalid server environment: ${names.join(", ")}. See .env.example.`);
+  }
+  return parsed.data;
+}

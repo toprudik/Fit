@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moneyDetails } from "./money-changes-present";
+import { moneyDetails, moneyLabel } from "./money-changes-present";
 
 const ZONE = "Europe/Moscow";
 
@@ -30,5 +30,14 @@ describe("moneyDetails", () => {
   it("says nothing more about a new pass or a freeze", () => {
     expect(moneyDetails("pass_created", null, { title: "Пакет", note: "x", expires_at: "2026-11-20T21:00:00Z" }, ZONE)).toEqual([]);
     expect(moneyDetails("freeze_added", null, { period: "[2026-11-01,2026-11-05)" }, ZONE)).toEqual([]);
+  });
+});
+
+describe("moneyLabel", () => {
+  it("calls a client's waiting report a report, not an added payment (QA B11)", () => {
+    expect(moneyLabel("payment_created", { status: "reported", amount_minor: 500000 })).toBe("payment_reported");
+    expect(moneyLabel("payment_created", { status: "confirmed" })).toBe("payment_created");
+    expect(moneyLabel("payment_confirmed", { status: "confirmed" })).toBe("payment_confirmed");
+    expect(moneyLabel("pass_created", null)).toBe("pass_created");
   });
 });

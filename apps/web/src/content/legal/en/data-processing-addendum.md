@@ -1,8 +1,8 @@
 # DaFit Data Processing Addendum for Trainers
 
-> **Draft of 18 October 2026. Do not publish without review by a qualified lawyer in each target jurisdiction.** Prepared from the DaFit codebase and laws in force in October 2026. Points for the lawyer are marked "Counsel:".
+> Edition for the DaFit closed beta. A lawyer will still review it; if the text changes, we will tell you in the bot.
 
-Effective date: [EFFECTIVE DATE]
+Effective date: 24 November 2026
 
 This Data Processing Addendum ("DPA") forms part of the agreement between [OPERATOR FULL NAME], an individual, at [ADDRESS] ("DaFit", "we", "us") and each trainer who uses the Service ("Trainer", "you") under the [Terms of Service](terms-of-service.md). It applies from the moment you add data covered by section 2.
 

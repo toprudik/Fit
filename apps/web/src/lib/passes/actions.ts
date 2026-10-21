@@ -304,8 +304,11 @@ export async function voidPayment(input: VoidInput): Promise<MoneyResult> {
   return { status: "done" };
 }
 
-/** "Я оплатил": the client tells the trainer; the balance moves only when the trainer confirms. */
-export async function reportPayment(input: ReportInput): Promise<MoneyResult> {
+/**
+ * "Я оплатил": the client tells the trainer; the balance moves only when the trainer confirms. While one report on the
+ * pass waits, the database refuses another (QA B1): "already" asks the client to wait or withdraw the first one.
+ */
+export async function reportPayment(input: ReportInput): Promise<MoneyResult | { status: "already" }> {
   const parsed = reportInput.safeParse(input);
   if (!parsed.success) return { status: "invalid", fields: invalidFields(parsed.error) };
   const { passId, payment, note } = parsed.data;
@@ -333,6 +336,7 @@ export async function reportPayment(input: ReportInput): Promise<MoneyResult> {
     status: "reported",
     note,
   });
+  if (error?.code === "P0001" && error.message === "payment_already_reported") return { status: "already" };
   if (error) return failed("reporting a payment", error);
   refresh();
   return { status: "done" };

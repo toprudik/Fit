@@ -8,6 +8,13 @@ import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
 import { announceDocumentsUpdate, type AnnounceDocumentsResult } from "@/lib/admin/documents-actions";
 
+/** The device's date `offset` days from today, as YYYY-MM-DD for a date input. */
+function localDay(offset: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + offset);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 /**
  * «Объявить новые редакции документов» (право 15): the day the new versions take effect, then a confirmation, since the
  * bot writes to everyone with an account and a sent message can't be taken back.
@@ -57,6 +64,11 @@ export function DocumentsAnnounce() {
         event.preventDefault();
         if (!day) {
           setError(copy.invalidDate);
+          return;
+        }
+        // The server checks the day against Moscow too; this catches today and past days before the confirmation.
+        if (day < localDay(1)) {
+          setError(copy.notAhead);
           return;
         }
         setError(undefined);
