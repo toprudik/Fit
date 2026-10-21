@@ -5730,6 +5730,9 @@ export const ru = {
     open: "Открыть DaFit",
     /** AUTH-7: the test message after the user allows the bot to write. */
     botTest: "Готово, теперь DaFit может писать тебе здесь. В этот чат придут напоминания о занятиях и другие уведомления.",
+    /** Право 15: a new edition of the documents takes effect on {date}. */
+    documentsUpdate: "С {date} в DaFit действуют новые редакции документов. Прочитай заранее, что меняется. В этот день приложение попросит их принять. Если ты не согласен, можно скачать свои данные или удалить аккаунт.",
+    openDocuments: "Документы",
     /** Т7: someone became the trainer's client by link or code. */
     newClient: "Новый клиент: {name}",
     /** Marketing 16: a trainer the user invited became a trainer by the user's link. */
