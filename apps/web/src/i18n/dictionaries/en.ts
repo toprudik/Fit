@@ -486,6 +486,7 @@ export const en: Dictionary = {
         title: "Account and privacy",
         items: [
           { q: "How do I sign in to DaFit?", a: "With Telegram, no password or email needed. Inside Telegram you are signed in automatically, and on the website tap “Sign in with Telegram”. Your DaFit account is tied to your Telegram account." },
+          { q: "Where are “More” and “Trainers” in Telegram on my phone?", a: "When DaFit fills the whole phone screen in Telegram, the last tab at the bottom is called “Profile” and shows your photo. For a trainer it holds everything from “More”, and for a client it starts with their trainers, as in the “Trainers” tab. So when an answer says “More” or “Trainers”, open “Profile” on your phone. In the browser and on a computer the tabs stay the same." },
           { q: "Which consents does DaFit ask for?", a: "On your first sign-in DaFit asks you to accept the beta terms and documents, agree to the processing of your personal data and tick “I am 18 or older”: DaFit is for adults only. Consent to health data is separate and covers the health questionnaire, measurements, photos, nutrition, steps and sleep. You can give it right away or tap “Not now”: the schedule and passes work without it, and the health sections ask for it when you open them." },
           { q: "How do I withdraw my health data consent?", a: "In “Settings” open “Consents”: it shows which consents you gave and when. Tap “Withdraw consent” next to health data. Trainers stop seeing it right away, and in 30 days DaFit deletes your questionnaire, measurements, photos, nutrition, sleep, steps and workouts. Until then you can download it under “Data export”, and if you give consent again, nothing is deleted. The schedule and passes keep working. The required consents can only be withdrawn together with your account." },
           { q: "Where is my information stored and who sees it?", a: "On servers in the USA, as the beta terms say. A trainer sees only what the client opened to them. DaFit admins don't see nutrition, measurements or photos, except through emergency access, which is written to a log." },
@@ -1959,6 +1960,17 @@ export const en: Dictionary = {
     },
   },
   /** Goal and nutrition target (wave-2 §1–2; screens.md /client/diary/food/target, the trainer's «Питание» tab). */
+  /** «Карточки для сторис» of a trainer (marketing backlog 5): their month in numbers and the showcase with a QR. */
+  trainerStories: {
+    header: "Story cards",
+    footer: "The month card shows only the number of sessions and clients, no money and no names.",
+    month: "My month on DaFit: {month}",
+    showcase: "Showcase with a QR code",
+    make: "Make",
+    emptyMonth: "No sessions were held that month.",
+    closedShowcase: "Your showcase is closed, so there is no card for it.",
+    failed: "Couldn't make the card. Try again.",
+  },
   /** "Month in review": the client's finished month and its story cards (PRD wave-3 §4), /client/progress/reports/[month]. */
   monthlyReport: {
     title: "Month in review",
@@ -2047,7 +2059,17 @@ export const en: Dictionary = {
       streakDiary: { one: "day of food diary in a row", few: "days of food diary in a row", many: "days of food diary in a row", other: "days of food diary in a row" },
       streakSteps: { one: "day of step goal in a row", few: "days of step goal in a row", many: "days of step goal in a row", other: "days of step goal in a row" },
       badges: { one: "new badge", few: "new badges", many: "new badges", other: "new badges" },
+      trainerMonth: { one: "session held this month", few: "sessions held this month", many: "sessions held this month", other: "sessions held this month" },
+      trainerClients: "Clients at sessions: {n}",
+      trainerMilestones: "Reached 10, 25, 50 or 100 sessions: {n}",
+      trainerShowcase: "Trainer on DaFit",
+      trainerTrial: "Trial session via the link",
       weight: "weight this month",
+      milestoneTop: "New milestone",
+      milestone: { one: "session together", few: "sessions together", many: "sessions together", other: "sessions together" },
+      badgeTop: "New badge",
+      badgeHeld: { one: "badge collected", few: "badges collected", many: "badges collected", other: "badges collected" },
+      momentText: "My progress on DaFit",
       showcase: "Trainer showcase",
     },
   },
@@ -2334,7 +2356,7 @@ export const en: Dictionary = {
   publicData: {
     title: "Consent to publish",
     showcaseText: "Anyone with the link can see your showcase, even without signing in to DaFit. Choose what it shows.",
-    storyText: "Anyone with the link can open the card for 30 days, without signing in to DaFit. It shows only what you pick in your monthly summary, and not your name.",
+    storyText: "Anyone with the link can open the card for 30 days, without signing in to DaFit. It shows only what you choose to share from your monthly summary, a milestone or a badge, and never your name.",
     fieldsLabel: "What the showcase shows",
     fields: {
       photo: "Photo",
@@ -4404,9 +4426,9 @@ export const en: Dictionary = {
     title: "Invite a trainer",
     moreText: "A bonus for colleagues who join by your link",
     lead: "Send the link to a trainer you know. The trainer zone opens right away, with no invite from an admin, on the free plan with up to 3 clients.",
-    bonusMonth: "Your bonus: a month of Pro once the invited trainer buys a plan.",
+    bonusMonth: "Your bonus: a month of Pro after the beta, once the invited trainer holds 3 or more sessions a week for 4 weeks in a row.",
     bonusDiscount: "Your bonus: {percent}% off a plan once the invited trainer buys one.",
-    betaNote: "Plans are not on sale during the beta, so bonuses are on hold for now.",
+    betaNote: "Everyone has Pro during the beta, so the bonus month starts after it. A plan discount waits until plans go on sale.",
     code: "Code to type in: {code}",
     shareText: "Join me on DaFit: clients, schedule and passes in one place",
     countsHeader: "Your invitations",

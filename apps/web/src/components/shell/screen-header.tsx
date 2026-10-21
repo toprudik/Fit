@@ -1,7 +1,6 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, User } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 import { useAccount } from "@/components/account/account-store";
 import { PersonAvatar } from "@/components/ui/avatar";
 import { useI18n } from "@/i18n/client";
@@ -46,8 +45,8 @@ function ProfileButton({ onOpen }: { onOpen: () => void }) {
       type="button"
       onClick={onOpen}
       aria-label={t.common.profile}
-      // 44px hit area around the 32px avatar, which lines up with the screen padding.
-      className={cn(pressable, "-ml-1.5 size-11 justify-center rounded-full")}
+      // 44px hit area around the 32px avatar; the bar's right column pulls it to the screen padding.
+      className={cn(pressable, "size-11 shrink-0 justify-center rounded-full")}
     >
       <PersonAvatar
         name={signedIn ? account.name : ""}
@@ -61,23 +60,29 @@ function ProfileButton({ onOpen }: { onOpen: () => void }) {
   );
 }
 
+/*
+ * Room for Telegram's buttons in the Mini App at fullscreen: «Закрыть» ends 111px from the left edge
+ * and «⌄ ⋯» starts 88px from the right (Telegram does not report their size). The bar keeps clear of
+ * both, so its title sits a few pixels right of center, which leaves the date more room.
+ */
+const TELEGRAM_BUTTONS = { "--tg-buttons-left": "7.25rem", "--tg-buttons-right": "6rem" } as React.CSSProperties;
+
 /**
- * Screen header (docs/design/components/LargeTitle, .df-header). On a phone the whole header (the
- * bar with the avatar on tab roots or "Back" on pushed screens and up to two actions, the large
- * title and the subtitle) sits on one edge-to-edge `material` band. The bar sticks at
- * `size-header` (52px); the large title scrolls under it and comes back as a small centered title.
- * From 768px on there is no bar: the side menu holds the avatar, and the title is a plain `title-1`
- * row on `bg` with the actions.
+ * Screen header (docs/design/components/LargeTitle, .df-header). On a phone it is one bar on an
+ * edge-to-edge `material` band that stays put while the page scrolls: the title and the subtitle in
+ * the middle, "Back" on the left of a pushed screen, the actions and the avatar on the right. A title
+ * or subtitle too long for the bar is cut with an ellipsis. From 768px on there is no bar: the side
+ * menu holds the avatar, and the title is a plain `title-1` row on `bg` with the actions.
  *
- * In the Telegram Mini App at fullscreen Telegram draws «Закрыть» and «⌄ ⋯» over the top of the app.
- * There the phone bar is that row: the title and the subtitle sit between Telegram's buttons and stay
- * put while the page scrolls, and the actions get a row of their own under it. A subtitle too long
- * for the row is cut with an ellipsis. The avatar moves to the tab bar (PROFILE_TAB), and the root of
+ * In the Telegram Mini App at fullscreen Telegram draws «Закрыть» and «⌄ ⋯» over the top of the app,
+ * and the bar is that row: the title and the subtitle sit between Telegram's buttons, and the actions
+ * get a row of their own under it. The avatar moves to the tab bar (PROFILE_TAB), and the root of
  * that tab is titled «Профиль» and starts with a row that opens the profile sheet.
  *
- * Render it as the first child of the screen's column: the bar sticks only within its parent.
+ * Render it as the first child of the screen's column.
  */
 export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderProps) {
+  const { t } = useI18n();
   const shell = useOptionalShell();
   const inTelegram = useInTelegram();
   const goBack = useBack(back?.fallbackHref ?? "/");
@@ -86,38 +91,15 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
   const showBack = back !== undefined && !inTelegram;
   const underTelegramButtons = useTelegramTopControls();
 
-  const titleEdgeRef = useRef<HTMLSpanElement>(null);
-  const [titleHidden, setTitleHidden] = useState(false);
-
-  useEffect(() => {
-    const titleEdge = titleEdgeRef.current;
-    if (!titleEdge || typeof IntersectionObserver === "undefined") return;
-    // The marker is positioned in CSS, so the observer needs no root margin: margins are ignored in
-    // cross-origin frames, and Telegram Web runs the Mini App in one.
-    const observer = new IntersectionObserver(([entry]) => {
-      setTitleHidden(!entry.isIntersecting && entry.boundingClientRect.top < 0);
-    });
-    observer.observe(titleEdge);
-    return () => observer.disconnect();
-  }, []);
-
-  if (underTelegramButtons) {
-    return (
-      <TelegramTopBar
-        title={title}
-        subtitle={subtitle}
-        actions={actions}
-        onOpenProfile={!back && shell?.onProfileTab ? shell.openProfile : undefined}
-      />
-    );
-  }
-
-  const leading = showBack ? <BackButton onBack={goBack} /> : !back && shell ? <ProfileButton onOpen={shell.openProfile} /> : null;
+  const onProfileTab = underTelegramButtons && !back && shell?.onProfileTab === true;
+  const barTitle = onProfileTab ? t.common.profile : title;
+  const avatar = !underTelegramButtons && !back && shell ? <ProfileButton onOpen={shell.openProfile} /> : null;
+  // Under Telegram's buttons the actions have no room in the bar and get a row of their own.
+  const actionsRow = underTelegramButtons && Boolean(actions);
 
   return (
     <>
       {/*
-       * 8px above the 44px row make the 52px size-header; the focus ring of its buttons stays on screen.
        * Fixed, not sticky: the page's scroll-padding keeps focused content clear of this bar, and a
        * browser never scrolls to bring a fixed element into view, so focusing the avatar or Back
        * (keyboard, or a tap on Android) leaves the page where it was. The spacer below holds its place.
@@ -125,103 +107,49 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
       <div
         className={cn(
           "material fixed inset-x-0 top-0 z-[var(--z-header)] md:hidden",
-          "pt-[calc(var(--safe-top)+var(--space-2))] pr-[calc(var(--safe-right)+var(--space-4))] pl-[calc(var(--safe-left)+var(--space-4))]",
+          underTelegramButtons
+            ? "pt-[var(--tg-viewport-safe-area-inset-top,0px)] pr-[calc(var(--safe-right)+var(--tg-buttons-right))] pl-[calc(var(--safe-left)+var(--tg-buttons-left))]"
+            : // 8px above the 44px row make the 52px size-header; the focus ring of its buttons stays on screen.
+              "pt-[calc(var(--safe-top)+var(--space-2))] pr-[calc(var(--safe-right)+var(--space-4))] pl-[calc(var(--safe-left)+var(--space-4))]",
         )}
+        style={underTelegramButtons ? TELEGRAM_BUTTONS : undefined}
       >
-        <div className="relative flex min-h-11 items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center">{leading}</div>
-          <p
-            aria-hidden
-            className={cn(
-              "pointer-events-none absolute inset-x-26 truncate text-center text-headline opacity-0",
-              "transition-opacity duration-[var(--duration-fast)] ease-standard motion-reduce:transition-none",
-              titleHidden && "opacity-100",
-            )}
-          >
-            {title}
-          </p>
-          {actions ? <div className="-mr-2.5 flex items-center gap-1">{actions}</div> : null}
-        </div>
-      </div>
-
-      <div aria-hidden className="h-[calc(var(--size-header)+var(--safe-top))] md:hidden" />
-      <header
-        data-slot="screen-title"
-        // On a phone the band goes on under the bar, edge to edge, and ends 12px below the subtitle.
-        className="flex items-center justify-between gap-4 pb-3 max-md:material max-md:-mx-4 max-md:px-4 md:pt-6 md:pb-6"
-      >
-        <div className="min-w-0">
-          {showBack ? <BackButton onBack={goBack} className="mb-2 hidden md:inline-flex" /> : null}
-          {/* At 200% zoom one long word (Расписание, Настройки) wraps, hyphenated where the browser can, instead of overflowing. */}
-          <h1 className="relative text-large-title text-balance break-words hyphens-auto md:text-title-1">
-            {title}
-            {/*
-             * Sits one bar height above the title's bottom edge, so it leaves the viewport exactly when
-             * the title has slid under the bar.
-             */}
-            <span
-              ref={titleEdgeRef}
-              aria-hidden
-              className="absolute top-[calc(100%-var(--size-header)-var(--safe-top))] left-0 h-px w-px"
-            />
-          </h1>
-          {subtitle ? <div className="mt-0.5 text-subhead text-ink-2">{subtitle}</div> : null}
-        </div>
-        {actions ? <div className="hidden shrink-0 items-center gap-2 md:flex">{actions}</div> : null}
-      </header>
-    </>
-  );
-}
-
-/*
- * Room for Telegram's buttons: «Закрыть» ends 111px from the left edge and «⌄ ⋯» starts 88px from
- * the right (Telegram does not report their size). The row keeps clear of both, so it sits a few
- * pixels right of center, which leaves the date more room than a centered row would.
- */
-const TELEGRAM_BUTTONS = { "--tg-buttons-left": "7.25rem", "--tg-buttons-right": "6rem" } as React.CSSProperties;
-
-function TelegramTopBar({
-  title,
-  subtitle,
-  actions,
-  onOpenProfile,
-}: Pick<ScreenHeaderProps, "title" | "subtitle" | "actions"> & {
-  /** Set on the root of the profile tab: the bar says «Профиль» and the profile row opens the sheet. */
-  onOpenProfile?: () => void;
-}) {
-  const { t } = useI18n();
-  const barTitle = onOpenProfile ? t.common.profile : title;
-  const band = Boolean(actions || onOpenProfile);
-  return (
-    <>
-      <div
-        className={cn(
-          "material fixed inset-x-0 top-0 z-[var(--z-header)] md:hidden",
-          "pt-[var(--tg-viewport-safe-area-inset-top,0px)] pr-[calc(var(--safe-right)+var(--tg-buttons-right))] pl-[calc(var(--safe-left)+var(--tg-buttons-left))]",
-        )}
-        style={TELEGRAM_BUTTONS}
-      >
-        <div data-slot="telegram-top-bar" className="flex h-[var(--tg-viewport-content-safe-area-inset-top)] items-center justify-center">
+        <div
+          data-slot="screen-bar"
+          className={cn(
+            // The side columns share what the title leaves, so a short title stays in the middle.
+            "grid grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2",
+            underTelegramButtons ? "h-[var(--tg-viewport-content-safe-area-inset-top)]" : "min-h-11",
+          )}
+        >
+          <div className="flex min-w-0 items-center">{showBack ? <BackButton onBack={goBack} /> : null}</div>
           <div className="min-w-0 text-center">
             <h1 className="truncate text-headline">{barTitle}</h1>
             {subtitle ? <div className="truncate text-footnote text-ink-2">{subtitle}</div> : null}
           </div>
+          <div className="-mr-2.5 flex min-w-0 items-center justify-end gap-1">
+            {underTelegramButtons ? null : actions}
+            {avatar}
+          </div>
         </div>
       </div>
 
-      <div aria-hidden className="h-[var(--safe-top)] md:hidden" />
-      {/* From 768px the header is the usual title row; on a phone only the profile row and the actions stay here. */}
-      {onOpenProfile ? <ProfileRow onOpen={onOpenProfile} /> : null}
+      <div
+        aria-hidden
+        className={cn("md:hidden", underTelegramButtons ? "h-[var(--safe-top)]" : "h-[calc(var(--size-header)+var(--safe-top))]")}
+      />
+      {onProfileTab && shell ? <ProfileRow onOpen={shell.openProfile} /> : null}
+      {/* From 768px the header is the usual title row; on a phone only the actions row under Telegram's buttons stays here. */}
       <header
         data-slot="screen-title"
         className={cn(
           "flex items-center justify-between gap-4 md:pt-6 md:pb-6",
-          band ? "max-md:material max-md:-mx-4 max-md:justify-end max-md:px-4 max-md:pb-1.5" : "max-md:hidden",
-          // The profile row above already ends the band; with no actions there is nothing more for a phone.
-          onOpenProfile && !actions && "max-md:hidden",
+          actionsRow ? "max-md:material max-md:-mx-4 max-md:justify-end max-md:px-4 max-md:pb-1.5" : "max-md:hidden",
         )}
       >
         <div className="min-w-0 max-md:hidden">
+          {showBack ? <BackButton onBack={goBack} className="mb-2" /> : null}
+          {/* At 200% zoom one long word (Расписание, Настройки) wraps, hyphenated where the browser can, instead of overflowing. */}
           <h1 className="text-title-1 text-balance break-words hyphens-auto">{title}</h1>
           {subtitle ? <div className="mt-0.5 text-subhead text-ink-2">{subtitle}</div> : null}
         </div>

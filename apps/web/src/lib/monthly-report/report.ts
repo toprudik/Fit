@@ -120,8 +120,24 @@ export function storyOptions(report: MonthlyReport): StoryOption[] {
   return options;
 }
 
+/** A trainer's cards (marketing backlog 5): the month in numbers and the showcase with its QR. */
+export const TRAINER_STORY_KINDS = ["trainer_month", "trainer_showcase"] as const;
+export type TrainerStoryKind = (typeof TRAINER_STORY_KINDS)[number];
+
+export function isTrainerStoryKind(value: unknown): value is TrainerStoryKind {
+  return (TRAINER_STORY_KINDS as readonly unknown[]).includes(value);
+}
+
+/** Cards of a moment (marketing backlog 4): a pair's milestone or a badge, shared from the list rather than a report. */
+export const MOMENT_KINDS = ["milestone", "badge"] as const;
+export type MomentKind = (typeof MOMENT_KINDS)[number];
+
+export function isMomentKind(value: unknown): value is MomentKind {
+  return (MOMENT_KINDS as readonly unknown[]).includes(value);
+}
+
 const cardSchema = z.object({
-  kind: z.enum(STORY_KINDS),
+  kind: z.enum([...STORY_KINDS, ...TRAINER_STORY_KINDS, ...MOMENT_KINDS]),
   month: z.string().regex(/^\d{4}-\d{2}-01$/),
   data: z.object({
     count: number.optional(),
@@ -129,10 +145,15 @@ const cardSchema = z.object({
     type: z.enum(["max_weight", "max_reps", "max_duration"]).optional(),
     value: number.optional(),
     change: number.optional(),
-    /** The latest badge of the month on the badge card. */
+    /** The latest badge of the month on the badge card, or the shared badge on a moment card. */
     code: z.string().optional(),
     /** The trainer's showcase address for the QR (§4-7): only while the trainer allows it and the showcase is open. */
     slug: z.string().refine(isShowcaseSlug).optional(),
+    /** The trainer's month: clients with a held session and clients who reached a milestone. */
+    clients: number.optional(),
+    milestones: number.optional(),
+    /** The showcase card: «Записаться на пробное» is on. */
+    trial: z.boolean().optional(),
   }),
 });
 
