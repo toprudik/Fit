@@ -3,6 +3,7 @@ import { z } from "zod";
 import { todayIn } from "@/lib/passes/present";
 import type { Milestone } from "@/lib/pairs/milestones";
 import { loadTrainerShares } from "@/lib/sharing/load";
+import { readAllPages, readByIds } from "@/lib/supabase/paging";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { MeasurementKind } from "./measurements";
 
@@ -27,8 +28,6 @@ export type MeasurementEntry = {
 
 export type Measurements = { entries: MeasurementEntry[]; today: string };
 
-const ENTRY_LIMIT = 2000;
-
 type Person = { id: string; first_name: string | null; last_name: string | null; display_name: string | null };
 
 function nameOf(person: Person | undefined): string {
@@ -46,18 +45,24 @@ async function viewer(supabase: Supabase): Promise<{ id: string; timeZone: strin
 
 /** Every measurement of a client the viewer may read (RLS decides), newest first, with its author. */
 async function measurementsOf(supabase: Supabase, clientId: string, me: string): Promise<MeasurementEntry[]> {
-  const { data, error } = await supabase
-    .from("measurements")
-    .select("id, kind, value, measured_at, local_date, entered_by")
-    .eq("client_id", clientId)
-    .order("measured_at", { ascending: false })
-    .limit(ENTRY_LIMIT);
+  // Every entry, page by page: "Всё" on the chart reaches the first one (PostgREST returns 1000 rows at most).
+  const { data, error } = await readAllPages((from, to) =>
+    supabase
+      .from("measurements")
+      .select("id, kind, value, measured_at, local_date, entered_by")
+      .eq("client_id", clientId)
+      .order("measured_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to),
+  );
   if (error) throw new Error(`loading measurements failed: ${error.code}`);
   const others = [...new Set(data.map((row) => row.entered_by).filter((id): id is string => !!id && id !== me && id !== clientId))];
   const people = new Map<string, Person>();
   if (others.length) {
     // A trainer of an ended pair may be hidden from the client; the entry then reads "Тренер" without a name.
-    const { data: rows } = await supabase.from("profiles").select("id, first_name, last_name, display_name").in("id", others);
+    const { data: rows } = await readByIds(others, (chunk) =>
+      supabase.from("profiles").select("id, first_name, last_name, display_name").in("id", chunk),
+    );
     for (const row of rows ?? []) people.set(row.id, row);
   }
   return data.map((row) => ({
