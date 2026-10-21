@@ -8,8 +8,9 @@ import { useI18n } from "@/i18n/client";
 import { DURATION, EASE_STANDARD, prefersReducedMotion } from "@/lib/motion";
 import { activeTab, isTabRoot, isZone, ZONE_COOKIE, type TabId, type Zone } from "@/lib/navigation/zones";
 import { preferenceCookie, saveAccountPreferences } from "@/lib/preferences";
-import { hapticImpact } from "@/lib/telegram/mini-app";
+import { hapticImpact, useTelegramTopControls } from "@/lib/telegram/mini-app";
 import { cn } from "@/lib/utils";
+import { PROFILE_TAB } from "./nav-items";
 import { arrival } from "./navigation-tracker";
 import { ShellContext, type Shell } from "./shell-context";
 import { SideNav } from "./side-nav";
@@ -106,6 +107,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const zone = useShownZone(routeZone);
   const tabId: TabId | null = routeZone ? (activeTab(routeZone, rest)?.id ?? null) : null;
   const atTabRoot = routeZone !== null && isTabRoot(routeZone, rest);
+  // Under Telegram's buttons the header has no room for the avatar, so the profile moves to a tab.
+  const profileTabId = useTelegramTopControls() && routeZone ? PROFILE_TAB[routeZone] : null;
+  const onProfileTab = atTabRoot && profileTabId !== null && tabId === profileTabId;
 
   // The sheet belongs to the screen it was opened over: any navigation closes it, whoever started it.
   const [profileRoute, setProfileRoute] = useState<string | null>(null);
@@ -118,7 +122,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [route]);
   const openProfile = useCallback(() => setProfileRoute(shownRoute.current), []);
   const setProfileOpen = useCallback((open: boolean) => setProfileRoute(open ? shownRoute.current : null), []);
-  const shell = useMemo<Shell>(() => ({ zone, openProfile }), [zone, openProfile]);
+  const shell = useMemo<Shell>(() => ({ zone, openProfile, onProfileTab }), [zone, openProfile, onProfileTab]);
 
   // "/" opens the last zone. The proxy remembers it on page requests, but a client navigation to a
   // prefetched screen may never reach the server, so the shell remembers zone changes too. Not on
@@ -241,7 +245,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div ref={screenRef}>{children}</div>
         </main>
         {/* Settings and the profile page are pushed screens on a phone: no tab bar there. */}
-        {routeZone ? <TabBar zone={routeZone} activeId={tabId} onSelect={selectTab} /> : null}
+        {routeZone ? <TabBar zone={routeZone} activeId={tabId} profileId={profileTabId} onSelect={selectTab} /> : null}
       </div>
       <ProfileSheet open={profileOpen} onOpenChange={setProfileOpen} />
     </ShellContext>

@@ -2993,6 +2993,52 @@ isOneToOne: false
       referencedColumns: ["user_id"]
     }
                   ]
+                },"season_challenge_participants": {
+                  Row: {
+                    "challenge_id": string,"joined_at": string,"result": string | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "challenge_id": string,"joined_at"?: string,"result"?: string | null,"user_id": string
+                  }
+                  Update: {
+                    "challenge_id"?: string,"joined_at"?: string,"result"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "season_challenge_participants_challenge_id_fkey"
+      columns: ["challenge_id"]
+isOneToOne: false
+      referencedRelation: "season_challenges"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "season_challenge_participants_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "season_challenge_participants_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "public_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"season_challenges": {
+                  Row: {
+                    "cancelled_at": string | null,"created_at": string,"created_by": string | null,"finished_at": string | null,"id": string,"month": string,"title": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cancelled_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"finished_at"?: string | null,"id"?: string,"month": string,"title": string
+                  }
+                  Update: {
+                    "cancelled_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"finished_at"?: string | null,"id"?: string,"month"?: string,"title"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"sessions": {
                   Row: {
                     "cancel_reason": string | null,"cancelled_at": string | null,"cancelled_by": string | null,"capacity": number,"completed_at": string | null,"conducted_by": string | null,"created_at": string,"created_by": string | null,"ends_at": string,"id": string,"is_exception": boolean,"kind": Database["public"]['Enums']["session_kind"],"location_id": string | null,"manually_adjusted_at": string | null,"meeting_url": string | null,"mode": Database["public"]['Enums']["session_mode"],"open_for_booking": boolean,"original_starts_at": string | null,"recurrence_id": string | null,"slot_id": string | null,"starts_at": string,"status": Database["public"]['Enums']["session_status"],"title": string | null,"trainer_id": string,"trial_link_id": string | null,"updated_at": string
@@ -4117,6 +4163,12 @@ isOneToOne: false
 "admin_block_user":
 { Args: { "p_reason": string,"p_user_id": string }; Returns: undefined
                            },
+"admin_cancel_season_challenge":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
+"admin_create_season_challenge":
+{ Args: { "p_month": string,"p_title": string }; Returns: string
+                           },
 "admin_create_trainer_invite":
 { Args: { "p_note"?: string,"p_valid_days"?: number }; Returns: {
               "code": string,"expires_at": string,"invite_id": string
@@ -4191,6 +4243,11 @@ isOneToOne: false
 "admin_search_users":
 { Args: { "p_limit"?: number,"p_query"?: string }; Returns: {
               "blocked": boolean,"created_at": string,"first_name": string,"is_admin": boolean,"is_trainer": boolean,"last_name": string,"photo_url": string,"telegram_id": number,"user_id": string,"username": string
+            }[]
+                           },
+"admin_season_challenges":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "cancelled_at": string,"created_at": string,"done": number,"finished_at": string,"id": string,"month": string,"participants": number,"title": string
             }[]
                            },
 "admin_set_trainer_honor":
@@ -4657,6 +4714,11 @@ isOneToOne: false
               "appealed": boolean,"report_id": string,"resolution_note": string,"resolved_at": string,"status": Database["public"]['Enums']["report_status"],"target_id": string,"target_type": Database["public"]['Enums']["report_target"]
             }[]
                            },
+"my_season_challenge":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "ahead": number,"attended": number,"finished": boolean,"id": string,"joined": boolean,"missed": number,"month": string,"result": string,"title": string
+            }[]
+                           },
 "my_session_substitutes":
 { Args: { "p_session_ids": (string)[] }; Returns: {
               "name": string,"session_id": string
@@ -4776,6 +4838,14 @@ isOneToOne: false
 { Args: { "p_code": string }; Returns: {
               "coaching_id": string,"first_name": string,"headline": string,"last_name": string,"photo_url": string,"referee_sessions": number,"referrer_first_name": string,"specialties": (string)[],"status": string,"trainer_id": string,"verified": boolean,"works_offline": boolean,"works_online": boolean
             }[]
+                           },
+"retention_due_files":
+{ Args: { "p_limit": number }; Returns: {
+              "bucket": string,"id": string,"kind": string,"paths": (string)[]
+            }[]
+                           },
+"retention_forget":
+{ Args: { "p_id": string,"p_kind": string }; Returns: boolean
                            },
 "review_eligibility":
 { Args: { "p_coaching_id": string }; Returns: {
@@ -4915,6 +4985,9 @@ isOneToOne: false
                            },
 "set_progress_photo_angle":
 { Args: { "p_angle": Database["public"]['Enums']["photo_angle"],"p_photo_id": string }; Returns: undefined
+                           },
+"set_season_challenge_joined":
+{ Args: { "p_id": string,"p_joined": boolean }; Returns: undefined
                            },
 "set_workout_week_goal":
 { Args: { "p_client": string,"p_per_week": number }; Returns: undefined

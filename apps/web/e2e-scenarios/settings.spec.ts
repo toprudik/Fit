@@ -3,6 +3,7 @@ import { collectErrors, expectAccessible } from "../e2e/support";
 import { expectToast, namedAdmin } from "./support/admin";
 import { expect, test } from "./support/fixtures";
 import { ok } from "./support/personas";
+import { tap } from "./support/schedule";
 
 /** A 1×1 PNG, a valid screenshot for the feedback form. */
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==", "base64");
@@ -73,7 +74,10 @@ test.describe("account settings", () => {
     await page.goto("/settings");
     await page.getByRole("radio", { name: "Русский" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Настройки" })).toBeVisible();
-    await page.getByRole("radio", { name: "Авто" }).click();
+    // The language reloads the page; the theme control remounts once hydrated, with the saved «Светлая».
+    // A tap before that lands on the server's copy and is lost.
+    await expect(page.getByRole("radio", { name: "Светлая" })).toHaveAttribute("aria-checked", "true");
+    await tap(page.getByRole("radio", { name: "Авто" }));
     await expect(page.getByRole("radio", { name: "Авто" })).toHaveAttribute("aria-checked", "true");
     expect(errors()).toEqual([]);
   });
@@ -176,7 +180,7 @@ test.describe("account settings", () => {
     const { page } = client;
     await page.goto("/settings/delete");
     await expect(page.getByRole("heading", { level: 1, name: "Удаление аккаунта" })).toBeVisible();
-    await expect(page.getByText("Тренеры получат сообщение: Иван Тренеров.")).toBeVisible();
+    await expect(page.locator("#main").getByText("Тренеры получат сообщение: Иван Тренеров.")).toBeVisible();
     await expect(page.getByRole("link", { name: "Экспорт данных" })).toHaveAttribute("href", "/settings/export");
     await expectAccessible(page);
 

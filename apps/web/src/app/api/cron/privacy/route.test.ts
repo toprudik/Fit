@@ -15,6 +15,7 @@ const runPrivacyJob = vi.hoisted(() =>
     built: 2,
     failed: 0,
     purged: 3,
+    retained: 4,
   })),
 );
 vi.mock("@/lib/account/job", () => ({ runPrivacyJob }));
@@ -52,7 +53,7 @@ describe("POST /api/cron/privacy", () => {
     const response = await call(`Bearer ${SECRET}`);
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ expired: 1, built: 2, failed: 0, purged: 3 });
+    expect(await response.json()).toEqual({ expired: 1, built: 2, failed: 0, purged: 3, retained: 4 });
     const [client, budget] = runPrivacyJob.mock.calls[0];
     expect(client).toBe(admin);
     // The job stops taking work well before Vercel stops the function.
