@@ -20,7 +20,7 @@ const createInput = z.object({
 });
 
 /**
- * "Создать инвайт" in /admin/invites. The database checks that the caller is an admin and writes the
+ * "Создать приглашение" in /admin/invites. The database checks that the caller is an admin and writes the
  * audit log (admin_create_trainer_invite); a non-admin gets "failed" and no invite.
  */
 export async function createTrainerInvite(_previous: CreateInviteState, formData: FormData): Promise<CreateInviteState> {

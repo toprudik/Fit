@@ -27,7 +27,7 @@ test.describe("account settings", () => {
     await expect(page.getByRole("main").getByRole("link", { name: "Настройки" })).toHaveAttribute("href", "/settings");
     await expect(page.getByRole("main").getByRole("link", { name: "Мой тариф" })).toHaveAttribute("href", "/settings/plan");
     await expect(page.getByRole("main").getByRole("link", { name: "Обратная связь" })).toHaveAttribute("href", /\/feedback/);
-    await expect(page.getByRole("main").getByRole("link", { name: "У меня есть инвайт тренера" })).toHaveAttribute("href", "/onboarding/trainer");
+    await expect(page.getByRole("main").getByRole("link", { name: "Я тренер, у меня есть код приглашения" })).toHaveAttribute("href", "/onboarding/trainer");
     await expect(page.getByRole("main").getByRole("link", { name: "Админка" })).toHaveCount(0);
     await expectAccessible(page);
     await page.getByRole("main").getByRole("link", { name: "Настройки" }).click();

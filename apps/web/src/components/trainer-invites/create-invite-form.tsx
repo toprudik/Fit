@@ -102,7 +102,7 @@ function Form({ onDone }: { onDone: () => void }) {
   );
 }
 
-/** "Новый инвайт" in /admin/invites. "Готово" starts a fresh form, so the code disappears from the screen. */
+/** "Новое приглашение" in /admin/invites. "Готово" starts a fresh form, so the code disappears from the screen. */
 export function CreateInviteForm() {
   const [round, setRound] = useState(0);
   return <Form key={round} onDone={() => setRound((value) => value + 1)} />;

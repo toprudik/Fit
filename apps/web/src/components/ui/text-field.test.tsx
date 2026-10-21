@@ -6,8 +6,8 @@ import { renderWithProviders } from "@/test/render";
 
 describe("TextField", () => {
   it("names the input by its visible label and describes it with the hint", () => {
-    renderWithProviders(<TextField label="Код инвайта" hint="12 букв и цифр" name="code" />);
-    const input = screen.getByRole("textbox", { name: "Код инвайта" });
+    renderWithProviders(<TextField label="Код приглашения" hint="12 букв и цифр" name="code" />);
+    const input = screen.getByRole("textbox", { name: "Код приглашения" });
     expect(input.getAttribute("name")).toBe("code");
     expect(input.getAttribute("aria-invalid")).toBeNull();
     expect(document.getElementById(input.getAttribute("aria-describedby") ?? "")?.textContent).toBe("12 букв и цифр");

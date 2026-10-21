@@ -43,7 +43,7 @@ async function Settings() {
   );
 }
 
-/** "Учёт открытий": anyone can switch off the first-party app-opening count (legal item Б12, app_opens). */
+/** "Статистика открытий": anyone can switch off the first-party app-opening count (legal item Б12, app_opens). */
 export default async function AppOpensPage() {
   const t = await getDictionary();
   return (

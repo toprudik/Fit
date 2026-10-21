@@ -93,14 +93,14 @@ const SCREENS: readonly Screen[] = [
   { slug: "settings-plan", path: "/settings/plan", title: "Мой тариф" },
   { slug: "settings-notifications", path: "/settings/notifications", title: "Уведомления" },
   { slug: "settings-calendar", path: "/settings/calendar", title: "Календарь" },
-  { slug: "settings-app-opens", path: "/settings/app-opens", title: "Учёт открытий" },
+  { slug: "settings-app-opens", path: "/settings/app-opens", title: "Статистика открытий" },
   { slug: "settings-licenses", path: "/settings/licenses", title: "Лицензии" },
   { slug: "settings-export", path: "/settings/export", title: "Экспорт данных" },
   { slug: "settings-delete", path: "/settings/delete", title: "Удаление аккаунта" },
   { slug: "profile", path: "/profile", title: "Профиль" },
   { slug: "feedback", path: "/feedback?from=%2Fclient", title: "Обратная связь" },
   { slug: "login", path: "/login", title: "Вход" },
-  { slug: "trainer-invite", path: "/onboarding/trainer?code=ABCD-EFGH-JKLM", title: "Инвайт тренера" },
+  { slug: "trainer-invite", path: "/onboarding/trainer?code=ABCD-EFGH-JKLM", title: "Приглашение тренера" },
   { slug: "beta-terms", path: "/onboarding/consent?next=%2Fclient", title: "Закрытая бета DaFit" },
   { slug: "onboarding-preferences", path: "/onboarding/preferences?next=%2Fclient", title: "Язык и тема" },
   { slug: "trainer-wizard", path: "/onboarding/trainer/format", title: "Чем ты занимаешься", documentTitle: false },
@@ -278,7 +278,7 @@ test.describe("trainer invite", () => {
   test("signed out, the profile offers no trainer invite and no admin section", async ({ page }) => {
     await page.goto("/profile");
     await expect(page.getByRole("link", { name: "Войти через Telegram" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "У меня есть инвайт тренера" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Я тренер, у меня есть код приглашения" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Админка" })).toHaveCount(0);
   });
 });
@@ -583,6 +583,16 @@ test.describe("focus and the bars", () => {
     const back = await page.getByRole("button", { name: "Назад" }).boundingBox();
     expect(back && back.x + back.width).toBeLessThan(width / 2);
     await expect(page.getByRole("button", { name: "Профиль", exact: true })).toHaveCount(0);
+
+    // A long title gives way to Back: it is cut, never drawn under the button.
+    await page.goto("/trainer/clients/new", { waitUntil: "networkidle" });
+    const backButton = await page.getByRole("button", { name: "Назад" }).boundingBox();
+    const longTitle = await page.getByRole("heading", { level: 1, name: "Добавить клиента вручную" }).first().boundingBox();
+    expect(backButton && longTitle).toBeTruthy();
+    if (backButton && longTitle) {
+      expect(backButton.x + backButton.width).toBeLessThanOrEqual(longTitle.x);
+      expect(longTitle.x + longTitle.width).toBeLessThanOrEqual(width);
+    }
   });
 
   test("focusing the header bar's own buttons doesn't scroll the page", async ({ page }) => {
