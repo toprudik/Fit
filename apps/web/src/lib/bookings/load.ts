@@ -470,3 +470,24 @@ export async function loadWaitlistEntry(owner: ScheduleOwner, entryId: string): 
     insideDeadline: Boolean(row.inside_deadline),
   };
 }
+
+/**
+ * The client's places in queues, offered or waiting, with offers first and then the soonest session (QA U1): the home
+ * screen lists them, so a missed bot message does not lose the place.
+ */
+export async function loadClientWaitlist(owner: ScheduleOwner, now: Date): Promise<WaitlistEntryView[]> {
+  const { data, error } = await owner.supabase
+    .from("waitlist_entries")
+    .select("id")
+    .eq("client_id", owner.userId)
+    .in("status", ["waiting", "offered"]);
+  if (error) fail("waitlist", error);
+  const entries = await Promise.all(data.map((row) => loadWaitlistEntry(owner, row.id)));
+  const live = (entry: WaitlistEntryView | null): entry is WaitlistEntryView =>
+    entry !== null &&
+    Date.parse(entry.session.startsAt) > now.getTime() &&
+    (entry.status === "waiting" || (entry.status === "offered" && entry.offerExpiresAt !== null && Date.parse(entry.offerExpiresAt) > now.getTime()));
+  return entries
+    .filter(live)
+    .sort((a, b) => Number(b.status === "offered") - Number(a.status === "offered") || a.session.startsAt.localeCompare(b.session.startsAt));
+}

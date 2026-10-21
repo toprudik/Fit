@@ -4105,6 +4105,8 @@ export const en: Dictionary = {
       notNow: "Not now",
       joined: "You're on the waitlist, place {place}",
       placeTitle: "You're on the waitlist",
+      homePlace: "On the waitlist, place {place}",
+      homeOffer: "Your place is held until {time}",
       placeText: "Your place in line: {place}. When a seat opens up and it's your turn, the bot will send you an offer.",
       leave: "Leave the waitlist",
       left: "Done, you're off the waitlist",

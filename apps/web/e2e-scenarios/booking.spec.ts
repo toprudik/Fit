@@ -424,6 +424,9 @@ test.describe("group sessions and the waitlist", () => {
     await expect(page.getByText(/Твоё место в очереди: 1\./)).toBeVisible();
     await expectAccessible(page);
     const entryUrl = page.url();
+    // The home screen keeps the place in line in view.
+    await gotoReady(page, "/client");
+    await expect(page.getByRole("link", { name: /Ты в очереди, место 1/ })).toBeVisible();
 
     // The trainer sees the queue on the session; a participant leaves and the seat goes to the queue.
     const coach = trainer.page;
@@ -434,7 +437,12 @@ test.describe("group sessions and the waitlist", () => {
     const [taken] = ok(await first.db.from("bookings").select("id").eq("session_id", sessionId).eq("client_id", first.userId), "seat");
     ok(await first.db.rpc("cancel_my_booking", { p_booking_id: taken.id }), "first leaves");
 
-    await gotoReady(page, entryUrl);
+    await gotoReady(page, "/client");
+    const offer = page.getByRole("link", { name: /Для тебя освободилось место.*Место ждёт тебя до/ });
+    await expect(offer).toBeVisible();
+    await expectAccessible(page);
+    await tap(offer);
+    await expect(page).toHaveURL(entryUrl);
     await expect(page.getByRole("heading", { name: "Для тебя освободилось место" })).toBeVisible();
     await expectAccessible(page);
     await tap(page.getByRole("button", { name: "Занять место" }));
