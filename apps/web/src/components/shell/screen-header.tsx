@@ -117,8 +117,9 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
         <div
           data-slot="screen-bar"
           className={cn(
-            // The side columns share what the title leaves, so a short title stays in the middle.
-            "grid grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2",
+            // The side columns share what the title leaves, so a short title stays in the middle; they never
+            // shrink below Back or the avatar, so a long title is cut instead of sliding under them.
+            "grid grid-cols-[minmax(max-content,1fr)_minmax(0,auto)_minmax(max-content,1fr)] items-center gap-2",
             underTelegramButtons ? "h-[var(--tg-viewport-content-safe-area-inset-top)]" : "min-h-11",
           )}
         >
