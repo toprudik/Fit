@@ -28,11 +28,40 @@ type Query = ReturnType<ReturnType<Db["from"]>["select"]>;
 const PAGE = 1000;
 const CHUNK = 100;
 
-/** Every row of a query, page by page: PostgREST returns at most 1000 at a time. */
+/** Primary keys of the exported tables that have no `id` column. */
+const KEYS: Record<string, string[]> = {
+  assistant_progress_blocks: ["coaching_id"],
+  body_profiles: ["user_id"],
+  challenge_participants: ["challenge_id", "coaching_id"],
+  check_ins: ["booking_id"],
+  coaching_trainer_meta: ["coaching_id"],
+  data_shares: ["coaching_id"],
+  delegation_clients: ["delegation_id", "coaching_id"],
+  food_dish_items: ["dish_id", "position"],
+  food_favorites: ["user_id", "food_id"],
+  homework_exercises: ["homework_id", "position"],
+  notification_preferences: ["user_id", "type"],
+  personal_records: ["client_id", "exercise_id", "record_type"],
+  referral_codes: ["coaching_id"],
+  trainer_profiles: ["user_id"],
+  trainer_referral_codes: ["trainer_id"],
+  user_badges: ["user_id", "badge_code"],
+  user_roles: ["user_id", "role"],
+  user_settings: ["user_id"],
+  workout_week_goals: ["client_id"],
+};
+
+/** The order a table is read in, page by page: without one, Postgres may return rows twice or skip them across pages. */
+export function pageOrder(table: string): string[] {
+  return KEYS[table] ?? ["id"];
+}
+
+/** Every row of a query, page by page in primary key order: PostgREST returns at most 1000 at a time. */
 async function all(db: Db, table: string, build: (query: Query) => Query): Promise<Row[]> {
   const rows: Row[] = [];
   for (let from = 0; ; from += PAGE) {
-    const { data, error } = await build(db.from(table).select("*")).range(from, from + PAGE - 1);
+    const query = pageOrder(table).reduce((ordered, key) => ordered.order(key), build(db.from(table).select("*")));
+    const { data, error } = await query.range(from, from + PAGE - 1);
     if (error) throw new Error(`export: reading ${table} failed: ${error.code}`);
     rows.push(...(data as Row[]));
     if (data.length < PAGE) return rows;
