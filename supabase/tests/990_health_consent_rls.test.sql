@@ -1,4 +1,4 @@
--- Health data behind the health data consent in the database, migration 20261021002347_health_consent_rls.sql
+-- Health data behind the health data consent in the database, migration 20261021003917_health_consent_rls.sql
 -- (право 3): without it the trainer reads nothing whatever the shares say, and no one writes a new row, except on a
 -- client card without an account.
 begin;
