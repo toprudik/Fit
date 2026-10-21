@@ -1451,7 +1451,7 @@ export const en: Dictionary = {
         current: "Running now",
         past: "Over",
         remove: "Remove",
-        end: "End today",
+        end: "Unfreeze",
         removed: "Freeze removed",
         ended: "Freeze ended",
       },

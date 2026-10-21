@@ -102,6 +102,14 @@ export function freezeState(freeze: Pick<Freeze, "from" | "to">, today: string):
   return freeze.to >= today ? "current" : "past";
 }
 
+/**
+ * "Разморозить" a running freeze (QA U8): today is free again. One that started today is removed; an earlier one
+ * ends yesterday, so its past days stay frozen.
+ */
+export function unfreeze(freeze: Pick<Freeze, "from">, today: string): { kind: "remove" } | { kind: "end"; lastDay: string } {
+  return freeze.from >= today ? { kind: "remove" } : { kind: "end", lastDay: addDays(today, -1) };
+}
+
 /** One row of a pass history: what moved the balance, by how much and when. */
 export type HistoryEntry = {
   id: string;

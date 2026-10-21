@@ -13,7 +13,7 @@ import { interpolate, plural } from "@/i18n/format";
 import { addFreeze, cancelPass, changeExpiry, deletePass, endFreeze, removeFreeze } from "@/lib/passes/actions";
 import { freezeOverlap } from "@/lib/passes/freeze-overlap";
 import type { PairMoney, PassView } from "@/lib/passes/load";
-import { formatLocalDay, freezeState, type Freeze } from "@/lib/passes/present";
+import { formatLocalDay, freezeState, unfreeze, type Freeze } from "@/lib/passes/present";
 import { AdjustForm, DebtCharges, PastSessionForm, WaiveForm, type WaiveTarget } from "./charge-forms";
 import { MoneyChanges } from "./money-changes";
 import { PassHistory, PassSummary } from "./pass-card";
@@ -50,12 +50,19 @@ function FreezeRow({ freeze, today, live }: { freeze: Freeze; today: string; liv
           {copy.remove}
         </Button>
       ) : null}
-      {live && state === "current" && freeze.to > today ? (
+      {live && state === "current" ? (
         <Button
           size="sm"
           variant="ghost"
           loading={pending}
-          onClick={() => startTransition(async () => void report(await endFreeze({ freezeId: freeze.id, lastDay: today }), copy.ended))}
+          onClick={() =>
+            startTransition(async () => {
+              const step = unfreeze(freeze, today);
+              const result =
+                step.kind === "remove" ? await removeFreeze(freeze.id) : await endFreeze({ freezeId: freeze.id, lastDay: step.lastDay });
+              report(result, copy.ended);
+            })
+          }
         >
           {copy.end}
         </Button>

@@ -45,7 +45,8 @@ export function passLines(t: Dictionary, locale: Locale, pass: PassView): string
           paid: formatMoney(locale, pass.paidMinor, pass.currency),
         })
       : null,
-    pass.freezeDays > 0 ? plural(locale, pass.freezeDays, copy.frozenDays) : null,
+    // A pass without a last day has nothing to extend (QA U8).
+    pass.freezeDays > 0 && pass.lastDay ? plural(locale, pass.freezeDays, copy.frozenDays) : null,
     pass.status === "cancelled" && pass.cancelReason ? interpolate(copy.cancelledReason, { reason: pass.cancelReason }) : null,
   ].filter((line): line is string => Boolean(line));
 }
