@@ -67,6 +67,21 @@ test.describe("Money tab", () => {
     await page.getByRole("link", { name: /Анна/ }).click();
     await expect(page).toHaveURL(new RegExp(`/trainer/clients/${client.coachingId}/payments$`));
   });
+
+  test("a pass not paid in full is listed apart from debts, with what is left to pay (QA T9)", async ({ trainer, client }) => {
+    await sellPass(trainer, client.coachingId, { title: "Пакет на 5", sessions: 5, priceMajor: 9000 });
+    const { page } = trainer;
+    await page.goto("/trainer/money");
+    // Nothing is owed in sessions, but the pass waits for 9 000 ₽, so the tab opens on debts.
+    const unpaid = page.locator("section", { has: page.getByRole("heading", { name: "Не доплачено за абонементы" }) });
+    const row = unpaid.getByRole("link", { name: /Анна/ });
+    await expect(row).toContainText("Пакет на 5");
+    await expect(row).toContainText(rub(9000));
+    await expect(page.getByText("Долгов нет")).toHaveCount(0);
+    await expectAccessible(page);
+    await row.click();
+    await expect(page).toHaveURL(new RegExp(`/trainer/clients/${client.coachingId}/payments$`));
+  });
 });
 
 test.describe("Packages and the price grid", () => {

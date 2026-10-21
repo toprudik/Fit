@@ -37,7 +37,8 @@ function PaymentRow({ payment, timeZone }: { payment: MoneyPayment; timeZone: st
 export function MoneyOverview({ money }: { money: TrainerMoney }) {
   const { t, locale } = useI18n();
   const copy = t.money.overview;
-  const [view, setView] = useState<View>(money.debts.length ? "debts" : "payments");
+  const owed = money.debts.length + money.unpaid.length > 0;
+  const [view, setView] = useState<View>(owed ? "debts" : "payments");
   const income = Object.entries(money.monthIncome).filter(([, minor]) => minor !== 0);
   const waiting = money.payments.filter((payment) => payment.status === "reported");
   const recent = money.payments.filter((payment) => payment.status !== "reported");
@@ -71,18 +72,36 @@ export function MoneyOverview({ money }: { money: TrainerMoney }) {
       />
 
       {view === "debts" ? (
-        money.debts.length ? (
-          <ListGroup header={copy.debts}>
-            {money.debts.map((item) => (
-              <ListRow
-                key={item.coachingId}
-                icon={AlertCircle}
-                title={item.name || t.botMessages.unnamedClient}
-                value={debtText(t, locale, item.debt)}
-                href={`/trainer/clients/${item.coachingId}/payments`}
-              />
-            ))}
-          </ListGroup>
+        owed ? (
+          <>
+            {money.debts.length ? (
+              <ListGroup header={copy.debts}>
+                {money.debts.map((item) => (
+                  <ListRow
+                    key={item.coachingId}
+                    icon={AlertCircle}
+                    title={item.name || t.botMessages.unnamedClient}
+                    value={debtText(t, locale, item.debt)}
+                    href={`/trainer/clients/${item.coachingId}/payments`}
+                  />
+                ))}
+              </ListGroup>
+            ) : null}
+            {money.unpaid.length ? (
+              <ListGroup header={copy.unpaid}>
+                {money.unpaid.map((item) => (
+                  <ListRow
+                    key={item.id}
+                    icon={Wallet}
+                    title={item.name || t.botMessages.unnamedClient}
+                    subtitle={item.title}
+                    value={formatMoney(locale, item.unpaidMinor, item.currency)}
+                    href={`/trainer/clients/${item.coachingId}/payments`}
+                  />
+                ))}
+              </ListGroup>
+            ) : null}
+          </>
         ) : (
           <EmptyState icon={Wallet} title={copy.debtsEmpty} description={copy.debtsEmptyText} />
         )

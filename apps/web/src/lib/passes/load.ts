@@ -435,6 +435,11 @@ export async function loadClientPass(passId: string): Promise<ClientPass | null>
 export type DebtItem = { coachingId: string; name: string; debt: Debt };
 /** A payment on the trainer's money screen, with whose it is. */
 export type MoneyPayment = PaymentView & { coachingId: string; name: string; passTitle: string | null };
+/**
+ * A live pass paid in part (QA T9). Not a debt: a debt is sessions taken with nothing left on a pass (decisions
+ * Q22), so the money screen lists what is left to pay on its own.
+ */
+export type UnpaidPass = { id: string; coachingId: string; name: string; title: string; unpaidMinor: number; currency: string };
 /** A pass that runs out soon: one session left or 7 days to go (К10, Т6). */
 export type EndingPass = {
   id: string;
@@ -449,6 +454,7 @@ export type EndingPass = {
 export type TrainerMoney = {
   timeZone: string;
   debts: DebtItem[];
+  unpaid: UnpaidPass[];
   payments: MoneyPayment[];
   ending: EndingPass[];
   /** Confirmed payments of the current month in the trainer time zone, by currency, refunds subtracted. */
@@ -475,7 +481,7 @@ export async function loadTrainerMoney(): Promise<TrainerMoney | null> {
   const monthStart = new Date(`${today.slice(0, 8)}01T00:00:00Z`);
   // A day of slack on each side of the month, then the local date decides.
   const since = new Date(monthStart.getTime() - 24 * 60 * 60 * 1000).toISOString();
-  if (!pairs.data.length) return { timeZone, debts: [], payments: [], ending: [], monthIncome: {} };
+  if (!pairs.data.length) return { timeZone, debts: [], unpaid: [], payments: [], ending: [], monthIncome: {} };
 
   const ids = pairs.data.map((pair) => pair.id);
   const [people, meta, balances, payments, month, passes] = await Promise.all([
@@ -497,7 +503,7 @@ export async function loadTrainerMoney(): Promise<TrainerMoney | null> {
     supabase.from("payments").select("direction, amount_minor, currency, paid_at").eq("trainer_id", userId).eq("status", "confirmed").gte("paid_at", since),
     supabase
       .from("pass_balances")
-      .select("pass_id, coaching_id, title, remaining, available, effective_expires_at, status")
+      .select("pass_id, coaching_id, title, remaining, available, effective_expires_at, status, unpaid_minor, currency")
       .eq("trainer_id", userId)
       .in("status", ["active", "frozen"]),
   ]);
@@ -533,6 +539,16 @@ export async function loadTrainerMoney(): Promise<TrainerMoney | null> {
       name: nameOf(row.coaching_id),
       debt: { sessions: row.debt_sessions ?? 0, amounts: amounts(row.debt_amounts) },
     })),
+    unpaid: (passes.data ?? [])
+      .filter((row) => (row.unpaid_minor ?? 0) > 0 && row.currency)
+      .map((row) => ({
+        id: row.pass_id ?? "",
+        coachingId: row.coaching_id ?? "",
+        name: nameOf(row.coaching_id),
+        title: row.title ?? "",
+        unpaidMinor: row.unpaid_minor ?? 0,
+        currency: row.currency ?? "",
+      })),
     payments: (payments.data ?? []).map((row) => ({
       ...paymentView(row),
       coachingId: row.coaching_id,
