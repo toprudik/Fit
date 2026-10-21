@@ -7,9 +7,10 @@ name: Database backup
 # row counts, so a copy that cannot be restored turns the run red. Storage files (uploads) are not in the copy.
 # Restore by hand: scripts/db-backup/restore.sh. The connection comes from SUPABASE_DB_URL (see db-deploy.yml).
 
+# Paused: artifacts of a public repository can be downloaded and kept by anyone signed in to GitHub, so the
+# 7-day retention would not bind copies already downloaded. The schedule ("37 0 * * *", 03:37 MSK) comes back
+# once it is decided where the copies live.
 on:
-  schedule:
-    - cron: "37 0 * * *" # nightly, 03:37 MSK
   workflow_dispatch:
 
 permissions:
