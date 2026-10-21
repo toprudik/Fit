@@ -5650,6 +5650,8 @@ export const en: Dictionary = {
   botMessages: {
     open: "Open DaFit",
     botTest: "Done, DaFit can now message you here. Session reminders and other notifications will come to this chat.",
+    documentsUpdate: "New editions of the DaFit documents take effect on {date}. Read what changes ahead of time. On that day the app will ask you to accept them. If you don't agree, you can download your data or delete your account.",
+    openDocuments: "Documents",
     newClient: "New client: {name}",
     /** Marketing 16: a trainer the user invited became a trainer by the user's link. */
     invitedTrainerJoined: "{name} joined DaFit by your invitation. Open your invitations to start training in the app.",

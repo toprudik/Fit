@@ -893,6 +893,20 @@ describe("account messages", () => {
   });
 });
 
+describe("documents update (право 15)", () => {
+  const app = { appUrl: "https://fit.example", group: false };
+  it("names the day the new editions take effect and opens the documents", () => {
+    const message = renderMessage({ ...row, kind: "documents_update", payload: { effective_on: "2026-12-01" } }, app);
+    expect(message?.text).toMatch(/^С 1 декабря в DaFit действуют новые редакции документов\./);
+    expect(message?.buttons).toEqual([{ text: "Документы", web_app: { url: "https://fit.example/legal?source=documents_update" } }]);
+  });
+
+  it("speaks English to an English reader", () => {
+    const message = renderMessage({ ...row, locale: "en", kind: "documents_update", payload: { effective_on: "2026-12-01" } }, app);
+    expect(message?.text).toMatch(/^New editions of the DaFit documents take effect on December 1\./);
+  });
+});
+
 describe("waitlist messages", () => {
   const options = { appUrl: "https://fit.example", group: false };
   const payload = {
