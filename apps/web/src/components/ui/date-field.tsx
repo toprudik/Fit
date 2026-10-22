@@ -20,6 +20,8 @@ type DateFieldProps = {
   /** Earliest and latest day that can be picked, "YYYY-MM-DD". */
   min?: string;
   max?: string;
+  /** The day the calendar opens on while the field is empty, "YYYY-MM-DD"; today by default. */
+  openOn?: string;
   /** An empty field stops the form with «Выбери дату», as a required native field would. */
   required?: boolean;
   hint?: string;
@@ -78,6 +80,7 @@ export function DateField({
   onChange,
   min,
   max,
+  openOn,
   required = false,
   hint,
   error,
@@ -125,7 +128,7 @@ export function DateField({
   );
 
   const openSheet = () => {
-    const start = ISO.test(value) ? value : localToday();
+    const start = ISO.test(value) ? value : openOn && ISO.test(openOn) ? openOn : localToday();
     const clamped = min && start < min ? min : max && start > max ? max : start;
     setMonth(clamped.slice(0, 7));
     setOpen(true);
