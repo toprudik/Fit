@@ -14,6 +14,7 @@ import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { dayRange } from "@/lib/bookings/book";
 import { BOOKING_DAYS, loadBookingPage, loadBookingTrainers, loadClientBooking } from "@/lib/bookings/load";
+import { moveBlock } from "@/lib/bookings/move-state";
 import { formatMoney } from "@/lib/money/format";
 import { isPairId } from "@/lib/pairs/clients";
 import { loadScheduleOwner } from "@/lib/schedule/load";
@@ -41,23 +42,33 @@ async function Reschedule({ params }: { params: PageProps<"/[lang]/client/bookin
 
   const at = now();
   const booking = isPairId(bookingId) ? await loadClientBooking(owner, bookingId) : null;
-  const movable =
-    booking !== null &&
-    booking.status === "confirmed" &&
-    booking.kind === "personal" &&
-    booking.source !== "trial" &&
-    booking.freeCancelUntil !== null &&
-    booking.freeCancelUntil >= at.toISOString();
-  const trainer = movable ? (await loadBookingTrainers(owner)).find((candidate) => candidate.trainerId === booking.trainerId) : undefined;
+  const block = moveBlock(booking, at);
+  const trainer =
+    booking && block === null ? (await loadBookingTrainers(owner)).find((candidate) => candidate.trainerId === booking.trainerId) : undefined;
   if (!booking || !trainer) {
+    const words = t.schedule.booking;
+    const why = block ?? "fixed";
+    const text = {
+      not_found: { title: words.notFoundTitle, text: words.notFoundText },
+      moved: { title: words.movedTitle, text: words.movedText },
+      closed: { title: words.closedTitle, text: words.closedText },
+      late: { title: words.lateTitle, text: words.lateText },
+      fixed: { title: words.fixedTitle, text: words.fixedText },
+    }[why];
+    const link =
+      why === "moved" && booking?.rescheduledToId
+        ? { href: `/client/bookings/${booking.rescheduledToId}`, label: words.movedLink }
+        : booking
+          ? { href: `/client/bookings/${booking.id}`, label: words.toBooking }
+          : { href: "/client/sessions", label: words.back };
     return (
       <EmptyState
         icon={CalendarX}
-        title={t.schedule.booking.notFoundTitle}
-        description={t.schedule.booking.lateText}
+        title={text.title}
+        description={text.text}
         action={
           <Button asChild variant="secondary">
-            <Link href={booking ? `/client/bookings/${booking.id}` : "/client/sessions"}>{t.schedule.booking.back}</Link>
+            <Link href={link.href}>{link.label}</Link>
           </Button>
         }
       />
