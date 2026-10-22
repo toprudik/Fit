@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import { useId, useState } from "react";
 import { useI18n } from "@/i18n/client";
 import { cn } from "@/lib/utils";
@@ -26,7 +27,22 @@ const HOURS = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "
 const TIME = /^(\d{2}):(\d{2})/;
 
 const selectClasses =
-  "h-13 min-w-0 flex-1 cursor-pointer rounded-sm border bg-field px-4 text-body text-ink tabular-nums outline-none focus:border-focus-ring focus:shadow-[0_0_0_1px_var(--focus-ring)] disabled:cursor-default disabled:opacity-(--opacity-disabled)";
+  "h-13 w-full cursor-pointer appearance-none rounded-sm border bg-field pr-8 pl-3 text-body text-ink tabular-nums outline-none focus:border-focus-ring focus:shadow-[0_0_0_1px_var(--focus-ring)] disabled:cursor-default disabled:opacity-(--opacity-disabled)";
+
+/**
+ * The lists draw their own arrow (the native one is off): Android in Telegram put the native arrow over the digits,
+ * so «23» read as «2З». The text keeps room for the arrow on the right.
+ */
+export function SelectChevron({ className }: { className?: string }) {
+  return (
+    <ChevronDown
+      aria-hidden
+      size={16}
+      strokeWidth={2}
+      className={cn("pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-ink-2", className)}
+    />
+  );
+}
 
 /**
  * Time field (QA T14): hours 00–23 and minutes as two native lists, so a phone shows its wheel and the time always
@@ -74,44 +90,50 @@ export function TimeField({
       <legend className="mb-1.5 px-1 text-footnote text-ink-2">{label}</legend>
       {name ? <input type="hidden" name={name} value={value} /> : null}
       <div className="flex items-center gap-2">
-        <select
-          aria-label={copy.hours}
-          value={hour}
-          disabled={disabled}
-          required={required}
-          onInvalid={invalid}
-          onChange={(event) => {
-            event.currentTarget.setCustomValidity("");
-            set(event.target.value, minute);
-          }}
-          aria-invalid={error ? true : undefined}
-          className={cn(selectClasses, error ? "border-danger" : "border-field-line")}
-        >
-          {!hour || !required ? <option value="">{copy.emptyHours}</option> : null}
-          {HOURS.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <div className="relative min-w-0 flex-1">
+          <select
+            aria-label={copy.hours}
+            value={hour}
+            disabled={disabled}
+            required={required}
+            onInvalid={invalid}
+            onChange={(event) => {
+              event.currentTarget.setCustomValidity("");
+              set(event.target.value, minute);
+            }}
+            aria-invalid={error ? true : undefined}
+            className={cn(selectClasses, error ? "border-danger" : "border-field-line")}
+          >
+            {!hour || !required ? <option value="">{copy.emptyHours}</option> : null}
+            {HOURS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+          <SelectChevron />
+        </div>
         <span aria-hidden className="text-body text-ink-2">
           :
         </span>
-        <select
-          aria-label={copy.minutes}
-          value={minute}
-          disabled={disabled || !hour}
-          onChange={(event) => set(hour, event.target.value)}
-          aria-invalid={error ? true : undefined}
-          className={cn(selectClasses, error ? "border-danger" : "border-field-line")}
-        >
-          {!minute ? <option value="">{copy.emptyMinutes}</option> : null}
-          {minutes.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <div className="relative min-w-0 flex-1">
+          <select
+            aria-label={copy.minutes}
+            value={minute}
+            disabled={disabled || !hour}
+            onChange={(event) => set(hour, event.target.value)}
+            aria-invalid={error ? true : undefined}
+            className={cn(selectClasses, error ? "border-danger" : "border-field-line")}
+          >
+            {!minute ? <option value="">{copy.emptyMinutes}</option> : null}
+            {minutes.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+          <SelectChevron />
+        </div>
       </div>
       {note ? (
         <p id={noteId} className={cn("px-1 text-footnote", error ? "text-danger" : "text-ink-2")}>
