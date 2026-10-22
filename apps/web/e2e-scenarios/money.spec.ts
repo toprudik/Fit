@@ -154,7 +154,7 @@ test.describe("Packages and the price grid", () => {
     await sheet.getByLabel("Цена за весь пакет").fill("дорого");
     await sheet.getByRole("button", { name: "Сохранить" }).click();
     await expect(sheet.getByText("От 1 до 200 занятий")).toBeVisible();
-    await expect(sheet.getByText("Цена должна быть числом, например 9000")).toBeVisible();
+    await expect(sheet.getByText("Укажи цену числом больше нуля, например 9000")).toBeVisible();
     await expectAccessible(page);
 
     await sheet.getByLabel("Название").fill("Утренний блок");

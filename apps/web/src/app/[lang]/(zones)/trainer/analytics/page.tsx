@@ -238,7 +238,9 @@ async function Nutrition({ copy }: { copy: Copy }) {
 
 function Hints({ copy, finance }: { copy: Copy; finance: NonNullable<Data["finance"]> }) {
   const text = (hint: (typeof finance.hints)[number]) => {
-    const template = copy.hints[hint.kind as keyof Omit<Copy["hints"], "header" | "empty">];
+    // savings_pct is null for a pack no cheaper than a drop-in, so 0 % means it saves nothing or costs more.
+    const kind = hint.kind === "weak_bundle" && hint.value <= 0 ? "weak_bundle_none" : hint.kind;
+    const template = copy.hints[kind as keyof Omit<Copy["hints"], "header" | "empty">];
     return template ? interpolate(template, { a: hint.a ?? "", b: hint.b ?? "", value: hint.value }) : null;
   };
   const shown = finance.hints.map(text).filter((line): line is string => Boolean(line));

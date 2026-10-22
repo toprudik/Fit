@@ -42,6 +42,13 @@ describe("DateField", () => {
     expect(new FormData(screen.getByRole<HTMLFormElement>("form")).get("birthDate")).toBe("1992-05-14");
   });
 
+  it("opens an empty field on openOn instead of this month", async () => {
+    form({ openOn: "1996-10-22" });
+    fireEvent.click(screen.getByRole("button", { name: /^Дата рождения/ }));
+    expect((await screen.findByRole<HTMLSelectElement>("combobox", { name: "Год" })).value).toBe("1996");
+    expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Месяц" }).value).toBe("10");
+  });
+
   it("does not offer days after max", async () => {
     form({ defaultValue: "2026-10-22", max: "2026-10-22" });
     fireEvent.click(screen.getByRole("button", { name: /^Дата рождения/ }));

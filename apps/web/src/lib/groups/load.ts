@@ -92,6 +92,7 @@ export type BroadcastRow = {
   deferred: number;
   undelivered: number;
   muted: number;
+  noTelegram: number;
 };
 
 export type GroupDetails = {
@@ -232,6 +233,7 @@ export async function loadGroup(groupId: string): Promise<GroupDetails | null> {
       deferred: row.deferred,
       undelivered: row.undelivered,
       muted: row.muted,
+      noTelegram: row.no_telegram,
     })),
     broadcastsToday: today.data,
   };

@@ -1,4 +1,4 @@
-import { backButton, hapticFeedback, openLink, swipeBehavior, viewport } from "@tma.js/sdk-react";
+import { backButton, downloadFile, hapticFeedback, openLink, swipeBehavior, viewport } from "@tma.js/sdk-react";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
 /**
@@ -211,6 +211,18 @@ export function openExternalLink(url: string): boolean {
     openLink(url);
     return true;
   }) ?? false;
+}
+
+/**
+ * Saves a file through Telegram's own download dialog (Bot API 8.0). The Mini App's WebView ignores
+ * `<a download>` on Android (QA 22.10), so a file link calls this first. Telegram fetches `url` itself,
+ * without the app's cookies: it must be an absolute https URL that works on its own, such as a signed
+ * storage link. Returns false outside Telegram and in a Telegram too old for it, where the link goes on.
+ */
+export function downloadInTelegram(url: string, fileName: string): boolean {
+  if (!ready || safely(() => downloadFile.isAvailable()) !== true) return false;
+  void safelyAsync(() => downloadFile(url, fileName));
+  return true;
 }
 
 /** Selection feedback: segmented controls, pickers, switches. */
