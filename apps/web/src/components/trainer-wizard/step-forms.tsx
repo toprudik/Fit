@@ -6,6 +6,7 @@ import { TemplateFields } from "@/components/packages/template-fields";
 import { PersonAvatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ChipCheckbox } from "@/components/ui/chip";
+import { LinkPending } from "@/components/ui/link-pending";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { TextArea } from "@/components/ui/text-area";
@@ -71,7 +72,9 @@ function StepForm({ step, addMore = false, edit = false, children }: StepFormPro
         ) : null}
         {SKIPPABLE_STEPS.has(step) && !edit ? (
           <Button asChild variant="ghost" size="lg" block>
-            <Link href={nextPath(step)}>{t.trainerWizard.skip}</Link>
+            <Link href={nextPath(step)}>
+              <LinkPending>{t.trainerWizard.skip}</LinkPending>
+            </Link>
           </Button>
         ) : null}
       </div>
@@ -462,7 +465,9 @@ export function CertificatesForm({ uploadHref }: { uploadHref: string }) {
         {copy.later}
       </Button>
       <Button asChild variant="secondary" size="lg" block>
-        <Link href={uploadHref}>{copy.upload}</Link>
+        <Link href={uploadHref}>
+          <LinkPending>{copy.upload}</LinkPending>
+        </Link>
       </Button>
     </form>
   );
