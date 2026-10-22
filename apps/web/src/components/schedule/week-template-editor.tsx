@@ -20,49 +20,55 @@ export const SELECT_CLASS =
 
 const WEEKDAYS = ["1", "2", "3", "4", "5", "6", "7"] as const;
 
+type TemplateCopy = ReturnType<typeof useI18n>["t"]["schedule"]["templatePage"];
+
+const newDraft = (mode: Mode): TemplateWindow => ({
+  isoWeekday: 1,
+  start: "09:00",
+  end: "13:00",
+  durationMin: 60,
+  mode,
+  locationId: null,
+  meetingUrl: null,
+});
+
+/** The window the form holds, ready for the template, or why it can't go in. */
+function checkDraft(
+  draft: TemplateWindow,
+  windows: readonly TemplateWindow[],
+  bufferMin: number,
+  copy: TemplateCopy,
+): { window: TemplateWindow } | { error: string } {
+  if (!draft.start || !draft.end || draft.end <= draft.start || slotsInWindow(draft, bufferMin) === 0) return { error: copy.windowInvalid };
+  if (draft.mode === "online" && draft.meetingUrl && !/^https:\/\/\S+$/.test(draft.meetingUrl)) return { error: copy.urlInvalid };
+  if (overlapsAny(draft, windows)) return { error: copy.overlap };
+  return {
+    window: {
+      ...draft,
+      locationId: draft.mode === "offline" ? draft.locationId : null,
+      meetingUrl: draft.mode === "online" ? draft.meetingUrl?.trim() || null : null,
+    },
+  };
+}
+
 /** The new-window form: one weekday, its hours, the session length and where it happens. */
 function WindowForm({
-  windows,
-  bufferMin,
+  draft,
+  error,
   locations,
-  defaultMode,
+  onChange: change,
   onAdd,
   onCancel,
 }: {
-  windows: readonly TemplateWindow[];
-  bufferMin: number;
+  draft: TemplateWindow;
+  error: string | null;
   locations: { id: string; name: string }[];
-  defaultMode: Mode;
-  onAdd: (window: TemplateWindow) => void;
+  onChange: (patch: Partial<TemplateWindow>) => void;
+  onAdd: () => void;
   onCancel: () => void;
 }) {
   const { t } = useI18n();
   const copy = t.schedule.templatePage;
-  const [draft, setDraft] = useState<TemplateWindow>({
-    isoWeekday: 1,
-    start: "09:00",
-    end: "13:00",
-    durationMin: 60,
-    mode: defaultMode,
-    locationId: null,
-    meetingUrl: null,
-  });
-  const [error, setError] = useState<string | null>(null);
-  const change = (patch: Partial<TemplateWindow>) => {
-    setDraft((current) => ({ ...current, ...patch }));
-    setError(null);
-  };
-
-  const add = () => {
-    if (!draft.start || !draft.end || draft.end <= draft.start || slotsInWindow(draft, bufferMin) === 0) return setError(copy.windowInvalid);
-    if (draft.mode === "online" && draft.meetingUrl && !/^https:\/\/\S+$/.test(draft.meetingUrl)) return setError(copy.urlInvalid);
-    if (overlapsAny(draft, windows)) return setError(copy.overlap);
-    onAdd({
-      ...draft,
-      locationId: draft.mode === "offline" ? draft.locationId : null,
-      meetingUrl: draft.mode === "online" ? draft.meetingUrl?.trim() || null : null,
-    });
-  };
 
   return (
     <section aria-labelledby="new-window" className="flex flex-col gap-4 rounded-lg bg-surface-1 p-4">
@@ -152,7 +158,7 @@ function WindowForm({
         </p>
       ) : null}
       <div className="flex gap-2">
-        <Button type="button" onClick={add}>
+        <Button type="button" onClick={onAdd}>
           {copy.add}
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel}>
@@ -186,8 +192,12 @@ export function WeekTemplateEditor({
   const [windows, setWindows] = useState(() => sortWindows(initialWindows));
   const [horizonWeeks, setHorizonWeeks] = useState(initialHorizonWeeks);
   const [bufferMin, setBufferMin] = useState(initialBufferMin);
-  const [adding, setAdding] = useState(false);
+  // The open new-window form; "Сохранить шаблон" takes it in too, so a filled window is never lost.
+  const [draft, setDraft] = useState<TemplateWindow | null>(null);
+  const [draftError, setDraftError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  // Stays under the button after a save, so the trainer sees it went through even when the toast is missed (QA T17).
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const placeName = new Map(locations.map((location) => [location.id, location.name]));
@@ -195,19 +205,38 @@ export function WeekTemplateEditor({
   const edit = (next: () => void) => {
     next();
     setDirty(true);
+    setSaved(false);
     setError(null);
   };
 
-  const save = () =>
+  /** Adds the open form's window and returns the new week; null when it can't go in, with the reason under the form. */
+  const takeDraft = (): TemplateWindow[] | null => {
+    if (!draft) return windows;
+    const checked = checkDraft(draft, windows, bufferMin, copy);
+    if ("error" in checked) {
+      setDraftError(checked.error);
+      return null;
+    }
+    const next = sortWindows([...windows, checked.window]);
+    edit(() => setWindows(next));
+    setDraft(null);
+    return next;
+  };
+
+  const save = () => {
+    const toSave = takeDraft();
+    if (!toSave) return;
     startTransition(async () => {
-      const result = await saveWeekTemplate({ windows, horizonWeeks, bufferMin });
+      const result = await saveWeekTemplate({ windows: toSave, horizonWeeks, bufferMin });
       if (result.status === "done") {
         setDirty(false);
-        toast.success(windows.length === 0 ? copy.savedEmpty : interpolate(copy.saved, { count: result.slots }));
+        setSaved(true);
+        toast.success(toSave.length === 0 ? copy.savedEmpty : interpolate(copy.saved, { count: result.slots }));
       } else {
         setError(result.status === "overlap" ? copy.overlap : result.status === "invalid" ? copy.windowInvalid : copy.failed);
       }
     });
+  };
 
   const days = WEEKDAYS.map(Number).filter((day) => windows.some((window) => window.isoWeekday === day));
 
@@ -240,21 +269,24 @@ export function WeekTemplateEditor({
         </ListGroup>
       ))}
 
-      {adding ? (
+      {draft ? (
         <WindowForm
-          windows={windows}
-          bufferMin={bufferMin}
+          draft={draft}
+          error={draftError}
           locations={locations}
-          defaultMode={defaultMode}
-          onCancel={() => setAdding(false)}
-          onAdd={(window) => {
-            edit(() => setWindows((current) => sortWindows([...current, window])));
-            setAdding(false);
+          onChange={(patch) => {
+            setDraft((current) => (current ? { ...current, ...patch } : current));
+            setDraftError(null);
           }}
+          onCancel={() => setDraft(null)}
+          onAdd={() => void takeDraft()}
         />
       ) : (
         <div>
-          <Button type="button" variant="secondary" icon={Plus} onClick={() => setAdding(true)}>
+          <Button type="button" variant="secondary" icon={Plus} onClick={() => {
+              setDraft(newDraft(defaultMode));
+              setDraftError(null);
+            }}>
             {copy.addWindow}
           </Button>
         </div>
@@ -302,6 +334,10 @@ export function WeekTemplateEditor({
           </p>
         ) : dirty ? (
           <p className="px-1 text-footnote text-ink-2">{copy.unsaved}</p>
+        ) : saved ? (
+          <p role="status" className="px-1 text-footnote text-ink-2">
+            {copy.allSaved}
+          </p>
         ) : null}
         <Button type="button" size="lg" block loading={pending} onClick={save}>
           {copy.save}
