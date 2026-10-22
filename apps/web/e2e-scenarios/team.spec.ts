@@ -3,6 +3,7 @@ import { expectAccessible, collectErrors, settle } from "../e2e/support";
 import { expectToast, grantPro, moscowAt, namedAdmin, namedTrainer, verifyTrainer } from "./support/admin";
 import { expect, test } from "./support/fixtures";
 import { joinTrainer, ok, type Persona } from "./support/personas";
+import { mskDay, openSlots, openWindow } from "./support/schedule";
 
 /** The one-time link from the invite sheet, as a path on this app. */
 async function inviteLinkPath(page: Page): Promise<string> {
@@ -164,6 +165,48 @@ test.describe("team and delegation", () => {
     await helper.getByRole("button", { name: "Сохранить заметку" }).click();
     await expect(helper.getByText("Заметки этому клиенту сейчас недоступны.", { exact: false })).toBeVisible();
     await expect(helper.getByLabel("Новая заметка")).toHaveValue("Колено лучше");
+  });
+
+  test("a helper with the schedule sees the owner's week and confirms a client's request", async ({ persona }) => {
+    const { owner, colleague, client, coachingId } = await team(persona);
+    const ownerName = `Марина ${owner.lastName}`;
+    await openWindow(owner, 2, 10, 11);
+    const [slot] = await openSlots(owner);
+    const [request] = ok(await client.db.rpc("book_slot", { p_slot_id: slot.id }), "book slot");
+    expect(request.status).toBe("requested");
+    const invite = ok(
+      await owner.db.rpc("create_delegation", { p_kind: "assistant", p_scopes: ["schedule"], p_all_clients: true }),
+      "assistant invite",
+    );
+    ok(await colleague.db.rpc("accept_delegation", { p_token: invite[0].token }), "accept");
+    const helper = colleague.page;
+
+    // «Моё / <тренер>» on the schedule: the owner's week, read-only, with the request.
+    await helper.goto("/trainer/schedule");
+    const whose = helper.getByRole("navigation", { name: "Чьё расписание показать" });
+    await expect(whose.getByRole("link", { name: "Моё" })).toHaveAttribute("aria-current", "page");
+    await whose.getByRole("link", { name: ownerName }).click();
+    await expect(helper).toHaveURL(new RegExp(`trainer=${owner.userId}`));
+    await expect(helper.getByText(`Расписание тренера ${ownerName}.`, { exact: false })).toBeVisible();
+    await expect(helper.getByRole("link", { name: "Шаблон недели" })).toHaveCount(0);
+    await expectAccessible(helper);
+    await helper.goto(`/trainer/schedule?date=${mskDay(2)}&trainer=${owner.userId}`);
+    await expect(helper.getByText("Полина Клиентская").filter({ visible: true }).first()).toBeVisible();
+
+    // The client's card lists the request; it opens without money and the helper confirms it.
+    await helper.goto(`/trainer/clients/delegated/${coachingId}`);
+    await expect(helper.getByText("Ждёт подтверждения", { exact: false })).toBeVisible();
+    await helper.goto("/trainer/requests");
+    await expect(helper.getByRole("heading", { name: `Клиенты тренера ${ownerName}` })).toBeVisible();
+    await helper.getByRole("link", { name: /Полина Клиентская/ }).click();
+    await expect(helper).toHaveURL(new RegExp(`/trainer/requests/${request.booking_id}`));
+    await expect(helper.getByText(`Клиент тренера ${ownerName}`)).toBeVisible();
+    const main = await helper.getByRole("main").innerText();
+    for (const money of ["₽", "Абонемент", "абонемент", "долг", "Долг"]) expect(main).not.toContain(money);
+    await helper.getByRole("button", { name: "Подтвердить", exact: true }).click();
+    await expectToast(helper, "Запись подтверждена");
+    const booking = ok(await owner.db.from("bookings").select("status").eq("id", request.booking_id), "booking");
+    expect(booking[0].status).toBe("confirmed");
   });
 
   test("an unverified trainer cannot accept a helper invite", async ({ persona }) => {

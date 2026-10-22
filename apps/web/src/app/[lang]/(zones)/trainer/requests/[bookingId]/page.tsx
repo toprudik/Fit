@@ -16,6 +16,7 @@ import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { loadBookingHistory } from "@/lib/bookings/history";
 import { loadTrainerRequest } from "@/lib/bookings/load";
+import { loadScheduleAssists } from "@/lib/delegations/assistant";
 import { isPairId } from "@/lib/pairs/clients";
 import { loadScheduleOwner } from "@/lib/schedule/load";
 import { formatTrialPrice } from "@/lib/trial-links/link";
@@ -39,7 +40,10 @@ async function RequestDetails({ params }: { params: PageProps<"/[lang]/trainer/r
   const owner = await loadScheduleOwner();
   if (!owner) return <ScheduleSignIn title={copy.detailTitle} next={`/trainer/requests/${bookingId}`} />;
 
-  const request = isPairId(bookingId) ? await loadTrainerRequest(owner, bookingId, now()) : null;
+  const assists = await loadScheduleAssists(owner);
+  const request = isPairId(bookingId)
+    ? await loadTrainerRequest(owner, bookingId, now(), [owner.userId, ...assists.map((assist) => assist.ownerId)])
+    : null;
   if (!request) {
     return (
       <EmptyState
@@ -55,6 +59,8 @@ async function RequestDetails({ params }: { params: PageProps<"/[lang]/trainer/r
     );
   }
 
+  // A request for a trainer the caller assists: the client's card is the delegated one, and no money shows (B8).
+  const assisted = assists.find((assist) => assist.ownerId === request.trainerId);
   const intl = INTL_LOCALE[locale];
   const day = new Intl.DateTimeFormat(intl, { weekday: "long", day: "numeric", month: "long", timeZone: owner.timeZone });
   const time = new Intl.DateTimeFormat(intl, { hour: "2-digit", minute: "2-digit", timeZone: owner.timeZone });
@@ -62,7 +68,12 @@ async function RequestDetails({ params }: { params: PageProps<"/[lang]/trainer/r
   return (
     <div className="flex flex-col gap-6">
       <ListGroup header={copy.client}>
-        <ListRow avatar={{ name: request.client }} title={request.client} href={`/trainer/clients/${request.coachingId}`} />
+        <ListRow
+          avatar={{ name: request.client }}
+          title={request.client}
+          subtitle={assisted ? interpolate(t.delegatedZone.clientOf, { name: assisted.ownerName }) : undefined}
+          href={assisted ? `/trainer/clients/delegated/${request.coachingId}` : `/trainer/clients/${request.coachingId}`}
+        />
       </ListGroup>
 
       <ListGroup>
@@ -80,29 +91,31 @@ async function RequestDetails({ params }: { params: PageProps<"/[lang]/trainer/r
         />
       </ListGroup>
 
-      <div className="flex gap-3 px-1 text-subhead text-ink-2">
-        <Wallet aria-hidden size={20} className="shrink-0" />
-        {request.trial ? (
-          <p>
-            {interpolate(copy.trialLine, {
-              title: request.trial.title,
-              price:
-                request.trial.priceMinor === 0
-                  ? copy.trialFree
-                  : formatTrialPrice(locale, request.trial.priceMinor, request.trial.currency),
-            })}
-          </p>
-        ) : (
-          <p>
-            {request.availableSessions > 0 ? interpolate(copy.passLine, { count: request.availableSessions }) : copy.debtLine}
-            {request.debtSessions > 0 ? ` ${interpolate(copy.debtNow, { count: request.debtSessions })}` : null}
-          </p>
-        )}
-      </div>
+      {assisted ? null : (
+        <div className="flex gap-3 px-1 text-subhead text-ink-2">
+          <Wallet aria-hidden size={20} className="shrink-0" />
+          {request.trial ? (
+            <p>
+              {interpolate(copy.trialLine, {
+                title: request.trial.title,
+                price:
+                  request.trial.priceMinor === 0
+                    ? copy.trialFree
+                    : formatTrialPrice(locale, request.trial.priceMinor, request.trial.currency),
+              })}
+            </p>
+          ) : (
+            <p>
+              {request.availableSessions > 0 ? interpolate(copy.passLine, { count: request.availableSessions }) : copy.debtLine}
+              {request.debtSessions > 0 ? ` ${interpolate(copy.debtNow, { count: request.debtSessions })}` : null}
+            </p>
+          )}
+        </div>
+      )}
 
       <BookingHistory items={await loadBookingHistory(owner, [request.id])} timeZone={owner.timeZone} />
 
-      <DecideRequest bookingId={request.id} single={!request.trial && request.availableSessions === 0} />
+      <DecideRequest bookingId={request.id} single={!assisted && !request.trial && request.availableSessions === 0} />
     </div>
   );
 }

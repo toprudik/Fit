@@ -24,6 +24,25 @@ function itemHref(item: DayItem, day: string): string {
   return item.type === "session" ? `/trainer/sessions/${item.id}` : `/trainer/sessions/new?date=${day}&time=${formatMinutes(item.startMin)}`;
 }
 
+/**
+ * An item of the week: a link to its screen in the trainer's own schedule, plain text in the schedule of a trainer
+ * the caller assists (B8), whose session screens show money a delegate never sees.
+ */
+function ItemBox({ href, className, children }: { href: string | null; className: string; children: React.ReactNode }) {
+  return href ? (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  ) : (
+    <div className={className}>{children}</div>
+  );
+}
+
+/** The week's address: ?date= and, in an assisted trainer's schedule, ?trainer=. */
+export function scheduleHref(day: string, trainer?: string): string {
+  return trainer ? `/trainer/schedule?date=${day}&trainer=${trainer}` : `/trainer/schedule?date=${day}`;
+}
+
 /** "18:30–19:30, онлайн, 5 из 8". */
 function itemDetail(item: DayItem, copy: Copy): string {
   const parts = [`${formatMinutes(item.startMin)}–${formatMinutes(item.endMin)}`];
@@ -55,6 +74,7 @@ export function DayList({
   today,
   copy,
   names,
+  trainer,
 }: {
   week: readonly WeekDay[];
   labels: ReadonlyMap<string, DayLabel>;
@@ -62,6 +82,8 @@ export function DayList({
   today: string;
   copy: Copy;
   names: SessionNames;
+  /** The assisted trainer whose week this is; items are then not links. */
+  trainer?: string;
 }) {
   const day = week.find((entry) => entry.day === selected) ?? week[0];
   const label = labels.get(day.day)!;
@@ -75,7 +97,7 @@ export function DayList({
             return (
               <li key={entry.day}>
                 <Link
-                  href={`/trainer/schedule?date=${entry.day}`}
+                  href={scheduleHref(entry.day, trainer)}
                   aria-current={active ? "date" : undefined}
                   aria-label={chip.long}
                   className={cn(
@@ -100,13 +122,13 @@ export function DayList({
         <ul className="flex flex-col gap-2">
           {day.items.map((item) => (
             <li key={item.id}>
-              <Link
-                href={itemHref(item, day.day)}
+              <ItemBox
+                href={trainer ? null : itemHref(item, day.day)}
                 className={cn("flex flex-col gap-0.5 rounded-md px-4 py-3 outline-offset-2", itemClass(item))}
               >
                 <span className="text-headline">{itemTitle(item, copy, names)}</span>
                 <span className="text-subhead tabular-nums text-ink-2">{itemDetail(item, copy)}</span>
-              </Link>
+              </ItemBox>
             </li>
           ))}
         </ul>
@@ -124,12 +146,15 @@ export function WeekGrid({
   today,
   copy,
   names,
+  trainer,
 }: {
   week: readonly WeekDay[];
   labels: ReadonlyMap<string, DayLabel>;
   today: string;
   copy: Copy;
   names: SessionNames;
+  /** The assisted trainer whose week this is; items are then not links. */
+  trainer?: string;
 }) {
   const { from, to } = gridHours(week);
   const hours = Array.from({ length: to - from }, (_, index) => from + index);
@@ -182,13 +207,13 @@ export function WeekGrid({
                   className="absolute inset-x-1"
                   style={{ top: top(item.startMin) + 1, height: Math.max(((item.endMin - item.startMin) / 60) * HOUR_PX - 2, 22) }}
                 >
-                  <Link
-                    href={itemHref(item, entry.day)}
+                  <ItemBox
+                    href={trainer ? null : itemHref(item, entry.day)}
                     className={cn("flex size-full flex-col overflow-hidden rounded-sm px-2 py-1", itemClass(item))}
                   >
                     <span className="truncate text-footnote font-semibold">{itemTitle(item, copy, names)}</span>
                     <span className="truncate text-caption tabular-nums text-ink-2">{itemDetail(item, copy)}</span>
-                  </Link>
+                  </ItemBox>
                 </li>
               ))}
             </ul>
