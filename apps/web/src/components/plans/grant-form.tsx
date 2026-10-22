@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { toast } from "@/components/ui/sonner";
+import { DateField } from "@/components/ui/date-field";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { grantPlan, type GrantResult } from "@/lib/plans/admin-actions";
@@ -20,6 +21,8 @@ export function GrantForm({ userId, isTrainer, defaultPlan }: { userId: string; 
   const copy = t.adminShell.plans.grant;
   const [plan, setPlan] = useState<PaidPlan>(isTrainer ? (defaultPlan ?? "trainer_pro") : "client_premium");
   const [errors, setErrors] = useState<Errors>({});
+  // form.reset() clears native fields only, so the date field starts over with a new key.
+  const [granted, setGranted] = useState(0);
   const [pending, startTransition] = useTransition();
 
   function report(result: GrantResult, form: HTMLFormElement) {
@@ -29,6 +32,7 @@ export function GrantForm({ userId, isTrainer, defaultPlan }: { userId: string; 
     setErrors({});
     if (result.status === "done") {
       form.reset();
+      setGranted((count) => count + 1);
       toast.success(copy.done);
     } else if (result.status === "already") toast.error(copy.already);
     else if (result.status === "not-trainer") toast.error(copy.notTrainer);
@@ -68,7 +72,7 @@ export function GrantForm({ userId, isTrainer, defaultPlan }: { userId: string; 
           <p className="text-footnote text-ink-2">{copy.notTrainerNote}</p>
         </div>
       )}
-      <TextField name="expires" type="date" label={copy.expires} hint={copy.expiresHint} error={errors.expires} />
+      <DateField key={granted} name="expires" label={copy.expires} hint={copy.expiresHint} error={errors.expires} />
       <TextField name="reason" label={copy.reasonLabel} hint={copy.reasonHint} error={errors.reason} maxLength={500} autoComplete="off" />
       <div>
         <Button type="submit" loading={pending}>
