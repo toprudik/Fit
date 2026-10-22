@@ -18,6 +18,7 @@ import type { PairMoney, PaymentView } from "@/lib/passes/load";
 import { localDay, PAYMENT_METHODS } from "@/lib/passes/present";
 import { formatNoteTime } from "@/lib/pairs/format";
 import { hapticSuccess } from "@/lib/telegram/mini-app";
+import { DebtCharges, WaiveForm, type WaiveTarget } from "./charge-forms";
 import { ChoiceList } from "./choice-list";
 import { PaymentFields, type PaymentValues } from "./payment-fields";
 import { SellPassForm } from "./sell-pass-form";
@@ -319,6 +320,7 @@ export function TrainerPayments({ money, symbol, startOpen }: { money: PairMoney
   const [recording, setRecording] = useState(startOpen);
   const [voiding, setVoiding] = useState<PaymentView | null>(null);
   const [correcting, setCorrecting] = useState<PaymentView | null>(null);
+  const [waiving, setWaiving] = useState<WaiveTarget | null>(null);
   const close = useCallback(() => setRecording(false), []);
   const titles = new Map(money.passes.map((pass) => [pass.id, pass.title]));
 
@@ -328,6 +330,10 @@ export function TrainerPayments({ money, symbol, startOpen }: { money: PairMoney
         <span className="text-body">{copy.debt}</span>
         <span className="text-body text-ink-2 tabular-nums">{debtText(t, locale, money.debt)}</span>
       </div>
+      {/* "Долг" leads here from "Сегодня" and the overview, so the sessions owed can be forgiven here too (QA U5). */}
+      {money.debtCharges.length ? (
+        <DebtCharges charges={money.debtCharges} timeZone={money.timeZone} onWaive={money.status !== "ended" ? setWaiving : null} />
+      ) : null}
       <Button size="lg" block icon={Plus} onClick={() => setRecording(true)}>
         {copy.record}
       </Button>
@@ -348,6 +354,9 @@ export function TrainerPayments({ money, symbol, startOpen }: { money: PairMoney
       </Sheet>
       <Sheet open={voiding !== null} onOpenChange={(next) => (next ? null : setVoiding(null))} title={copy.voidForm.title}>
         {voiding ? <VoidForm key={voiding.id} payment={voiding} onDone={() => setVoiding(null)} /> : null}
+      </Sheet>
+      <Sheet open={waiving !== null} onOpenChange={(next) => (next ? null : setWaiving(null))} title={t.money.passes.waiveForm.title}>
+        {waiving ? <WaiveForm key={waiving.chargeId} target={waiving} onDone={() => setWaiving(null)} /> : null}
       </Sheet>
       <Sheet open={correcting !== null} onOpenChange={(next) => (next ? null : setCorrecting(null))} title={copy.correctForm.title}>
         {correcting ? <CorrectForm key={correcting.id} payment={correcting} money={money} onDone={() => setCorrecting(null)} /> : null}

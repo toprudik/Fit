@@ -260,6 +260,23 @@ test.describe("Marking a payment", () => {
     await expect(page.getByText(/^1 занятие, /)).toBeVisible();
   });
 
+  test("the payments tab, where \"Долг\" leads, shows the debt with its amount and forgives it (QA U5)", async ({ trainer, client }) => {
+    await addPackage(trainer, { title: "Разовое занятие", sessions: 1, priceMajor: 2000 });
+    await recordPastSessions(trainer, client.coachingId, 1);
+    const { page } = trainer;
+    await page.goto(`/trainer/clients/${client.coachingId}/payments`);
+    await expect(page.getByText(/^1 занятие, /)).toContainText(rub(2000));
+    const debt = page.locator("section", { has: page.getByRole("heading", { name: "Долг" }) });
+    await expect(debt.getByRole("listitem")).toHaveCount(1);
+    await expectAccessible(page);
+    const sheet = page.getByRole("dialog", { name: "Простить списание?" });
+    await openSheet(debt.getByRole("button", { name: "Простить" }), sheet);
+    await sheet.getByRole("button", { name: "Простить" }).click();
+    await expect(page.getByText("Списание прощено")).toBeVisible();
+    await expect(page.getByText("Долга нет")).toBeVisible();
+    await expect(debt).toHaveCount(0);
+  });
+
   test("a trainer corrects a payment: the old one stays voided with the reason", async ({ trainer, client }) => {
     await sellPass(trainer, client.coachingId, { title: "Абонемент на 8", sessions: 8, priceMajor: 12000, paid: true });
     const { page } = trainer;
