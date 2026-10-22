@@ -27,6 +27,9 @@ const LANG_RU = 5;
 // wger rows that are not exercises: a pause for timed workouts and a fitness studio brand. Archived by
 // 20261022210637_exercise_library_tidy.sql; skipped here so a refresh does not bring them back.
 const NOT_EXERCISES = new Set([1114, 1630]);
+// wger categories a person would not look in: burpees and mountain climbers are cardio, a close-grip bench press
+// ("Supine press") is chest. Same as 20261022210637_exercise_library_tidy.sql.
+const CATEGORY = { 132: "cardio", 996: "cardio", 997: "cardio", 998: "cardio", 1583: "chest" };
 
 const LICENSES = { "CC-BY-SA 4": "CC-BY-SA-4.0", "CC-BY-SA 3": "CC-BY-SA-3.0", CC0: "CC0-1.0" };
 
@@ -125,7 +128,7 @@ for (const e of all) {
     .join(", ")
     .slice(0, 500);
   exercises.push(
-    `(${e.id}, ${sql(e.uuid)}, ${sql(clean(en.name))}, ${sql(e.category?.name?.toLowerCase() ?? null)}, ` +
+    `(${e.id}, ${sql(e.uuid)}, ${sql(clean(en.name))}, ${sql(CATEGORY[e.id] ?? e.category?.name?.toLowerCase() ?? null)}, ` +
       `${arr(keys(e.muscles.map((m) => m.name_en || m.name), MUSCLES))}, ` +
       `${arr(keys(e.muscles_secondary.map((m) => m.name_en || m.name), MUSCLES))}, ` +
       `${arr(keys(e.equipment.map((q) => q.name), EQUIPMENT))}, ${sql(license)}, ${sql(authors || null)}, ` +

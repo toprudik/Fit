@@ -1,9 +1,10 @@
 -- Tidier exercise library (migration 20261022210637_exercise_library_tidy.sql, PRD 2.10-1..3): the search lists one
 -- wger exercise per name in the caller's language, the hidden twins stay readable by id, a trainer's own exercise
--- is never folded into a wger one, and the two wger rows that are not exercises are gone from the library.
+-- is never folded into a wger one, the two wger rows that are not exercises are gone from the library, and a few
+-- exercises sit in the muscle group a person looks for them in.
 begin;
 \ir _helpers.psql
-select plan(6);
+select plan(7);
 
 select tests.create_trainer('trainer_a');
 insert into public.exercises (id, source, owner_id, name, category)
@@ -44,6 +45,12 @@ select is(
   (select count(*) from public.search_exercises(null, 'en', 'cardio', false, 50) where name in ('Jogging', 'Run')),
   2::bigint,
   'twins are folded by the name in the caller''s language: in English «Jogging» and «Run» both stay'
+);
+
+select is(
+  (select array_agg(category order by wger_id) from public.exercises where source = 'wger' and wger_id in (132, 996, 997, 998, 1583)),
+  '{cardio,cardio,cardio,cardio,chest}',
+  'burpees and mountain climbers are cardio, the close-grip bench press is chest'
 );
 
 select tests.clear_authentication();

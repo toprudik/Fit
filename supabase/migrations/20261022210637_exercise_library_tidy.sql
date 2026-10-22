@@ -2,11 +2,17 @@
 -- Russian («Бег» twice, three «Тяга верхнего блока широким хватом»), and two rows that are not exercises at all
 -- (a timer pause and a studio brand). The search now lists one wger exercise per name in the caller's language,
 -- preferring the one described in that language, then the oldest; the others stay readable by id, so workouts that
--- use them keep working. The two non-exercises are archived; scripts/wger/build-migration.mjs skips them on refresh.
+-- use them keep working. The two non-exercises are archived, and four exercises move to the group a person looks
+-- for them in (burpees and mountain climbers are cardio, not chest; a close-grip bench press is chest, not back).
+-- scripts/wger/build-migration.mjs skips the first and keeps the second on refresh.
 
 update public.exercises
 set archived_at = now()
 where source = 'wger' and wger_id in (1114, 1630) and archived_at is null;
+
+update public.exercises
+set category = case when wger_id = 1583 then 'chest' else 'cardio' end
+where source = 'wger' and wger_id in (132, 996, 997, 998, 1583);
 
 create or replace function public.search_exercises(
   p_query text default null,
