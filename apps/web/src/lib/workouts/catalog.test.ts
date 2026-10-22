@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { keyLabel, libraryQuery, licenseLabel, normalizeVideoUrl } from "./catalog";
+import { exerciseDescription, keyLabel, libraryQuery, licenseLabel, normalizeVideoUrl } from "./catalog";
 
 describe("normalizeVideoUrl", () => {
   it("keeps https links and drops empty ones", () => {
@@ -37,5 +37,18 @@ describe("labels", () => {
   it("falls back to the raw key", () => {
     expect(keyLabel({ legs: "Ноги" }, "legs")).toBe("Ноги");
     expect(keyLabel({ legs: "Ноги" }, "neck")).toBe("neck");
+  });
+});
+
+describe("exerciseDescription", () => {
+  it("shows a wger exercise's text only in the reader's language", () => {
+    expect(exerciseDescription("wger", "Бег трусцой в парке", "Running in a park", null)).toBe("Бег трусцой в парке");
+    expect(exerciseDescription("wger", null, "Running in a park", "Running in a park")).toBeNull();
+  });
+
+  it("falls back to English, then the owner's text, for an own exercise", () => {
+    expect(exerciseDescription("custom", null, "Slow squat", "Медленный присед")).toBe("Slow squat");
+    expect(exerciseDescription("custom", null, null, "Медленный присед")).toBe("Медленный присед");
+    expect(exerciseDescription("custom", null, null, null)).toBeNull();
   });
 });

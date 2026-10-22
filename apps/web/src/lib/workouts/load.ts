@@ -2,7 +2,7 @@ import "server-only";
 
 import type { Locale } from "@/i18n/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isExerciseId, type LibraryQuery } from "./catalog";
+import { exerciseDescription, isExerciseId, type LibraryQuery } from "./catalog";
 
 export type LibraryItem = {
   id: string;
@@ -113,7 +113,7 @@ export async function loadExercise(id: string, locale: Locale): Promise<Exercise
     own,
     archived: row.archived_at !== null,
     name: local?.name ?? english?.name ?? row.name,
-    description: local?.description ?? english?.description ?? authored?.description ?? null,
+    description: exerciseDescription(row.source, local?.description, english?.description, authored?.description),
     baseName: row.name,
     category: row.category,
     musclesPrimary: row.muscles_primary,

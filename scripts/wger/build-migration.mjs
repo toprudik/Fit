@@ -24,6 +24,10 @@ const cacheDir = process.env.WGER_CACHE_DIR;
 const LANG_EN = 2;
 const LANG_RU = 5;
 
+// wger rows that are not exercises: a pause for timed workouts and a fitness studio brand. Archived by
+// 20261022210637_exercise_library_tidy.sql; skipped here so a refresh does not bring them back.
+const NOT_EXERCISES = new Set([1114, 1630]);
+
 const LICENSES = { "CC-BY-SA 4": "CC-BY-SA-4.0", "CC-BY-SA 3": "CC-BY-SA-3.0", CC0: "CC0-1.0" };
 
 // wger English names → the keys the app translates (src/lib/workouts/catalog.ts).
@@ -109,6 +113,7 @@ all.sort((a, b) => a.id - b.id);
 const exercises = [];
 const translations = [];
 for (const e of all) {
+  if (NOT_EXERCISES.has(e.id)) continue;
   const en = e.translations.find((t) => t.language === LANG_EN);
   if (!en || !clean(en.name)) continue;
   const ru = e.translations.find((t) => t.language === LANG_RU);
