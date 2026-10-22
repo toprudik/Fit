@@ -18,6 +18,7 @@ import { currencySymbol } from "@/lib/money/format";
 import { loadPair, loadTrainerDpaAccepted, type PairDetail } from "@/lib/pairs/load";
 import { loadPairMoney } from "@/lib/passes/load";
 import { formatLocalDay, lastValidDay } from "@/lib/passes/present";
+import { passLeftText } from "@/lib/passes/remaining";
 import { TrainerNutrition } from "@/components/nutrition/sections";
 import { TrainerActivity } from "@/components/activity/sections";
 import { TrainerGamification } from "@/components/gamification/sections";
@@ -73,7 +74,7 @@ export function PassRows({ t, locale, pair }: { t: Dictionary; locale: Locale; p
       title={pass.title}
       href={pair.side === "trainer" ? `/trainer/clients/${pair.coachingId}/passes` : `/client/passes/${pass.id}`}
       subtitle={[
-        interpolate(t.pairs.passLeft, { available: pass.available, total: pass.sessionsTotal }),
+        passLeftText(t, pass),
         pass.expiresAt
           ? interpolate(t.pairs.passUntil, { date: formatLocalDay(locale, lastValidDay(pass.expiresAt, pair.timeZone) ?? "") })
           : null,

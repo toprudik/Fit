@@ -8,7 +8,7 @@ import { ScreenHeader } from "@/components/shell/screen-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { IconButton } from "@/components/ui/icon-button";
-import { SkeletonRows } from "@/components/ui/skeleton";
+import { Skeleton, SkeletonChips, SkeletonRows, SkeletonScreen } from "@/components/ui/skeleton";
 import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
@@ -189,7 +189,20 @@ export default async function TrainerSchedulePage(props: PageProps<"/[lang]/trai
   return (
     <Screen header={<ScreenHeader title={t.tabs.trainer.schedule} />}>
       <div className="flex w-full flex-col pt-4 md:pt-0">
-        <Suspense fallback={<SkeletonRows rows={5} label={t.common.loading} />}>
+        <Suspense
+          fallback={
+            <SkeletonScreen label={t.common.loading}>
+              <Skeleton className="h-6 w-48" />
+              <SkeletonChips widths={["6.5rem", "5.5rem", "8.5rem", "4.5rem"]} />
+              <div aria-hidden className="grid grid-cols-7 gap-1.5 md:hidden">
+                {Array.from({ length: 7 }, (_, day) => (
+                  <Skeleton key={day} className="h-14 rounded-sm" />
+                ))}
+              </div>
+              <SkeletonRows header leading="none" rows={2} />
+            </SkeletonScreen>
+          }
+        >
           <Week searchParams={props.searchParams} />
         </Suspense>
       </div>

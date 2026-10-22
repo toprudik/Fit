@@ -2,7 +2,7 @@
 
 > Edition for the DaFit closed beta. A lawyer will still review it; if the text changes, we will tell you in the bot.
 
-Effective date: 24 November 2026
+Version [VERSION], in effect from the day it is published
 
 This policy is written for the Washington My Health My Data Act (RCW 19.373), Nevada's consumer health data law (SB 370, NRS 603A.400 to 603A.550) and the consumer health data provisions of the Connecticut Data Privacy Act. It applies to residents of those states and to anyone whose consumer health data DaFit collects there. It sits alongside our general [Privacy Policy](privacy-policy.md); where they differ for consumer health data, this policy applies.
 

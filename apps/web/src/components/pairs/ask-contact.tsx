@@ -4,6 +4,7 @@ import { MessageCircleQuestion } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
+import { ListRow } from "@/components/ui/list";
 import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
 import { useI18n } from "@/i18n/client";
@@ -18,6 +19,8 @@ type Props = {
   /** The viewer's last request to this person, for the 24-hour pause. */
   requestedAt: string | null;
   timeZone: string;
+  /** `row`: a list row with the words, as on the client's card of a trainer. */
+  variant?: "icon" | "row";
 };
 
 /**
@@ -25,7 +28,7 @@ type Props = {
  * explains what happens, then request_contact. Within 24 hours of the last request the sheet only says when
  * the next one is possible. The time is worked out when the sheet opens, never during render.
  */
-export function AskContactButton({ coachingId, requestedAt, timeZone }: Props) {
+export function AskContactButton({ coachingId, requestedAt, timeZone, variant = "icon" }: Props) {
   const { t, locale } = useI18n();
   const copy = t.pairs.contact;
   const [open, setOpen] = useState(false);
@@ -54,7 +57,11 @@ export function AskContactButton({ coachingId, requestedAt, timeZone }: Props) {
 
   return (
     <>
-      <IconButton icon={MessageCircleQuestion} label={copy.action} onClick={show} />
+      {variant === "row" ? (
+        <ListRow icon={MessageCircleQuestion} title={copy.action} onClick={show} />
+      ) : (
+        <IconButton icon={MessageCircleQuestion} label={copy.action} onClick={show} />
+      )}
       <Sheet open={open} onOpenChange={(next) => !pending && setOpen(next)} title={copy.title} description={copy.text}>
         <div className="flex flex-col gap-4">
           {nextAt ? (

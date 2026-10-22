@@ -9,6 +9,7 @@ import { interpolate } from "@/i18n/format";
 import type { ClientBooking } from "@/lib/bookings/load";
 import type { ClientTrainerMoney, PassView } from "@/lib/passes/load";
 import { debtText } from "@/lib/passes/debt";
+import { passLeftText } from "@/lib/passes/remaining";
 
 export type ClientHome = {
   /** The client's zone: the session time is shown in it. */
@@ -21,9 +22,9 @@ export type ClientHome = {
   money: ClientTrainerMoney[];
 };
 
-/** "Осталось 8 из 10", as on the pass card (which is a Client Component, so not imported here). */
-function passLeft(t: Dictionary, pass: Pick<PassView, "remaining" | "sessionsTotal">): string {
-  return interpolate(t.money.passes.left, { remaining: pass.remaining, total: pass.sessionsTotal });
+/** "Осталось 8 из 10" with what future bookings hold, by the same rule as the pass card (QA B2). */
+function passLeft(t: Dictionary, pass: Pick<PassView, "remaining" | "available" | "sessionsTotal">): string {
+  return passLeftText(t, pass);
 }
 
 /** Passes the client can still train on: active or frozen, as on the passes screen. */

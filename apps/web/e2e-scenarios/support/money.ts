@@ -62,8 +62,8 @@ export async function addPackage(
  */
 export async function recordPastSessions(trainer: Persona, coachingId: string, count: number, status: "attended" | "no_show" = "attended") {
   for (let index = 0; index < count; index += 1) {
-    const startsAt = new Date(Date.now() - (index + 1) * 86_400_000);
-    startsAt.setUTCHours(7, 0, 0, 0);
+    // 10:00 on the Moscow days before today, like the pass start (moscowDay), so the count holds at any UTC hour.
+    const startsAt = new Date(`${moscowDay(-(index + 1))}T10:00:00+03:00`);
     ok(
       await trainer.db.rpc("record_past_session", {
         p_coaching_id: coachingId,

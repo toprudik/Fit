@@ -18,7 +18,7 @@ export function fillPlaceholders(source: string, values: LegalValues): string {
     [["[АДРЕС]", "[ADDRESS]"], values.operatorAddress],
     [["[EMAIL ДЛЯ ОБРАЩЕНИЙ]", "[CONTACT EMAIL]"], values.contactEmail],
     [["[ДОМЕН]", "[DOMAIN]"], values.domain],
-    [["[ВЕРСИЯ]"], values.version],
+    [["[ВЕРСИЯ]", "[VERSION]"], values.version],
   ];
   let text = source;
   for (const [placeholders, value] of replacements) {
