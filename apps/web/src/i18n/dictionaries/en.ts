@@ -785,6 +785,7 @@ export const en: Dictionary = {
       allReached: "Every milestone reached: 100 sessions together",
     },
     write: "Message",
+    book: "Book a session",
     tabsLabel: "Sections",
     tabs: {
       overview: "Overview",
