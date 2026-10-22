@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CalendarX, UserRound } from "lucide-react";
+import Link from "next/link";
 import { Suspense } from "react";
 import { BookPicker } from "@/components/bookings/book-picker";
 import { ScheduleSignIn } from "@/components/schedule/sign-in-state";
@@ -38,7 +39,25 @@ async function Booking({ searchParams }: { searchParams: PageProps<"/[lang]/clie
 
   const trainers = await loadBookingTrainers(owner);
   if (trainers.length === 0) {
-    return <EmptyState icon={UserRound} title={copy.noTrainersTitle} description={copy.noTrainersText} />;
+    // The same way to a trainer as on the client home, so the screen is not a dead end (QA T2).
+    const home = t.screens.client.home;
+    return (
+      <EmptyState
+        icon={UserRound}
+        title={copy.noTrainersTitle}
+        description={copy.noTrainersText}
+        action={
+          <div className="flex flex-col items-center gap-2">
+            <Button asChild>
+              <Link href="/join">{home.noTrainerAction}</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/client/invite-trainer">{home.inviteTrainerAction}</Link>
+            </Button>
+          </div>
+        }
+      />
+    );
   }
   const trainer = trainers.find((candidate) => candidate.coachingId === params.coaching) ?? (trainers.length === 1 ? trainers[0] : null);
   if (!trainer) {
