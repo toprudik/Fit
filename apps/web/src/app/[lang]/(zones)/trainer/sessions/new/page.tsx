@@ -57,11 +57,14 @@ async function NewSession({ searchParams }: { searchParams: PageProps<"/[lang]/t
   const askedDay = parseDay(params.date);
   // A past day opens a personal session straight in "record a past session", within the same year the date field allows.
   const earliest = initialType === "personal" ? addDays(today, -365) : today;
-  const day = askedDay && askedDay >= earliest ? askedDay : today;
   const askedTime = parseMinutes(params.time);
-  // Without a time: the next whole hour, or 09:00 on a later day.
+  // Without a time: the next whole hour today, or 09:00 on a later day. After 23:00 no hour is left today, so the
+  // form opens on tomorrow rather than on a time that has already passed (QA).
   const current = localParts(now(), data.timeZone);
-  const fallback = day === today ? Math.min(Math.floor(current.minutes / 60 + 1) * 60, 23 * 60) : 9 * 60;
+  const nextHour = Math.floor(current.minutes / 60 + 1) * 60;
+  const chosen = askedDay && askedDay >= earliest ? askedDay : today;
+  const day = chosen === today && askedTime === null && nextHour >= 24 * 60 ? addDays(today, 1) : chosen;
+  const fallback = day === today ? nextHour : 9 * 60;
   const client = typeof params.client === "string" && data.clients.some((pair) => pair.coachingId === params.client) ? params.client : "";
 
   return (
