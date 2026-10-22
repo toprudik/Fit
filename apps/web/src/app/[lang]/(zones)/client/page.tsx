@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ClientTodayGoals } from "@/components/today/client-goals";
 import { ClientHomeView } from "@/components/today/client-home";
-import { SkeletonRows } from "@/components/ui/skeleton";
+import { SkeletonRows, SkeletonScreen } from "@/components/ui/skeleton";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { segmentBookings } from "@/lib/bookings/book";
 import { loadClientBookings } from "@/lib/bookings/load";
@@ -89,7 +89,15 @@ export default async function ClientHomePage() {
   const t = await getDictionary();
   return (
     <Screen header={<ScreenHeader title={t.tabs.client.home} subtitle={<TodayDate />} />}>
-      <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
+      <Suspense
+        fallback={
+          <SkeletonScreen label={t.common.loading}>
+            <SkeletonRows header rows={1} />
+            <SkeletonRows header rows={2} />
+            <SkeletonRows header rows={2} />
+          </SkeletonScreen>
+        }
+      >
         <HomeContent />
       </Suspense>
     </Screen>

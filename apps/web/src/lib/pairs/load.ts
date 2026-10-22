@@ -166,6 +166,7 @@ export type PairPass = {
   id: string;
   title: string;
   sessionsTotal: number;
+  remaining: number;
   available: number;
   expiresAt: string | null;
   status: string;
@@ -242,7 +243,7 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
     supabase.from("coaching_stats").select("attended_count, next_session_at").eq("coaching_id", pair.id).maybeSingle(),
     supabase
       .from("pass_balances")
-      .select("pass_id, title, sessions_total, available, effective_expires_at, status")
+      .select("pass_id, title, sessions_total, remaining, available, effective_expires_at, status")
       .eq("coaching_id", pair.id)
       .in("status", ["active", "frozen"]),
     supabase
@@ -293,6 +294,7 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
       id: pass.pass_id ?? "",
       title: pass.title ?? "",
       sessionsTotal: pass.sessions_total ?? 0,
+      remaining: pass.remaining ?? 0,
       available: pass.available ?? 0,
       expiresAt: pass.effective_expires_at,
       status: pass.status ?? "active",

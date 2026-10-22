@@ -2,7 +2,7 @@
 
 > Edition for the DaFit closed beta. A lawyer will still review it; if the text changes, we will tell you in the bot.
 
-Effective date: 24 November 2026
+Version [VERSION], in effect from the day it is published
 
 ## 1. What these guidelines cover
 

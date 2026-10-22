@@ -8,6 +8,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useI18n } from "@/i18n/client";
 import { interpolate, plural } from "@/i18n/format";
 import { formatMoney } from "@/lib/money/format";
+import { withBooked } from "@/lib/passes/remaining";
 import type { MoneyPayment, TrainerMoney } from "@/lib/passes/load";
 import { formatLocalDay } from "@/lib/passes/present";
 import { formatNoteTime } from "@/lib/pairs/format";
@@ -120,7 +121,7 @@ export function MoneyOverview({ money }: { money: TrainerMoney }) {
                 title={pass.name || t.botMessages.unnamedClient}
                 subtitle={[
                   pass.title,
-                  plural(locale, pass.available, copy.left),
+                  withBooked(t, plural(locale, pass.remaining, copy.left), pass),
                   pass.lastDay ? interpolate(t.money.passes.until, { date: formatLocalDay(locale, pass.lastDay) }) : null,
                 ]
                   .filter(Boolean)
