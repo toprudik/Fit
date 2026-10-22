@@ -11,6 +11,8 @@ type Answer = { data: unknown; error: { message: string; code: string } | null }
 const db = vi.hoisted(() => ({
   calls: [] as unknown[][],
   answer: { data: null, error: null } as Answer,
+  /** The client's own live booking of the slot, read after "slot_unavailable". */
+  own: null as { id: string; status: string } | null,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -18,6 +20,21 @@ vi.mock("@/lib/supabase/server", () => ({
     rpc: (fn: string, args: unknown) => {
       db.calls.push(["rpc", fn, args]);
       return Promise.resolve(db.answer);
+    },
+    auth: { getClaims: async () => ({ data: { claims: { sub: "00000000-0000-4000-8000-0000000000aa" } } }) },
+    from: (table: string) => {
+      const filters: unknown[][] = [];
+      const query = {
+        select: () => query,
+        eq: (column: string, value: unknown) => (filters.push(["eq", column, value]), query),
+        in: (column: string, value: unknown) => (filters.push(["in", column, value]), query),
+        limit: () => query,
+        maybeSingle: () => {
+          db.calls.push(["from", table, filters]);
+          return Promise.resolve({ data: db.own, error: null });
+        },
+      };
+      return query;
     },
   }),
 }));
@@ -73,6 +90,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   db.calls = [];
   db.answer = { data: null, error: null };
+  db.own = null;
   logged = vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -131,6 +149,35 @@ describe("previewGroupBooking", () => {
   it("says what covers the seat", async () => {
     db.answer = { data: [{ confirmed: false, pass_title: null, sessions_left: null }], error: null };
     expect(await previewGroupBooking(ID)).toEqual({ status: "done", confirmed: false, passTitle: null, sessionsLeft: null });
+  });
+});
+
+describe("a slot the client took themselves (QA B12)", () => {
+  it("leads bookSlot to the client's own booking", async () => {
+    db.answer = fail("slot_unavailable");
+    db.own = { id: BOOKING, status: "confirmed" };
+    expect(await bookSlot(ID)).toEqual({ status: "done", bookingId: BOOKING, confirmed: true, already: true });
+    expect(db.calls[1]).toEqual([
+      "from",
+      "bookings",
+      [
+        ["eq", "client_id", "00000000-0000-4000-8000-0000000000aa"],
+        ["eq", "sessions.slot_id", ID],
+        ["in", "status", ["confirmed", "requested"]],
+      ],
+    ]);
+  });
+
+  it("says so in the preview", async () => {
+    db.answer = fail("slot_unavailable");
+    db.own = { id: BOOKING, status: "requested" };
+    expect(await previewBooking(ID)).toEqual({ status: "error", error: "own_slot" });
+  });
+
+  it("keeps slot_unavailable when someone else took it", async () => {
+    db.answer = fail("slot_unavailable");
+    expect(await bookSlot(ID)).toEqual({ status: "error", error: "slot_unavailable" });
+    expect(await previewBooking(ID)).toEqual({ status: "error", error: "slot_unavailable" });
   });
 });
 

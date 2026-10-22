@@ -128,6 +128,7 @@ export function BookPicker({
       if (result.status === "done") {
         setSlot(null);
         if (moveBookingId) toast.success(result.confirmed ? copy.moved : copy.moveRequested);
+        else if (result.already) toast.success(copy.errors.own_slot);
         else toast.success(result.confirmed ? copy.booked : copy.requested);
         router.push(`/client/bookings/${result.bookingId}`);
         return;
@@ -271,7 +272,10 @@ export function BookPicker({
               {preview.error === "session_full" || preview.error === "already_booked"
                 ? groupCopy.bookErrors[preview.error]
                 : copy.errors[
-                    preview.error === "slot_unavailable" || preview.error === "too_late" || preview.error === "debt_limit"
+                    preview.error === "slot_unavailable" ||
+                    preview.error === "own_slot" ||
+                    preview.error === "too_late" ||
+                    preview.error === "debt_limit"
                       ? preview.error
                       : "failed"
                   ]}

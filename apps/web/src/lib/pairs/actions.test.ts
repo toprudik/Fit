@@ -71,7 +71,7 @@ describe("acceptTrainerDpa", () => {
     db.userId = null;
     expect(await acceptTrainerDpa()).toEqual({ ok: false, reason: "invalid" });
     db.userId = "user-1";
-    db.answer = { data: null, error: { message: "denied", code: "42501" } };
+    db.answer = { data: null, error: { message: "broken", code: "XX000" } };
     expect(await acceptTrainerDpa()).toEqual({ ok: false, reason: "failed" });
   });
 });
@@ -90,6 +90,12 @@ describe("notes", () => {
     expect(await addNote({ coachingId: PAIR, body: "x".repeat(5001), visibleToClient: false })).toEqual({ ok: false, reason: "invalid" });
     expect(await addNote({ coachingId: "nope", body: "Hi", visibleToClient: false })).toEqual({ ok: false, reason: "invalid" });
     expect(db.calls).toEqual([]);
+  });
+
+  it("says a note was refused by access, so the form keeps the text and explains (B9)", async () => {
+    db.answer = { data: null, error: { message: "new row violates row-level security policy", code: "42501" } };
+    expect(await addNote({ coachingId: PAIR, body: "Hi", visibleToClient: false })).toEqual({ ok: false, reason: "forbidden" });
+    expect(next.refresh).not.toHaveBeenCalled();
   });
 
   it("needs a session to add a note", async () => {
