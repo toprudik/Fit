@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CalendarClock, UserRound } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { ClientWaitlist } from "@/components/bookings/client-waitlist";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { ClientHomeSkeleton } from "@/components/shell/tab-skeletons";
@@ -84,6 +85,9 @@ async function HomeContent() {
       {/* Same place as the goals group of the screen's skeleton, so the goals arrive without a jump. */}
       <Suspense fallback={<SkeletonRows header rows={2} label={t.common.loading} />}>
         <ClientTodayGoals />
+      </Suspense>
+      <Suspense fallback={null}>
+        <ClientWaitlist />
       </Suspense>
     </ClientHomeView>
   );
