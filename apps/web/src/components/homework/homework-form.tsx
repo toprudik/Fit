@@ -9,6 +9,7 @@ import { IconButton } from "@/components/ui/icon-button";
 import { toast } from "@/components/ui/sonner";
 import { Switch } from "@/components/ui/switch";
 import { TextArea } from "@/components/ui/text-area";
+import { DateField } from "@/components/ui/date-field";
 import { TextField } from "@/components/ui/text-field";
 import { ExercisePicker } from "@/components/workouts/log-editor";
 import { TemplatePicker } from "@/components/workouts/template-picker";
@@ -145,12 +146,11 @@ export function HomeworkForm({
         autoComplete="off"
         error={error("videoUrl")}
       />
-      <TextField
+      <DateField
         label={copy.dueDate}
-        type="date"
         min={today}
         value={draft.dueDate}
-        onChange={(e) => setDraft((d) => ({ ...d, dueDate: e.target.value }))}
+        onChange={(dueDate) => setDraft((d) => ({ ...d, dueDate }))}
         required
         error={error("dueDate")}
       />
@@ -185,13 +185,12 @@ export function HomeworkForm({
             </div>
             {error("weekdays") ? <p className="px-1 text-footnote text-danger">{error("weekdays")}</p> : null}
           </fieldset>
-          <TextField
+          <DateField
             label={copy.repeatUntil}
-            type="date"
             min={draft.dueDate || today}
             max={draft.dueDate ? addDays(draft.dueDate, HOMEWORK_REPEAT_MAX_DAYS) : undefined}
             value={draft.repeatUntil}
-            onChange={(e) => setDraft((d) => ({ ...d, repeatUntil: e.target.value }))}
+            onChange={(repeatUntil) => setDraft((d) => ({ ...d, repeatUntil }))}
             error={error("repeatUntil")}
           />
         </>

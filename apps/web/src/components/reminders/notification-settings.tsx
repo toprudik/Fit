@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { toast } from "@/components/ui/sonner";
 import { Switch } from "@/components/ui/switch";
-import { TextField } from "@/components/ui/text-field";
+import { TimeField } from "@/components/ui/time-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
 import { setDefaultReminders, setDigestTime, setNotificationEnabled, setPairReminders, setQuietHours } from "@/lib/reminders/actions";
@@ -158,13 +158,12 @@ export function NotificationSettings({ data }: { data: NotificationSettingsData 
             {copy.types.items.daily_digest}
           </h2>
           <div className="rounded-lg bg-surface-1 p-4">
-            <TextField
+            <TimeField
               key={`digest-${digestTime}`}
-              type="time"
               label={copy.digest.label}
               defaultValue={digestTime}
               disabled={disabled.includes("daily_digest")}
-              onBlur={(event) => saveDigestTime(event.target.value)}
+              onChange={saveDigestTime}
             />
           </div>
           <p className="px-1 text-footnote text-ink-2">{copy.digest.footer}</p>
@@ -184,24 +183,18 @@ export function NotificationSettings({ data }: { data: NotificationSettingsData 
           />
           {quiet ? (
             <div className="flex gap-3">
-              <TextField
+              <TimeField
                 key={`start-${quiet.start}`}
-                type="time"
                 label={copy.quiet.from}
                 defaultValue={quiet.start}
-                onBlur={(event) =>
-                  event.target.value && event.target.value !== quiet.start && saveQuiet({ ...quiet, start: event.target.value })
-                }
+                onChange={(start) => start && start !== quiet.start && saveQuiet({ ...quiet, start })}
                 className="flex-1"
               />
-              <TextField
+              <TimeField
                 key={`end-${quiet.end}`}
-                type="time"
                 label={copy.quiet.to}
                 defaultValue={quiet.end}
-                onBlur={(event) =>
-                  event.target.value && event.target.value !== quiet.end && saveQuiet({ ...quiet, end: event.target.value })
-                }
+                onChange={(end) => end && end !== quiet.end && saveQuiet({ ...quiet, end })}
                 className="flex-1"
               />
             </div>

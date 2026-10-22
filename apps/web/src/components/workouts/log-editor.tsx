@@ -10,6 +10,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { TextArea } from "@/components/ui/text-area";
+import { DateField } from "@/components/ui/date-field";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
@@ -186,11 +187,10 @@ export function LogEditor({
         error={has("title") ? copy.errors.title : undefined}
       />
       <div className="grid grid-cols-2 gap-3">
-        <TextField
+        <DateField
           label={copy.date}
-          type="date"
           value={draft.date}
-          onChange={(e) => setDraft((d) => ({ ...d, date: e.target.value }))}
+          onChange={(date) => setDraft((d) => ({ ...d, date }))}
           required
           error={has("date") ? copy.errors.date : undefined}
         />
