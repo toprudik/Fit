@@ -78,6 +78,9 @@ test.describe("booking a slot", () => {
     await gotoReady(page, "/client");
     await expect(page.getByRole("heading", { name: "Ближайшее занятие" })).toBeVisible();
     await expect(page.getByRole("link", { name: /10:00.*Тренер Иван Тренеров/ })).toBeVisible();
+    // Booking once more stays on the home screen (QA U2).
+    await expect(page.getByRole("main").getByRole("link", { name: "Записаться" })).toHaveAttribute("href", "/client/book");
+    await expectAccessible(page);
     await gotoReady(page, "/client/sessions");
     await expect(page.getByRole("link", { name: /10:00.*Тренер Иван Тренеров/ })).toBeVisible();
     await expectAccessible(page);

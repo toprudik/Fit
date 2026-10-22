@@ -1,4 +1,4 @@
-import { CalendarDays, Hourglass, Ticket, Wallet } from "lucide-react";
+import { CalendarDays, CalendarPlus, Hourglass, Ticket, Wallet } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -73,6 +73,8 @@ export function ClientHomeView({
             />
           ) : null}
           {home.requests > 0 ? <ListRow icon={Hourglass} title={copy.requests} value={home.requests} href="/client/sessions" /> : null}
+          {/* One booking planned does not end booking: another time or another trainer stays one tap away (QA U2). */}
+          <ListRow icon={CalendarPlus} title={copy.book} href="/client/book" />
         </ListGroup>
       ) : (
         <EmptyState
