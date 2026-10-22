@@ -8,7 +8,9 @@
  * values are inlined at build time and validated on the server by env/client.
  */
 export async function uploadToSignedUrl(bucket: string, path: string, token: string, file: File): Promise<boolean> {
-  const url = new URL(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/upload/sign/${bucket}/${path}`);
+  // The project URL may come with a trailing slash ("https://x.supabase.co/"): drop it, or the path starts with "//".
+  const base = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/+$/, "");
+  const url = new URL(`${base}/storage/v1/object/upload/sign/${bucket}/${path}`);
   url.searchParams.set("token", token);
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
   try {

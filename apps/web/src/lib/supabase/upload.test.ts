@@ -23,6 +23,15 @@ describe("uploadToSignedUrl", () => {
     expect(init.headers).not.toHaveProperty("authorization");
   });
 
+  it("drops a trailing slash from the project URL instead of sending //storage", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.example/");
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await uploadToSignedUrl("verification", "user-1/c.png", "t", file());
+    expect(String(fetchMock.mock.calls[0][0])).toBe("https://project.example/storage/v1/object/upload/sign/verification/user-1/c.png?token=t");
+  });
+
   it("reports a rejected or failed upload as false", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.example");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 400 })));
