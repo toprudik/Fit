@@ -227,6 +227,15 @@ test.describe("moving and cancelling a booking", () => {
 
     const rows = ok(await client.db.from("bookings").select("status").eq("client_id", client.userId), "bookings");
     expect(rows.map((row) => row.status).sort()).toEqual(["confirmed", "rescheduled"]);
+
+    // The old move link (system "Back") says the booking was moved and leads to the new one (QA B6).
+    const moved = page.url();
+    await gotoReady(page, `/client/bookings/${booked.booking_id}/reschedule`);
+    await expect(page.getByRole("heading", { name: "Эту запись уже перенесли" })).toBeVisible();
+    await expect(page.getByText(/Бесплатная отмена закончилась/)).toHaveCount(0);
+    await expectAccessible(page);
+    await tap(page.getByRole("link", { name: "К новой записи" }));
+    await expect(page).toHaveURL(moved);
     expect(errors()).toEqual([]);
   });
 
