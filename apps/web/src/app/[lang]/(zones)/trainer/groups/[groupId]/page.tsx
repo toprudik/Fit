@@ -130,6 +130,7 @@ function Broadcasts({ copy, locale, details }: { copy: Copy["broadcast"]; locale
             broadcast.deferred ? interpolate(copy.deferred, { count: broadcast.deferred }) : null,
             broadcast.undelivered ? interpolate(copy.undelivered, { count: broadcast.undelivered }) : null,
             broadcast.muted ? interpolate(copy.muted, { count: broadcast.muted }) : null,
+            broadcast.noTelegram ? interpolate(copy.noTelegram, { count: broadcast.noTelegram }) : null,
           ];
           const button =
             broadcast.buttonKind === "deep_link" ? copy.withButton : broadcast.buttonKind === "url" && broadcast.buttonUrl ? interpolate(copy.withLink, { url: broadcast.buttonUrl }) : null;
