@@ -49,6 +49,12 @@ select throws_ok(format($$ select * from public.book_slot(%L) $$, :'slot10'), 'P
   'book: not for a client of another trainer');
 select tests.clear_authentication();
 
+-- The week template has slots at 09:00 MSK; on those mornings "in an hour" overlaps one. Drop an unbooked
+-- template slot in that window (the tests use slots a week ahead) so the insert below does not hit slots_no_overlap_excl.
+delete from public.slots s
+ where s.trainer_id = tests.user_id('trainer_a')
+   and tstzrange(s.starts_at, s.ends_at) && tstzrange(now() + interval '1 hour', now() + interval '2 hours')
+   and not exists (select 1 from public.sessions x where x.slot_id = s.id);
 insert into public.slots (trainer_id, starts_at, ends_at) values
   (tests.user_id('trainer_a'), now() + interval '1 hour', now() + interval '2 hours')
 returning id as slot_soon \gset
