@@ -4,7 +4,7 @@ import { useState } from "react";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
-import { formatMoney, majorText, parseMajor } from "@/lib/money/format";
+import { formatMoney, majorText, MINOR_PER_MAJOR, parseMajor } from "@/lib/money/format";
 import { priceGrid, TEMPLATE, templatePrices } from "@/lib/packages/grid";
 import { packageTitle, priceGridItems } from "@/lib/packages/present";
 import { PriceGrid } from "./price-grid";
@@ -54,14 +54,16 @@ export function TemplateFields({
   const dropInMinor = parseMajor(dropIn);
   const suggested = new Map((dropInMinor ? templatePrices(dropInMinor) : []).map((pack) => [pack.sessions, majorText(pack.priceMinor)]));
   const packText = (sessions: number) => typed[packField(sessions)] ?? suggested.get(sessions) ?? "";
-  // A pack whose session costs more than a drop-in is likely a typo, so it says so; saving still works.
+  // A pack whose session costs more than a drop-in is likely a typo, so it says so; saving still works. Whole
+  // units on both sides, so kopecks left by the division never warn.
   const packHint = (sessions: number) => {
     const price = parseMajor(packText(sessions));
-    const perSession = price === null ? null : Math.round(price / sessions);
-    return dropInMinor && perSession !== null && perSession > dropInMinor
+    const perSession = price === null ? null : Math.round(price / sessions / MINOR_PER_MAJOR) * MINOR_PER_MAJOR;
+    const single = dropInMinor ? Math.round(dropInMinor / MINOR_PER_MAJOR) * MINOR_PER_MAJOR : 0;
+    return single > 0 && perSession !== null && perSession > single
       ? interpolate(copy.template.packPricier, {
           pack: formatMoney(locale, perSession, currency),
-          single: formatMoney(locale, dropInMinor, currency),
+          single: formatMoney(locale, single, currency),
         })
       : copy.template.packHint;
   };
