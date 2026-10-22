@@ -504,7 +504,7 @@ test.describe("push and pop", () => {
     await expect.poll(() => page.locator("main#main > div").evaluate((element) => getComputedStyle(element).transform)).toBe("none");
   });
 
-  test("the side menu's Настройки switches like a tab: a crossfade, no slide", async ({ page }, testInfo) => {
+  test("the side menu's Настройки switches like a tab: at once, no fade and no slide", async ({ page }, testInfo) => {
     test.skip(isPhone(testInfo), "the side menu is the layout from 768px");
     await recordAnimations(page);
     await page.goto("/trainer", { waitUntil: "networkidle" });
@@ -512,12 +512,32 @@ test.describe("push and pop", () => {
 
     await page.getByRole("link", { name: "Настройки", exact: true }).click();
     await expect(page).toHaveURL(/\/settings$/);
-    await expect.poll(async () => (await takeAnimations(page)).some((animation) => animation.screen)).toBe(true);
     await page.getByRole("link", { name: "Сегодня", exact: true }).click();
     await expect(page).toHaveURL(/\/trainer$/);
     await settle(page);
-    // Neither direction slides; both are the tab crossfade.
-    expect(screenSlideStart(await takeAnimations(page))).toBeNull();
+    expect((await takeAnimations(page)).filter((animation) => animation.screen)).toEqual([]);
+  });
+
+  test("another tab shows at once, and the tapped tab lights up before its screen arrives", async ({ page }) => {
+    await recordAnimations(page);
+    await page.goto("/trainer", { waitUntil: "networkidle" });
+    await takeAnimations(page);
+    // A screen not fetched yet can take a second on a phone's network.
+    await page.route(/\/trainer\/money/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await route.continue();
+    });
+
+    const money = page.getByRole("link", { name: "Деньги", exact: true }).filter({ visible: true });
+    await expect(async () => {
+      await money.click();
+      await expect(money).toHaveAttribute("aria-current", "page", { timeout: 500 });
+    }).toPass();
+    await expect(page).toHaveURL(/\/trainer\/money$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Деньги" }).first()).toBeVisible();
+    await settle(page);
+    // No fade: the header and its title stay put while the screen changes.
+    expect((await takeAnimations(page)).filter((animation) => animation.screen)).toEqual([]);
   });
 
   test.describe("with reduced motion", () => {

@@ -37,7 +37,6 @@ const ROOTS = [
   "/login",
   "/onboarding/consent",
   "/onboarding/preferences",
-  "/onboarding/trainer",
   "/onboarding/trainer/done",
   "/onboarding/trainer/x1",
   "/trainer",
@@ -68,6 +67,7 @@ describe("Telegram's BackButton", () => {
     expect(backFallbackHref("/admin/users/x1")).toBe("/admin");
     expect(backFallbackHref("/settings")).toBe("/");
     expect(backFallbackHref("/trainers/some-coach")).toBe("/");
+    expect(backFallbackHref("/onboarding/trainer")).toBe("/");
   });
 
   it("shows on an address no screen answers, so the not-found screen has a way back", () => {

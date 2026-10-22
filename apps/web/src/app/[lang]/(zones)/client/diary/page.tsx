@@ -22,7 +22,7 @@ export default async function ClientDiaryPage() {
       <div className="flex w-full max-w-2xl flex-col gap-6 pt-4 md:pt-0">
         <FoodDiaryEntry t={t} />
         <ActivityDiaryEntry t={t} />
-        <Suspense fallback={<SkeletonRows rows={4} label={t.common.loading} />}>
+        <Suspense fallback={<SkeletonRows rows={2} label={t.common.loading} />}>
           <HealthConsentGate next="/client/diary">
             <LogListSection place={{ side: "client" }} />
           </HealthConsentGate>

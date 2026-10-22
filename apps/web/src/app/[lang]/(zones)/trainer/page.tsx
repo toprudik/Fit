@@ -41,7 +41,7 @@ export default async function TrainerTodayPage() {
       <Suspense fallback={null}>
         <VerificationBanner />
       </Suspense>
-      <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
+      <Suspense fallback={<SkeletonRows header rows={2} label={t.common.loading} />}>
         <Today />
       </Suspense>
       <Suspense fallback={null}>
