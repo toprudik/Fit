@@ -120,3 +120,11 @@ drop schema tests cascade;
 select count(*) filter (where handle not like 'load\_c%') as trainers, count(*) filter (where handle like 'load\_c%') as clients
 from load.users;
 commit;
+
+-- Fresh statistics for the rows just written. Without them the first stage measured the planner's guesses, not the
+-- queries: autovacuum had not analyzed the new tables yet, and trainer_nutrition_adherence for 300 clients took
+-- 2.4 s instead of 0.11 s until it did (load run 39695650580, 10 VU p95 6.7 s, then 0.5 s and 0.2 s). The level
+-- hides the warnings about system catalogs the postgres role may not analyze.
+set client_min_messages = error;
+analyze;
+reset client_min_messages;

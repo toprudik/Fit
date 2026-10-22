@@ -187,6 +187,21 @@ test.describe("booking a slot", () => {
     await expectAccessible(page);
   });
 
+  test("a slot the client took in another tab leads to that booking (QA B12)", async ({ trainer, client }) => {
+    await createPass(trainer, client.coachingId);
+    await openWindow(trainer, 3, 10, 11);
+    const page = client.page;
+    await pickSlot(page, client.coachingId, 3, "10:00");
+    const sheet = page.getByRole("dialog", { name: "Записаться на занятие?" });
+    await expect(sheet.getByRole("button", { name: "Записаться" })).toBeVisible();
+    const [slot] = await openSlots(trainer);
+    const [booked] = ok(await client.db.rpc("book_slot", { p_slot_id: slot.id }), "the other tab books first");
+    await tap(sheet.getByRole("button", { name: "Записаться" }));
+    await expect(page.getByText("На это время у тебя уже есть запись.")).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/client/bookings/${booked.booking_id}$`));
+    await expect(page.getByText("Это время уже заняли")).toHaveCount(0);
+  });
+
   test("a client with no trainer and a trainer with no slots both get an empty state", async ({ trainer, client, persona }) => {
     const loner = await persona({ firstName: "Вера", lastName: "Одна" });
     await gotoReady(loner.page, "/client/book");
@@ -227,6 +242,15 @@ test.describe("moving and cancelling a booking", () => {
 
     const rows = ok(await client.db.from("bookings").select("status").eq("client_id", client.userId), "bookings");
     expect(rows.map((row) => row.status).sort()).toEqual(["confirmed", "rescheduled"]);
+
+    // The old move link (system "Back") says the booking was moved and leads to the new one (QA B6).
+    const moved = page.url();
+    await gotoReady(page, `/client/bookings/${booked.booking_id}/reschedule`);
+    await expect(page.getByRole("heading", { name: "Эту запись уже перенесли" })).toBeVisible();
+    await expect(page.getByText(/Бесплатная отмена закончилась/)).toHaveCount(0);
+    await expectAccessible(page);
+    await tap(page.getByRole("link", { name: "К новой записи" }));
+    await expect(page).toHaveURL(moved);
     expect(errors()).toEqual([]);
   });
 

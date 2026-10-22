@@ -261,16 +261,32 @@ export async function loadClientBookings(owner: ScheduleOwner, bookingId?: strin
 export type ClientBookingDetail = ClientBooking & {
   location: { name: string; address: string | null } | null;
   meetingUrl: string | null;
-  /** When a free cancellation ends: the session start minus the trainer's deadline (PRD 2.6.5-2). */
+  /**
+   * When a free cancellation ends: the session start minus the trainer's deadline (PRD 2.6.5-2), or the start itself
+   * when a substitute runs the session (wave-3 §1 rule 5), as private.cancel_deadline counts it.
+   */
   freeCancelUntil: string | null;
+  /** The booking a move made, when this one was moved. */
+  rescheduledToId: string | null;
 };
+
+/** The end of a free cancellation of a confirmed booking; null when there is none to count. */
+export function freeCancelUntil(
+  booking: Pick<ClientBooking, "status" | "startsAt" | "substitute">,
+  hours: number | null | undefined,
+): string | null {
+  if (booking.status !== "confirmed") return null;
+  // A substitute runs the session: the client may cancel for free until it starts.
+  if (booking.substitute !== null) return booking.startsAt;
+  return typeof hours === "number" ? new Date(new Date(booking.startsAt).getTime() - hours * 3_600_000).toISOString() : null;
+}
 
 /** One booking of the signed-in client for /client/bookings/[id], or null when it is not theirs. */
 export async function loadClientBooking(owner: ScheduleOwner, bookingId: string): Promise<ClientBookingDetail | null> {
   const [booking] = await loadClientBookings(owner, bookingId);
   if (!booking) return null;
   const { supabase } = owner;
-  const [location, link, profile] = await Promise.all([
+  const [location, link, profile, moved] = await Promise.all([
     booking.locationId
       ? supabase.from("locations").select("name, address").eq("id", booking.locationId).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -278,16 +294,17 @@ export async function loadClientBooking(owner: ScheduleOwner, bookingId: string)
       ? supabase.rpc("session_meeting_url", { p_session_id: booking.sessionId })
       : Promise.resolve({ data: null }),
     supabase.from("trainer_profiles").select("cancellation_deadline_hours").eq("user_id", booking.trainerId).maybeSingle(),
+    booking.status === "rescheduled"
+      ? supabase.from("bookings").select("rescheduled_to_id").eq("id", booking.id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
   const hours = profile.data?.cancellation_deadline_hours;
   return {
     ...booking,
     location: location.data ?? null,
     meetingUrl: link.data ?? null,
-    freeCancelUntil:
-      booking.status === "confirmed" && typeof hours === "number"
-        ? new Date(new Date(booking.startsAt).getTime() - hours * 3_600_000).toISOString()
-        : null,
+    freeCancelUntil: freeCancelUntil(booking, hours),
+    rescheduledToId: moved.data?.rescheduled_to_id ?? null,
   };
 }
 
