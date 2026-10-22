@@ -1,5 +1,6 @@
 import { collectErrors, expectAccessible } from "../e2e/support";
 import { expect, test } from "./support/fixtures";
+import { pickDate } from "./support/date-field";
 import { addPackage, moscowDay, recordPastSessions, rub, ruDay, sellPass } from "./support/money";
 import { ok } from "./support/personas";
 import type { Locator } from "@playwright/test";
@@ -379,16 +380,12 @@ test.describe("Passes", () => {
     await expect(pass).toContainText("Не оплачен");
     await pass.getByRole("button", { name: "Изменить срок" }).click();
     const sheet = page.getByRole("dialog", { name: "Изменить срок" });
-    await sheet.getByLabel("Последний день").fill(lastDay);
+    // The calendar starts at the pass's first day, so a last day before it can't be picked.
+    await pickDate(page, sheet, "Последний день", lastDay);
     await sheet.getByRole("button", { name: "Сохранить" }).click();
     await expect(sheet.getByText("Напиши причину")).toBeVisible();
-    await sheet.getByLabel("Последний день").fill(moscowDay(-10));
     await sheet.getByLabel("Причина").fill("Болел две недели");
-    await sheet.getByRole("button", { name: "Сохранить" }).click();
-    await expect(page.getByText("Последний день не может быть раньше начала абонемента.").first()).toBeVisible();
     await expectAccessible(page);
-
-    await sheet.getByLabel("Последний день").fill(lastDay);
     await sheet.getByRole("button", { name: "Сохранить" }).click();
     await expect(page.getByText("Срок изменён")).toBeVisible();
     await expect(pass).toContainText(`Действует по ${ruDay(lastDay)}`);
@@ -407,7 +404,7 @@ test.describe("Passes", () => {
     await page.getByRole("button", { name: "Изменить срок" }).click();
     const sheet = page.getByRole("dialog", { name: "Изменить срок" });
     await expect(sheet.getByText("Клиент увидит её в истории абонемента. Например: болел две недели")).toBeVisible();
-    await sheet.getByLabel("Последний день").fill(moscowDay(60));
+    await pickDate(page, sheet, "Последний день", moscowDay(60));
     await sheet.getByLabel("Причина").fill("Болел две недели");
     await sheet.getByRole("button", { name: "Сохранить" }).click();
     await expect(page.getByText("Срок изменён")).toBeVisible();
