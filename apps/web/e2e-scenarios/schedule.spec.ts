@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { collectErrors, expectAccessible as axe, settle } from "../e2e/support";
+import { dateField, pickDate, pickTime, ruDate, timeField } from "./support/date-field";
 import { expect, test } from "./support/fixtures";
 import { ok } from "./support/personas";
 import {
@@ -106,8 +107,8 @@ test.describe("week template and slots", () => {
 
     await tap(page.getByRole("button", { name: "Добавить окно" }));
     await page.getByLabel("День").selectOption(String(isoWeekday(day)));
-    await page.getByLabel("С", { exact: true }).fill("10:00");
-    await page.getByLabel("До", { exact: true }).fill("12:00");
+    await pickTime(page, "С", "10:00");
+    await pickTime(page, "До", "12:00");
     await page.getByLabel("Длительность занятия").selectOption("60");
     await expectAccessible(page);
     await tap(page.getByRole("button", { name: "Добавить", exact: true }));
@@ -140,8 +141,8 @@ test.describe("week template and slots", () => {
     await gotoReady(page, "/trainer/schedule/template");
     await tap(page.getByRole("button", { name: "Добавить окно" }));
     await page.getByLabel("День").selectOption(String(isoWeekday(day)));
-    await page.getByLabel("С", { exact: true }).fill("10:00");
-    await page.getByLabel("До", { exact: true }).fill("12:00");
+    await pickTime(page, "С", "10:00");
+    await pickTime(page, "До", "12:00");
     await page.getByLabel("Открывать запись вперёд на").selectOption("1");
     await tap(page.getByRole("button", { name: "Сохранить шаблон" }));
     await expect(page.getByText("Шаблон сохранён, новых слотов: 2")).toBeVisible();
@@ -152,8 +153,8 @@ test.describe("week template and slots", () => {
     // A window that can't go in stops the save and says why under the form.
     await tap(page.getByRole("button", { name: "Добавить окно" }));
     await page.getByLabel("День").selectOption(String(isoWeekday(day)));
-    await page.getByLabel("С", { exact: true }).fill("11:00");
-    await page.getByLabel("До", { exact: true }).fill("13:00");
+    await pickTime(page, "С", "11:00");
+    await pickTime(page, "До", "13:00");
     await tap(page.getByRole("button", { name: "Сохранить шаблон" }));
     await expect(page.getByRole("alert").filter({ hasText: "Окна в один день пересекаются" })).toBeVisible();
     expect(await openSlots(trainer)).toHaveLength(2);
@@ -163,17 +164,17 @@ test.describe("week template and slots", () => {
     const page = trainer.page;
     await gotoReady(page, "/trainer/schedule/template");
     await tap(page.getByRole("button", { name: "Добавить окно" }));
-    await page.getByLabel("С", { exact: true }).fill("12:00");
-    await page.getByLabel("До", { exact: true }).fill("11:00");
+    await pickTime(page, "С", "12:00");
+    await pickTime(page, "До", "11:00");
     await tap(page.getByRole("button", { name: "Добавить", exact: true }));
     await expect(page.getByRole("alert").filter({ hasText: "Конец должен быть позже начала" })).toBeVisible();
     await expectAccessible(page);
 
-    await page.getByLabel("До", { exact: true }).fill("14:00");
+    await pickTime(page, "До", "14:00");
     await tap(page.getByRole("button", { name: "Добавить", exact: true }));
     await tap(page.getByRole("button", { name: "Добавить окно" }));
-    await page.getByLabel("С", { exact: true }).fill("13:00");
-    await page.getByLabel("До", { exact: true }).fill("15:00");
+    await pickTime(page, "С", "13:00");
+    await pickTime(page, "До", "15:00");
     await tap(page.getByRole("button", { name: "Добавить", exact: true }));
     await expect(page.getByRole("alert").filter({ hasText: "Окна в один день пересекаются" })).toBeVisible();
   });
@@ -195,8 +196,8 @@ test.describe("week template and slots", () => {
     const day = mskDay(2);
     await openWindow(trainer, 2, 10, 12);
     await gotoReady(page, "/trainer/schedule/slots");
-    await page.getByLabel("С", { exact: true }).fill(day);
-    await page.getByLabel("По", { exact: true }).fill(day);
+    await pickDate(page, page, "С", day);
+    await pickDate(page, page, "По", day);
     await tap(page.getByRole("button", { name: "Закрыть дни" }));
     await expect(page.getByText("Дни закрыты")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Закрытые дни" })).toBeVisible();
@@ -223,8 +224,8 @@ test.describe("sessions", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Новое занятие" })).toBeVisible();
     await expect(page.getByLabel("Клиент")).toHaveValue(client.coachingId);
     await expectAccessible(page);
-    await page.getByLabel("Дата").fill(day);
-    await page.getByLabel("Начало").fill("18:30");
+    await pickDate(page, page, "Дата", day);
+    await pickTime(page, "Начало", "18:30");
     await page.getByLabel("Длительность").selectOption("90");
     await page.getByLabel("Название").fill("Ноги");
     await tap(page.getByRole("button", { name: "Назначить" }));
@@ -244,8 +245,8 @@ test.describe("sessions", () => {
     const day = mskDay(1);
     const second = mskDay(3);
     await gotoReady(page, `/trainer/sessions/new?coaching=${client.coachingId}`);
-    await page.getByLabel("Дата").fill(day);
-    await page.getByLabel("Начало").fill("07:00");
+    await pickDate(page, page, "Дата", day);
+    await pickTime(page, "Начало", "07:00");
     await tap(page.getByRole("radio", { name: "Каждую неделю" }));
     await expect(page.getByRole("checkbox", { name: weekdayName(day) })).toBeChecked();
     await page.getByRole("checkbox", { name: weekdayName(second) }).check();
@@ -271,11 +272,9 @@ test.describe("sessions", () => {
     await createPass(trainer, client.coachingId);
     const day = mskDay(-2);
     await gotoReady(page, `/trainer/sessions/new?coaching=${client.coachingId}`);
-    await expect(async () => {
-      await page.getByLabel("Дата").fill(day);
-      await page.getByLabel("Начало").fill("10:00");
-      await expect(page.getByRole("radiogroup", { name: "Как прошло" })).toBeVisible({ timeout: 1_000 });
-    }).toPass();
+    await pickDate(page, page, "Дата", day);
+    await pickTime(page, "Начало", "10:00");
+    await expect(page.getByRole("radiogroup", { name: "Как прошло" })).toBeVisible();
     await expect(page.getByRole("radio", { name: "Каждую неделю" })).toHaveCount(0);
     await expectAccessible(page);
     await tap(page.getByRole("button", { name: "Дозаписать" }));
@@ -285,11 +284,23 @@ test.describe("sessions", () => {
     expect(errors()).toEqual([]);
   });
 
+  test("a past day in the schedule opens the new-session form ready to record it", async ({ trainer, client }) => {
+    const page = trainer.page;
+    const day = mskDay(-1);
+    await gotoReady(page, `/trainer/schedule?date=${day}`);
+    await page.getByRole("link", { name: "Занятие", exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/trainer/sessions/new\\?date=${day}`));
+    await expect(dateField(page, "Дата")).toContainText(ruDate(day));
+    await expect(page.getByRole("radiogroup", { name: "Как прошло" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Дозаписать" })).toBeVisible();
+    void client; // the fixture pairs the trainer with a client, so the form has someone to book
+  });
+
   test("the session form refuses a repeat without the first day", async ({ trainer, client }) => {
     const page = trainer.page;
     await gotoReady(page, `/trainer/sessions/new?coaching=${client.coachingId}`);
     const day = mskDay(2);
-    await page.getByLabel("Дата").fill(day);
+    await pickDate(page, page, "Дата", day);
     await tap(page.getByRole("radio", { name: "Каждую неделю" }));
     await page.getByRole("checkbox", { name: weekdayName(day) }).uncheck();
     await page.getByRole("checkbox", { name: weekdayName(mskDay(3)) }).check();
@@ -315,9 +326,10 @@ test.describe("sessions", () => {
     await page.getByRole("link", { name: "Изменить" }).click();
     await expect(page).toHaveURL(new RegExp(`/trainer/sessions/${sessionId}/edit$`));
     await expect(page.getByRole("heading", { level: 1, name: "Изменить занятие" })).toBeVisible();
-    await expect(page.getByLabel("Начало")).toHaveValue("15:00");
+    await expect(timeField(page, "Начало").getByRole("combobox", { name: "Часы" })).toHaveValue("15");
+    await expect(timeField(page, "Начало").getByRole("combobox", { name: "Минуты" })).toHaveValue("00");
     await expectAccessible(page);
-    await page.getByLabel("Начало").fill("17:00");
+    await pickTime(page, "Начало", "17:00");
     await page.getByLabel("Название").fill("Спина и плечи");
     await tap(page.getByRole("button", { name: "Сохранить" }));
     await expect(page.getByText("Сохранено, клиенту придёт сообщение")).toBeVisible();
@@ -529,7 +541,7 @@ test.describe("group sessions", () => {
     expect(await page.getByLabel("Название группы").evaluate((input: HTMLInputElement) => input.validity.valueMissing)).toBe(true);
     await page.getByLabel("Название группы").fill("Утренняя йога");
     await page.getByLabel("Мест").fill("3");
-    await page.getByLabel("Начало").fill("08:00");
+    await pickTime(page, "Начало", "08:00");
     await expectAccessible(page);
     await tap(page.getByRole("button", { name: "Создать" }));
     await expect(page.getByText("Групповое занятие создано")).toBeVisible();

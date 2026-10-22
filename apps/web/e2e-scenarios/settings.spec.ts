@@ -98,27 +98,33 @@ test.describe("account settings", () => {
     // Quiet hours start on for a new account; turning them off hides the times, turning them on shows them.
     const quiet = page.getByRole("switch", { name: "Тихие часы" });
     await expect(quiet).toBeChecked();
-    await expect(page.getByLabel("С", { exact: true })).toBeVisible();
+    await expect(page.getByRole("group", { name: "С", exact: true })).toBeVisible();
     await saved(page, () => quiet.click());
     await expect(quiet).not.toBeChecked();
-    await expect(page.getByLabel("С", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("group", { name: "С", exact: true })).toHaveCount(0);
     await expectAccessible(page);
 
     await page.reload();
     await expect(page.getByRole("switch", { name: "Итоги месяца" })).not.toBeChecked();
     await expect(page.getByRole("switch", { name: "Тихие часы" })).not.toBeChecked();
     await saved(page, () => page.getByRole("switch", { name: "Тихие часы" }).click());
-    await expect(page.getByLabel("До", { exact: true })).toBeVisible();
+    // A new end hour saves as soon as it's picked and stays after a reload.
+    const end = page.getByRole("group", { name: "До", exact: true });
+    await saved(page, async () => {
+      await end.getByRole("combobox", { name: "Часы" }).selectOption("07");
+    });
     await saved(page, () => page.getByRole("switch", { name: "Итоги месяца" }).click());
     await page.reload();
     await expect(page.getByRole("switch", { name: "Итоги месяца" })).toBeChecked();
+    await expect(end.getByRole("combobox", { name: "Часы" })).toHaveValue("07");
+    await expect(end.getByRole("combobox", { name: "Минуты" })).toHaveValue("00");
   });
 
   test("a trainer's notification settings have the defaults for new clients and the morning digest", async ({ trainer }) => {
     const { page } = trainer;
     await page.goto("/settings/notifications");
     await expect(page.getByRole("heading", { name: "Напоминания новым клиентам" })).toBeVisible();
-    await expect(page.getByLabel("Время утренней сводки")).toBeVisible();
+    await expect(page.getByRole("group", { name: "Время утренней сводки" })).toBeVisible();
     await expect(page.getByRole("switch", { name: "Утренняя сводка" })).toBeVisible();
     await expectAccessible(page);
   });

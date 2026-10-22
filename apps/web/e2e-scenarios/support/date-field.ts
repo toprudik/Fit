@@ -26,3 +26,15 @@ export async function pickDate(page: Page, scope: Page | Locator, label: string,
   await expect(calendar).toBeHidden();
   await expect(dateField(scope, label)).toContainText(ruDate(iso));
 }
+
+/** The TimeField labelled `label`: a group with the «Часы» and «Минуты» lists. */
+export function timeField(scope: Page | Locator, label: string): Locator {
+  return scope.getByRole("group", { name: label, exact: true });
+}
+
+/** Picks "HH:MM" in the TimeField labelled `label`, hours first, then minutes. */
+export async function pickTime(scope: Page | Locator, label: string, time: string): Promise<void> {
+  const field = timeField(scope, label);
+  await field.getByRole("combobox", { name: "Часы" }).selectOption(time.slice(0, 2));
+  await field.getByRole("combobox", { name: "Минуты" }).selectOption(time.slice(3, 5));
+}

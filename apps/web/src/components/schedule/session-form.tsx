@@ -8,6 +8,8 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
 import { Switch } from "@/components/ui/switch";
+import { DateField } from "@/components/ui/date-field";
+import { TimeField } from "@/components/ui/time-field";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { INTL_LOCALE } from "@/i18n/config";
@@ -99,7 +101,7 @@ export function SessionForm(props: Props) {
   const [conflicts, setConflicts] = useState<SessionConflict[]>([]);
   const [pending, startTransition] = useTransition();
   // A personal session that has already ended goes into the history and is charged right away (QA T11).
-  const [ended, setEnded] = useState(false);
+  const [ended, setEnded] = useState(() => endedByNow(props.initial, props.timeZone));
   const [pastStatus, setPastStatus] = useState<"attended" | "no_show">("attended");
   const past = ended && props.kind === "create" && !group;
 
@@ -290,23 +292,20 @@ export function SessionForm(props: Props) {
           </div>
         ) : null}
         <div className="grid grid-cols-2 gap-3">
-          <TextField
+          <DateField
             label={copy.date}
-            type="date"
             min={props.kind === "create" && !group ? addDays(props.today, -365) : props.today}
             value={values.day}
-            onChange={(event) => {
-              const day = event.target.value;
+            onChange={(day) => {
               change({ day });
               if (day && repeat === "none") setWeekdays([isoWeekday(day)]);
             }}
             required
           />
-          <TextField
+          <TimeField
             label={copy.time}
-            type="time"
             value={values.time}
-            onChange={(event) => change({ time: event.target.value })}
+            onChange={(time) => change({ time })}
             required
           />
         </div>
@@ -472,13 +471,12 @@ export function SessionForm(props: Props) {
                   onChange={(event) => setCount(event.target.value)}
                 />
               ) : (
-                <TextField
+                <DateField
                   label={copy.until}
-                  type="date"
                   min={addDays(values.day, 1)}
                   max={addDays(values.day, 366)}
                   value={until}
-                  onChange={(event) => setUntil(event.target.value)}
+                  onChange={setUntil}
                 />
               )}
             </>
