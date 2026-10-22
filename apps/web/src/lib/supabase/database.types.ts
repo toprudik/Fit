@@ -4333,7 +4333,7 @@ isOneToOne: false
                            },
 "broadcast_history":
 { Args: { "p_group_id": string }; Returns: {
-              "body": string,"button_kind": string,"button_url": string,"created_at": string,"deferred": number,"id": string,"muted": number,"recipients": number,"sent": number,"undelivered": number
+              "body": string,"button_kind": string,"button_url": string,"created_at": string,"deferred": number,"id": string,"muted": number,"no_telegram": number,"recipients": number,"sent": number,"undelivered": number
             }[]
                            },
 "broadcasts_today":
