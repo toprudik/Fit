@@ -54,6 +54,14 @@ export function timeZones(): string[] {
  */
 export function isTimeZone(value: string): boolean {
   if (timeZones().includes(value)) return true;
+  // A fixed offset from a device with the zone set by hand (components/shell/device-time-zone.tsx).
+  if (/^Etc\/GMT(-(1[0-4]|[1-9])|\+(1[0-2]|[1-9]))$/.test(value)) {
+    try {
+      return new Intl.DateTimeFormat("en", { timeZone: value }).resolvedOptions().timeZone === value;
+    } catch {
+      return false;
+    }
+  }
   if (!/^[A-Za-z]+(\/[A-Za-z0-9_+-]+)+$/.test(value)) return false;
   try {
     return timeZones().includes(new Intl.DateTimeFormat("en", { timeZone: value }).resolvedOptions().timeZone);
