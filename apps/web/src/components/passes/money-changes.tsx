@@ -43,7 +43,7 @@ export function MoneyChanges({ changes, timeZone, headingLevel = 3 }: { changes:
           const who = change.role === "system" ? roles.system : (change.actor ?? roles[change.role]);
           return (
             <li key={change.id} className="flex flex-col border-t border-line px-4 py-3 first:border-t-0">
-              <span className="text-body">{copy.actions[change.action]}</span>
+              <span className="text-body">{copy.actions[change.label]}</span>
               {change.details.length ? (
                 <span className="text-subhead">{change.details.map((detail) => detailText(t, locale, detail)).join(", ")}</span>
               ) : null}

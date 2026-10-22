@@ -101,13 +101,13 @@ describe("account", () => {
   it("offers the trainer invite only to people who are not trainers yet (TINV-1)", () => {
     renderPanel();
     act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: false, isAdmin: false, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" }));
-    expect(screen.getByRole("link", { name: "У меня есть инвайт тренера" }).getAttribute("href")).toBe("/onboarding/trainer");
+    expect(screen.getByRole("link", { name: "Я тренер, у меня есть код приглашения" }).getAttribute("href")).toBe("/onboarding/trainer");
 
     act(() => setAccount({ status: "signed-in", name: "Анна Смирнова", photoUrl: null, isTrainer: true, isAdmin: false, botBlocked: false, botUrl: "https://t.me/fitconnection_bot" }));
-    expect(screen.queryByRole("link", { name: "У меня есть инвайт тренера" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Я тренер, у меня есть код приглашения" })).toBeNull();
 
     act(() => setAccount({ status: "signed-out" }));
-    expect(screen.queryByRole("link", { name: "У меня есть инвайт тренера" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Я тренер, у меня есть код приглашения" })).toBeNull();
   });
 
   it("links to the admin section for admins only", () => {

@@ -4,11 +4,12 @@ vi.mock("server-only", () => ({}));
 
 const next = vi.hoisted(() => ({
   refresh: vi.fn(),
+  revalidatePath: vi.fn(),
   redirect: vi.fn((to: string) => {
     throw new Error(`redirect ${to}`);
   }),
 }));
-vi.mock("next/cache", () => ({ refresh: next.refresh }));
+vi.mock("next/cache", () => ({ refresh: next.refresh, revalidatePath: next.revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: next.redirect }));
 
 type Write = {
@@ -90,6 +91,8 @@ describe("saveWizardStep", () => {
       { table: "user_settings", op: "update", values: { display_name: "Анна" }, filter: ["user_id", "trainer-1"] },
       { table: "trainer_profiles", op: "update", values: { headline: "Силовые", bio: null }, filter: ["user_id", "trainer-1"] },
     ]);
+    // "Назад" then loads the saved answers, not the router's copy from before the save (QA B3).
+    expect(next.revalidatePath).toHaveBeenCalledWith("/[lang]/onboarding/trainer", "layout");
   });
 
   it("asks for a name and keeps what was typed", async () => {

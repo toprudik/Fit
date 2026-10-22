@@ -1,4 +1,4 @@
-import { CalendarDays, ShieldCheck, Wallet } from "lucide-react";
+import { CalendarDays, CalendarPlus, ShieldCheck, Wallet } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Screen } from "@/components/shell/screen";
 import { ClientIntakeRows } from "@/components/intake/intake-rows";
@@ -13,10 +13,12 @@ import { loadPair } from "@/lib/pairs/load";
 import { sharingPath } from "@/lib/sharing/categories";
 import { PairMilestones } from "./milestones";
 import { EndPairRow } from "./pair-controls";
-import { PairNotice, PassRows, WriteButton, pairSubtitle } from "./trainer-pair";
+import { AskContactButton } from "./ask-contact";
+import { PairNotice, PassRows, pairSubtitle } from "./trainer-pair";
+import { WriteRow } from "./write-row";
 
 /**
- * The client's card of one trainer (screens.md "Тренер (моя пара)"): "вместе с …", "Написать", the next
+ * The client's card of one trainer (screens.md "Тренер (моя пара)"): "вместе с …", "Записаться" and "Написать" in words, the next
  * session, passes, debt, the notes the trainer showed (PAIR-2) and ending the pair (PRIV-5). Not the
  * caller's pair → 404.
  */
@@ -33,7 +35,6 @@ export async function ClientPair({ coachingId }: { coachingId: string }) {
           title={name}
           subtitle={pairSubtitle(t, locale, pair)}
           back={{ fallbackHref: "/client/trainers" }}
-          actions={<WriteButton t={t} pair={pair} />}
         />
       }
     >
@@ -47,6 +48,22 @@ export async function ClientPair({ coachingId }: { coachingId: string }) {
         )}
         {live && pair.partnerDeletingOn ? (
           <PairNotice>{interpolate(t.pairs.deletingTrainer, { date: formatDay(locale, pair.partnerDeletingOn, pair.timeZone) })}</PairNotice>
+        ) : null}
+
+        {live && !pair.partner.isCard ? (
+          <ListGroup>
+            <ListRow icon={CalendarPlus} title={t.pairs.book} href={`/client/book?coaching=${pair.coachingId}`} />
+            {pair.partner.username ? (
+              <WriteRow username={pair.partner.username} />
+            ) : (
+              <AskContactButton
+                variant="row"
+                coachingId={pair.coachingId}
+                requestedAt={pair.contactRequestedAt}
+                timeZone={pair.timeZone}
+              />
+            )}
+          </ListGroup>
         ) : null}
 
         <ListGroup>
