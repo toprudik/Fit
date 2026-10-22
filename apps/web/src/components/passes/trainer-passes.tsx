@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Sheet } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { DateField } from "@/components/ui/date-field";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate, plural } from "@/i18n/format";
@@ -100,13 +101,13 @@ function FreezeForm({ pass, today, onDone }: { pass: PassView; today: string; on
       }}
     >
       <p className="text-subhead text-ink-2">{copy.text}</p>
-      <TextField label={copy.from} type="date" value={values.from} onChange={(event) => setValues({ ...values, from: event.target.value })} />
-      <TextField
+      <DateField label={copy.from} required value={values.from} onChange={(from) => setValues({ ...values, from })} />
+      <DateField
         label={copy.to}
-        type="date"
+        required
         min={values.from}
         value={values.to}
-        onChange={(event) => setValues({ ...values, to: event.target.value })}
+        onChange={(to) => setValues({ ...values, to })}
         error={errors.includes("to") ? copy.toError : undefined}
       />
       {overlap > 0 && values.to >= values.from ? (
@@ -154,12 +155,12 @@ function ExpiryForm({ pass, onDone }: { pass: PassView; onDone: () => void }) {
       <p className="text-subhead text-ink-2">{copy.text}</p>
       <Switch checked={none} onCheckedChange={setNone} label={copy.noExpiry} showLabel />
       {none ? null : (
-        <TextField
+        <DateField
           label={copy.lastDay}
-          type="date"
+          required
           min={pass.startsOn}
           value={lastDay}
-          onChange={(event) => setLastDay(event.target.value)}
+          onChange={setLastDay}
           error={errors.includes("lastDay") ? copy.dayError : undefined}
         />
       )}

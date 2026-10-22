@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { DateField } from "@/components/ui/date-field";
+import { TimeField } from "@/components/ui/time-field";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
@@ -135,12 +137,12 @@ export function PastSessionForm({ coachingId, today, onDone }: { coachingId: str
       }}
     >
       <p className="text-subhead text-ink-2">{copy.text}</p>
-      <TextField label={copy.day} type="date" max={today} value={values.day} onChange={(event) => setValues({ ...values, day: event.target.value })} />
-      <TextField
+      <DateField label={copy.day} required max={today} value={values.day} onChange={(day) => setValues({ ...values, day })} />
+      <TimeField
         label={copy.time}
-        type="time"
+        required
         value={values.time}
-        onChange={(event) => setValues({ ...values, time: event.target.value })}
+        onChange={(time) => setValues({ ...values, time })}
         error={errors.includes("time") ? copy.timeError : undefined}
       />
       <TextField

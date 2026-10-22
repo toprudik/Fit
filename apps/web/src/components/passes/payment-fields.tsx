@@ -1,6 +1,7 @@
 "use client";
 
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { DateField } from "@/components/ui/date-field";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/passes/present";
@@ -48,12 +49,12 @@ export function PaymentFields({
           options={PAYMENT_METHODS.map((method) => ({ value: method, label: copy.methods[method] }))}
         />
       </div>
-      <TextField
+      <DateField
         label={copy.form.paidOn}
-        type="date"
+        required
         max={today}
         value={values.paidOn}
-        onChange={(event) => onChange({ ...values, paidOn: event.target.value })}
+        onChange={(paidOn) => onChange({ ...values, paidOn })}
         error={errors.paidOn ? copy.form.dayError : undefined}
       />
     </>

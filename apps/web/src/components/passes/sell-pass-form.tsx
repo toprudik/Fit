@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { toast } from "@/components/ui/sonner";
 import { Switch } from "@/components/ui/switch";
+import { DateField } from "@/components/ui/date-field";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { plural } from "@/i18n/format";
@@ -187,11 +188,11 @@ export function SellPassForm({
         </>
       )}
 
-      <TextField
+      <DateField
         label={copy.startsOn}
-        type="date"
+        required
         value={startsOn}
-        onChange={(event) => setStartsOn(event.target.value)}
+        onChange={setStartsOn}
         error={invalid("startsOn") ? t.money.passes.expiryForm.dayError : undefined}
       />
 
