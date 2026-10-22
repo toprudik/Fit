@@ -785,6 +785,7 @@ export const en: Dictionary = {
       allReached: "Every milestone reached: 100 sessions together",
     },
     write: "Message",
+    book: "Book a session",
     tabsLabel: "Sections",
     tabs: {
       overview: "Overview",
@@ -797,7 +798,6 @@ export const en: Dictionary = {
     noNextSession: "No sessions booked yet",
     passes: "Passes",
     noPass: "No pass",
-    passLeft: "{available} of {total} left",
     passUntil: "until {date}",
     passFrozen: "Frozen",
     debt: "Debt",
@@ -1356,6 +1356,7 @@ export const en: Dictionary = {
       },
       left: "{remaining} of {total} left",
       leftExpired: "Expired, {remaining} unused",
+      booked: "{count} booked",
       until: "Valid through {date}",
       noExpiry: "No expiry",
       startsOn: "From {date}",

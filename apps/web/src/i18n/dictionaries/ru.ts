@@ -789,6 +789,7 @@ export const ru = {
       allReached: "Все вехи пройдены: 100 занятий вместе",
     },
     write: "Написать",
+    book: "Записаться",
     tabsLabel: "Разделы",
     tabs: {
       overview: "Обзор",
@@ -801,7 +802,6 @@ export const ru = {
     noNextSession: "Занятий пока не назначено",
     passes: "Абонементы",
     noPass: "Абонемента нет",
-    passLeft: "Осталось {available} из {total}",
     passUntil: "до {date}",
     passFrozen: "Заморожен",
     debt: "Долг",
@@ -1364,6 +1364,7 @@ export const ru = {
       },
       left: "Осталось {remaining} из {total}",
       leftExpired: "Истёк, не использовано {remaining}",
+      booked: "забронировано: {count}",
       until: "Действует по {date}",
       noExpiry: "Без срока",
       startsOn: "С {date}",

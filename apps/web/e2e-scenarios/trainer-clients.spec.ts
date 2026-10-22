@@ -716,6 +716,8 @@ test.describe("the client's side of the pair", () => {
     ).toBeVisible();
     await expectAccessible(page);
 
+    await expect(page.getByRole("link", { name: "Записаться", exact: true })).toHaveAttribute("href", `/client/book?coaching=${client.coachingId}`);
+    await expect(page.getByRole("button", { name: /^(Написать|Попросить связаться)$/ })).toBeVisible();
     await page.getByRole("link", { name: "Что видит тренер", exact: true }).click();
     await expectPath(page, `${base}/sharing`);
     await expect(
