@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
-import { TextField } from "@/components/ui/text-field";
+import { DateField } from "@/components/ui/date-field";
 import { useI18n } from "@/i18n/client";
 import { INTL_LOCALE } from "@/i18n/config";
 import { closeDays, reopenDays, setSlotOpen, type CloseDaysResult } from "@/lib/schedule/actions";
@@ -49,8 +49,8 @@ export function CloseDaysForm({ today, timeZone }: { today: string; timeZone: st
       </div>
       <form onSubmit={submit} className="flex flex-col gap-4 rounded-lg bg-surface-1 p-4">
         <div className="grid grid-cols-2 gap-3">
-          <TextField label={copy.from} type="date" min={today} value={from} onChange={(event) => setFrom(event.target.value)} required />
-          <TextField label={copy.to} type="date" min={from || today} value={to} onChange={(event) => setTo(event.target.value)} required />
+          <DateField label={copy.from} min={today} value={from} onChange={setFrom} required />
+          <DateField label={copy.to} min={from || today} value={to} onChange={setTo} required />
         </div>
         {error ? (
           <p role="alert" className="text-subhead text-danger">

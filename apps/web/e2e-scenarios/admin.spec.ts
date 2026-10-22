@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { collectErrors, expectAccessible } from "../e2e/support";
 import { cardOf, expectToast, namedAdmin, namedTrainer, submitVerification, uniqueLastName } from "./support/admin";
+import { pickDate } from "./support/date-field";
 import { expect, test } from "./support/fixtures";
 import { ok, signedInitData } from "./support/personas";
 
@@ -500,12 +501,9 @@ test.describe("admin section", () => {
     await page.goto("/admin");
     const today = new Date();
     const day = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    // A date typed before hydration is lost, so type and submit until the form answers.
-    await expect(async () => {
-      await page.getByLabel("Действуют с").fill(day);
-      await page.getByRole("button", { name: "Объявить новые редакции документов" }).click();
-      await expect(page.getByText("Выбери день не раньше завтрашнего")).toBeVisible({ timeout: 1000 });
-    }).toPass();
+    await pickDate(page, page, "Действуют с", day);
+    await page.getByRole("button", { name: "Объявить новые редакции документов" }).click();
+    await expect(page.getByText("Выбери день не раньше завтрашнего")).toBeVisible();
     await expect(page.getByText("Отменить рассылку нельзя", { exact: false })).toHaveCount(0);
   });
 

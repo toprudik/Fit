@@ -108,14 +108,16 @@ export function DateField({
     const name = new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(utc(`2024-${option}-01`));
     return name.charAt(0).toUpperCase() + name.slice(1);
   };
-  const thisYear = new Date().getFullYear();
+  // Only while the sheet is open: a prerendered page can't read the clock (Cache Components).
+  const thisYear = open ? new Date().getFullYear() : 0;
   const fromYear = min ? Number(min.slice(0, 4)) : thisYear - 100;
   const toYear = max ? Number(max.slice(0, 4)) : thisYear + 10;
   const shownYear = month ? Number(month.slice(0, 4)) : thisYear;
-  const years = Array.from(
-    { length: Math.max(toYear, shownYear) - Math.min(fromYear, shownYear) + 1 },
-    (_, index) => String(Math.max(toYear, shownYear) - index),
-  );
+  const years = open
+    ? Array.from({ length: Math.max(toYear, shownYear) - Math.min(fromYear, shownYear) + 1 }, (_, index) =>
+        String(Math.max(toYear, shownYear) - index),
+      )
+    : [];
   const weekdays = Array.from({ length: 7 }, (_, index) =>
     // 2024-01-01 was a Monday.
     new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(utc(`2024-01-0${index + 1}`)),

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
-import { TextField } from "@/components/ui/text-field";
+import { DateField } from "@/components/ui/date-field";
 import { useI18n } from "@/i18n/client";
 import { grantReferralBonus, type GrantReferralBonusResult } from "@/lib/referral-bonuses/actions";
 import { BONUS_DEFAULT_START } from "@/lib/referral-bonuses/bonuses";
@@ -33,9 +33,8 @@ export function ReferralBonusGrant({ bonusId }: { bonusId: string }) {
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-3 sm:flex-row sm:items-start">
-      <TextField
+      <DateField
         name="startsOn"
-        type="date"
         label={copy.start}
         hint={copy.startHint}
         defaultValue={BONUS_DEFAULT_START}
