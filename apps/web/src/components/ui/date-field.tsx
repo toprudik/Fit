@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Sheet } from "@/components/ui/sheet";
+import { SelectChevron } from "@/components/ui/time-field";
 import { useI18n } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +31,7 @@ type DateFieldProps = {
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const MONTHS = Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, "0"));
 const headerSelect =
-  "h-11 min-w-0 flex-1 cursor-pointer rounded-sm border border-field-line bg-field px-3 text-body text-ink outline-none focus:border-focus-ring focus:shadow-[0_0_0_1px_var(--focus-ring)]";
+  "h-11 w-full cursor-pointer appearance-none rounded-sm border border-field-line bg-field pr-7 pl-2.5 text-body text-ink outline-none focus:border-focus-ring focus:shadow-[0_0_0_1px_var(--focus-ring)]";
 
 /** "YYYY-MM-DD" as a UTC midnight, so the calendar never shifts a day with the device's zone. */
 function utc(iso: string): Date {
@@ -181,30 +182,36 @@ export function DateField({
                 disabled={min !== undefined && shiftMonth(month, -1) < min.slice(0, 7)}
                 onClick={() => setMonth(shiftMonth(month, -1))}
               />
-              <select
-                aria-label={copy.month}
-                value={month.slice(5)}
-                onChange={(event) => setMonth(`${month.slice(0, 4)}-${event.target.value}`)}
-                className={headerSelect}
-              >
-                {MONTHS.map((option) => (
-                  <option key={option} value={option}>
-                    {monthName(option)}
-                  </option>
-                ))}
-              </select>
-              <select
-                aria-label={copy.year}
-                value={month.slice(0, 4)}
-                onChange={(event) => setMonth(`${event.target.value}-${month.slice(5)}`)}
-                className={headerSelect}
-              >
-                {years.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+              <div className="relative min-w-0 flex-1">
+                <select
+                  aria-label={copy.month}
+                  value={month.slice(5)}
+                  onChange={(event) => setMonth(`${month.slice(0, 4)}-${event.target.value}`)}
+                  className={headerSelect}
+                >
+                  {MONTHS.map((option) => (
+                    <option key={option} value={option}>
+                      {monthName(option)}
+                    </option>
+                  ))}
+                </select>
+                <SelectChevron className="right-2" />
+              </div>
+              <div className="relative min-w-0 flex-1">
+                <select
+                  aria-label={copy.year}
+                  value={month.slice(0, 4)}
+                  onChange={(event) => setMonth(`${event.target.value}-${month.slice(5)}`)}
+                  className={headerSelect}
+                >
+                  {years.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <SelectChevron className="right-2" />
+              </div>
               <IconButton
                 icon={ChevronRight}
                 label={copy.next}
