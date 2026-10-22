@@ -10,11 +10,15 @@ import { activeTab, isTabRoot, isZone, ZONE_COOKIE, type TabId, type Zone } from
 import { preferenceCookie, saveAccountPreferences } from "@/lib/preferences";
 import { hapticImpact, useTelegramTopControls } from "@/lib/telegram/mini-app";
 import { cn } from "@/lib/utils";
-import { PROFILE_TAB } from "./nav-items";
+import { PROFILE_TAB, tabLabel } from "./nav-items";
 import { arrival } from "./navigation-tracker";
+import { Screen } from "./screen";
+import { ScreenHeader } from "./screen-header";
 import { ShellContext, type Shell } from "./shell-context";
 import { SideNav } from "./side-nav";
 import { TabBar, type TabSelectHandler } from "./tab-bar";
+import { PENDING_SKELETONS } from "./tab-skeletons";
+import { TodayDate } from "./today-date";
 import { useShownZone } from "./use-shown-zone";
 
 /** Where a tab was left: the top of its stack and how far it was scrolled. */
@@ -24,6 +28,12 @@ type TabMemory = { href: string; scrollY: number };
 type Shown = { route: string; zone: Zone | null; tabId: TabId | null };
 
 type Transition = "zone" | "tab" | "push" | "pop";
+
+/** How long a tapped tab may take before the shell shows its skeleton: the skeletons' own 300 ms. */
+const SKELETON_DELAY_MS = 300;
+
+/** Tabs whose header carries today's date under the title. */
+const DATED_TABS: ReadonlySet<TabId> = new Set(["today", "home"]);
 
 /** First segment of the settings screen, which the side menu lists as an item of its own. */
 const SETTINGS_SEGMENT = "settings";
@@ -152,6 +162,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (pendingTab !== null && pendingTab.from !== route) setPendingTab(null);
   const shownTabId = pendingTab?.id ?? tabId;
 
+  // A screen that has not arrived after 300 ms (the first tap after opening, before its prefetch is
+  // in) gets its skeleton from the shell, under the tab's title, instead of the old screen standing
+  // still. The arriving screen then shows its own skeleton at once (data-skeleton-instant on <main>)
+  // rather than after another 300 ms; that lasts until the next navigation.
+  const [skeleton, setSkeleton] = useState<{ from: string; at: string | null } | null>(null);
+  if (skeleton !== null && skeleton.at === null && skeleton.from !== route) setSkeleton({ from: skeleton.from, at: route });
+  if (skeleton !== null && skeleton.at !== null && skeleton.at !== route) setSkeleton(null);
+  useEffect(() => {
+    if (pendingTab === null) return;
+    const { from } = pendingTab;
+    const timer = window.setTimeout(() => setSkeleton({ from, at: null }), SKELETON_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [pendingTab]);
+  const waitingTab = pendingTab !== null && skeleton?.at === null && skeleton.from === route ? pendingTab.id : null;
+
   const selectTab: TabSelectHandler = (tab, event) => {
     event.preventDefault();
     if (tab.id === tabId) {
@@ -243,17 +268,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           id="main"
           ref={mainRef}
           tabIndex={-1}
+          data-skeleton-instant={skeleton !== null ? "" : undefined}
           className={cn(
             "min-w-0 flex-1 overflow-x-clip outline-none md:pb-0",
             routeZone ? "pb-[calc(var(--size-tabbar)+var(--safe-bottom))]" : "pb-[var(--safe-bottom)]",
           )}
         >
-          <div ref={screenRef}>{children}</div>
+          <div ref={screenRef} hidden={waitingTab !== null}>
+            {children}
+          </div>
+          {waitingTab !== null ? (
+            <ShellContext value={{ ...shell, onProfileTab: waitingTab === profileTabId }}>
+              <PendingScreen tab={waitingTab} />
+            </ShellContext>
+          ) : null}
         </main>
         {/* Settings and the profile page are pushed screens on a phone: no tab bar there. */}
         {routeZone ? <TabBar zone={routeZone} activeId={shownTabId} profileId={profileTabId} onSelect={selectTab} /> : null}
       </div>
       <ProfileSheet open={profileOpen} onOpenChange={setProfileOpen} />
     </ShellContext>
+  );
+}
+
+/** The tapped tab's title and skeleton while its screen is on the way (see AppShell). */
+function PendingScreen({ tab }: { tab: TabId }) {
+  const { t } = useI18n();
+  const { column, render } = PENDING_SKELETONS[tab];
+  return (
+    <Screen header={<ScreenHeader title={tabLabel(t, tab)} subtitle={DATED_TABS.has(tab) ? <TodayDate /> : undefined} />}>
+      <div className={column}>{render(t.common.loading)}</div>
+    </Screen>
   );
 }

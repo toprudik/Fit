@@ -9,7 +9,9 @@ import { ListGroup, ListRow } from "@/components/ui/list";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { INTL_LOCALE } from "@/i18n/config";
 import { getDictionary, getLocale } from "@/i18n/server";
-import { loadTrainerRequests } from "@/lib/bookings/load";
+import { interpolate } from "@/i18n/format";
+import { loadTrainerRequests, type TrainerRequest } from "@/lib/bookings/load";
+import { loadScheduleAssists } from "@/lib/delegations/assistant";
 import { loadScheduleOwner } from "@/lib/schedule/load";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -28,7 +30,9 @@ async function Requests() {
   const owner = await loadScheduleOwner();
   if (!owner) return <ScheduleSignIn title={copy.title} next="/trainer/requests" />;
 
-  const requests = await loadTrainerRequests(owner, now());
+  // With the requests of the trainers the caller assists with the schedule, each under its trainer (B8).
+  const assists = await loadScheduleAssists(owner);
+  const requests = await loadTrainerRequests(owner, now(), undefined, [owner.userId, ...assists.map((assist) => assist.ownerId)]);
   if (requests.length === 0) return <EmptyState icon={Inbox} title={copy.emptyTitle} description={copy.emptyText} />;
   const format = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     weekday: "short",
@@ -38,18 +42,29 @@ async function Requests() {
     minute: "2-digit",
     timeZone: owner.timeZone,
   });
+  const rows = (items: TrainerRequest[]) =>
+    items.map((request) => (
+      <ListRow
+        key={request.id}
+        avatar={{ name: request.client }}
+        title={request.client}
+        subtitle={format.format(new Date(request.startsAt))}
+        href={`/trainer/requests/${request.id}`}
+      />
+    ));
+  const own = requests.filter((request) => request.trainerId === owner.userId);
   return (
-    <ListGroup>
-      {requests.map((request) => (
-        <ListRow
-          key={request.id}
-          avatar={{ name: request.client }}
-          title={request.client}
-          subtitle={format.format(new Date(request.startsAt))}
-          href={`/trainer/requests/${request.id}`}
-        />
-      ))}
-    </ListGroup>
+    <div className="flex flex-col gap-6">
+      {own.length > 0 ? <ListGroup>{rows(own)}</ListGroup> : null}
+      {assists.map((assist) => {
+        const theirs = requests.filter((request) => request.trainerId === assist.ownerId);
+        return theirs.length > 0 ? (
+          <ListGroup key={assist.ownerId} header={interpolate(copy.ownerHeader, { name: assist.ownerName })} headingLevel={2}>
+            {rows(theirs)}
+          </ListGroup>
+        ) : null;
+      })}
+    </div>
   );
 }
 

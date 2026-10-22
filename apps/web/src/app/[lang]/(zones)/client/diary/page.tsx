@@ -5,7 +5,7 @@ import { ActivityDiaryEntry } from "@/components/activity/sections";
 import { FoodDiaryEntry } from "@/components/nutrition/food-day";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
-import { SkeletonRows } from "@/components/ui/skeleton";
+import { ClientDiarySkeleton } from "@/components/shell/tab-skeletons";
 import { LogListSection } from "@/components/workouts/log-screens";
 import { getDictionary } from "@/i18n/server";
 
@@ -22,7 +22,7 @@ export default async function ClientDiaryPage() {
       <div className="flex w-full max-w-2xl flex-col gap-6 pt-4 md:pt-0">
         <FoodDiaryEntry t={t} />
         <ActivityDiaryEntry t={t} />
-        <Suspense fallback={<SkeletonRows rows={2} label={t.common.loading} />}>
+        <Suspense fallback={<ClientDiarySkeleton label={t.common.loading} />}>
           <HealthConsentGate next="/client/diary">
             <LogListSection place={{ side: "client" }} />
           </HealthConsentGate>

@@ -314,6 +314,56 @@
   backdrop-filter: blur(20px) saturate(180%);
 }
 
+/*
+ * Skeleton motion (docs/design/components/Skeleton). The highlight moves with transform only
+ * (brand.md "Движение") and stops with reduced motion. These were a CSS module once, but the
+ * Tailwind rule for *.css in next.config.ts turns modules into global CSS with no class names.
+ */
+@utility skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, var(--surface-3) 50%, transparent 100%);
+    transform: translateX(-100%);
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      display: none;
+    }
+  }
+}
+
+/*
+ * Loading that ends within 300 ms never shows the skeleton: it stays invisible until then. When the
+ * shell already showed a tab's skeleton while the screen was on its way (AppShell), the screen's own
+ * skeleton takes over at once instead of vanishing for another 300 ms.
+ */
+@utility skeleton-delayed {
+  animation: skeleton-appear 1ms linear 300ms both;
+  [data-skeleton-instant] & {
+    animation: none;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes skeleton-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @layer base {
   *,
   ::before,

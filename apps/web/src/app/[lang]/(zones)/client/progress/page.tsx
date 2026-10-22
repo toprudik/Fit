@@ -4,6 +4,13 @@ import { HealthConsentGate } from "@/components/consent/health-consent-gate";
 import { MonthlyReportEntry } from "@/components/monthly-report/entry";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
+import {
+  GamificationSkeleton,
+  MeasurementsSkeleton,
+  NutritionEntrySkeleton,
+  PhotosSkeleton,
+  ProgressHealthSkeleton,
+} from "@/components/shell/tab-skeletons";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { ClientGamificationEntry } from "@/components/gamification/sections";
 import { ClientNutritionEntry } from "@/components/nutrition/sections";
@@ -30,21 +37,21 @@ export default async function ClientProgressPage() {
         <Suspense fallback={null}>
           <ClientSeasonChallenge />
         </Suspense>
-        <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
+        <Suspense fallback={<ProgressHealthSkeleton label={t.common.loading} />}>
           {/* Measurements, the nutrition target and photos are health data (право 3): one card asks for the consent. */}
           <HealthConsentGate next="/client/progress">
-            <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
+            <Suspense fallback={<MeasurementsSkeleton label={t.common.loading} />}>
               <ClientMeasurements />
             </Suspense>
-            <Suspense fallback={<SkeletonRows rows={1} label={t.common.loading} />}>
+            <Suspense fallback={<NutritionEntrySkeleton label={t.common.loading} />}>
               <ClientNutritionEntry />
             </Suspense>
-            <Suspense fallback={<SkeletonRows rows={2} label={t.common.loading} />}>
+            <Suspense fallback={<PhotosSkeleton label={t.common.loading} />}>
               <ClientPhotos />
             </Suspense>
           </HealthConsentGate>
         </Suspense>
-        <Suspense fallback={<SkeletonRows rows={2} label={t.common.loading} />}>
+        <Suspense fallback={<GamificationSkeleton label={t.common.loading} />}>
           <ClientGamificationEntry />
         </Suspense>
         <Suspense fallback={null}>

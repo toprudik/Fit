@@ -6,7 +6,7 @@ import { DetailPlaceholder, MasterDetail, Screen } from "@/components/shell/scre
 import { ScreenHeader } from "@/components/shell/screen-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/components/ui/list";
-import { Skeleton, SkeletonRows, SkeletonScreen, SkeletonSegments } from "@/components/ui/skeleton";
+import { TrainerMoneySkeleton } from "@/components/shell/tab-skeletons";
 import { getDictionary } from "@/i18n/server";
 import { loadTrainerMoney } from "@/lib/passes/load";
 
@@ -31,15 +31,7 @@ export default async function TrainerMoneyPage() {
       list={
         <Screen header={<ScreenHeader title={t.tabs.trainer.money} />}>
           <div className="flex flex-col gap-6 pt-4 md:pt-0">
-            <Suspense
-              fallback={
-                <SkeletonScreen label={t.common.loading}>
-                  <Skeleton className="h-19 rounded-lg" />
-                  <SkeletonSegments />
-                  <SkeletonRows header rows={1} />
-                </SkeletonScreen>
-              }
-            >
+            <Suspense fallback={<TrainerMoneySkeleton label={t.common.loading} />}>
               <Overview />
             </Suspense>
             <ListGroup>

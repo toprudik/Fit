@@ -76,6 +76,15 @@ async function pairNames(me: ScheduleOwner, pairs: { id: string; client_id: stri
   return new Map(pairs.map((pair) => [pair.id, displayName(people.get(pair.client_id))]));
 }
 
+export type ScheduleAssist = { ownerId: string; ownerName: string };
+
+/** Trainers whose schedule the caller helps with now: live assistant delegations with the schedule scope (B8). */
+export async function loadScheduleAssists(me: ScheduleOwner): Promise<ScheduleAssist[]> {
+  const ids = [...new Set((await liveAssistance(me)).filter((item) => item.scopes.includes("schedule")).map((item) => item.owner_trainer_id))];
+  const names = await ownerNames(me, ids);
+  return ids.map((ownerId) => ({ ownerId, ownerName: names.get(ownerId) ?? "" }));
+}
+
 /** Whether the caller assists anyone right now: the switch on «Клиенты» shows only then. */
 export async function hasAssistance(): Promise<boolean> {
   const me = await loadScheduleOwner();
@@ -284,7 +293,8 @@ const AHEAD_DAYS = 60;
 
 /**
  * The client's personal sessions with the owner, for an assistant with the schedule or attendance scope (RLS):
- * the coming ones and those of the last two weeks, where attendance is marked. Cancelled ones are left out.
+ * the coming ones and those of the last two weeks, where attendance is marked. Cancelled ones are left out; a
+ * request waiting for the trainer shows among the coming ones (B8).
  */
 export async function loadAssistedSessions(pair: AssistedPair): Promise<{ upcoming: AssistedSession[]; past: AssistedSession[] }> {
   const me = await loadScheduleOwner();
@@ -294,7 +304,7 @@ export async function loadAssistedSessions(pair: AssistedPair): Promise<{ upcomi
     .from("bookings")
     .select("id, status, sessions!inner(id, starts_at, ends_at, mode, title, status, locations(name))")
     .eq("coaching_id", pair.coachingId)
-    .in("status", ["confirmed", "attended", "no_show"])
+    .in("status", ["requested", "confirmed", "attended", "no_show"])
     .neq("sessions.status", "cancelled")
     .gte("sessions.starts_at", new Date(now - PAST_DAYS * 86_400_000).toISOString())
     .lte("sessions.starts_at", new Date(now + AHEAD_DAYS * 86_400_000).toISOString());
