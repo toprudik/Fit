@@ -310,6 +310,8 @@ export async function loadClientBooking(owner: ScheduleOwner, bookingId: string)
 
 export type TrainerRequest = {
   id: string;
+  /** The trainer the request is for: the caller, or a trainer the caller assists with the schedule (B8). */
+  trainerId: string;
   coachingId: string;
   client: string;
   sessionId: string;
@@ -321,10 +323,18 @@ export type TrainerRequest = {
   trialLinkId: string | null;
 };
 
-/** Open booking requests of the signed-in trainer, soonest first; one of them with `bookingId`. */
-export async function loadTrainerRequests(owner: ScheduleOwner, now: Date, bookingId?: string): Promise<TrainerRequest[]> {
-  const { supabase, userId } = owner;
-  let query = supabase.from("bookings").select("id, coaching_id, session_id").eq("trainer_id", userId).eq("status", "requested");
+/**
+ * Open booking requests of the signed-in trainer, soonest first; one of them with `bookingId`. `trainerIds` adds the
+ * trainers the caller assists with the schedule; RLS then shows only the pairs the delegation covers.
+ */
+export async function loadTrainerRequests(
+  owner: ScheduleOwner,
+  now: Date,
+  bookingId?: string,
+  trainerIds: string[] = [owner.userId],
+): Promise<TrainerRequest[]> {
+  const { supabase } = owner;
+  let query = supabase.from("bookings").select("id, trainer_id, coaching_id, session_id").in("trainer_id", trainerIds).eq("status", "requested");
   if (bookingId) query = query.eq("id", bookingId);
   const { data: bookings, error } = await query;
   if (error) fail("requests", error);
@@ -353,6 +363,7 @@ export async function loadTrainerRequests(owner: ScheduleOwner, now: Date, booki
       return [
         {
           id: booking.id,
+          trainerId: booking.trainer_id,
           coachingId: booking.coaching_id,
           client: names.get(booking.coaching_id) ?? "",
           sessionId: session.id,
@@ -376,16 +387,25 @@ export type TrainerRequestDetail = TrainerRequest & {
 };
 
 /** One open request of the signed-in trainer with the client's balance (screens.md /trainer/requests/[id]). */
-export async function loadTrainerRequest(owner: ScheduleOwner, bookingId: string, now: Date): Promise<TrainerRequestDetail | null> {
-  const [request] = await loadTrainerRequests(owner, now, bookingId);
+export async function loadTrainerRequest(
+  owner: ScheduleOwner,
+  bookingId: string,
+  now: Date,
+  trainerIds: string[] = [owner.userId],
+): Promise<TrainerRequestDetail | null> {
+  const [request] = await loadTrainerRequests(owner, now, bookingId, trainerIds);
   if (!request) return null;
   const { supabase } = owner;
+  // A delegate never sees the client's passes, debt or prices (PRD wave-3 §1 rule 3).
+  const delegated = request.trainerId !== owner.userId;
   const [location, balance, trial] = await Promise.all([
     request.locationId
       ? supabase.from("locations").select("name").eq("id", request.locationId).maybeSingle()
       : Promise.resolve({ data: null }),
-    supabase.from("coaching_balances").select("available_sessions, debt_sessions").eq("coaching_id", request.coachingId).maybeSingle(),
-    request.trialLinkId
+    delegated
+      ? Promise.resolve({ data: null })
+      : supabase.from("coaching_balances").select("available_sessions, debt_sessions").eq("coaching_id", request.coachingId).maybeSingle(),
+    request.trialLinkId && !delegated
       ? supabase.from("trial_links").select("title, price_minor, currency").eq("id", request.trialLinkId).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
@@ -399,8 +419,8 @@ export async function loadTrainerRequest(owner: ScheduleOwner, bookingId: string
 }
 
 /** How many open requests the trainer has, for the button on the schedule. */
-export async function countTrainerRequests(owner: ScheduleOwner, now: Date): Promise<number> {
-  return (await loadTrainerRequests(owner, now)).length;
+export async function countTrainerRequests(owner: ScheduleOwner, now: Date, trainerIds?: string[]): Promise<number> {
+  return (await loadTrainerRequests(owner, now, undefined, trainerIds)).length;
 }
 
 export type WaitlistStatus = Database["public"]["Enums"]["waitlist_status"];

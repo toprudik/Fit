@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { interpolate } from "@/i18n/format";
 import { loadClientPasses } from "@/lib/passes/load";
+import { ClientSignedOut } from "./client-signed-out";
 import { PassSummary } from "./pass-card";
 import { debtText } from "@/lib/passes/debt";
 
@@ -14,7 +15,8 @@ import { debtText } from "@/lib/passes/debt";
 export async function ClientPasses() {
   const [t, locale, groups] = await Promise.all([getDictionary(), getLocale(), loadClientPasses()]);
   const copy = t.money.client;
-  if (!groups?.length) return <EmptyState icon={Ticket} title={copy.emptyTitle} description={copy.emptyText} />;
+  if (groups === null) return <ClientSignedOut t={t} title={copy.signedOut} text={copy.signedOutText} next="/client/passes" />;
+  if (!groups.length) return <EmptyState icon={Ticket} title={copy.emptyTitle} description={copy.emptyText} />;
   return (
     <div className="flex flex-col gap-6">
       {groups.map((group) => (

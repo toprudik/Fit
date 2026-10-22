@@ -164,6 +164,8 @@ export const en: Dictionary = {
     },
     client: {
       home: {
+        signedOut: "Sign in first",
+        signedOutText: "Sign in with Telegram to see your sessions and passes here.",
         emptyTitle: "No upcoming sessions",
         emptyText: "Pick a free time with your trainer and book it.",
         book: "Book a session",
@@ -1259,6 +1261,7 @@ export const en: Dictionary = {
         dropInError: "Enter a price, for example 2000",
         packPrice: "Pack of {count}",
         packHint: "Leave it empty if you don't sell this pack",
+        packPricier: "A session in this pack costs more than a single one: {pack} vs {single}",
         packError: "The price should be a number, for example 9000",
         validityHint: "For the packs of 5, 10, and 20 sessions",
         submit: "Create the grid",
@@ -1620,6 +1623,8 @@ export const en: Dictionary = {
     /** The client's side: /client/passes and /client/passes/[passId]. */
     client: {
       title: "Passes",
+      signedOut: "Sign in first",
+      signedOutText: "Sign in with Telegram to see your passes.",
       emptyTitle: "No passes",
       emptyText: "Ask your trainer about packages. Once they sell you a pass, it shows up here.",
       trainer: "Trainer {name}",
@@ -2956,7 +2961,7 @@ export const en: Dictionary = {
       noShowLabel: "{name}: no-show",
       marked: "Marked",
       notStarted: "You can mark attendance once the session starts.",
-      statuses: { confirmed: "Booked", attended: "Present", no_show: "No-show" },
+      statuses: { requested: "Waiting for confirmation", confirmed: "Booked", attended: "Present", no_show: "No-show" },
       notFound: "The session isn't available",
       notFoundText: "The substitution ended with the session or was revoked.",
       chargeNote: "Charges follow the trainer's rules, you only mark attendance.",
@@ -3828,6 +3833,9 @@ export const en: Dictionary = {
     online: "online",
     days: "Days of the week",
     emptyDay: "Nothing on this day",
+    whose: "Whose schedule to show",
+    mine: "Mine",
+    assistedNote: "{name}'s schedule. Book clients and change sessions in their cards under “Delegated to me”.",
     emptyWeekTitle: "The week is empty so far",
     emptyWeekText: "Fill in your week template and free slots will appear on their own.",
     emptyWeekAction: "Create a week template",
@@ -4266,6 +4274,7 @@ export const en: Dictionary = {
       emptyTitle: "No requests",
       emptyText: "When a client without a fitting pass picks a time, the request shows up here.",
       detailTitle: "Booking request",
+      ownerHeader: "{name}'s clients",
       client: "Client",
       passLine: "Charged to a pass, free sessions: {count}.",
       debtLine: "No pass fits, so the session goes to debt when charged.",

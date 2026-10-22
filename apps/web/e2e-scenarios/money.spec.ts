@@ -322,6 +322,18 @@ test.describe("Marking a payment", () => {
 });
 
 test.describe("Passes", () => {
+  test("signed out, the client home and passes ask to sign in instead of looking empty (QA B10)", async ({ page }) => {
+    await page.goto("/client/passes");
+    await expect(page.getByRole("heading", { name: "Нужно войти" })).toBeVisible();
+    await expect(page.getByText("Абонементов нет")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Войти через Telegram" })).toHaveAttribute("href", `/login?next=${encodeURIComponent("/client/passes")}`);
+    await expectAccessible(page);
+    await page.goto("/client");
+    await expect(page.getByText("Войди через Telegram, и здесь появятся твои занятия и абонементы.")).toBeVisible();
+    await expect(page.getByText("Ближайших занятий нет")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Войти через Telegram" })).toHaveAttribute("href", `/login?next=${encodeURIComponent("/client")}`);
+  });
+
   test("a client without passes is told to ask the trainer", async ({ client }) => {
     await client.page.goto("/client/passes");
     await expect(client.page.getByText("Абонементов нет")).toBeVisible();
