@@ -20,11 +20,31 @@ import {
   type SessionConflict,
   type SessionError,
 } from "@/lib/schedule/session-actions";
+import { recordPastSession } from "@/lib/passes/actions";
 import { DURATIONS } from "@/lib/schedule/template";
 import { addDays, isoWeekday } from "@/lib/schedule/time";
 import { SELECT_CLASS } from "./week-template-editor";
 
 const WEEKDAYS = ["1", "2", "3", "4", "5", "6", "7"] as const;
+
+/** Whether a session on this day and time would already have ended now in the trainer's zone. */
+function endedByNow(values: Pick<SessionFormValues, "day" | "time" | "durationMin">, timeZone: string): boolean {
+  if (!values.day || !values.time) return false;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  const today = `${part("year")}-${part("month")}-${part("day")}`;
+  if (values.day !== today) return values.day < today;
+  const [hours, minutes] = values.time.split(":").map(Number);
+  return hours * 60 + minutes + values.durationMin <= Number(part("hour")) * 60 + Number(part("minute"));
+}
 
 export type SessionFormValues = {
   coachingId: string;
@@ -59,6 +79,7 @@ export function SessionForm(props: Props) {
   const { t, locale } = useI18n();
   const copy = t.schedule.sessionForm;
   const groupCopy = t.schedule.groupSession;
+  const pastCopy = t.money.passes.pastForm;
   const router = useRouter();
   const [values, setValues] = useState(props.initial);
   const [type, setType] = useState<"personal" | "group">(() =>
@@ -77,9 +98,15 @@ export function SessionForm(props: Props) {
   const [error, setError] = useState<string | null>(null);
   const [conflicts, setConflicts] = useState<SessionConflict[]>([]);
   const [pending, startTransition] = useTransition();
+  // A personal session that has already ended goes into the history and is charged right away (QA T11).
+  const [ended, setEnded] = useState(false);
+  const [pastStatus, setPastStatus] = useState<"attended" | "no_show">("attended");
+  const past = ended && props.kind === "create" && !group;
 
   const change = (patch: Partial<SessionFormValues>) => {
-    setValues((current) => ({ ...current, ...patch }));
+    const next = { ...values, ...patch };
+    setValues(next);
+    if ("day" in patch || "time" in patch || "durationMin" in patch) setEnded(endedByNow(next, props.timeZone));
     setError(null);
   };
   const errorText = (key: SessionError) =>
@@ -161,8 +188,28 @@ export function SessionForm(props: Props) {
       const badUntil = end === "until" && (!until || until <= values.day || until > addDays(values.day, 366));
       if (!weekdays.includes(isoWeekday(values.day)) || badCount || badUntil) return setError(copy.errors.invalid_repeat);
     }
+    if (past) return recordPast();
     save(false);
   };
+
+  const recordPast = () =>
+    startTransition(async () => {
+      const result = await recordPastSession({
+        coachingId: values.coachingId,
+        day: values.day,
+        time: values.time,
+        durationMin: values.durationMin,
+        status: pastStatus,
+      });
+      if (result.status === "done") {
+        toast.success(pastCopy.done);
+        router.push(`/trainer/schedule?date=${values.day}`);
+      } else if (result.status === "refused") {
+        setError(result.reason === "ended" ? pastCopy.ended : pastCopy.notPast);
+      } else {
+        setError(copy.errors.failed);
+      }
+    });
 
   const toggleWeekday = (day: number) => {
     setWeekdays((current) => (current.includes(day) ? current.filter((other) => other !== day) : [...current, day].sort()));
@@ -246,7 +293,7 @@ export function SessionForm(props: Props) {
           <TextField
             label={copy.date}
             type="date"
-            min={props.today}
+            min={props.kind === "create" && !group ? addDays(props.today, -365) : props.today}
             value={values.day}
             onChange={(event) => {
               const day = event.target.value;
@@ -282,66 +329,87 @@ export function SessionForm(props: Props) {
               ))}
           </select>
         </div>
+        {past ? (
+          <>
+            <p className="px-1 text-footnote text-ink-2">{pastCopy.text}</p>
+            <div className="flex flex-col gap-1.5">
+              <span aria-hidden className="px-1 text-footnote text-ink-2">
+                {pastCopy.status}
+              </span>
+              <SegmentedControl
+                label={pastCopy.status}
+                value={pastStatus}
+                onValueChange={setPastStatus}
+                options={[
+                  { value: "attended", label: pastCopy.attended },
+                  { value: "no_show", label: pastCopy.noShow },
+                ]}
+              />
+            </div>
+          </>
+        ) : null}
       </div>
 
-      <div className="flex flex-col gap-4 rounded-lg bg-surface-1 p-4">
-        <div className="flex flex-col gap-1.5">
-          <span className="px-1 text-footnote text-ink-2">{t.schedule.templatePage.format}</span>
-          <SegmentedControl
-            label={t.schedule.templatePage.format}
-            value={values.mode}
-            onValueChange={(mode) => change({ mode })}
-            options={[
-              { value: "offline", label: t.schedule.templatePage.offline },
-              { value: "online", label: t.schedule.templatePage.online },
-            ]}
-          />
-        </div>
-        {values.mode === "offline" && props.locations.length > 0 ? (
+      {past ? null : (
+        <div className="flex flex-col gap-4 rounded-lg bg-surface-1 p-4">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="session-location" className="px-1 text-footnote text-ink-2">
-              {t.schedule.templatePage.location}
-            </label>
-            <select
-              id="session-location"
-              value={values.locationId ?? ""}
-              onChange={(event) => change({ locationId: event.target.value || null })}
-              className={SELECT_CLASS}
-            >
-              <option value="">{t.schedule.templatePage.noLocation}</option>
-              {props.locations.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.name}
-                </option>
-              ))}
-            </select>
+            <span className="px-1 text-footnote text-ink-2">{t.schedule.templatePage.format}</span>
+            <SegmentedControl
+              label={t.schedule.templatePage.format}
+              value={values.mode}
+              onValueChange={(mode) => change({ mode })}
+              options={[
+                { value: "offline", label: t.schedule.templatePage.offline },
+                { value: "online", label: t.schedule.templatePage.online },
+              ]}
+            />
           </div>
-        ) : null}
-        {values.mode === "online" ? (
-          <TextField
-            label={t.schedule.templatePage.meetingUrl}
-            type="url"
-            inputMode="url"
-            placeholder="https://"
-            hint={t.schedule.templatePage.meetingUrlHint}
-            value={values.meetingUrl}
-            onChange={(event) => change({ meetingUrl: event.target.value })}
-            maxLength={500}
-          />
-        ) : null}
-        {props.kind === "create" && group ? null : (
-          <TextField
-            label={group ? groupCopy.title : copy.sessionTitle}
-            hint={group ? groupCopy.titleHint : copy.sessionTitleHint}
-            value={values.title}
-            onChange={(event) => change({ title: event.target.value })}
-            maxLength={120}
-            required={group}
-          />
-        )}
-      </div>
+          {values.mode === "offline" && props.locations.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="session-location" className="px-1 text-footnote text-ink-2">
+                {t.schedule.templatePage.location}
+              </label>
+              <select
+                id="session-location"
+                value={values.locationId ?? ""}
+                onChange={(event) => change({ locationId: event.target.value || null })}
+                className={SELECT_CLASS}
+              >
+                <option value="">{t.schedule.templatePage.noLocation}</option>
+                {props.locations.map((location) => (
+                  <option key={location.id} value={location.id}>
+                    {location.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+          {values.mode === "online" ? (
+            <TextField
+              label={t.schedule.templatePage.meetingUrl}
+              type="url"
+              inputMode="url"
+              placeholder="https://"
+              hint={t.schedule.templatePage.meetingUrlHint}
+              value={values.meetingUrl}
+              onChange={(event) => change({ meetingUrl: event.target.value })}
+              maxLength={500}
+            />
+          ) : null}
+          {props.kind === "create" && group ? null : (
+            <TextField
+              label={group ? groupCopy.title : copy.sessionTitle}
+              hint={group ? groupCopy.titleHint : copy.sessionTitleHint}
+              value={values.title}
+              onChange={(event) => change({ title: event.target.value })}
+              maxLength={120}
+              required={group}
+            />
+          )}
+        </div>
+      )}
 
-      {props.kind === "create" ? (
+      {past ? null : props.kind === "create" ? (
         <div className="flex flex-col gap-4 rounded-lg bg-surface-1 p-4">
           <div className="flex flex-col gap-1.5">
             <span className="px-1 text-footnote text-ink-2">{copy.repeat}</span>
@@ -442,7 +510,7 @@ export function SessionForm(props: Props) {
           </p>
         ) : null}
         <Button type="submit" size="lg" block loading={pending && conflicts.length === 0}>
-          {props.kind === "edit" ? copy.save : group ? groupCopy.submit : copy.submit}
+          {props.kind === "edit" ? copy.save : group ? groupCopy.submit : past ? pastCopy.submit : copy.submit}
         </Button>
       </div>
 

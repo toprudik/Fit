@@ -4,6 +4,7 @@ import { expect, test } from "./support/fixtures";
 import { ok } from "./support/personas";
 import {
   createGroup,
+  createPass,
   createSession,
   fromNow,
   gotoReady,
@@ -264,15 +265,29 @@ test.describe("sessions", () => {
     await expectAccessible(page);
   });
 
-  test("the session form refuses a time in the past and a repeat without the first day", async ({ trainer, client }) => {
+  test("a trainer records a forgotten session from the past, and it is charged", async ({ trainer, client }) => {
+    const page = trainer.page;
+    const errors = collectErrors(page);
+    await createPass(trainer, client.coachingId);
+    const day = mskDay(-2);
+    await gotoReady(page, `/trainer/sessions/new?coaching=${client.coachingId}`);
+    await expect(async () => {
+      await page.getByLabel("Дата").fill(day);
+      await page.getByLabel("Начало").fill("10:00");
+      await expect(page.getByRole("radiogroup", { name: "Как прошло" })).toBeVisible({ timeout: 1_000 });
+    }).toPass();
+    await expect(page.getByRole("radio", { name: "Каждую неделю" })).toHaveCount(0);
+    await expectAccessible(page);
+    await tap(page.getByRole("button", { name: "Дозаписать" }));
+    await expect(page.getByText("Занятие записано")).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/trainer/schedule\\?date=${day}`));
+    expect(await ledgerTypes(trainer, client.coachingId)).toContain("charge");
+    expect(errors()).toEqual([]);
+  });
+
+  test("the session form refuses a repeat without the first day", async ({ trainer, client }) => {
     const page = trainer.page;
     await gotoReady(page, `/trainer/sessions/new?coaching=${client.coachingId}`);
-    await page.getByLabel("Дата").fill(mskDay(0));
-    await page.getByLabel("Начало").fill("00:00");
-    await tap(page.getByRole("button", { name: "Назначить" }));
-    await expect(page.getByText("Это время уже прошло, выбери будущее")).toBeVisible();
-    await expectAccessible(page);
-
     const day = mskDay(2);
     await page.getByLabel("Дата").fill(day);
     await tap(page.getByRole("radio", { name: "Каждую неделю" }));
