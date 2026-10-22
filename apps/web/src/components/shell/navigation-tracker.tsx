@@ -11,6 +11,8 @@ import { activeTab, tabsForZone, zoneFromPath } from "@/lib/navigation/zones";
  * up to a fallback screen instead.
  */
 const entries: string[] = [];
+/** Per entry: opened by a tap on the tab bar rather than by a link on a screen (openTab). */
+const byTab: boolean[] = [];
 let index = -1;
 /** Target of a browser back/forward whose popstate came before the router rendered the page. */
 let poppedTo: string | null = null;
@@ -20,6 +22,8 @@ let recordedPop: Event | null = null;
 let goingUp = false;
 /** Set by replaceScreen: the next page takes the current entry instead of adding one. */
 let replacing = false;
+/** Set by openTab: the next page is a tab the user switched to. */
+let switchingTab = false;
 
 function currentUrl() {
   return `${window.location.pathname}${window.location.search}`;
@@ -42,10 +46,13 @@ function record(url: string) {
   poppedTo = null;
   goingUp = false;
   const replaced = replacing;
+  const tab = switchingTab;
   replacing = false;
+  switchingTab = false;
   if (replaced && !popped && index >= 0) {
     entries[index] = url;
-    entries.length = index + 1;
+    entries.length = byTab.length = index + 1;
+    byTab[index] = tab;
     return;
   }
   if (popped) {
@@ -60,12 +67,13 @@ function record(url: string) {
       return;
     }
     // Back past the first page we saw: whatever lies behind it is unknown, so start over from here.
-    entries.length = 0;
+    entries.length = byTab.length = 0;
     index = -1;
   }
   if (entries[index] === url) return;
-  entries.length = index + 1;
+  entries.length = byTab.length = index + 1;
   entries.push(url);
+  byTab.push(tab);
   index = entries.length - 1;
 }
 
@@ -112,13 +120,28 @@ export function stepsBackToHome(zone: string): number | null {
 /** Opens `href` in place of the current screen, so the history does not grow (another tab). */
 export function replaceScreen(router: ReturnType<typeof useRouter>, href: string) {
   replacing = true;
+  switchingTab = false;
   router.replace(href, { scroll: false });
 }
 
 /**
+ * Opens a tab the user tapped on the tab bar, on top of the current screen or in its place. useBack
+ * goes up from a tab opened this way on its last screen; a screen of another tab opened by a link
+ * goes back to the screen with the link instead.
+ */
+export function openTab(router: ReturnType<typeof useRouter>, href: string, { replace }: { replace: boolean }) {
+  replacing = replace;
+  switchingTab = true;
+  if (replace) router.replace(href, { scroll: false });
+  else router.push(href, { scroll: false });
+}
+
+/**
  * Back to the previous screen if we came from one in this app, otherwise up to `fallbackHref`. A
- * previous screen of another tab doesn't count: a tab reopened on its last screen goes up to its
- * root, as in a native app, and that root takes the screen's place in the history.
+ * previous screen of another tab doesn't count when the tab bar reopened this tab on its last
+ * screen: that goes up to the tab's root, as in a native app, and the root takes the screen's place
+ * in the history. A screen of another tab opened by a link («Цель и норма питания» on «Прогресс»)
+ * goes back to the link (QA 22.10: going up there left a dead "Back").
  */
 export function useBack(fallbackHref: string): () => void {
   const router = useRouter();
@@ -126,7 +149,7 @@ export function useBack(fallbackHref: string): () => void {
     if (index > 0) {
       const here = tabOf(entries[index]);
       const before = tabOf(entries[index - 1]);
-      const otherTab = here !== null && before !== null && here.key !== before.key && !here.root;
+      const otherTab = byTab[index] && here !== null && before !== null && here.key !== before.key && !here.root;
       if (!otherTab) {
         router.back();
         return;
