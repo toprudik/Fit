@@ -47,6 +47,8 @@ async function Invite({ searchParams }: { searchParams: PageProps<"/[lang]/train
   }
   if (invite === "not-found" || !token) return <EmptyState icon={UserPlus} title={copy.notFound} description={copy.notFoundText} action={back} />;
   if (invite === "expired") return <EmptyState icon={UserPlus} title={copy.expired} description={copy.expiredText} action={back} />;
+  // The trainer opened their own link: there is nothing to accept, so say so instead of offering the buttons.
+  if (invite.own) return <EmptyState icon={UserPlus} title={copy.title} description={copy.own} action={back} />;
 
   const format = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     day: "numeric",

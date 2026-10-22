@@ -4499,7 +4499,7 @@ isOneToOne: false
                            },
 "delegation_invite":
 { Args: { "p_token": string }; Returns: {
-              "all_clients": boolean,"clients": number,"ends_at": string,"kind": Database["public"]['Enums']["delegation_kind"],"owner_name": string,"scopes": (Database["public"]['Enums']["delegation_scope"])[],"session_starts_at": string,"sessions_starts_at": (string)[]
+              "all_clients": boolean,"clients": number,"ends_at": string,"kind": Database["public"]['Enums']["delegation_kind"],"own": boolean,"owner_name": string,"scopes": (Database["public"]['Enums']["delegation_scope"])[],"session_starts_at": string,"sessions_starts_at": (string)[]
             }[]
                            },
 "delete_food_comment":

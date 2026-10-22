@@ -231,6 +231,8 @@ export type InviteDetails = {
   /** Every session of a substitute invite still ahead, earliest first; one for a single session. */
   sessionsStartsAt: string[];
   endsAt: string | null;
+  /** The caller made this invite; only another trainer can accept it. */
+  own: boolean;
   timeZone: string;
 };
 
@@ -250,6 +252,7 @@ export async function loadInvite(token: string): Promise<InviteDetails | "signed
     sessionStartsAt: data.session_starts_at,
     sessionsStartsAt: data.sessions_starts_at,
     endsAt: data.ends_at,
+    own: data.own,
     timeZone: owner.timeZone,
   };
 }

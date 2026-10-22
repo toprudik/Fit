@@ -88,8 +88,8 @@ test.describe("team and delegation", () => {
 
     // The owner cannot accept their own invite.
     await page.goto(link);
-    await page.getByRole("button", { name: "Принять" }).click();
-    await expectToast(page, "Это твоё приглашение, его принимает другой тренер.");
+    await expect(page.getByText("Это твоё приглашение, его принимает другой тренер.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Принять" })).toHaveCount(0);
 
     const helper = colleague.page;
     await helper.goto(link);
