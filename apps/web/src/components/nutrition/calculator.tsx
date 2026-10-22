@@ -5,6 +5,7 @@ import { ChoiceList } from "@/components/passes/choice-list";
 import { Button } from "@/components/ui/button";
 import { ChipRadio } from "@/components/ui/chip";
 import { toast } from "@/components/ui/sonner";
+import { DateField } from "@/components/ui/date-field";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
@@ -177,11 +178,10 @@ function NutritionCalculator({
           </p>
         ) : null}
         {radioGroup("sex", copy.sex, CALC_SEXES, (value) => copy.sexes[value], sex, setSex, errors.sex)}
-        <TextField
+        <DateField
           name="birthDate"
-          type="date"
           label={copy.birthDate}
-          defaultValue={initial.birthDate ?? undefined}
+          defaultValue={initial.birthDate ?? ""}
           max={today}
           required
           error={errors.birthDate}
