@@ -1622,6 +1622,7 @@ export const en: Dictionary = {
       monthNone: "No payments this month yet",
       debtsEmpty: "No debts",
       debtsEmptyText: "When a session is taken without a pass, the client shows up here.",
+      unpaid: "Passes not paid in full",
       paymentsEmpty: "No payments yet",
       paymentsEmptyText: "Record a payment on a client's card and it shows up here.",
       passesEmpty: "No passes are running out",
