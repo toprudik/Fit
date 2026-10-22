@@ -290,6 +290,8 @@ test.describe("client link and trainer code", () => {
       "href",
       `/login?next=${encodeURIComponent("/join?code=ABCDEF")}`,
     );
+    // No app bar here, so the browser gets its own way back.
+    await expect(page.getByRole("link", { name: "Назад" })).toHaveAttribute("href", "/");
   });
 
   test("a malformed client link offers the trainer code instead", async ({ page }) => {

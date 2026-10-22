@@ -1,3 +1,4 @@
+import { ChevronLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -107,7 +108,15 @@ async function JoinStep({ searchParams }: { searchParams: PageProps<"/[lang]/joi
 export default async function JoinPage(props: PageProps<"/[lang]/join">) {
   const t = await getDictionary();
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-6 px-4 pt-[var(--safe-top)] pb-[max(var(--safe-bottom),var(--space-6))]">
+    <main className="relative mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-6 px-4 pt-[var(--safe-top)] pb-[max(var(--safe-bottom),var(--space-6))]">
+      {/* In a browser the screen has no app bar, so "Back" leads home ("/" opens the last zone). Telegram has its own. */}
+      <Link
+        href="/"
+        className="absolute top-[var(--safe-top)] left-2.5 inline-flex min-h-11 items-center gap-0.5 pr-2 text-body text-accent-ink telegram:hidden"
+      >
+        <ChevronLeft aria-hidden size={24} strokeWidth={2} className="shrink-0" />
+        {t.common.back}
+      </Link>
       <div className="flex flex-col items-start gap-3">
         <DaMark className="size-12" />
         <h1 className="text-large-title">{t.clientLinks.join.title}</h1>
