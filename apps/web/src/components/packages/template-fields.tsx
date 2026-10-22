@@ -4,7 +4,7 @@ import { useState } from "react";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
-import { majorText, parseMajor } from "@/lib/money/format";
+import { formatMoney, majorText, parseMajor } from "@/lib/money/format";
 import { priceGrid, TEMPLATE, templatePrices } from "@/lib/packages/grid";
 import { packageTitle, priceGridItems } from "@/lib/packages/present";
 import { PriceGrid } from "./price-grid";
@@ -54,6 +54,17 @@ export function TemplateFields({
   const dropInMinor = parseMajor(dropIn);
   const suggested = new Map((dropInMinor ? templatePrices(dropInMinor) : []).map((pack) => [pack.sessions, majorText(pack.priceMinor)]));
   const packText = (sessions: number) => typed[packField(sessions)] ?? suggested.get(sessions) ?? "";
+  // A pack whose session costs more than a drop-in is likely a typo, so it says so; saving still works.
+  const packHint = (sessions: number) => {
+    const price = parseMajor(packText(sessions));
+    const perSession = price === null ? null : Math.round(price / sessions);
+    return dropInMinor && perSession !== null && perSession > dropInMinor
+      ? interpolate(copy.template.packPricier, {
+          pack: formatMoney(locale, perSession, currency),
+          single: formatMoney(locale, dropInMinor, currency),
+        })
+      : copy.template.packHint;
+  };
 
   const preview =
     dropInMinor && dropInMinor > 0
@@ -88,7 +99,7 @@ export function TemplateFields({
           suffix={symbol}
           value={packText(sessions)}
           onChange={(event) => setTyped((current) => ({ ...current, [packField(sessions)]: event.target.value }))}
-          hint={copy.template.packHint}
+          hint={packHint(sessions)}
           error={error(packField(sessions)) ? copy.template.packError : undefined}
           autoComplete="off"
         />

@@ -1261,6 +1261,7 @@ export const en: Dictionary = {
         dropInError: "Enter a price, for example 2000",
         packPrice: "Pack of {count}",
         packHint: "Leave it empty if you don't sell this pack",
+        packPricier: "A session in this pack costs more than a single one: {pack} vs {single}",
         packError: "The price should be a number, for example 9000",
         validityHint: "For the packs of 5, 10, and 20 sessions",
         submit: "Create the grid",
