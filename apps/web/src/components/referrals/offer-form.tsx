@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
+import { DateField } from "@/components/ui/date-field";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { saveReferralOffer, stopReferralOffer, type OfferFormState } from "@/lib/referrals/actions";
@@ -104,10 +105,9 @@ export function OfferForm({
             {invalid("package") ? <p className="px-1 text-footnote text-danger">{copy.packageError}</p> : null}
           </div>
         ) : null}
-        <TextField
+        <DateField
           label={copy.until}
           name="until"
-          type="date"
           defaultValue={values?.until ?? ""}
           hint={copy.untilHint}
           error={invalid("until") ? copy.untilError : undefined}
