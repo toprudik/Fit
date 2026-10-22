@@ -5,7 +5,7 @@ import { ClientsSwitch } from "@/components/delegations/assisted";
 import { AddClientButton, ClientList } from "@/components/pairs/client-list";
 import { DetailPlaceholder, MasterDetail, Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
-import { SkeletonRows } from "@/components/ui/skeleton";
+import { Skeleton, SkeletonChips, SkeletonRows, SkeletonScreen } from "@/components/ui/skeleton";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getDictionary } from "@/i18n/server";
 import { hasAssistance } from "@/lib/delegations/assistant";
@@ -38,7 +38,15 @@ export default async function TrainerClientsPage(props: PageProps<"/[lang]/train
           <Suspense fallback={null}>
             <AssistantSwitch t={t} />
           </Suspense>
-          <Suspense fallback={<SkeletonRows rows={3} label={t.common.loading} />}>
+          <Suspense
+            fallback={
+              <SkeletonScreen label={t.common.loading} className="pt-4 md:pt-0">
+                <Skeleton className="h-11 rounded-md" />
+                <SkeletonChips widths={["4.5rem", "6.5rem", "8rem", "5rem"]} />
+                <SkeletonRows leading="avatar" rows={3} />
+              </SkeletonScreen>
+            }
+          >
             <ClientsFromParams searchParams={props.searchParams} />
           </Suspense>
         </Screen>

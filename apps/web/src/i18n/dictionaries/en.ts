@@ -3877,6 +3877,7 @@ export const en: Dictionary = {
       saved: "Template saved, new slots: {count}",
       savedEmpty: "Template off, no free slots left",
       unsaved: "You have unsaved changes",
+      allSaved: "All changes saved",
       windowInvalid: "The end must be after the start, with room for at least one session",
       urlInvalid: "The link must start with https://",
       overlap: "Windows on one day overlap",

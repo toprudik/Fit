@@ -15,4 +15,9 @@ describe("isTimeZone", () => {
     expect(isTimeZone("")).toBe(false);
     expect(isTimeZone("Europe/Moscow; drop")).toBe(false);
   });
+
+  it("takes the fixed Etc/GMT zones a device with a hand-set zone sends, and only real ones", () => {
+    for (const zone of ["Etc/GMT", "Etc/GMT-3", "Etc/GMT+5", "Etc/GMT-14", "Etc/GMT+12"]) expect(isTimeZone(zone)).toBe(true);
+    for (const zone of ["Etc/GMT-15", "Etc/GMT+13", "Etc/GMT+03", "Etc/GMT-3:30", "+03:00"]) expect(isTimeZone(zone)).toBe(false);
+  });
 });

@@ -118,6 +118,7 @@ test.describe("week template and slots", () => {
     await tap(page.getByRole("button", { name: "Сохранить шаблон" }));
     await expect(page.getByText("Шаблон сохранён, новых слотов: 2")).toBeVisible();
     await expect(page.getByText("Есть несохранённые изменения")).toHaveCount(0);
+    await expect(page.getByRole("status").filter({ hasText: "Все изменения сохранены" })).toBeVisible();
     expect(await openSlots(trainer)).toHaveLength(2);
 
     await gotoReady(page, "/trainer/schedule/slots");
@@ -130,6 +131,31 @@ test.describe("week template and slots", () => {
     await gotoReady(page, `/trainer/schedule?date=${day}`);
     await expect(scheduleItem(page, /Свободно.*10:00–11:00|10:00–11:00.*Свободно/)).toHaveCount(1);
     expect(errors()).toEqual([]);
+  });
+
+  test("saving the template keeps a filled window that was not added yet", async ({ trainer }) => {
+    const page = trainer.page;
+    const day = mskDay(2);
+    await gotoReady(page, "/trainer/schedule/template");
+    await tap(page.getByRole("button", { name: "Добавить окно" }));
+    await page.getByLabel("День").selectOption(String(isoWeekday(day)));
+    await page.getByLabel("С", { exact: true }).fill("10:00");
+    await page.getByLabel("До", { exact: true }).fill("12:00");
+    await page.getByLabel("Открывать запись вперёд на").selectOption("1");
+    await tap(page.getByRole("button", { name: "Сохранить шаблон" }));
+    await expect(page.getByText("Шаблон сохранён, новых слотов: 2")).toBeVisible();
+    await expect(page.getByText("10:00–12:00")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Новое окно" })).toHaveCount(0);
+    expect(await openSlots(trainer)).toHaveLength(2);
+
+    // A window that can't go in stops the save and says why under the form.
+    await tap(page.getByRole("button", { name: "Добавить окно" }));
+    await page.getByLabel("День").selectOption(String(isoWeekday(day)));
+    await page.getByLabel("С", { exact: true }).fill("11:00");
+    await page.getByLabel("До", { exact: true }).fill("13:00");
+    await tap(page.getByRole("button", { name: "Сохранить шаблон" }));
+    await expect(page.getByRole("alert").filter({ hasText: "Окна в один день пересекаются" })).toBeVisible();
+    expect(await openSlots(trainer)).toHaveLength(2);
   });
 
   test("the template refuses a window that ends before it starts and one that overlaps", async ({ trainer }) => {

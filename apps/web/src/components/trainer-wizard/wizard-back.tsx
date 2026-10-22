@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { IconButton } from "@/components/ui/icon-button";
+import { LinkPending } from "@/components/ui/link-pending";
 import { useI18n } from "@/i18n/client";
 import { useTelegramBackButton } from "@/lib/telegram/mini-app";
 
@@ -13,8 +14,10 @@ export function WizardBack({ href }: { href: string }) {
   const router = useRouter();
   useTelegramBackButton(() => router.push(href));
   return (
-    <IconButton asChild icon={ChevronLeft} label={t.common.back} className="-ml-3">
-      <Link href={href} />
+    <IconButton asChild icon={ChevronLeft} label={t.common.back} className="-ml-3 has-data-pending:[&>svg]:opacity-0">
+      <Link href={href}>
+        <LinkPending />
+      </Link>
     </IconButton>
   );
 }

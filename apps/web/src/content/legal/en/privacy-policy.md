@@ -2,7 +2,7 @@
 
 > Edition for the DaFit closed beta. A lawyer will still review it; if the text changes, we will tell you in the bot.
 
-Effective date: 24 November 2026
+Version [VERSION], in effect from the day it is published
 
 This policy explains what personal data DaFit collects, why, who can see it, how long we keep it and how you control it. It covers the DaFit Telegram bot @fitconnection_bot, the DaFit web app at [DOMAIN] and the DaFit Telegram Mini App (together, the "Service").
 
