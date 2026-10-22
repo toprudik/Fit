@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/components/ui/list";
-import { Skeleton, SkeletonRows, SkeletonScreen, SkeletonSegments } from "@/components/ui/skeleton";
+import { ClientSessionsSkeleton } from "@/components/shell/tab-skeletons";
 import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
@@ -127,15 +127,7 @@ export default async function ClientSessionsPage(props: PageProps<"/[lang]/clien
     <MasterDetail
       list={
         <Screen header={<ScreenHeader title={t.tabs.client.sessions} />}>
-          <Suspense
-            fallback={
-              <SkeletonScreen label={t.common.loading}>
-                <Skeleton className="h-11 w-36 rounded-full" />
-                <SkeletonSegments />
-                <SkeletonRows rows={2} />
-              </SkeletonScreen>
-            }
-          >
+          <Suspense fallback={<ClientSessionsSkeleton label={t.common.loading} />}>
             <Bookings searchParams={props.searchParams} />
           </Suspense>
         </Screen>

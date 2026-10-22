@@ -518,21 +518,27 @@ test.describe("push and pop", () => {
     expect((await takeAnimations(page)).filter((animation) => animation.screen)).toEqual([]);
   });
 
-  test("another tab shows at once, and the tapped tab lights up before its screen arrives", async ({ page }) => {
-    await recordAnimations(page);
-    await page.goto("/trainer", { waitUntil: "networkidle" });
-    await takeAnimations(page);
-    // A screen not fetched yet can take a second on a phone's network.
+  test("another tab shows at once, and the tapped tab lights up and shows its skeleton before its screen arrives", async ({ page }) => {
+    // A screen not fetched yet, its prefetch included, can take a second on a phone's network: the
+    // first tap right after opening.
     await page.route(/\/trainer\/money/, async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      await route.continue();
+      await route.continue().catch(() => undefined);
     });
+    await recordAnimations(page);
+    await page.goto("/trainer");
+    await takeAnimations(page);
 
     const money = page.getByRole("link", { name: "Деньги", exact: true }).filter({ visible: true });
     await expect(async () => {
       await money.click();
       await expect(money).toHaveAttribute("aria-current", "page", { timeout: 500 });
     }).toPass();
+    // Still on its way after 300 ms: the shell shows the tab's title and skeleton, not the old screen.
+    await expect(page.getByRole("status", { name: "Загрузка" }).first()).toBeVisible({ timeout: 1000 });
+    await expect(page.getByRole("heading", { level: 1, name: "Деньги" }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Сегодня" })).toBeHidden();
+    expect(new URL(page.url()).pathname).toBe("/trainer");
     await expect(page).toHaveURL(/\/trainer\/money$/);
     await expect(page.getByRole("heading", { level: 1, name: "Деньги" }).first()).toBeVisible();
     await settle(page);

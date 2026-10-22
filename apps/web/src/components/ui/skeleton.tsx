@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import styles from "./skeleton.module.css";
 
 /**
  * One placeholder line with a shimmer, shaped by `className` (`h-5 w-32`, `size-16 rounded-full`).
@@ -11,7 +10,7 @@ function Skeleton({ className }: { className?: string }) {
     <span
       data-slot="skeleton"
       aria-hidden
-      className={cn("block h-3.5 w-full rounded-full bg-surface-2", styles.shimmer, styles.delayed, className)}
+      className={cn("skeleton-shimmer skeleton-delayed block h-3.5 w-full rounded-full bg-surface-2", className)}
     />
   );
 }
@@ -61,8 +60,8 @@ function SkeletonRows({ rows = 3, label, leading = "tile", header = false, class
             {leading === "avatar" ? <span className="size-10 shrink-0 rounded-full bg-surface-2" /> : null}
             {leading === "tile" ? <span className="size-7.5 shrink-0 rounded-xs bg-surface-2" /> : null}
             <div className="flex flex-1 flex-col gap-2 py-1">
-              <span className={cn("block h-3.5 rounded-full bg-surface-2", styles.shimmer)} style={{ width: first }} />
-              <span className={cn("block h-3 rounded-full bg-surface-2", styles.shimmer)} style={{ width: second }} />
+              <span className="skeleton-shimmer block h-3.5 rounded-full bg-surface-2" style={{ width: first }} />
+              <span className="skeleton-shimmer block h-3 rounded-full bg-surface-2" style={{ width: second }} />
             </div>
           </div>
         );
@@ -73,20 +72,20 @@ function SkeletonRows({ rows = 3, label, leading = "tile", header = false, class
     <div
       data-slot="skeleton-rows"
       {...statusProps(label)}
-      className={cn("flex flex-col gap-1.5", label && styles.delayed, className)}
+      className={cn("flex flex-col gap-1.5", label && "skeleton-delayed", className)}
     >
-      {header ? <span aria-hidden className={cn("mx-4 my-0.5 block h-3 w-28 rounded-full bg-surface-2", styles.shimmer)} /> : null}
+      {header ? <span aria-hidden className="skeleton-shimmer mx-4 my-0.5 block h-3 w-28 rounded-full bg-surface-2" /> : null}
       {group}
     </div>
   );
 }
 
-/** Placeholder for a `SegmentedControl`: its track with `count` equal parts. */
-function SkeletonSegments({ count = 3, className }: { count?: number; className?: string }) {
+/** Placeholder for a `SegmentedControl`: its track with `count` equal parts, `selected` of them marked. */
+function SkeletonSegments({ count = 3, selected = 0, className }: { count?: number; selected?: number; className?: string }) {
   return (
     <div aria-hidden className={cn("grid h-11 auto-cols-[minmax(0,1fr)] grid-flow-col rounded-sm bg-surface-2 p-[3px]", className)}>
       {Array.from({ length: count }, (_, index) => (
-        <span key={index} className={cn("rounded-xs", index === 0 && "bg-surface-3")} />
+        <span key={index} className={cn("rounded-xs", index === selected && "bg-surface-3")} />
       ))}
     </div>
   );
@@ -97,8 +96,36 @@ function SkeletonChips({ widths = ["4.5rem", "6rem", "7rem"], className }: { wid
   return (
     <div aria-hidden className={cn("flex gap-2 overflow-hidden", className)}>
       {widths.map((width, index) => (
-        <span key={index} className={cn("block h-8 shrink-0 rounded-full bg-surface-1", styles.shimmer)} style={{ width }} />
+        <span key={index} className="skeleton-shimmer block h-8 shrink-0 rounded-full bg-surface-1" style={{ width }} />
       ))}
+    </div>
+  );
+}
+
+/**
+ * Placeholder for an `EmptyState` with a description and an action, line for line: the 64px tile,
+ * the title, two lines of text and the button, 302px in all like the real one.
+ */
+function SkeletonEmpty({ label, className }: { label?: string; className?: string }) {
+  return (
+    <div
+      data-slot="skeleton-empty"
+      {...statusProps(label)}
+      className={cn("flex flex-col items-center gap-3 px-6 py-10", label && "skeleton-delayed", className)}
+    >
+      <span className="skeleton-shimmer mb-1 block size-16 rounded-lg bg-surface-1" />
+      <span className="flex h-6.5 items-center">
+        <span className="skeleton-shimmer block h-4 w-44 rounded-full bg-surface-2" />
+      </span>
+      <span className="mb-2 flex flex-col items-center">
+        <span className="flex h-5 items-center">
+          <span className="skeleton-shimmer block h-3 w-60 rounded-full bg-surface-2" />
+        </span>
+        <span className="flex h-5 items-center">
+          <span className="skeleton-shimmer block h-3 w-40 rounded-full bg-surface-2" />
+        </span>
+      </span>
+      <span className="skeleton-shimmer block h-11 w-44 rounded-md bg-surface-1" />
     </div>
   );
 }
@@ -109,10 +136,10 @@ function SkeletonChips({ widths = ["4.5rem", "6rem", "7rem"], className }: { wid
  */
 function SkeletonScreen({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return (
-    <div data-slot="skeleton-screen" {...statusProps(label)} className={cn("flex flex-col gap-4", styles.delayed, className)}>
+    <div data-slot="skeleton-screen" {...statusProps(label)} className={cn("skeleton-delayed flex flex-col gap-4", className)}>
       {children}
     </div>
   );
 }
 
-export { Skeleton, SkeletonChips, SkeletonRows, SkeletonScreen, SkeletonSegments };
+export { Skeleton, SkeletonChips, SkeletonEmpty, SkeletonRows, SkeletonScreen, SkeletonSegments };
