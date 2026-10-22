@@ -1,5 +1,6 @@
 import { collectErrors } from "../e2e/support";
 import { checked, exerciseId, lastMonth, mskAt, mskDay, open, solidPng, workoutLog } from "./support/diary";
+import { dateField, pickDate, ruDate } from "./support/date-field";
 import { expect, test } from "./support/fixtures";
 import { makeTrainer, ok, type Persona } from "./support/personas";
 
@@ -19,7 +20,7 @@ async function weight(client: Persona, day: string, value: number) {
 async function uploadPhoto(page: Persona["page"], date?: string) {
   // The date goes in the address, as the grid's "Добавить фото" links pass it: a date typed before hydration is lost.
   await open(page, date ? `/client/progress/photos/new?angle=front&date=${date}` : "/client/progress/photos/new", "Новое фото");
-  if (date) await expect(page.getByLabel("Дата").filter({ visible: true })).toHaveValue(date);
+  if (date) await expect(dateField(page, "Дата")).toContainText(ruDate(date));
   // Right after a fresh load the picker may not be hydrated yet, so a pick can go unnoticed: pick again.
   await expect(async () => {
     await page.locator('label:has-text("Выбрать из галереи") input[type="file"]').setInputFiles({
@@ -85,19 +86,17 @@ test.describe("the client's progress", () => {
     await open(page, "/client/progress", "Прогресс");
     await page.getByRole("button", { name: "Добавить замер" }).click();
     const sheet = page.getByRole("dialog", { name: "Новый замер" });
-    await expect(sheet.getByLabel("Дата").filter({ visible: true })).toHaveValue(mskDay());
+    await expect(dateField(sheet, "Дата")).toContainText(ruDate(mskDay()));
     await sheet.getByRole("button", { name: "Сохранить" }).click();
     await expect(sheet.getByText("Заполни хотя бы одно поле")).toBeVisible();
     await sheet.getByRole("textbox", { name: "Вес" }).fill("abc");
     await sheet.getByRole("textbox", { name: "Талия" }).fill("900");
-    await sheet.getByLabel("Дата").filter({ visible: true }).fill(mskDay(1));
     await sheet.getByRole("button", { name: "Сохранить" }).click();
     await expect(sheet.getByText("Введи число, например 72,5")).toBeVisible();
     await expect(sheet.getByText("Такого значения не бывает, проверь число")).toBeVisible();
-    await expect(sheet.getByText("Выбери сегодняшний или прошедший день")).toBeVisible();
     await checked(page);
 
-    await sheet.getByLabel("Дата").filter({ visible: true }).fill(mskDay());
+    await pickDate(page, sheet, "Дата", mskDay());
     await sheet.getByRole("textbox", { name: "Вес" }).fill("72,5");
     await sheet.getByRole("textbox", { name: "Талия" }).fill("80");
     await sheet.getByRole("button", { name: "Сохранить" }).click();

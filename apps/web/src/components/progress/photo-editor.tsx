@@ -10,7 +10,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { toast } from "@/components/ui/sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
-import { TextField } from "@/components/ui/text-field";
+import { DateField } from "@/components/ui/date-field";
 import { useI18n } from "@/i18n/client";
 import { brush, compose, decodePhoto, detectFaces, emptyMask, encode, maskFaces, maskIsEmpty, pixelate } from "@/lib/progress/face-blur";
 import { prepareProgressPhoto, saveProgressPhoto } from "@/lib/progress/photo-actions";
@@ -124,12 +124,12 @@ export function PhotoEditor({ today, angle: initialAngle, date: initialDate, tak
           </Chip>
         ))}
       </ChipRow>
-      <TextField
-        type="date"
+      <DateField
         label={copy.date}
         value={date}
         max={today}
-        onChange={(event) => event.target.value && event.target.value <= today && setDate(event.target.value)}
+        required
+        onChange={(next) => next && next <= today && setDate(next)}
         hint={taken.includes(`${date}:${angle}`) ? copy.replaces : undefined}
       />
 

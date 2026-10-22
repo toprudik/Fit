@@ -1,5 +1,6 @@
 import { collectErrors, expectAccessible } from "../e2e/support";
 import { checked, pick, mskDay, open, ownFood, quickEntry, trainerTarget } from "./support/diary";
+import { pickDate } from "./support/date-field";
 import { expect, test } from "./support/fixtures";
 import { joinTrainer, makeTrainer } from "./support/personas";
 
@@ -361,7 +362,7 @@ test.describe("nutrition target", () => {
     await pick(page, "radio", "Держать вес");
     await expect(page.getByText("Цель сохранена")).toBeVisible();
     await pick(page, "radio", "Женский");
-    await page.getByLabel("Дата рождения").filter({ visible: true }).fill("1992-05-14");
+    await pickDate(page, page, "Дата рождения", "1992-05-14");
     await page.getByRole("textbox", { name: "Рост" }).fill("168");
     await page.getByRole("textbox", { name: "Вес" }).fill("62,5");
     await pick(page, "radio", /Средняя/);
@@ -399,7 +400,7 @@ test.describe("nutrition target", () => {
     await pick(page, "radio", "Набрать массу");
     await expect(page.getByText("Цель сохранена")).toBeVisible();
     await pick(page, "radio", "Мужской");
-    await page.getByLabel("Дата рождения").filter({ visible: true }).fill(`${year}-03-01`);
+    await pickDate(page, page, "Дата рождения", `${year}-03-01`);
     await page.getByRole("textbox", { name: "Рост" }).fill("170");
     await page.getByRole("textbox", { name: "Вес" }).fill("60");
     await page.getByRole("button", { name: "Рассчитать" }).click();
