@@ -1,5 +1,6 @@
 import { collectErrors } from "../e2e/support";
 import { checked, pick, exerciseId, mskDay, open, workoutLog } from "./support/diary";
+import { dateField, ruDate } from "./support/date-field";
 import { expect, test } from "./support/fixtures";
 import { makeTrainer, ok } from "./support/personas";
 
@@ -18,7 +19,7 @@ test.describe("the client's workouts", () => {
     await expect(page.getByRole("heading", { name: "Запиши первую тренировку" })).toBeVisible();
     await page.getByRole("link", { name: "Записать тренировку" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Новая тренировка" })).toBeVisible();
-    await expect(page.getByLabel("Дата").filter({ visible: true })).toHaveValue(mskDay());
+    await expect(dateField(page, "Дата").filter({ visible: true })).toContainText(ruDate(mskDay()));
     await checked(page);
 
     await page.getByRole("button", { name: "Сохранить" }).click();
@@ -367,7 +368,7 @@ test.describe("homework", () => {
     await open(page, base);
     await page.getByRole("link", { name: "Задать домашку" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Новое задание" })).toBeVisible();
-    await expect(page.getByLabel("Срок").filter({ visible: true })).toHaveValue(mskDay());
+    await expect(dateField(page, "Срок").filter({ visible: true })).toContainText(ruDate(mskDay()));
     await page.getByRole("textbox", { name: "Ссылка на видео" }).fill("ftp://example.com/v");
     await page.getByRole("button", { name: "Задать" }).click();
     await expect(page.getByText("Напиши, что сделать")).toBeVisible();
