@@ -187,6 +187,21 @@ test.describe("booking a slot", () => {
     await expectAccessible(page);
   });
 
+  test("a slot the client took in another tab leads to that booking (QA B12)", async ({ trainer, client }) => {
+    await createPass(trainer, client.coachingId);
+    await openWindow(trainer, 3, 10, 11);
+    const page = client.page;
+    await pickSlot(page, client.coachingId, 3, "10:00");
+    const sheet = page.getByRole("dialog", { name: "Записаться на занятие?" });
+    await expect(sheet.getByRole("button", { name: "Записаться" })).toBeVisible();
+    const [slot] = await openSlots(trainer);
+    const [booked] = ok(await client.db.rpc("book_slot", { p_slot_id: slot.id }), "the other tab books first");
+    await tap(sheet.getByRole("button", { name: "Записаться" }));
+    await expect(page.getByText("На это время у тебя уже есть запись.")).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/client/bookings/${booked.booking_id}$`));
+    await expect(page.getByText("Это время уже заняли")).toHaveCount(0);
+  });
+
   test("a client with no trainer and a trainer with no slots both get an empty state", async ({ trainer, client, persona }) => {
     const loner = await persona({ firstName: "Вера", lastName: "Одна" });
     await gotoReady(loner.page, "/client/book");

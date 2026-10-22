@@ -27,7 +27,8 @@ const KNOWN_ERRORS = [
   "debt_limit",
 ] as const;
 
-export type BookingError = (typeof KNOWN_ERRORS)[number] | "failed";
+/** The slot is taken by the client's own booking, e.g. made a moment ago in another tab (QA B12). */
+export type BookingError = (typeof KNOWN_ERRORS)[number] | "own_slot" | "failed";
 
 function known(error: { message: string; code: string }, what: string): BookingError {
   const match = KNOWN_ERRORS.find((key) => key === error.message);
@@ -38,6 +39,25 @@ function known(error: { message: string; code: string }, what: string): BookingE
 
 const id = z.uuid();
 
+type ServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+/** The signed-in client's live booking of a slot, when "slot_unavailable" means they took it themselves. */
+async function ownSlotBooking(supabase: ServerClient, slotId: string): Promise<{ id: string; confirmed: boolean } | null> {
+  const { data: session } = await supabase.auth.getClaims();
+  const userId = session?.claims.sub;
+  if (!userId) return null;
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("id, status, sessions!inner(slot_id)")
+    .eq("client_id", userId)
+    .eq("sessions.slot_id", slotId)
+    .in("status", ["confirmed", "requested"])
+    .limit(1)
+    .maybeSingle();
+  if (error) console.error("looking up the own booking of a slot failed", error.code);
+  return data ? { id: data.id, confirmed: data.status === "confirmed" } : null;
+}
+
 export type PreviewResult =
   | { status: "done"; confirmed: boolean; passTitle: string | null; sessionsLeft: number | null }
   | { status: "error"; error: BookingError };
@@ -47,7 +67,11 @@ export async function previewBooking(slotId: string): Promise<PreviewResult> {
   if (!id.safeParse(slotId).success) return { status: "error", error: "failed" };
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("booking_preview", { p_slot_id: slotId });
-  if (error) return { status: "error", error: known(error, "previewing a booking") };
+  if (error) {
+    const reason = known(error, "previewing a booking");
+    if (reason === "slot_unavailable" && (await ownSlotBooking(supabase, slotId))) return { status: "error", error: "own_slot" };
+    return { status: "error", error: reason };
+  }
   const row = data[0];
   return {
     status: "done",
@@ -57,14 +81,22 @@ export async function previewBooking(slotId: string): Promise<PreviewResult> {
   };
 }
 
-export type BookResult = { status: "done"; bookingId: string; confirmed: boolean } | { status: "error"; error: BookingError };
+export type BookResult =
+  | { status: "done"; bookingId: string; confirmed: boolean; already?: true }
+  | { status: "error"; error: BookingError };
 
 /** "Записаться" or "Отправить запрос" (PRD 2.6.4): a confirmed booking or a request that holds the slot. */
 export async function bookSlot(slotId: string): Promise<BookResult> {
   if (!id.safeParse(slotId).success) return { status: "error", error: "failed" };
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("book_slot", { p_slot_id: slotId });
-  if (error) return { status: "error", error: known(error, "booking a slot") };
+  if (error) {
+    const reason = known(error, "booking a slot");
+    // Booked a moment ago in another tab: lead to that booking instead of "the time is taken".
+    const own = reason === "slot_unavailable" ? await ownSlotBooking(supabase, slotId) : null;
+    if (own) return { status: "done", bookingId: own.id, confirmed: own.confirmed, already: true };
+    return { status: "error", error: reason };
+  }
   refresh();
   return { status: "done", bookingId: data[0].booking_id, confirmed: data[0].status === "confirmed" };
 }
