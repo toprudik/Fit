@@ -127,6 +127,23 @@ test.describe("booking a slot", () => {
     expect(errors()).toEqual([]);
   });
 
+  test("the trainer confirms a request right from the list", async ({ trainer, client }) => {
+    await openWindow(trainer, 3, 10, 11);
+    const [slot] = await openSlots(trainer);
+    const [request] = ok(await client.db.rpc("book_slot", { p_slot_id: slot.id }), "book slot");
+    expect(request.status).toBe("requested");
+
+    const coach = trainer.page;
+    await gotoReady(coach, "/trainer/requests");
+    await expect(coach.getByText("Без абонемента запись уйдёт в долг.", { exact: false })).toBeVisible();
+    await expectAccessible(coach);
+    await tap(coach.getByRole("button", { name: /^Подтвердить запись: / }));
+    await expect(coach.getByText("Запись подтверждена")).toBeVisible();
+    await expect(coach.getByRole("heading", { name: "Запросов нет" })).toBeVisible();
+    const booking = ok(await client.db.from("bookings").select("status").eq("id", request.booking_id), "booking");
+    expect(booking[0].status).toBe("confirmed");
+  });
+
   test("the trainer declines a request with a reason and the time is free again", async ({ trainer, client }) => {
     await openWindow(trainer, 3, 10, 11);
     const [slot] = await openSlots(trainer);
