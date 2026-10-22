@@ -164,6 +164,8 @@ export const en: Dictionary = {
     },
     client: {
       home: {
+        signedOut: "Sign in first",
+        signedOutText: "Sign in with Telegram to see your sessions and passes here.",
         emptyTitle: "No upcoming sessions",
         emptyText: "Pick a free time with your trainer and book it.",
         book: "Book a session",
@@ -1620,6 +1622,8 @@ export const en: Dictionary = {
     /** The client's side: /client/passes and /client/passes/[passId]. */
     client: {
       title: "Passes",
+      signedOut: "Sign in first",
+      signedOutText: "Sign in with Telegram to see your passes.",
       emptyTitle: "No passes",
       emptyText: "Ask your trainer about packages. Once they sell you a pass, it shows up here.",
       trainer: "Trainer {name}",
