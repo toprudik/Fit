@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
+import { DateField } from "@/components/ui/date-field";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { addMeasurements } from "@/lib/progress/actions";
@@ -75,7 +76,7 @@ export function AddMeasurement({ today, coachingId, block = false }: { today: st
       </Button>
       <Sheet open={open} onOpenChange={(next) => !pending && setOpen(next)} title={copy.addTitle} description={copy.addText}>
         <form action={submit} noValidate className="flex flex-col gap-4">
-          <TextField name="date" type="date" label={copy.date} defaultValue={today} max={today} required error={errors.date} />
+          <DateField name="date" label={copy.date} defaultValue={today} max={today} required error={errors.date} />
           {field("weight")}
           <fieldset className="flex flex-col gap-4">
             <legend className="mb-2 px-1 text-headline">{copy.girths}</legend>
