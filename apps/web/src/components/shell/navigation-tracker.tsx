@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useCallback, useEffect } from "react";
+import { activeTab, tabsForZone, zoneFromPath } from "@/lib/navigation/zones";
 
 /*
  * This tab's in-app history: the URLs visited since the page loaded and where we are among them.
@@ -17,6 +18,8 @@ let poppedTo: string | null = null;
 let recordedPop: Event | null = null;
 /** Set by "Back" when it goes up to its fallback screen: a push in the history, a pop for the user. */
 let goingUp = false;
+/** Set by replaceScreen: the next page takes the current entry instead of adding one. */
+let replacing = false;
 
 function currentUrl() {
   return `${window.location.pathname}${window.location.search}`;
@@ -38,6 +41,13 @@ function record(url: string) {
   if (event) recordedPop = event;
   poppedTo = null;
   goingUp = false;
+  const replaced = replacing;
+  replacing = false;
+  if (replaced && !popped && index >= 0) {
+    entries[index] = url;
+    entries.length = index + 1;
+    return;
+  }
   if (popped) {
     // Back or forward: move to the nearest matching entry, looking back first. popstate doesn't say
     // which way it went, so a Forward to a URL that is also behind us counts as a Back (it plays as a
@@ -75,16 +85,60 @@ export function arrival(): "load" | "push" | "pop" {
   return back === -1 && forward !== -1 ? "push" : "pop";
 }
 
-/** Back to the previous screen if we came from one in this app, otherwise up to `fallbackHref`. */
+/** The tab a URL belongs to, as "zone/tab", and whether it is that tab's root; null outside the tabs. */
+function tabOf(url: string): { key: string; zone: string; root: boolean; home: boolean } | null {
+  const path = url.split("?")[0];
+  const zone = zoneFromPath(path);
+  if (!zone) return null;
+  const segments = path.split("/").slice(2).filter(Boolean);
+  const tab = activeTab(zone, segments);
+  if (!tab) return null;
+  return { key: `${zone}/${tab.id}`, zone, root: segments.length <= 1, home: tabsForZone(zone)[0].id === tab.id };
+}
+
+/**
+ * Where the zone's first tab («Главная», «Сегодня») sits behind the current screen, as a step for
+ * history.go (-1 is the previous entry), or null when it is not there: the history holds the first
+ * tab's stack, then at most the stack of one other tab (AppShell switches tabs that way).
+ */
+export function stepsBackToHome(zone: string): number | null {
+  for (let at = index - 1; at >= 0; at--) {
+    const tab = tabOf(entries[at]);
+    if (tab?.home && tab.zone === zone) return at - index;
+  }
+  return null;
+}
+
+/** Opens `href` in place of the current screen, so the history does not grow (another tab). */
+export function replaceScreen(router: ReturnType<typeof useRouter>, href: string) {
+  replacing = true;
+  router.replace(href, { scroll: false });
+}
+
+/**
+ * Back to the previous screen if we came from one in this app, otherwise up to `fallbackHref`. A
+ * previous screen of another tab doesn't count: a tab reopened on its last screen goes up to its
+ * root, as in a native app, and that root takes the screen's place in the history.
+ */
 export function useBack(fallbackHref: string): () => void {
   const router = useRouter();
   return useCallback(() => {
     if (index > 0) {
-      router.back();
+      const here = tabOf(entries[index]);
+      const before = tabOf(entries[index - 1]);
+      const otherTab = here !== null && before !== null && here.key !== before.key && !here.root;
+      if (!otherTab) {
+        router.back();
+        return;
+      }
+      goingUp = true;
+      replaceScreen(router, fallbackHref);
       return;
     }
     goingUp = true;
-    router.push(fallbackHref);
+    // From a tab's root up to the first tab: nothing to keep behind it, so it replaces the root.
+    if (index === 0 && tabOf(entries[0])?.root) replaceScreen(router, fallbackHref);
+    else router.push(fallbackHref);
   }, [router, fallbackHref]);
 }
 

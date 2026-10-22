@@ -137,6 +137,33 @@ test.describe("Telegram's buttons", () => {
     expect(pathname(page)).toBe("/trainer");
   });
 
+  test("BackButton from another tab leads to the first one, where Telegram shows «Закрыть»", async ({ page }) => {
+    await openInTelegram(page, "/trainer");
+    await expectMiniAppReady(page);
+    const nav = page.getByRole("navigation", { name: "Разделы" }).filter({ visible: true });
+    for (const [name, path] of [["Расписание", "/trainer/schedule"], ["Клиенты", "/trainer/clients"], ["Деньги", "/trainer/money"]]) {
+      await expect(async () => {
+        await nav.getByRole("link", { name, exact: true }).click();
+        await expect.poll(() => pathname(page), { timeout: 2000 }).toBe(path);
+      }).toPass();
+      await expect.poll(() => backButtonVisible(page)).toBe(true);
+    }
+
+    // One press, not one per tab: the tabs between replaced each other.
+    await receive(page, "back_button_pressed");
+    await expect.poll(() => pathname(page)).toBe("/trainer");
+    await expect.poll(() => backButtonVisible(page)).toBe(false);
+  });
+
+  test("BackButton on a tab opened directly goes to the first tab", async ({ page }) => {
+    await openInTelegram(page, "/trainer/more");
+    await expectMiniAppReady(page);
+    await expect.poll(() => backButtonVisible(page)).toBe(true);
+    await receive(page, "back_button_pressed");
+    await expect.poll(() => pathname(page)).toBe("/trainer");
+    await expect.poll(() => backButtonVisible(page)).toBe(false);
+  });
+
   test("BackButton replaces the web Back button on a pushed screen and pops it", async ({ page }) => {
     await openInTelegram(page, "/settings");
     await expectMiniAppReady(page);
