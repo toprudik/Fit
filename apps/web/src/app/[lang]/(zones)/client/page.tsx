@@ -4,12 +4,13 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
+import { ClientHomeSkeleton } from "@/components/shell/tab-skeletons";
+import { SkeletonRows } from "@/components/ui/skeleton";
 import { TodayDate } from "@/components/shell/today-date";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ClientTodayGoals } from "@/components/today/client-goals";
 import { ClientHomeView } from "@/components/today/client-home";
-import { SkeletonRows, SkeletonScreen } from "@/components/ui/skeleton";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { segmentBookings } from "@/lib/bookings/book";
 import { loadClientBookings } from "@/lib/bookings/load";
@@ -78,7 +79,8 @@ async function HomeContent() {
       locale={locale}
       home={{ timeZone: owner.timeZone, next: upcoming[0] ?? null, requests: requests.length, money: money ?? [] }}
     >
-      <Suspense fallback={null}>
+      {/* Same place as the goals group of the screen's skeleton, so the goals arrive without a jump. */}
+      <Suspense fallback={<SkeletonRows header rows={2} label={t.common.loading} />}>
         <ClientTodayGoals />
       </Suspense>
     </ClientHomeView>
@@ -89,15 +91,7 @@ export default async function ClientHomePage() {
   const t = await getDictionary();
   return (
     <Screen header={<ScreenHeader title={t.tabs.client.home} subtitle={<TodayDate />} />}>
-      <Suspense
-        fallback={
-          <SkeletonScreen label={t.common.loading}>
-            <SkeletonRows header rows={1} />
-            <SkeletonRows header rows={2} />
-            <SkeletonRows header rows={2} />
-          </SkeletonScreen>
-        }
-      >
+      <Suspense fallback={<ClientHomeSkeleton label={t.common.loading} />}>
         <HomeContent />
       </Suspense>
     </Screen>

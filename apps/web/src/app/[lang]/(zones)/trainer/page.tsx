@@ -7,7 +7,7 @@ import { TodayDate } from "@/components/shell/today-date";
 import { TodayMilestones } from "@/components/pairs/today-milestones";
 import { TrainerTodayView } from "@/components/today/trainer-today";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SkeletonRows } from "@/components/ui/skeleton";
+import { TrainerTodaySkeleton } from "@/components/shell/tab-skeletons";
 import { VerificationBanner } from "@/components/verification/verification-banner";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { loadTrainerMoney } from "@/lib/passes/load";
@@ -41,7 +41,7 @@ export default async function TrainerTodayPage() {
       <Suspense fallback={null}>
         <VerificationBanner />
       </Suspense>
-      <Suspense fallback={<SkeletonRows header rows={2} label={t.common.loading} />}>
+      <Suspense fallback={<TrainerTodaySkeleton label={t.common.loading} />}>
         <Today />
       </Suspense>
       <Suspense fallback={null}>
