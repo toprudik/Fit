@@ -56,14 +56,19 @@ export async function addPackage(
   return (row as unknown as { id: string }).id;
 }
 
+const recordedDays = new Map<string, number>();
+
 /**
  * Personal sessions that already happened ("Дозаписать занятие"), one a day going back from yesterday. Attended
  * ones charge the client's pass, or become a debt when there is none.
  */
 export async function recordPastSessions(trainer: Persona, coachingId: string, count: number, status: "attended" | "no_show" = "attended") {
+  // A later call for the same pair goes on further back, so it never lands on a day an earlier call took.
+  const before = recordedDays.get(coachingId) ?? 0;
+  recordedDays.set(coachingId, before + count);
   for (let index = 0; index < count; index += 1) {
     // 10:00 on the Moscow days before today, like the pass start (moscowDay), so the count holds at any UTC hour.
-    const startsAt = new Date(`${moscowDay(-(index + 1))}T10:00:00+03:00`);
+    const startsAt = new Date(`${moscowDay(-(before + index + 1))}T10:00:00+03:00`);
     ok(
       await trainer.db.rpc("record_past_session", {
         p_coaching_id: coachingId,
