@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
-import { TextField } from "@/components/ui/text-field";
+import { DateField } from "@/components/ui/date-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
 import { announceDocumentsUpdate, type AnnounceDocumentsResult } from "@/lib/admin/documents-actions";
@@ -75,13 +75,12 @@ export function DocumentsAnnounce() {
         setConfirming(true);
       }}
     >
-      <TextField
+      <DateField
         name="effective-on"
-        type="date"
         label={copy.dateLabel}
         hint={copy.dateHint}
         value={day}
-        onChange={(event) => setDay(event.target.value)}
+        onChange={setDay}
         error={error}
         className="sm:max-w-56"
       />

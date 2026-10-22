@@ -7,6 +7,7 @@ import { IconButton } from "@/components/ui/icon-button";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { toast } from "@/components/ui/sonner";
+import { TimeField } from "@/components/ui/time-field";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate, plural } from "@/i18n/format";
@@ -88,8 +89,8 @@ function WindowForm({
         </select>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <TextField label={copy.from} type="time" value={draft.start} onChange={(event) => change({ start: event.target.value })} />
-        <TextField label={copy.to} type="time" value={draft.end} onChange={(event) => change({ end: event.target.value })} />
+        <TimeField label={copy.from} value={draft.start} onChange={(start) => change({ start })} />
+        <TimeField label={copy.to} value={draft.end} onChange={(end) => change({ end })} />
       </div>
       <div className="flex flex-col gap-1.5">
         <label htmlFor="window-duration" className="px-1 text-footnote text-ink-2">

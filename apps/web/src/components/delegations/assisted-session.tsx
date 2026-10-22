@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
+import { DateField } from "@/components/ui/date-field";
+import { TimeField } from "@/components/ui/time-field";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
@@ -87,8 +89,8 @@ export function NewAssistedSession({
       >
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
-            <TextField label={copy.date} type="date" value={day} min={tomorrow()} onChange={(event) => setDay(event.target.value)} required />
-            <TextField label={copy.time} type="time" value={time} hint={copy.timeHint} onChange={(event) => setTime(event.target.value)} required />
+            <DateField label={copy.date} value={day} min={tomorrow()} onChange={setDay} required />
+            <TimeField label={copy.time} value={time} hint={copy.timeHint} onChange={setTime} required />
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="assisted-duration" className="px-1 text-footnote text-ink-2">

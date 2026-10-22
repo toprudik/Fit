@@ -11,6 +11,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
 import { Switch } from "@/components/ui/switch";
+import { DateField } from "@/components/ui/date-field";
 import { TextField } from "@/components/ui/text-field";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
@@ -202,7 +203,7 @@ export function AddAssistantButton({ clients }: { clients: { coachingId: string;
               </p>
             ) : null}
           </div>
-          <TextField type="date" label={copy.form.endsOn} hint={copy.form.endsOnHint} value={endsOn} onChange={(event) => setEndsOn(event.target.value)} />
+          <DateField label={copy.form.endsOn} hint={copy.form.endsOnHint} value={endsOn} onChange={setEndsOn} />
           <Button type="submit" size="lg" block loading={pending}>
             {copy.form.create}
           </Button>
