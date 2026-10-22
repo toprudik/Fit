@@ -137,30 +137,31 @@ test.describe("Telegram's buttons", () => {
     expect(pathname(page)).toBe("/trainer");
   });
 
-  test("BackButton from another tab leads to the first one, where Telegram shows «Закрыть»", async ({ page }) => {
+  test("a tab of the tab bar shows only «Закрыть», and a screen in it gets «Назад» up to the tab", async ({ page }) => {
     await openInTelegram(page, "/trainer");
     await expectMiniAppReady(page);
     const nav = page.getByRole("navigation", { name: "Разделы" }).filter({ visible: true });
-    for (const [name, path] of [["Расписание", "/trainer/schedule"], ["Клиенты", "/trainer/clients"], ["Деньги", "/trainer/money"]]) {
+    for (const [name, path] of [["Расписание", "/trainer/schedule"], ["Клиенты", "/trainer/clients"], ["Ещё", "/trainer/more"]]) {
       await expect(async () => {
         await nav.getByRole("link", { name, exact: true }).click();
         await expect.poll(() => pathname(page), { timeout: 2000 }).toBe(path);
       }).toPass();
-      await expect.poll(() => backButtonVisible(page)).toBe(true);
+      // Rudik 22.10: a tab is a top level of its own, so Telegram shows «Закрыть» there, not «Назад».
+      await expect.poll(() => backButtonVisible(page)).toBe(false);
     }
 
-    // One press, not one per tab: the tabs between replaced each other.
+    await page.getByRole("main").getByRole("link", { name: /QR и ссылка/ }).click();
+    await expect.poll(() => pathname(page)).toBe("/trainer/links");
+    await expect.poll(() => backButtonVisible(page)).toBe(true);
     await receive(page, "back_button_pressed");
-    await expect.poll(() => pathname(page)).toBe("/trainer");
+    await expect.poll(() => pathname(page)).toBe("/trainer/more");
     await expect.poll(() => backButtonVisible(page)).toBe(false);
   });
 
-  test("BackButton on a tab opened directly goes to the first tab", async ({ page }) => {
+  test("a tab opened directly shows only «Закрыть»", async ({ page }) => {
     await openInTelegram(page, "/trainer/more");
     await expectMiniAppReady(page);
-    await expect.poll(() => backButtonVisible(page)).toBe(true);
-    await receive(page, "back_button_pressed");
-    await expect.poll(() => pathname(page)).toBe("/trainer");
+    await expect(page.getByRole("heading", { level: 1, name: "Ещё" }).first()).toBeVisible();
     await expect.poll(() => backButtonVisible(page)).toBe(false);
   });
 
@@ -242,6 +243,8 @@ test.describe("Telegram's buttons", () => {
       expect(box.y + box.height).toBeLessThanOrEqual(59 + 46);
       expect(box.x).toBeGreaterThanOrEqual(116);
       expect(box.x + box.width).toBeLessThanOrEqual(width - 96);
+      // In the middle of the screen, not of the room between the buttons (Rudik 22.10).
+      expect(Math.abs(box.x + box.width / 2 - width / 2)).toBeLessThan(2);
     }
     // The date stays under the title; the avatar is not in the row, nothing sits between the row and the content.
     await expect(bar).toContainText(/\d/);

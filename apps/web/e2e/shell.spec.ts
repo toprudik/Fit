@@ -635,7 +635,14 @@ test.describe("focus and the bars", () => {
     await page.goto("/settings", { waitUntil: "networkidle" });
     const back = await page.getByRole("button", { name: "Назад" }).boundingBox();
     expect(back && back.x + back.width).toBeLessThan(width / 2);
+    const settingsTitle = await page.getByRole("heading", { level: 1, name: "Настройки" }).first().boundingBox();
+    expect(settingsTitle && Math.abs(settingsTitle.x + settingsTitle.width / 2 - width / 2)).toBeLessThan(2);
     await expect(page.getByRole("button", { name: "Профиль", exact: true })).toHaveCount(0);
+
+    // An action and the avatar on the right, nothing on the left: the title still sits in the middle.
+    await page.goto("/trainer/clients", { waitUntil: "networkidle" });
+    const clientsTitle = await page.getByRole("heading", { level: 1, name: "Клиенты" }).first().boundingBox();
+    expect(clientsTitle && Math.abs(clientsTitle.x + clientsTitle.width / 2 - width / 2)).toBeLessThan(2);
 
     // A long title gives way to Back: it is cut, never drawn under the button.
     await page.goto("/trainer/clients/new", { waitUntil: "networkidle" });
