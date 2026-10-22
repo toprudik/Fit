@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { ErrorScreen, reportError, useFeedbackHref } from "@/components/errors/error-screen";
 import { useI18n } from "@/i18n/client";
+import { isChunkLoadError, reloadForNewBuild } from "@/lib/navigation/stale-build";
 
 /**
  * A screen that crashed (PRD wave-1 §2.13 rule 1). Replaces everything under the root layout, the zone shell
@@ -12,7 +13,10 @@ export default function ErrorBoundary({ error, retry }: { error: Error & { diges
   const { t } = useI18n();
   const feedbackHref = useFeedbackHref();
 
-  useEffect(() => reportError(error), [error]);
+  // An open page that missed a deployment gets the new build instead of the error screen.
+  useEffect(() => {
+    if (!(isChunkLoadError(error) && reloadForNewBuild())) reportError(error);
+  }, [error]);
 
   return (
     <>

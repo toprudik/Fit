@@ -276,20 +276,19 @@ describe("inside Telegram", () => {
     expect(router.push).toHaveBeenCalledOnce();
   });
 
-  it("shows Telegram's BackButton on a screen that did not ask for it and on another tab, not on the first tab", () => {
+  it("shows Telegram's BackButton on a screen that did not ask for it, not on a tab of the tab bar", () => {
     launch();
-    for (const path of ["/client/diary/food", "/client/diary"]) {
+    window.history.replaceState(null, "", "/client/diary/food");
+    renderApp().unmount();
+    expect(sdk.backButton.show).toHaveBeenCalled();
+
+    for (const path of ["/client", "/client/diary"]) {
       vi.clearAllMocks();
       window.history.replaceState(null, "", path);
       const screen = renderApp();
-      expect(sdk.backButton.show).toHaveBeenCalled();
+      expect(sdk.backButton.show).not.toHaveBeenCalled();
       screen.unmount();
     }
-
-    vi.clearAllMocks();
-    window.history.replaceState(null, "", "/client");
-    renderApp();
-    expect(sdk.backButton.show).not.toHaveBeenCalled();
   });
 
   it("stays put: vertical swipes off, and closing asks first", () => {

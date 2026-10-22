@@ -11,7 +11,7 @@ import { preferenceCookie, saveAccountPreferences } from "@/lib/preferences";
 import { hapticImpact, useTelegramTopControls } from "@/lib/telegram/mini-app";
 import { cn } from "@/lib/utils";
 import { PROFILE_TAB, tabLabel } from "./nav-items";
-import { arrival, replaceScreen, stepsBackToHome } from "./navigation-tracker";
+import { arrival, openTab, stepsBackToHome } from "./navigation-tracker";
 import { Screen } from "./screen";
 import { ScreenHeader } from "./screen-header";
 import { ShellContext, type Shell } from "./shell-context";
@@ -204,8 +204,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const home = zone ? tabsForZone(zone)[0].id : null;
     const homeSteps = zone && tab.id === home ? stepsBackToHome(zone) : null;
     if (homeSteps !== null) window.history.go(homeSteps);
-    else if (tabId === null || tabId === home) router.push(href, { scroll: false });
-    else replaceScreen(router, href);
+    else openTab(router, href, { replace: tabId !== null && tabId !== home });
   };
 
   // Restores the scroll of a tab switch once its screen is in the DOM, before it is painted.
