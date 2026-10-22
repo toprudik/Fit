@@ -68,7 +68,12 @@ export function ClientHomeView({
               icon={CalendarDays}
               iconTone="accent"
               title={format.format(new Date(home.next.startsAt))}
-              subtitle={interpolate(t.schedule.clientSessions.trainer, { name: trainerName(home.next.trainer) })}
+              subtitle={
+                // A substitute runs it: the client should not come to their own trainer (QA U9).
+                home.next.substitute !== null
+                  ? interpolate(t.schedule.clientSessions.substitute, { name: home.next.substitute || t.schedule.booking.trainer })
+                  : interpolate(t.schedule.clientSessions.trainer, { name: trainerName(home.next.trainer) })
+              }
               href={`/client/bookings/${home.next.id}`}
             />
           ) : null}

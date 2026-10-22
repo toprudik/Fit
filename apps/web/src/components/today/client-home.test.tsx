@@ -20,6 +20,7 @@ const booking = {
   trainer: "Ольга",
   trainerUsername: null,
   trainerId: "t1",
+  substitute: null,
   sessionId: "s1",
   locationId: null,
   cancelReason: null,
@@ -57,6 +58,13 @@ describe("ClientHomeView", () => {
     expect(screen.queryByRole("link", { name: /Осталось 0 из 10/ })).toBeNull();
     expect(screen.getByRole("link", { name: /Долг/ }).getAttribute("href")).toBe("/client/passes");
     expect(screen.getByRole("link", { name: "Записаться" }).getAttribute("href")).toBe("/client/book");
+  });
+
+  it("names the substitute who runs the next session", () => {
+    const home = { timeZone: "Europe/Moscow", next: { ...booking, substitute: "Сергей" }, requests: 0, money: [] };
+    renderWithProviders(<ClientHomeView t={ru} locale="ru" home={home} />);
+    expect(screen.getByRole("link", { name: /Вместо тренера: Сергей/ }).getAttribute("href")).toBe("/client/bookings/b1");
+    expect(screen.queryByText(/Тренер Ольга/)).toBeNull();
   });
 
   it("offers to book when nothing is planned and leaves the passes out when there are none", () => {
