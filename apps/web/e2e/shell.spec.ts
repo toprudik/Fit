@@ -546,6 +546,33 @@ test.describe("push and pop", () => {
     expect((await takeAnimations(page)).filter((animation) => animation.screen)).toEqual([]);
   });
 
+  test("the browser's Back from any tab goes to the first one, then out", async ({ page }) => {
+    await page.goto("/trainer", { waitUntil: "networkidle" });
+    const nav = page.getByRole("navigation", { name: "Разделы" }).filter({ visible: true });
+    for (const [name, path] of [["Расписание", /\/trainer\/schedule$/], ["Клиенты", /\/trainer\/clients$/], ["Деньги", /\/trainer\/money$/]] as const) {
+      await expect(async () => {
+        await nav.getByRole("link", { name, exact: true }).click();
+        await expect(page).toHaveURL(path, { timeout: 2000 });
+      }).toPass();
+    }
+    await page.goBack();
+    await expect(page).toHaveURL(/\/trainer$/);
+
+    // The first tab from another one goes back in the history instead of adding to it.
+    await nav.getByRole("link", { name: "Клиенты", exact: true }).click();
+    await expect(page).toHaveURL(/\/trainer\/clients$/);
+    await nav.getByRole("link", { name: "Сегодня", exact: true }).click();
+    await expect(page).toHaveURL(/\/trainer$/);
+    await page.goBack();
+    await expect(page).not.toHaveURL(/\/trainer/);
+  });
+
+  test("the tab bar stays on settings", async ({ page }, testInfo) => {
+    test.skip(!isPhone(testInfo), "the tab bar is for phones");
+    await page.goto("/settings");
+    await expect(page.getByRole("navigation", { name: "Разделы" }).filter({ visible: true }).getByRole("link")).toHaveCount(5);
+  });
+
   test.describe("with reduced motion", () => {
     test.use({ contextOptions: { reducedMotion: "reduce" } });
 

@@ -6,12 +6,12 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { ProfileSheet } from "@/components/profile/profile-sheet";
 import { useI18n } from "@/i18n/client";
 import { DURATION, EASE_STANDARD, prefersReducedMotion } from "@/lib/motion";
-import { activeTab, isTabRoot, isZone, ZONE_COOKIE, type TabId, type Zone } from "@/lib/navigation/zones";
+import { activeTab, isTabRoot, isZone, tabsForZone, ZONE_COOKIE, type TabId, type Zone } from "@/lib/navigation/zones";
 import { preferenceCookie, saveAccountPreferences } from "@/lib/preferences";
 import { hapticImpact, useTelegramTopControls } from "@/lib/telegram/mini-app";
 import { cn } from "@/lib/utils";
 import { PROFILE_TAB, tabLabel } from "./nav-items";
-import { arrival } from "./navigation-tracker";
+import { arrival, replaceScreen, stepsBackToHome } from "./navigation-tracker";
 import { Screen } from "./screen";
 import { ScreenHeader } from "./screen-header";
 import { ShellContext, type Shell } from "./shell-context";
@@ -95,7 +95,7 @@ function play(element: HTMLElement, transition: Transition): Playback {
  * Frame of every screen in the (zones) group (docs/architecture/screens.md §1): the tab bar on
  * phones, the side menu from 768px on, the profile sheet behind the avatar, and the transitions
  * between screens. Settings and the profile page live here too, so the side menu stays on wider
- * screens; on phones they are pushed screens without the tab bar.
+ * screens and the tab bar on phones.
  *
  * Each tab keeps its own stack and scroll position: switching tabs returns to the screen and the
  * scroll where the tab was left. Tapping the current tab goes back to its root, or scrolls up when
@@ -114,7 +114,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const tabId: TabId | null = routeZone ? (activeTab(routeZone, rest)?.id ?? null) : null;
   const atTabRoot = routeZone !== null && isTabRoot(routeZone, rest);
   // Under Telegram's buttons the header has no room for the avatar, so the profile moves to a tab.
-  const profileTabId = useTelegramTopControls() && routeZone ? PROFILE_TAB[routeZone] : null;
+  const profileTabId = useTelegramTopControls() && zone ? PROFILE_TAB[zone] : null;
   const onProfileTab = atTabRoot && profileTabId !== null && tabId === profileTabId;
 
   // The sheet belongs to the screen it was opened over: any navigation closes it, whoever started it.
@@ -160,7 +160,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // second or more, and an unlit tab reads as a lost tap. The next route clears it.
   const [pendingTab, setPendingTab] = useState<{ id: TabId; from: string } | null>(null);
   if (pendingTab !== null && pendingTab.from !== route) setPendingTab(null);
-  const shownTabId = pendingTab?.id ?? tabId;
+  // Settings, the profile page and the rest outside the zones belong to the profile tab in the Mini App.
+  const shownTabId = pendingTab?.id ?? tabId ?? (routeZone === null ? profileTabId : null);
 
   // A screen that has not arrived after 300 ms (the first tap after opening, before its prefetch is
   // in) gets its skeleton from the shell, under the tab's title, instead of the old screen standing
@@ -197,7 +198,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     intent.current = "tab";
     hapticImpact();
     setPendingTab({ id: tab.id, from: route });
-    router.push(saved?.href ?? tab.href, { scroll: false });
+    const href = saved?.href ?? tab.href;
+    // The history keeps the first tab and at most one other tab, as in a native app: "Back" from any
+    // tab leads to the first one, then out (QA 22.10: six presses to get out after five tab taps).
+    const home = zone ? tabsForZone(zone)[0].id : null;
+    const homeSteps = zone && tab.id === home ? stepsBackToHome(zone) : null;
+    if (homeSteps !== null) window.history.go(homeSteps);
+    else if (tabId === null || tabId === home) router.push(href, { scroll: false });
+    else replaceScreen(router, href);
   };
 
   // Restores the scroll of a tab switch once its screen is in the DOM, before it is painted.
@@ -271,7 +279,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           data-skeleton-instant={skeleton !== null ? "" : undefined}
           className={cn(
             "min-w-0 flex-1 overflow-x-clip outline-none md:pb-0",
-            routeZone ? "pb-[calc(var(--size-tabbar)+var(--safe-bottom))]" : "pb-[var(--safe-bottom)]",
+            zone ? "pb-[calc(var(--size-tabbar)+var(--safe-bottom))]" : "pb-[var(--safe-bottom)]",
           )}
         >
           <div ref={screenRef} hidden={waitingTab !== null}>
@@ -283,8 +291,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </ShellContext>
           ) : null}
         </main>
-        {/* Settings and the profile page are pushed screens on a phone: no tab bar there. */}
-        {routeZone ? <TabBar zone={routeZone} activeId={shownTabId} profileId={profileTabId} onSelect={selectTab} /> : null}
+        {/* On every screen of the shell, settings and the profile page included, as in a native app (Rudik 22.10). */}
+        {zone ? <TabBar zone={zone} activeId={shownTabId} profileId={profileTabId} onSelect={selectTab} /> : null}
       </div>
       <ProfileSheet open={profileOpen} onOpenChange={setProfileOpen} />
     </ShellContext>

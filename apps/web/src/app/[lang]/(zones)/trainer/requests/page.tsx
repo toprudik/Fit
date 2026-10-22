@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inbox } from "lucide-react";
 import { Suspense } from "react";
+import { QuickConfirm } from "@/components/bookings/quick-confirm";
 import { ScheduleSignIn } from "@/components/schedule/sign-in-state";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
@@ -42,20 +43,28 @@ async function Requests() {
     minute: "2-digit",
     timeZone: owner.timeZone,
   });
+  // The row opens the request; «Подтвердить» beside it confirms in one tap (QA U6). Not inside the link: a button
+  // in a link is not allowed.
   const rows = (items: TrainerRequest[]) =>
     items.map((request) => (
-      <ListRow
-        key={request.id}
-        avatar={{ name: request.client }}
-        title={request.client}
-        subtitle={format.format(new Date(request.startsAt))}
-        href={`/trainer/requests/${request.id}`}
-      />
+      <div key={request.id} className="flex items-center">
+        <ListRow
+          avatar={{ name: request.client }}
+          title={request.client}
+          subtitle={format.format(new Date(request.startsAt))}
+          href={`/trainer/requests/${request.id}`}
+          chevron={false}
+          className="min-w-0 flex-1"
+        />
+        <div className="shrink-0 pe-4">
+          <QuickConfirm bookingId={request.id} client={request.client} />
+        </div>
+      </div>
     ));
   const own = requests.filter((request) => request.trainerId === owner.userId);
   return (
     <div className="flex flex-col gap-6">
-      {own.length > 0 ? <ListGroup>{rows(own)}</ListGroup> : null}
+      {own.length > 0 ? <ListGroup footer={copy.listHint}>{rows(own)}</ListGroup> : null}
       {assists.map((assist) => {
         const theirs = requests.filter((request) => request.trainerId === assist.ownerId);
         return theirs.length > 0 ? (

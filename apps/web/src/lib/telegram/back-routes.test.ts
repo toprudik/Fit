@@ -23,27 +23,19 @@ function screens(dir = APP): string[] {
 }
 
 /**
- * The only screens without Telegram's BackButton: the tab roots and the way in. A new screen gets
+ * The only screens without Telegram's BackButton: the first tab of each zone and the way in. A new screen gets
  * the button by itself; adding one here needs a reason, since in the Mini App a screen without
  * "Back" can only be left by closing the app.
  */
 const ROOTS = [
   "/",
   "/client",
-  "/client/diary",
-  "/client/progress",
-  "/client/sessions",
-  "/client/trainers",
   "/login",
   "/onboarding/consent",
   "/onboarding/preferences",
   "/onboarding/trainer/done",
   "/onboarding/trainer/x1",
   "/trainer",
-  "/trainer/clients",
-  "/trainer/money",
-  "/trainer/more",
-  "/trainer/schedule",
 ];
 
 describe("Telegram's BackButton", () => {
@@ -59,6 +51,8 @@ describe("Telegram's BackButton", () => {
   });
 
   it("goes up to the tab, the zone's home or the section", () => {
+    expect(backFallbackHref("/client/progress")).toBe("/client");
+    expect(backFallbackHref("/trainer/more")).toBe("/trainer");
     expect(backFallbackHref("/client/diary/food/add")).toBe("/client/diary");
     expect(backFallbackHref("/trainer/clients/x1/payments")).toBe("/trainer/clients");
     expect(backFallbackHref("/client/bookings/x1")).toBe("/client");
