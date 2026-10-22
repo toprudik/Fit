@@ -18,6 +18,7 @@ import {
   loadAssistedHomework,
   loadAssistedMeasurements,
   loadAssistedNotes,
+  loadNotesWritable,
   loadAssistedOwners,
   loadAssistedPair,
   loadAssistedSessions,
@@ -205,13 +206,17 @@ async function Homework({ t, locale, pair }: { t: Dictionary; locale: Locale; pa
 
 async function Notes({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: AssistedPair }) {
   const copy = t.delegatedZone;
-  const notes = await loadAssistedNotes(pair);
+  const [notes, writable] = await Promise.all([loadAssistedNotes(pair), loadNotesWritable(pair)]);
   return (
     <section className="flex flex-col gap-4" aria-labelledby="assisted-notes">
       <h2 id="assisted-notes" className="px-1 text-headline">
         {copy.notes}
       </h2>
-      <NoteComposer coachingId={pair.coachingId} />
+      {writable ? (
+        <NoteComposer coachingId={pair.coachingId} />
+      ) : (
+        <p className="px-1 text-subhead text-ink-2">{interpolate(copy.notesClosed, { name: pair.ownerName })}</p>
+      )}
       {notes.length === 0 ? <p className="px-1 text-subhead text-ink-2">{copy.notesEmpty}</p> : null}
       {notes.map((note) => (
         <NoteItem

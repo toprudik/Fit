@@ -218,6 +218,15 @@ export async function loadAssistedNotes(pair: AssistedPair): Promise<AssistedNot
   }));
 }
 
+/** Whether the assistant can add a note now: the owner must have accepted «Поручение для тренеров» (B9). */
+export async function loadNotesWritable(pair: AssistedPair): Promise<boolean> {
+  const me = await loadScheduleOwner();
+  if (!me) return false;
+  const { data, error } = await me.supabase.rpc("coaching_notes_writable", { p_coaching_id: pair.coachingId });
+  if (error) fail("notes writable", error);
+  return data;
+}
+
 export type AssistedHomework = Pick<Homework, "id" | "title" | "dueDate" | "repeatWeekdays" | "repeatUntil"> & {
   /** The deadline the list shows (currentOccurrence), or null for a homework without deadlines. */
   current: HomeworkOccurrence | null;

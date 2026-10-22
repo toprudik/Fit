@@ -139,6 +139,33 @@ test.describe("team and delegation", () => {
     await expectAccessible(helper);
   });
 
+  test("a helper's notes wait for the owner's agreement and keep the text when access goes", async ({ persona }) => {
+    const { owner, colleague, coachingId } = await team(persona);
+    const ownerName = `Марина ${owner.lastName}`;
+    const invite = ok(
+      await owner.db.rpc("create_delegation", { p_kind: "assistant", p_scopes: ["notes"], p_all_clients: true }),
+      "assistant invite",
+    );
+    ok(await colleague.db.rpc("accept_delegation", { p_token: invite[0].token }), "accept");
+    const helper = colleague.page;
+
+    // The owner has not accepted «Поручение для тренеров», so there is no form, only the reason.
+    await helper.goto(`/trainer/clients/delegated/${coachingId}`);
+    await expect(helper.getByText(`Заметки откроются, когда тренер ${ownerName} примет «Поручение для тренеров».`)).toBeVisible();
+    await expect(helper.getByRole("button", { name: "Сохранить заметку" })).toHaveCount(0);
+
+    ok(await owner.db.from("consents").insert({ user_id: owner.userId, kind: "trainer_dpa", version: "2026-10-18" }).select("id"), "agreement");
+    await helper.reload();
+    await helper.getByLabel("Новая заметка").fill("Колено лучше");
+
+    // The owner revokes the access while the helper is typing: the text stays and the reason shows.
+    const delegation = ok(await owner.db.from("delegations").select("id").eq("kind", "assistant"), "delegation");
+    ok(await owner.db.rpc("revoke_delegation", { p_delegation_id: delegation[0].id }), "revoke");
+    await helper.getByRole("button", { name: "Сохранить заметку" }).click();
+    await expect(helper.getByText("Заметки этому клиенту сейчас недоступны.", { exact: false })).toBeVisible();
+    await expect(helper.getByLabel("Новая заметка")).toHaveValue("Колено лучше");
+  });
+
   test("an unverified trainer cannot accept a helper invite", async ({ persona }) => {
     const admin = await namedAdmin(persona);
     const owner = await namedTrainer(persona, "Марина");
