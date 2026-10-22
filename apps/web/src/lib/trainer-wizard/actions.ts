@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { dictionaries } from "@/i18n/dictionaries";
@@ -116,6 +116,9 @@ export async function saveWizardStep(_previous: WizardState, form: FormData): Pr
     refresh();
     return { status: "added" };
   }
+  // Drops the router's copies of the wizard's steps, taken before this save: "Назад" then loads the saved answers,
+  // and StepFields starts the form over from them (QA B3).
+  revalidatePath("/[lang]/onboarding/trainer", "layout");
   redirect(text(form, "mode") === "edit" && isEditableStep(step) ? PROFILE_EDIT_PATH : nextPath(step));
 }
 

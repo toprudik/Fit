@@ -30,6 +30,15 @@ type StepFieldsProps = {
 
 /** One step's form filled with the trainer's saved answers, for the wizard and for "Профиль тренера". */
 export function StepFields({ step, data, locale, edit = false }: StepFieldsProps) {
+  return <StepForms key={JSON.stringify(data)} step={step} data={data} locale={locale} edit={edit} />;
+}
+
+/**
+ * Keyed by the saved answers in StepFields: "Назад" brings a step back with the form state it was left in (and
+ * React resets a submitted form to the defaults it rendered with), so a step whose answers changed since starts
+ * over from them. Otherwise "Далее" there writes the old, often empty, values back (QA B3).
+ */
+function StepForms({ step, data, locale, edit = false }: StepFieldsProps) {
   const { trainer } = data;
   switch (step) {
     case "profile":
