@@ -13,6 +13,7 @@ import {
   paidAtFor,
   paymentState,
   localInstant,
+  unfreeze,
 } from "./present";
 
 describe("paymentState", () => {
@@ -100,5 +101,12 @@ describe("localInstant", () => {
     expect(localInstant("2026-10-16", "18:30", "Europe/Moscow")).toBe("2026-10-16T15:30:00.000Z");
     expect(localInstant("2026-01-15", "09:00", "Europe/Berlin")).toBe("2026-01-15T08:00:00.000Z");
     expect(localInstant("2026-07-15", "09:00", "Europe/Berlin")).toBe("2026-07-15T07:00:00.000Z");
+  });
+});
+
+describe("unfreeze", () => {
+  it("removes a freeze that started today and ends an earlier one yesterday", () => {
+    expect(unfreeze({ from: "2026-10-21" }, "2026-10-21")).toEqual({ kind: "remove" });
+    expect(unfreeze({ from: "2026-10-18" }, "2026-10-21")).toEqual({ kind: "end", lastDay: "2026-10-20" });
   });
 });

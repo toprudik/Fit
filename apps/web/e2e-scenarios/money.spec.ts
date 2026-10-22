@@ -431,6 +431,24 @@ test.describe("Passes", () => {
     await expect(client.page.getByText("Болел две недели")).toBeVisible();
   });
 
+  test("a trainer freezes a pass for today and unfreezes it the same day (QA U8)", async ({ trainer, client }) => {
+    await sellPass(trainer, client.coachingId, { title: "Абонемент на 8", sessions: 8, priceMajor: 12000, validityDays: 30 });
+    const { page } = trainer;
+    await page.goto(`/trainer/clients/${client.coachingId}/passes`);
+    const pass = page.getByRole("article").filter({ has: page.getByRole("heading", { name: "Абонемент на 8" }) });
+    const sheet = page.getByRole("dialog", { name: "Заморозить абонемент" });
+    await openSheet(pass.getByRole("button", { name: "Заморозить" }), sheet);
+    await sheet.getByRole("button", { name: "Заморозить" }).click();
+    await expect(page.getByText("Абонемент заморожен")).toBeVisible();
+    await expect(pass.getByText("Идёт сейчас")).toBeVisible();
+    await expectAccessible(page);
+
+    await pass.getByRole("button", { name: "Разморозить" }).click();
+    await expect(page.getByText("Заморозка снята").first()).toBeVisible();
+    await expect(pass.getByText("Идёт сейчас")).toHaveCount(0);
+    await expect(pass.getByRole("button", { name: "Разморозить" })).toHaveCount(0);
+  });
+
   test("a pass that cannot be found is a not-found page for the client", async ({ trainer, client, persona }) => {
     const passId = await sellPass(trainer, client.coachingId, { title: "Чужой абонемент", sessions: 2, priceMajor: 3000 });
     const stranger = await persona({ firstName: "Пётр" });
