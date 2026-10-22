@@ -1,6 +1,7 @@
 import { INTL_LOCALE, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { interpolate } from "@/i18n/format";
+import { DEFAULT_TIME_ZONE } from "@/lib/plans/plans";
 import { pickKnown, PUBLIC_BANS } from "@/lib/public-data/consent";
 
 export type ShowcaseTermsRow = { accepted_at: string; bans: string[]; condition: string | null };
@@ -12,7 +13,8 @@ export type ShowcaseTermsRow = { accepted_at: string; bans: string[]; condition:
 export function ShowcaseTerms({ t, locale, terms }: { t: Dictionary; locale: Locale; terms: ShowcaseTermsRow }) {
   const copy = t.publicData.terms;
   const bans = pickKnown(terms.bans, PUBLIC_BANS);
-  const date = new Intl.DateTimeFormat(INTL_LOCALE[locale], { day: "numeric", month: "long", year: "numeric" }).format(
+  // Moscow, as elsewhere when the zone is unknown: the showcase does not expose the trainer's, and the server's is UTC.
+  const date = new Intl.DateTimeFormat(INTL_LOCALE[locale], { day: "numeric", month: "long", year: "numeric", timeZone: DEFAULT_TIME_ZONE }).format(
     new Date(terms.accepted_at),
   );
   return (

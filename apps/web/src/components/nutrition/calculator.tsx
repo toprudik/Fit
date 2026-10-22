@@ -183,6 +183,8 @@ function NutritionCalculator({
           label={copy.birthDate}
           defaultValue={initial.birthDate ?? ""}
           max={today}
+          // An empty birth date opens thirty years back, not on this month.
+          openOn={`${Number(today.slice(0, 4)) - 30}${today.slice(4)}`}
           required
           error={errors.birthDate}
         />
@@ -228,7 +230,8 @@ function NutritionCalculator({
             {trainerName !== null ? (
               <p className="mt-2 text-footnote text-ink-2">{interpolate(copy.trainerActive, { name: trainerName })}</p>
             ) : null}
-            <Button className="mt-3" block loading={saving} onClick={() => save(result.weightKg)}>
+            {/* Held while «Рассчитать» is still refreshing the page, so the save never overlaps it (QA: the first tap was lost). */}
+            <Button className="mt-3" block loading={saving || pending} onClick={() => save(result.weightKg)}>
               {copy.save}
             </Button>
           </TargetCard>
