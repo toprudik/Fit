@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fillPlaceholders, hostOf } from "./fill";
 
 describe("fillPlaceholders", () => {
-  const text = "Оператор: [ФИО ОПЕРАТОРА], адрес: [АДРЕС], email: [EMAIL ДЛЯ ОБРАЩЕНИЙ]. Run by [OPERATOR FULL NAME] at [DOMAIN]/legal, https://[ДОМЕН]. Версия: [ВЕРСИЯ].";
+  const text = "Оператор: [ФИО ОПЕРАТОРА], адрес: [АДРЕС], email: [EMAIL ДЛЯ ОБРАЩЕНИЙ]. Run by [OPERATOR FULL NAME] at [DOMAIN]/legal, https://[ДОМЕН]. Версия: [ВЕРСИЯ], version [VERSION].";
 
   it("fills every placeholder it has a value for, in both languages", () => {
     const filled = fillPlaceholders(text, {
@@ -13,7 +13,7 @@ describe("fillPlaceholders", () => {
       version: "2026-11",
     });
     expect(filled).toBe(
-      "Оператор: Иванов Иван Иванович, адрес: г. Москва, ул. Тестовая, 1, email: privacy@example.com. Run by Иванов Иван Иванович at dafit.example/legal, https://dafit.example. Версия: 2026-11.",
+      "Оператор: Иванов Иван Иванович, адрес: г. Москва, ул. Тестовая, 1, email: privacy@example.com. Run by Иванов Иван Иванович at dafit.example/legal, https://dafit.example. Версия: 2026-11, version 2026-11.",
     );
   });
 
