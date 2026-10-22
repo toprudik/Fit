@@ -285,6 +285,18 @@ test.describe("sessions", () => {
     expect(errors()).toEqual([]);
   });
 
+  test("a past day in the schedule opens the new-session form ready to record it", async ({ trainer, client }) => {
+    const page = trainer.page;
+    const day = mskDay(-1);
+    await gotoReady(page, `/trainer/schedule?date=${day}`);
+    await page.getByRole("link", { name: "Занятие", exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/trainer/sessions/new\\?date=${day}`));
+    await expect(page.getByLabel("Дата")).toHaveValue(day);
+    await expect(page.getByRole("radiogroup", { name: "Как прошло" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Дозаписать" })).toBeVisible();
+    void client; // the fixture pairs the trainer with a client, so the form has someone to book
+  });
+
   test("the session form refuses a repeat without the first day", async ({ trainer, client }) => {
     const page = trainer.page;
     await gotoReady(page, `/trainer/sessions/new?coaching=${client.coachingId}`);

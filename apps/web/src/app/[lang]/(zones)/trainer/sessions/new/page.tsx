@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { getDictionary } from "@/i18n/server";
 import { loadScheduleOwner, loadSessionFormData } from "@/lib/schedule/load";
-import { formatMinutes, localParts, parseDay, parseMinutes, today as todayIn } from "@/lib/schedule/time";
+import { addDays, formatMinutes, localParts, parseDay, parseMinutes, today as todayIn } from "@/lib/schedule/time";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getDictionary();
@@ -55,7 +55,9 @@ async function NewSession({ searchParams }: { searchParams: PageProps<"/[lang]/t
   // ?client=, ?date= and ?time= come from a pair card or a free slot in the schedule.
   const today = todayIn(data.timeZone);
   const askedDay = parseDay(params.date);
-  const day = askedDay && askedDay >= today ? askedDay : today;
+  // A past day opens a personal session straight in "record a past session", within the same year the date field allows.
+  const earliest = initialType === "personal" ? addDays(today, -365) : today;
+  const day = askedDay && askedDay >= earliest ? askedDay : today;
   const askedTime = parseMinutes(params.time);
   // Without a time: the next whole hour, or 09:00 on a later day.
   const current = localParts(now(), data.timeZone);
