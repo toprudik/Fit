@@ -13,7 +13,7 @@ import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
 import { currencySymbol, formatMoney, majorText } from "@/lib/money/format";
 import { confirmPayment, correctPayment, recordPayment, voidPayment } from "@/lib/passes/actions";
-import { debtText } from "@/lib/passes/debt";
+import { amountsText, debtText, unpaidByCurrency } from "@/lib/passes/debt";
 import type { PairMoney, PaymentView } from "@/lib/passes/load";
 import { localDay, PAYMENT_METHODS } from "@/lib/passes/present";
 import { formatNoteTime } from "@/lib/pairs/format";
@@ -323,6 +323,7 @@ export function TrainerPayments({ money, symbol, startOpen }: { money: PairMoney
   const [waiving, setWaiving] = useState<WaiveTarget | null>(null);
   const close = useCallback(() => setRecording(false), []);
   const titles = new Map(money.passes.map((pass) => [pass.id, pass.title]));
+  const unpaid = unpaidByCurrency(money.passes);
 
   return (
     <div className="flex flex-col gap-4">
@@ -330,6 +331,12 @@ export function TrainerPayments({ money, symbol, startOpen }: { money: PairMoney
         <span className="text-body">{copy.debt}</span>
         <span className="text-body text-ink-2 tabular-nums">{debtText(t, locale, money.debt)}</span>
       </div>
+      {Object.keys(unpaid).length ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-1 px-4 py-3">
+          <span className="text-body">{t.money.overview.unpaid}</span>
+          <span className="text-body text-ink-2 tabular-nums">{amountsText(locale, unpaid)}</span>
+        </div>
+      ) : null}
       {/* "Долг" leads here from "Сегодня" and the overview, so the sessions owed can be forgiven here too (QA U5). */}
       {money.debtCharges.length ? (
         <DebtCharges charges={money.debtCharges} timeZone={money.timeZone} onWaive={money.status !== "ended" ? setWaiving : null} />
