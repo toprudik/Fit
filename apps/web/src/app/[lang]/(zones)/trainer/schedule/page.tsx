@@ -188,7 +188,7 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
       <div className="flex flex-wrap gap-2">
         {assisted ? null : (
           <Button asChild size="sm" icon={Plus}>
-            <Link href={`/trainer/sessions/new?date=${selected < today ? today : selected}`}>{copy.newSession}</Link>
+            <Link href={`/trainer/sessions/new?date=${selected}`}>{copy.newSession}</Link>
           </Button>
         )}
         {requests > 0 ? (

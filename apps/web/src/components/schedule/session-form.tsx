@@ -99,7 +99,7 @@ export function SessionForm(props: Props) {
   const [conflicts, setConflicts] = useState<SessionConflict[]>([]);
   const [pending, startTransition] = useTransition();
   // A personal session that has already ended goes into the history and is charged right away (QA T11).
-  const [ended, setEnded] = useState(false);
+  const [ended, setEnded] = useState(() => endedByNow(props.initial, props.timeZone));
   const [pastStatus, setPastStatus] = useState<"attended" | "no_show">("attended");
   const past = ended && props.kind === "create" && !group;
 
