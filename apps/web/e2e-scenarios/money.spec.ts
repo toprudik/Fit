@@ -81,6 +81,16 @@ test.describe("Money tab", () => {
     await expectAccessible(page);
     await row.click();
     await expect(page).toHaveURL(new RegExp(`/trainer/clients/${client.coachingId}/payments$`));
+    const left = page.locator("div", { has: page.locator("span", { hasText: "Не доплачено за абонементы" }) }).last();
+    await expect(left).toContainText(rub(9000));
+
+    // The client card says the same next to "Долг", which stays "Долга нет" (Q22).
+    await page.goto(`/trainer/clients/${client.coachingId}`);
+    const owed = page.getByRole("link", { name: /Не доплачено за абонементы/ });
+    await expect(owed).toContainText(rub(9000));
+    await expectAccessible(page);
+    await client.page.goto(`/client/trainers/${client.coachingId}`);
+    await expect(client.page.getByText("Не доплачено за абонементы")).toBeVisible();
   });
 });
 

@@ -14,3 +14,23 @@ export function debtText(t: Dictionary, locale: Locale, debt: Debt): string {
     ...Object.entries(debt.amounts).map(([currency, minor]) => formatMoney(locale, minor, currency)),
   ].join(", ");
 }
+
+/**
+ * What is left to pay on live passes, by currency (QA T9). Not a debt (Q22): screens show it next to "Долг"
+ * as "Не доплачено за абонементы", the same sum "Деньги → Долги" lists.
+ */
+export function unpaidByCurrency(passes: { unpaidMinor: number; currency: string | null; status: string }[]): Record<string, number> {
+  const amounts: Record<string, number> = {};
+  for (const pass of passes) {
+    if (pass.unpaidMinor <= 0 || !pass.currency || (pass.status !== "active" && pass.status !== "frozen")) continue;
+    amounts[pass.currency] = (amounts[pass.currency] ?? 0) + pass.unpaidMinor;
+  }
+  return amounts;
+}
+
+/** "4 000 ₽, 50 $": money per currency, never added across currencies (R38). */
+export function amountsText(locale: Locale, amounts: Record<string, number>): string {
+  return Object.entries(amounts)
+    .map(([currency, minor]) => formatMoney(locale, minor, currency))
+    .join(", ");
+}

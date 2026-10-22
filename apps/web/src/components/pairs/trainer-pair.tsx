@@ -18,6 +18,7 @@ import { currencySymbol } from "@/lib/money/format";
 import { loadPair, loadTrainerDpaAccepted, type PairDetail } from "@/lib/pairs/load";
 import { loadPairMoney } from "@/lib/passes/load";
 import { formatLocalDay, lastValidDay } from "@/lib/passes/present";
+import { amountsText } from "@/lib/passes/debt";
 import { passLeftText } from "@/lib/passes/remaining";
 import { TrainerNutrition } from "@/components/nutrition/sections";
 import { TrainerActivity } from "@/components/activity/sections";
@@ -62,6 +63,12 @@ export function WriteButton({ t, pair }: { t: Dictionary; pair: PairDetail }) {
       <a href={`https://t.me/${encodeURIComponent(username)}`} target="_blank" rel="noopener noreferrer" />
     </IconButton>
   );
+}
+
+/** "Не доплачено за абонементы" under "Долг", the sum "Деньги → Долги" shows (QA T9); nothing when all is paid. */
+export function UnpaidRow({ t, locale, pair, href }: { t: Dictionary; locale: Locale; pair: PairDetail; href: string }) {
+  if (!Object.keys(pair.unpaid).length) return null;
+  return <ListRow icon={Wallet} title={t.money.overview.unpaid} value={amountsText(locale, pair.unpaid)} href={href} />;
 }
 
 export function PassRows({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: PairDetail }) {
@@ -117,6 +124,7 @@ function Overview({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: Pa
           value={pair.debtSessions > 0 ? plural(locale, pair.debtSessions, t.pairs.debtSessions) : t.pairs.noDebt}
           href={`${base}/payments`}
         />
+        <UnpaidRow t={t} locale={locale} pair={pair} href={`${base}/payments`} />
       </ListGroup>
 
       <ListGroup header={t.pairs.passes}>

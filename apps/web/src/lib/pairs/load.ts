@@ -2,6 +2,7 @@ import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PAID_PLAN, requestedPlans } from "@/lib/plans/plans";
 import type { Json } from "@/lib/supabase/database.types";
+import { unpaidByCurrency } from "@/lib/passes/debt";
 import { DELETED_CLIENT_ID, displayName, isLive, isPairId, passIsEnding, type ClientGoal, type ClientItem, type CoachingStatus } from "./clients";
 import { todayMilestones, type Milestone, type TodayMilestones } from "./milestones";
 
@@ -204,6 +205,8 @@ export type PairDetail = {
   nextSessionAt: string | null;
   availableSessions: number;
   debtSessions: number;
+  /** Left to pay on live passes by currency, shown under "Долг" (QA T9); not a debt (Q22). */
+  unpaid: Record<string, number>;
   passes: PairPass[];
   notes: PairNote[];
   /** Trainer side only. */
@@ -243,7 +246,7 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
     supabase.from("coaching_stats").select("attended_count, next_session_at").eq("coaching_id", pair.id).maybeSingle(),
     supabase
       .from("pass_balances")
-      .select("pass_id, title, sessions_total, remaining, available, effective_expires_at, status")
+      .select("pass_id, title, sessions_total, remaining, available, effective_expires_at, status, unpaid_minor, currency")
       .eq("coaching_id", pair.id)
       .in("status", ["active", "frozen"]),
     supabase
@@ -290,6 +293,9 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
     nextSessionAt: stats.data?.next_session_at ?? null,
     availableSessions: balance.data?.available_sessions ?? 0,
     debtSessions: balance.data?.debt_sessions ?? 0,
+    unpaid: unpaidByCurrency(
+      (passes.data ?? []).map((pass) => ({ unpaidMinor: pass.unpaid_minor ?? 0, currency: pass.currency, status: pass.status ?? "" })),
+    ),
     passes: (passes.data ?? []).map((pass) => ({
       id: pass.pass_id ?? "",
       title: pass.title ?? "",
