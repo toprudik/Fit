@@ -2,6 +2,8 @@ import { lastValidDay } from "@/lib/passes/present";
 import type { Database } from "@/lib/supabase/database.types";
 
 export type MoneyAction = Database["public"]["Enums"]["money_event_action"];
+/** What the history calls a change: the action, except that a client's «Я оплатил» is a report, not an added payment. */
+export type MoneyLabel = MoneyAction | "payment_reported";
 type ActorRole = Database["public"]["Enums"]["actor_role"];
 
 /** One field a change touched, as the history shows it; days are "YYYY-MM-DD" in the trainer's zone. */
@@ -17,6 +19,7 @@ export type MoneyChange = {
   id: number;
   passId: string | null;
   action: MoneyAction;
+  label: MoneyLabel;
   details: MoneyDetail[];
   role: ActorRole;
   actor: string | null;
@@ -28,6 +31,11 @@ type Values = Record<string, unknown> | null;
 
 function has(values: Values, key: string): boolean {
   return values !== null && key in values;
+}
+
+/** A payment the client reported is waiting for the trainer, so the history does not call it added (QA B11). */
+export function moneyLabel(action: MoneyAction, newValues: Values): MoneyLabel {
+  return action === "payment_created" && newValues?.status === "reported" ? "payment_reported" : action;
 }
 
 /** The fields worth naming: a new expiry, title or size of a pass, the sum of a payment, a changed note. */

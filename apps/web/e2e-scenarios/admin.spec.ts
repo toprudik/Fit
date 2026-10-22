@@ -19,12 +19,12 @@ test.describe("admin section", () => {
     await page.goto("/admin");
     await expect(page.getByRole("heading", { level: 1, name: "Обзор беты" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Сейчас в бете" })).toBeVisible();
-    for (const label of ["Пользователи", "Тренеры", "Ждут верификации", "Верифицированы", "Действующие инвайты", "Активные пары", "Заблокированы"]) {
+    for (const label of ["Пользователи", "Тренеры", "Ждут верификации", "Верифицированы", "Действующие приглашения", "Активные пары", "Заблокированы"]) {
       await expect(page.getByRole("main").getByText(label, { exact: true }).first()).toBeVisible();
     }
     // A phone has no side menu: the overview lists the sections; a desktop has the menu.
     const sections = testInfo.project.name === "phone" ? page.getByRole("main") : page.getByRole("navigation", { name: "Разделы админки" });
-    for (const name of ["Инвайты", "Верификация", "Тарифы", "Обратная связь", "Отзывы", "Аналитика", "Статистика", "Журнал действий"]) {
+    for (const name of ["Приглашения", "Верификация", "Тарифы", "Обратная связь", "Отзывы", "Аналитика", "Статистика", "Журнал действий"]) {
       await expect(sections.getByRole("link", { name, exact: true })).toBeVisible();
     }
     await expectAccessible(page);
@@ -153,27 +153,27 @@ test.describe("admin section", () => {
     const { page } = admin;
     const note = `Зал на Лесной ${uniqueLastName("")}`;
     await page.goto("/admin/invites");
-    await expect(page.getByRole("heading", { level: 1, name: "Инвайты тренеров" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Приглашения тренеров" })).toBeVisible();
     await expectAccessible(page);
 
     // Validation: a validity of 0 days is refused.
     await page.getByRole("textbox", { name: "Для кого" }).fill(note);
     const days = page.getByRole("spinbutton", { name: "Сколько дней действует" });
     await days.fill("0");
-    await page.getByRole("button", { name: "Создать инвайт" }).click();
+    await page.getByRole("button", { name: "Создать приглашение" }).click();
     expect(await days.evaluate((input: HTMLInputElement) => input.validity.rangeUnderflow)).toBe(true);
-    await expect(page.getByRole("heading", { name: "Инвайт готов" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Приглашение готово" })).toHaveCount(0);
 
     await days.fill("7");
-    await page.getByRole("button", { name: "Создать инвайт" }).click();
-    await expect(page.getByRole("heading", { name: "Инвайт готов" })).toBeVisible();
+    await page.getByRole("button", { name: "Создать приглашение" }).click();
+    await expect(page.getByRole("heading", { name: "Приглашение готово" })).toBeVisible();
     const code = (await page.locator("dt", { hasText: "Код" }).locator("xpath=following-sibling::dd").innerText()).trim();
     expect(code).toMatch(/^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
-    await expect(page.getByRole("img", { name: "QR-код со ссылкой на инвайт" })).toBeVisible();
+    await expect(page.getByRole("img", { name: "QR-код со ссылкой на приглашение" })).toBeVisible();
     await expect(page.getByText(/startapp=ti_/)).toBeVisible();
     await expectAccessible(page);
     await page.getByRole("button", { name: "Готово" }).click();
-    await expect(page.getByRole("heading", { name: "Инвайт готов" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Приглашение готово" })).toHaveCount(0);
 
     await page.reload();
     const row = inviteRow(page, note, "Действует");
@@ -182,7 +182,7 @@ test.describe("admin section", () => {
     // The code works for a new person through the redeem screen.
     const newcomer = await persona({ firstName: "Лев", lastName: uniqueLastName("Новичков") });
     await newcomer.page.goto(`/onboarding/trainer?code=${code.replaceAll("-", "")}`);
-    await expect(newcomer.page.getByText("Инвайт действует")).toBeVisible();
+    await expect(newcomer.page.getByText("Приглашение действует")).toBeVisible();
     await expectAccessible(newcomer.page);
     await newcomer.page.getByRole("button", { name: "Стать тренером" }).click();
     await expect(newcomer.page).toHaveURL(/\/onboarding\/trainer\/|\/trainer/);
@@ -194,23 +194,23 @@ test.describe("admin section", () => {
     // A second, unused invite gets revoked; its code then says so.
     const second = `${note} второй`;
     await page.getByRole("textbox", { name: "Для кого" }).fill(second);
-    await page.getByRole("button", { name: "Создать инвайт" }).click();
+    await page.getByRole("button", { name: "Создать приглашение" }).click();
     const secondCode = (await page.locator("dt", { hasText: "Код" }).locator("xpath=following-sibling::dd").innerText()).trim();
     await page.getByRole("button", { name: "Готово" }).click();
     await page.reload();
     const secondRow = inviteRow(page, second, "Действует");
     await secondRow.getByRole("button", { name: "Отозвать" }).click();
     await page.getByRole("button", { name: "Да, отозвать" }).click();
-    await expectToast(page, "Инвайт отозван");
+    await expectToast(page, "Приглашение отозвано");
     await expect(inviteRow(page, second, "Отозван")).toBeVisible();
     const late = await persona({ firstName: "Яна", lastName: uniqueLastName("Опоздалова") });
     await late.page.goto(`/onboarding/trainer?code=${secondCode.replaceAll("-", "")}`);
-    await expect(late.page.getByText("Инвайт отозван")).toBeVisible();
+    await expect(late.page.getByText("Приглашение отозвано")).toBeVisible();
     await expect(late.page.getByRole("button", { name: "Стать тренером" })).toHaveCount(0);
 
     await page.goto("/admin/audit?action=trainer_invite");
     await expect(page.getByText(`Кто: Вера ${admin.lastName}`)).toHaveCount(3);
-    await expect(page.getByText("Инвайт отозван").first()).toBeVisible();
+    await expect(page.getByText("Приглашение отозвано").first()).toBeVisible();
   });
 
   test("verification: an admin approves one trainer and rejects another with a reason", async ({ persona }) => {

@@ -7,7 +7,7 @@ import { collectErrors, expectAccessible, SCHEMES, screenshotPath, settle } from
  */
 
 const SCREENS = [
-  { zone: "trainer", path: "/trainer/help", first: "Как стать тренером в DaFit?", answer: /Зону «Тренер» открывает инвайт/ },
+  { zone: "trainer", path: "/trainer/help", first: "Как стать тренером в DaFit?", answer: /Зону «Тренер» открывает приглашение/ },
   { zone: "client", path: "/client/help", first: "Как начать заниматься у тренера?", answer: /Открой ссылку или QR тренера/ },
 ] as const;
 

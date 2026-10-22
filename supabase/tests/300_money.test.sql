@@ -487,7 +487,7 @@ select lives_ok(
   'payments: C reports a payment on account (no pass)'
 );
 insert into public.payments (coaching_id, pass_id, amount_minor, currency, method, paid_at, status, note)
-values (tests.i('pair_ac'), tests.i('pass_ac'), 8000, 'RUB', 'sbp', now() - interval '1 day', 'reported', 'c report 3'),
+values (tests.i('pair_ac'), null, 8000, 'RUB', 'sbp', now() - interval '1 day', 'reported', 'c report 3'),
        (tests.i('pair_ac'), null, 4000, 'RUB', 'sbp', now() - interval '1 day', 'reported', 'c report 4');
 select results_eq(
   $$ update public.payments set pass_id = tests.i('pass_ac_paid') where note = 'c report 3' returning pass_id $$,
