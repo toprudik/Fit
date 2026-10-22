@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useCallback, useEffect } from "react";
+import { isChunkLoadError, reloadForNewBuild } from "@/lib/navigation/stale-build";
 import { activeTab, tabsForZone, zoneFromPath } from "@/lib/navigation/zones";
 
 /*
@@ -173,8 +174,16 @@ function HistoryRecorder() {
       // Already recorded if the router rendered the page inside this very event.
       if (event !== recordedPop) poppedTo = currentUrl();
     };
+    // A chunk of the next screen that failed to load outside React (a prefetch, a lazy import).
+    const onRejection = (event: PromiseRejectionEvent) => {
+      if (isChunkLoadError(event.reason)) reloadForNewBuild();
+    };
     window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+      window.removeEventListener("unhandledrejection", onRejection);
+    };
   }, []);
 
   // Rendered output never depends on the pathname (it differs between the server and the browser

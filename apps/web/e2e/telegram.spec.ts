@@ -243,6 +243,8 @@ test.describe("Telegram's buttons", () => {
       expect(box.y + box.height).toBeLessThanOrEqual(59 + 46);
       expect(box.x).toBeGreaterThanOrEqual(116);
       expect(box.x + box.width).toBeLessThanOrEqual(width - 96);
+      // In the middle of the screen, not of the room between the buttons (Rudik 22.10).
+      expect(Math.abs(box.x + box.width / 2 - width / 2)).toBeLessThan(2);
     }
     // The date stays under the title; the avatar is not in the row, nothing sits between the row and the content.
     await expect(bar).toContainText(/\d/);
