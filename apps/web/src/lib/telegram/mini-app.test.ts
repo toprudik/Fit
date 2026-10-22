@@ -5,6 +5,7 @@ import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  downloadInTelegram,
   hapticImpact,
   markMiniAppReady,
   type MiniAppSignInResult,
@@ -37,6 +38,7 @@ const sdk = vi.hoisted(() => {
     },
     hapticFeedback: { impactOccurred: vi.fn(), selectionChanged: vi.fn() },
     swipeBehavior: { enableVertical: vi.fn(), disableVertical: vi.fn() },
+    downloadFile: Object.assign(vi.fn(() => Promise.resolve()), { isAvailable: vi.fn(() => true) }),
   };
 });
 vi.mock("@tma.js/sdk-react", () => sdk);
@@ -60,6 +62,24 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 afterEach(cleanup);
+
+describe("downloadInTelegram", () => {
+  const url = "https://files.example/export/part-1.zip?token=x";
+
+  it("hands the file to Telegram's download dialog inside the Mini App", () => {
+    goLive();
+    expect(downloadInTelegram(url, "dafit-export.zip")).toBe(true);
+    expect(sdk.downloadFile).toHaveBeenCalledWith(url, "dafit-export.zip");
+  });
+
+  it("leaves the link to the browser outside Telegram and in a Telegram without the method", () => {
+    expect(downloadInTelegram(url, "dafit-export.zip")).toBe(false);
+    goLive();
+    sdk.downloadFile.isAvailable.mockReturnValueOnce(false);
+    expect(downloadInTelegram(url, "dafit-export.zip")).toBe(false);
+    expect(sdk.downloadFile).not.toHaveBeenCalled();
+  });
+});
 
 describe("safely", () => {
   it("returns what the call returns", () => {
