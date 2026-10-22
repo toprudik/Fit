@@ -146,7 +146,15 @@ test("a new person with an invite code goes through consent, preferences, the in
     page.getByRole("heading", { level: 1, name: "Часовой пояс и валюта" }),
   ).toBeVisible();
   await expectAccessible(page);
-  await page.getByLabel("Часовой пояс").selectOption("Europe/Moscow");
+  await page.getByRole("button", { name: /^Часовой пояс/ }).click();
+  const zones = page.getByRole("dialog", { name: "Часовой пояс" });
+  await zones.getByRole("searchbox", { name: "Поиск" }).fill("москва");
+  await expectAccessible(page);
+  await zones.getByRole("button", { name: /Europe\/Moscow/ }).click();
+  await expect(zones).toBeHidden();
+  await expect(page.getByRole("button", { name: /^Часовой пояс/ })).toContainText(
+    "Europe/Moscow",
+  );
   await page.getByRole("radio", { name: "RUB" }).click();
   await page.getByRole("button", { name: "Далее" }).click();
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useState } from "react";
 import { TemplateFields } from "@/components/packages/template-fields";
 import { PersonAvatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,8 @@ import {
 } from "@/lib/trainer-wizard/options";
 import { nextPath, SKIPPABLE_STEPS, type WizardStep } from "@/lib/trainer-wizard/steps";
 import { LocationList, type Place } from "./location-manager";
+import type { ZoneOption } from "./step-fields";
+import { TimeZonePicker } from "./time-zone-picker";
 
 const IDLE: WizardState = { status: "idle" };
 
@@ -209,7 +211,7 @@ export function LocationsForm({ locations, onlineOnly }: { locations: Place[]; o
   );
 }
 
-type RegionFormProps = { timeZone: string; currency: string; zones: { id: string; label: string }[] } & EditProp;
+type RegionFormProps = { timeZone: string; currency: string; zones: ZoneOption[] } & EditProp;
 
 export function RegionForm({ timeZone, currency, zones, edit }: RegionFormProps) {
   const { t } = useI18n();
@@ -238,7 +240,7 @@ function RegionFields({
   initialCurrency,
   zoneError,
 }: {
-  zones: { id: string; label: string }[];
+  zones: ZoneOption[];
   initialZone: string;
   initialCurrency: string;
   zoneError?: string;
@@ -246,7 +248,6 @@ function RegionFields({
   const { t } = useI18n();
   const copy = t.trainerWizard.steps.region;
   const hydrated = useHydrated();
-  const select = useRef<HTMLSelectElement>(null);
   const [zone, setZone] = useState(initialZone);
   const [currency, setCurrency] = useState<Currency>(isCurrency(initialCurrency) ? initialCurrency : "RUB");
   // Only the browser knows its zone, so the hint appears after hydration.
@@ -256,40 +257,14 @@ function RegionFields({
   return (
     <>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="time-zone" className="px-1 text-footnote text-ink-2">
-          {copy.timeZone}
-        </label>
-        <select
-          id="time-zone"
-          name="timeZone"
-          ref={select}
-          defaultValue={initialZone}
-          onChange={(event) => setZone(event.target.value)}
-          aria-invalid={zoneError ? true : undefined}
-          aria-describedby={zoneError ? "time-zone-error" : undefined}
-          className="h-13 w-full rounded-sm border border-field-line bg-field px-4 text-body text-ink outline-none focus:border-focus-ring focus:shadow-[0_0_0_1px_var(--focus-ring)] aria-invalid:border-danger"
-        >
-          {zones.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-        {zoneError ? (
-          <p id="time-zone-error" className="px-1 text-footnote text-danger">
-            {zoneError}
-          </p>
-        ) : null}
+        <TimeZonePicker name="timeZone" label={copy.timeZone} zones={zones} value={zone} onChange={setZone} error={zoneError} />
         {offerDevice ? (
           <Button
             type="button"
             variant="ghost"
             size="sm"
             className="self-start"
-            onClick={() => {
-              if (select.current) select.current.value = deviceZone;
-              setZone(deviceZone);
-            }}
+            onClick={() => setZone(deviceZone)}
           >
             {interpolate(copy.useDevice, { zone: deviceZone.replaceAll("_", " ") })}
           </Button>

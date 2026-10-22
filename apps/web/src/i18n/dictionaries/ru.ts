@@ -1073,6 +1073,10 @@ export const ru = {
         timeZone: "Часовой пояс",
         timeZoneError: "Выбери часовой пояс из списка",
         useDevice: "Взять с телефона: {zone}",
+        search: "Поиск",
+        searchHint: "Город, страна или смещение, например Москва, Berlin или +3",
+        searchEmpty: "Ничего не нашлось. Попробуй город по-английски или смещение, например +5.",
+        chosen: "Выбран",
         currency: "Валюта",
       },
       cancellation: {

@@ -1066,6 +1066,10 @@ export const en: Dictionary = {
         timeZone: "Time zone",
         timeZoneError: "Choose a time zone from the list",
         useDevice: "Use this device's: {zone}",
+        search: "Search",
+        searchHint: "A city, a country or an offset such as +3",
+        searchEmpty: "Nothing found. Try a city or an offset like +5.",
+        chosen: "Selected",
         currency: "Currency",
       },
       cancellation: {
