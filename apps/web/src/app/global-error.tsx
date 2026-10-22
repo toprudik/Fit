@@ -6,6 +6,7 @@ import { onest, tekturNarrow } from "@/fonts";
 import { DEFAULT_LOCALE, LOCALE_COOKIE, matchLocale, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { themeInitScript } from "@/lib/theme/init-script";
+import { isChunkLoadError, reloadForNewBuild } from "@/lib/navigation/stale-build";
 import "./globals.css";
 
 /** The catalog of one language, loaded only when this page shows: it is part of every page's bundle. */
@@ -29,7 +30,10 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
   const locale = useClientValue(currentLocale, DEFAULT_LOCALE);
   const feedbackHref = useFeedbackHref();
 
-  useEffect(() => reportError(error), [error]);
+  // An open page that missed a deployment gets the new build instead of the error screen.
+  useEffect(() => {
+    if (!(isChunkLoadError(error) && reloadForNewBuild())) reportError(error);
+  }, [error]);
   useEffect(() => {
     let live = true;
     void CATALOGS[locale]().then((catalog) => {

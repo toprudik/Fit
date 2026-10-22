@@ -8,6 +8,7 @@ import { useI18n } from "@/i18n/client";
 import { tabsForZone, type Tab, type TabId, type Zone } from "@/lib/navigation/zones";
 import { cn } from "@/lib/utils";
 import { TAB_ICONS, tabLabel } from "./nav-items";
+import { useKeyboardOpen } from "./use-keyboard-open";
 
 /**
  * Called when a tab link starts a client-side navigation (not on Ctrl/Cmd-click, which opens a new
@@ -26,17 +27,20 @@ type TabBarProps = {
 
 /**
  * Bottom tab bar of a zone on phones (docs/design/components/TabBar), five tabs at most. From 768px
- * on the side menu takes its place. The links point at the tab roots, so they also work without
+ * on the side menu takes its place. It steps aside while the on-screen keyboard is up. The links point at the tab roots, so they also work without
  * JavaScript and in a new browser tab.
  */
 export function TabBar({ zone, activeId, profileId = null, onSelect }: TabBarProps) {
   const { t } = useI18n();
   const account = useAccount();
   const signedIn = account.status === "signed-in";
+  // Fixed to the bottom, the bar would ride up on the keyboard and cover the field being typed in.
+  const keyboardOpen = useKeyboardOpen();
 
   return (
     <nav
       aria-label={t.nav.sections}
+      hidden={keyboardOpen}
       className={cn(
         "material fixed inset-x-0 bottom-0 z-[var(--z-tabbar)] border-t border-line md:hidden",
         "pr-[var(--safe-right)] pb-[var(--safe-bottom)] pl-[var(--safe-left)]",

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, User } from "lucide-react";
+import { useLayoutEffect, useRef } from "react";
 import { useAccount } from "@/components/account/account-store";
 import { PersonAvatar } from "@/components/ui/avatar";
 import { useI18n } from "@/i18n/client";
@@ -63,9 +64,32 @@ function ProfileButton({ onOpen }: { onOpen: () => void }) {
 /*
  * Room for Telegram's buttons in the Mini App at fullscreen: «Закрыть» ends 111px from the left edge
  * and «⌄ ⋯» starts 88px from the right (Telegram does not report their size). The bar keeps clear of
- * both, so its title sits a few pixels right of center, which leaves the date more room.
+ * the wider one on both sides, so the title sits in the middle of the screen (Rudik 22.10).
  */
-const TELEGRAM_BUTTONS = { "--tg-buttons-left": "7.25rem", "--tg-buttons-right": "6rem" } as React.CSSProperties;
+const TELEGRAM_BUTTONS = { "--tg-buttons-left": "7.25rem", "--tg-buttons-right": "7.25rem" } as React.CSSProperties;
+
+/**
+ * Gives both side columns of the bar the width of the wider one, so the title stays in the middle of
+ * the screen even when the actions and the avatar on the right take more room than "Back" on the left.
+ * Returns the refs for the content of the left and the right column.
+ */
+function useEqualSides() {
+  const left = useRef<HTMLDivElement>(null);
+  const right = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const [start, end] = [left.current, right.current];
+    const bar = start?.closest<HTMLElement>("[data-slot=screen-bar]");
+    if (!start || !end || !bar || typeof ResizeObserver === "undefined") return;
+    // The right column reaches 10px into the bar's padding (-mr-2.5), so its track is that much narrower.
+    const measure = () => bar.style.setProperty("--bar-side", `${Math.max(start.offsetWidth, end.offsetWidth - 10)}px`);
+    const observer = new ResizeObserver(measure);
+    observer.observe(start);
+    observer.observe(end);
+    measure();
+    return () => observer.disconnect();
+  }, []);
+  return [left, right] as const;
+}
 
 /**
  * Screen header (docs/design/components/LargeTitle, .df-header). On a phone it is one bar on an
@@ -96,6 +120,7 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
   const avatar = !underTelegramButtons && !back && shell ? <ProfileButton onOpen={shell.openProfile} /> : null;
   // Under Telegram's buttons the actions have no room in the bar and get a row of their own.
   const actionsRow = underTelegramButtons && Boolean(actions);
+  const [leftSide, rightSide] = useEqualSides();
 
   return (
     <>
@@ -123,14 +148,20 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
             underTelegramButtons ? "h-[var(--tg-viewport-content-safe-area-inset-top)]" : "min-h-11",
           )}
         >
-          <div className="flex min-w-0 items-center">{showBack ? <BackButton onBack={goBack} /> : null}</div>
+          <div className="flex min-w-[var(--bar-side,0px)] items-center">
+            <div ref={leftSide} className="flex w-max items-center">
+              {showBack ? <BackButton onBack={goBack} /> : null}
+            </div>
+          </div>
           <div className="min-w-0 text-center">
             <h1 className="truncate text-headline">{barTitle}</h1>
             {subtitle ? <div className="truncate text-footnote text-ink-2">{subtitle}</div> : null}
           </div>
-          <div className="-mr-2.5 flex min-w-0 items-center justify-end gap-1">
-            {underTelegramButtons ? null : actions}
-            {avatar}
+          <div className="-mr-2.5 flex min-w-[calc(var(--bar-side,0px)+0.625rem)] items-center justify-end">
+            <div ref={rightSide} className="flex w-max items-center gap-1">
+              {underTelegramButtons ? null : actions}
+              {avatar}
+            </div>
           </div>
         </div>
       </div>

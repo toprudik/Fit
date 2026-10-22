@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { arrival, NavigationTracker, useBack } from "./navigation-tracker";
+import { arrival, NavigationTracker, openTab, useBack } from "./navigation-tracker";
 
-const router = { back: vi.fn(), push: vi.fn() };
+const router = { back: vi.fn(), push: vi.fn(), replace: vi.fn() };
 let pathname = "/";
 
 vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => pathname }));
@@ -57,6 +57,31 @@ describe("useBack", () => {
     navigate(rerender, "/trainer/clients?filter=debt", { pop: true });
     back.current();
     expect(router.back).toHaveBeenCalledOnce();
+  });
+
+  it("goes up from a tab reopened on its last screen, and back from a screen of another tab opened by a link", () => {
+    const tracker = render(<NavigationTracker />);
+    const rerender = () => tracker.rerender(<NavigationTracker />);
+    const back = renderHook(() => useBack("/client/progress")).result;
+    // A back/forward to an unknown page starts the history over from «Главная».
+    navigate(rerender, "/client?start", { pop: true });
+
+    // «Прогресс» from the tab bar, then «Цель и норма питания», a screen of «Дневник», by its link.
+    openTab(router as never, "/client/progress", { replace: false });
+    navigate(rerender, "/client/progress");
+    navigate(rerender, "/client/diary/food/target");
+    back.current();
+    expect(router.back).toHaveBeenCalledOnce();
+    expect(router.replace).not.toHaveBeenCalled();
+    navigate(rerender, "/client/progress", { pop: true });
+    router.back.mockClear();
+
+    // «Дневник» from the tab bar, reopened on its last screen: up to its root in place of the screen.
+    openTab(router as never, "/client/diary/food", { replace: true });
+    navigate(rerender, "/client/diary/food");
+    renderHook(() => useBack("/client/diary")).result.current();
+    expect(router.back).not.toHaveBeenCalled();
+    expect(router.replace).toHaveBeenLastCalledWith("/client/diary", { scroll: false });
   });
 
   it("tells a back/forward arrival from a push while the screen mounts", () => {

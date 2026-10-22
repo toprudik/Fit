@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { Locale } from "@/i18n/config";
 import { ZONES } from "@/lib/navigation/zones";
@@ -42,6 +42,22 @@ describe("TabBar", () => {
   it("marks no tab when the screen belongs to none", () => {
     const { container } = renderWithProviders(<TabBar zone="client" activeId={null} />);
     expect(container.querySelector("[aria-current]")).toBeNull();
+  });
+
+  it("steps aside while a text field has the focus, as the on-screen keyboard is up then", () => {
+    renderWithProviders(
+      <>
+        <input aria-label="Название" />
+        <input type="checkbox" aria-label="Повторять" />
+        <TabBar zone="trainer" activeId="schedule" />
+      </>,
+    );
+    const nav = () => screen.queryByRole("navigation", { name: SECTIONS_LABEL.ru });
+
+    act(() => screen.getByRole("textbox", { name: "Название" }).focus());
+    expect(nav()).toBeNull();
+    act(() => screen.getByRole("checkbox", { name: "Повторять" }).focus());
+    expect(nav()).not.toBeNull();
   });
 
   it("hands a tab press to onSelect, which may take over the navigation", () => {
