@@ -30,7 +30,7 @@ Cloud sessions build a code graph of apps/web, apps/bot and supabase at start (`
 - `graphify path "A()" "B()" --undirected`: how two symbols are connected.
 - `graphify query "telegram initData session" --budget 800`: orientation in an unfamiliar area. Ask with code identifiers, not prose; prose matches noise. Then read only the lines it points to.
 - Go straight to `rg` for database tables and dictionary keys: the graph misses `.from('table')` calls and most migrations that touch a table (for `data_shares` it showed 3 of 25+ places), and it has no dictionary keys at all. Plain grep also stays the right tool for other exact strings (copy, SQL grants). Don't read `graphify-out/GRAPH_REPORT.md` (about 70 KB) or `graph.json`.
-- After large uncommitted edits run `graphify update .` (seconds, no LLM) before asking the graph again. If `graphify-out/graph.json` is missing, the build is still running or failed: check the log and fall back to grep.
+- After large uncommitted edits run `graphify update .` (seconds, no LLM) before asking the graph again. If `graphify-out/graph.json` is missing, the build is still running or failed: check the log and fall back to grep. If there is no log at all (and `command -v graphify` finds nothing), the start hook did not run (for example, the session started outside the repo, in `/home/user`, and this repo's `.claude/settings.json` was not read). Then run `bash scripts/cloud-session-setup.sh` from the repo root once (it also installs the web and bot dependencies); the graph is ready in about a minute.
 - Docs and the project folder are not in the graph on purpose: docs are read by name from the list above, and indexing them would need an LLM.
 
 ## Infrastructure
