@@ -91,3 +91,18 @@ export function normalizeVideoUrl(value: string): string | null | undefined {
 export function licenseLabel(license: string): string {
   return license.replace(/-(\d+\.\d+)$/, " $1");
 }
+
+/**
+ * The description to show: in the reader's language, else (own exercises only) English or the text the owner wrote.
+ * A wger description in another language is left out, since English text on a Russian screen reads as a bug.
+ */
+export function exerciseDescription(
+  source: "wger" | "custom",
+  local: string | null | undefined,
+  english: string | null | undefined,
+  authored: string | null | undefined,
+): string | null {
+  if (local) return local;
+  if (source === "wger") return null;
+  return english ?? authored ?? null;
+}

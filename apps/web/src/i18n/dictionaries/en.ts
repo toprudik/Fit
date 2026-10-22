@@ -3127,6 +3127,7 @@ export const en: Dictionary = {
       deferred: "waiting for quiet hours to end: {count}",
       undelivered: "not delivered: {count}",
       muted: "turned off by the recipient: {count}",
+      noTelegram: "no Telegram, won't get it: {count}",
       withButton: "With a button that opens DaFit",
       withLink: "With a link to {url}",
       delete: "Delete from history",

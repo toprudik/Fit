@@ -14,7 +14,7 @@ import { sharingPath } from "@/lib/sharing/categories";
 import { PairMilestones } from "./milestones";
 import { EndPairRow } from "./pair-controls";
 import { AskContactButton } from "./ask-contact";
-import { PairNotice, PassRows, pairSubtitle } from "./trainer-pair";
+import { PairNotice, PassRows, UnpaidRow, pairSubtitle } from "./trainer-pair";
 import { WriteRow } from "./write-row";
 
 /**
@@ -79,6 +79,7 @@ export async function ClientPair({ coachingId }: { coachingId: string }) {
             value={pair.debtSessions > 0 ? plural(locale, pair.debtSessions, t.pairs.debtSessions) : t.pairs.noDebt}
             href={pair.debtSessions > 0 ? "/client/passes" : undefined}
           />
+          <UnpaidRow t={t} locale={locale} pair={pair} href="/client/passes" />
         </ListGroup>
 
         <ListGroup header={t.pairs.passes}>

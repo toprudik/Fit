@@ -3160,6 +3160,7 @@ export const ru = {
       deferred: "ждут конца тихих часов: {count}",
       undelivered: "не доставлено: {count}",
       muted: "отключено получателем: {count}",
+      noTelegram: "без Telegram, не получат: {count}",
       withButton: "С кнопкой «Открыть DaFit»",
       withLink: "Со ссылкой {url}",
       delete: "Удалить из истории",
