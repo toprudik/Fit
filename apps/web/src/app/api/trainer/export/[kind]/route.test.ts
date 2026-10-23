@@ -127,7 +127,7 @@ beforeEach(() => {
       { id: "client-2", first_name: "Other", last_name: null, display_name: null, username: null },
     ],
     coaching_stats: [{ coaching_id: "pair-1", attended_count: 7, no_show_count: 1 }],
-    coaching_balances: [{ coaching_id: "pair-1", available_sessions: 3, debt_sessions: 0 }],
+    coaching_balances: [{ coaching_id: "pair-1", debt_sessions: 0 }],
     sessions: [
       { id: "session-1", starts_at: "2026-10-05T07:00:00Z", kind: "personal", title: null },
       { id: "session-2", starts_at: "2026-10-06T15:30:00Z", kind: "group", title: "Stretching" },
@@ -141,6 +141,7 @@ beforeEach(() => {
     pass_balances: [
       {
         pass_id: "pass-1",
+        coaching_id: "pair-1",
         title: "8 sessions",
         sessions_total: 8,
         remaining: 5,
@@ -180,6 +181,16 @@ describe("GET /api/trainer/export/[kind]", () => {
     );
   });
 
+  it("counts sessions left on frozen passes too, as the pass card does", async () => {
+    db.rows.pass_balances = [
+      { pass_id: "pass-1", coaching_id: "pair-1", remaining: 4, status: "frozen" },
+      { pass_id: "pass-2", coaching_id: "pair-1", remaining: 2, status: "active" },
+    ];
+    const rows = table(await rawText(await get("clients")));
+    expect(rows[1][5]).toBe("6");
+    expect(queriesOf("pass_balances")[0].calls).toEqual(expect.arrayContaining([["in", "status", ["active", "frozen"]]]));
+  });
+
   it("lists the pairs that were live in the period, with the trainer's alias first", async () => {
     const csv = await rawText(await get("clients"));
     const c = en.trainerAnalytics.csv.columns;
@@ -187,8 +198,8 @@ describe("GET /api/trainer/export/[kind]", () => {
 
     expect(table(csv)).toEqual([
       [c.client, c.status, c.startedAt, c.attended, c.noShows, c.availableSessions, c.debtSessions],
-      ["Test Client", status.active, "2026-09-01T12:00:00+03:00", "7", "1", "3", "0"],
-      ["Morning client", status.ended, "2026-08-01T12:00:00+03:00", "0", "0", "0", "0"],
+      ["Test Client", status.active, "2026-09-01", "7", "1", "5", "0"],
+      ["Morning client", status.ended, "2026-08-01", "0", "0", "0", "0"],
     ]);
     expect(queriesOf("coachings")[0].calls).toEqual(
       expect.arrayContaining([
@@ -307,6 +318,7 @@ describe("GET /api/trainer/export/[kind]", () => {
     ["clients", "coachings"],
     ["clients", "coaching_stats"],
     ["clients", "coaching_balances"],
+    ["clients", "pass_balances"],
     ["sessions", "sessions"],
     ["sessions", "bookings"],
     ["payments", "payments"],

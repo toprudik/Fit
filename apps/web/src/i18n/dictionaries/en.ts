@@ -3266,7 +3266,7 @@ export const en: Dictionary = {
       columns: {
         client: "Client",
         status: "Status",
-        startedAt: "Pair started",
+        startedAt: "Client since",
         attended: "Held",
         noShows: "No-shows",
         availableSessions: "Sessions left",

@@ -8,7 +8,7 @@ import { readAllPages, readByIds } from "@/lib/supabase/paging";
 import { EXPORT_BUCKET } from "@/lib/account/export";
 import { isSameOrigin } from "@/lib/auth/same-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { exportFileName, isExportKind, isoInZone, majorUnits, toCsv, type Cell, type ExportKind } from "@/lib/trainer-analytics/csv";
+import { dayInZone, exportFileName, isExportKind, isoInZone, majorUnits, toCsv, type Cell, type ExportKind } from "@/lib/trainer-analytics/csv";
 
 type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type Range = { from: string; to: string; fromAt: string; toAt: string };
@@ -34,25 +34,34 @@ async function clients({ supabase, userId, locale, timeZone, range }: Context): 
   );
   if (error) fail("clients", error);
   const ids = pairs.map((pair) => pair.id);
-  const [names, stats, balances] = await Promise.all([
+  const [names, stats, balances, livePasses] = await Promise.all([
     clientNames(supabase, ids),
     readByIds(ids, (chunk) => supabase.from("coaching_stats").select("coaching_id, attended_count, no_show_count").in("coaching_id", chunk)),
-    readByIds(ids, (chunk) => supabase.from("coaching_balances").select("coaching_id, available_sessions, debt_sessions").in("coaching_id", chunk)),
+    readByIds(ids, (chunk) => supabase.from("coaching_balances").select("coaching_id, debt_sessions").in("coaching_id", chunk)),
+    // Sessions left on live passes, frozen ones too: the "4 из 5" the pass card shows, not what can be booked today.
+    readByIds(ids, (chunk) =>
+      supabase.from("pass_balances").select("coaching_id, remaining").in("coaching_id", chunk).in("status", ["active", "frozen"]),
+    ),
   ]);
   if (stats.error) fail("client stats", stats.error);
   if (balances.error) fail("client balances", balances.error);
+  if (livePasses.error) fail("client passes", livePasses.error);
   const stat = new Map(stats.data.map((row) => [row.coaching_id, row]));
   const balance = new Map(balances.data.map((row) => [row.coaching_id, row]));
+  const left = new Map<string, number>();
+  for (const row of livePasses.data) {
+    if (row.coaching_id) left.set(row.coaching_id, (left.get(row.coaching_id) ?? 0) + (row.remaining ?? 0));
+  }
   const c = t.columns;
   return [
     [c.client, c.status, c.startedAt, c.attended, c.noShows, c.availableSessions, c.debtSessions],
     pairs.map((pair) => [
       names.get(pair.id),
       t.pairStatus[pair.status],
-      pair.started_at ? isoInZone(pair.started_at, timeZone) : null,
+      pair.started_at ? dayInZone(pair.started_at, timeZone, locale) : null,
       stat.get(pair.id)?.attended_count ?? 0,
       stat.get(pair.id)?.no_show_count ?? 0,
-      balance.get(pair.id)?.available_sessions ?? 0,
+      left.get(pair.id) ?? 0,
       balance.get(pair.id)?.debt_sessions ?? 0,
     ]),
   ];
