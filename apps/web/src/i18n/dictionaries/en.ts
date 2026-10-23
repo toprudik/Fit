@@ -3259,6 +3259,7 @@ export const en: Dictionary = {
       payments: "Payments",
       passes: "Passes",
       footer: "For the selected period. Opens in any spreadsheet app.",
+      failed: "Couldn't prepare the file. Please try again.",
       lockTitle: "CSV export",
       lockText: "Clients, sessions, payments and passes as a file for your spreadsheet app.",
       pairStatus: { trial: "Trial", active: "Active", ended: "Ended" },

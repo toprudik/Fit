@@ -3292,6 +3292,7 @@ export const ru = {
       payments: "Оплаты",
       passes: "Абонементы",
       footer: "За выбранный период. Открывается в Excel и Google Таблицах.",
+      failed: "Не получилось подготовить файл, попробуй ещё раз.",
       lockTitle: "Выгрузка в CSV",
       lockText: "Клиенты, занятия, оплаты и абонементы файлом для Excel или Google Таблиц.",
       pairStatus: { trial: "Пробная", active: "Активна", ended: "Завершена" },

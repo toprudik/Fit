@@ -5,7 +5,7 @@
 -- (20261015123800_progress_policies.sql).
 begin;
 \ir _helpers.psql
-select plan(77);
+select plan(84);
 
 -- Fixtures: C has live pairs to A and B, D a live pair to A. Photos are not shared by default.
 select tests.create_trainer('trainer_a');
@@ -88,7 +88,7 @@ select results_eq(
        ('avatars',         true,  2097152::bigint,  array['image/webp', 'image/jpeg', 'image/png']),
        ('certificates',    false, 10485760::bigint, array['image/jpeg', 'image/png', 'application/pdf']),
        ('exercise-media',  true,  2097152::bigint,  array['image/webp', 'image/jpeg', 'image/png']),
-       ('exports',         false, 52428800::bigint, array['application/zip']),
+       ('exports',         false, 52428800::bigint, array['application/zip', 'text/csv']),
        ('feedback',        false, 5242880::bigint,  array['image/webp', 'image/jpeg', 'image/png']),
        ('progress-photos', false, 5242880::bigint,  array['image/webp', 'image/jpeg']) $$,
   'the six buckets have the expected visibility, size limit and MIME types'
@@ -105,7 +105,7 @@ select results_eq(
        ('avatars', 'a', true), ('avatars', 'd', true), ('avatars', 'r', true), ('avatars', 'w', true),
        ('certificates', 'a', true), ('certificates', 'd', true), ('certificates', 'r', true),
        ('exercise-media', 'a', true), ('exercise-media', 'd', true), ('exercise-media', 'r', true), ('exercise-media', 'w', true),
-       ('exports', 'r', true),
+       ('exports', 'a', true), ('exports', 'r', true),
        ('feedback', 'a', true), ('feedback', 'r', true),
        ('progress-photos', 'a', true), ('progress-photos', 'd', true), ('progress-photos', 'r', true) $$,
   'storage.objects has exactly the planned policies, each for authenticated only'
@@ -367,6 +367,18 @@ select throws_ok(
   'C cannot write an export'
 );
 select is(tests.remove('exports', tests.p('client_c', 'e1.zip')), 0, 'C cannot delete own export (the job expires it)');
+select lives_ok(format($$ select tests.put('exports', %L) $$, tests.p('client_c', 'csv/c1.csv')),
+  'C puts a CSV copy into own csv folder (20261023022417_csv_downloads.sql)');
+select ok(tests.visible('exports', tests.p('client_c', 'csv/c1.csv')), 'C reads own CSV copy (for the signed link)');
+select throws_ok(format($$ select tests.put('exports', %L) $$, tests.p('client_d', 'csv/c1.csv')), '42501', null,
+  'C cannot put a CSV copy into D''s folder');
+select throws_ok(format($$ select tests.put('exports', %L) $$, tests.p('client_c', 'c2.csv')), '42501', null,
+  'C cannot put a CSV outside the csv folder');
+select throws_ok(format($$ select tests.put('exports', %L) $$, tests.p('client_c', 'csv/deep/c3.csv')), '42501', null,
+  'C cannot put a CSV into a folder below csv');
+select throws_ok(format($$ select tests.put('exports', %L) $$, tests.p('client_c', 'csv/c4.zip')), '42501', null,
+  'C cannot put another kind of file into the csv folder');
+select is(tests.remove('exports', tests.p('client_c', 'csv/c1.csv')), 0, 'C cannot delete own CSV copy (the privacy route does)');
 
 select tests.authenticate_as('admin_x');
 select ok(not tests.visible('exports', tests.p('client_c', 'e1.zip')), 'the admin cannot read C''s export');
