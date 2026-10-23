@@ -324,7 +324,9 @@ async function Analytics({ searchParams }: { searchParams: PageProps<"/[lang]/tr
       ) : (
         <TierLock plan="trainer_pro" title={copy.csv.lockTitle} description={copy.csv.lockText} feature="trainer.export" requested={access.requested} />
       )}
-      <TrainerStoryCards month={{ param: storyMonth, name: formatMonth(locale, monthFromParam(storyMonth) ?? "") }} />
+      {data.storyMonthHeld > 0 ? (
+        <TrainerStoryCards month={{ param: storyMonth, name: formatMonth(locale, monthFromParam(storyMonth) ?? "") }} />
+      ) : null}
     </div>
   );
 }

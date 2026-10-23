@@ -65,6 +65,8 @@ test.describe("Analytics", () => {
     await expect(attendance.locator("[data-slot=list-row]").filter({ hasText: "Явка" })).toContainText("Пока не с чем считать");
     await expect(attendance.locator("[data-slot=list-row]").filter({ hasText: "Проведено занятий" })).toContainText("0");
     await expect(page.getByRole("heading", { name: "Выгрузка в CSV" })).toBeVisible();
+    // Nothing was held last month, so there is no «Мой месяц в DaFit» card to offer (QA 23.10).
+    await expect(page.getByText(/Мой месяц в DaFit/)).toHaveCount(0);
     await expectAccessible(page);
     expect(errors()).toEqual([]);
   });
