@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
+import { CsvLink } from "@/components/telegram/csv-link";
 import { buttonVariants } from "@/components/ui/button";
 import { Chip, ChipRow } from "@/components/ui/chip";
 import { ListGroup, ListRow } from "@/components/ui/list";
@@ -132,10 +133,10 @@ async function Stats({ searchParams }: { searchParams: SearchParams }) {
             </Chip>
           ))}
         </ChipRow>
-        <a href={`/api/admin/stats?weeks=${weeks}`} download className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "self-start")}>
+        <CsvLink href={`/api/admin/stats?weeks=${weeks}`} failed={copy.downloadFailed} className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "self-start")}>
           <Download aria-hidden size={18} />
           {copy.download}
-        </a>
+        </CsvLink>
       </div>
 
       <section className="flex flex-col gap-1.5">

@@ -31,7 +31,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 function click() {
-  renderWithProviders(<CsvLink href={HREF}>Оплаты</CsvLink>);
+  renderWithProviders(<CsvLink href={HREF} failed={dictionaries.ru.trainerAnalytics.csv.failed}>Оплаты</CsvLink>);
   const link = screen.getByRole("link", { name: "Оплаты" });
   const event = new MouseEvent("click", { bubbles: true, cancelable: true });
   fireEvent(link, event);

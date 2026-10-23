@@ -3297,6 +3297,7 @@ export const en: Dictionary = {
     period: "Period",
     periods: { "8": "8 weeks", "12": "12 weeks", "26": "26 weeks" },
     download: "Download CSV",
+    downloadFailed: "Couldn't prepare the file. Please try again.",
     highlights: {
       header: "Highlights",
       users: "Users",
