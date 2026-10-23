@@ -105,6 +105,13 @@ export function DateField({
   const shown = ISO.test(value)
     ? new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(utc(value))
     : "";
+  // «24 окт. 2026» without the calendar icon for a half-width field on a phone, where «24 октября 2026 г.» loses
+  // its year to the ellipsis.
+  const short = ISO.test(value)
+    ? new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
+        .format(utc(value))
+        .replace(/\s*г\.$/, "")
+    : "";
   const outside = (day: string) => (min !== undefined && day < min) || (max !== undefined && day > max);
   const today = open ? localToday() : "";
   // Month and year as lists, so a birth date forty years back is two taps, not 480 pages.
@@ -160,15 +167,28 @@ export function DateField({
         aria-describedby={note ? noteId : undefined}
         onClick={openSheet}
         className={cn(
-          "flex h-13 w-full cursor-pointer items-center gap-2 rounded-sm border bg-field px-4 text-left outline-none",
+          "@container flex h-13 w-full cursor-pointer items-center gap-2 rounded-sm border bg-field px-4 text-left outline-none",
           "focus-visible:border-focus-ring focus-visible:shadow-[0_0_0_1px_var(--focus-ring)] disabled:cursor-default disabled:opacity-(--opacity-disabled)",
           error ? "border-danger" : "border-field-line",
         )}
       >
-        <span id={valueId} className={cn("min-w-0 flex-1 truncate text-body", shown ? "text-ink" : "text-ink-3")}>
+        <span
+          id={valueId}
+          className={cn("min-w-0 flex-1 truncate text-body", shown ? "text-ink" : "text-ink-3", short && "hidden @min-[14rem]:block")}
+        >
           {shown || copy.empty}
         </span>
-        <CalendarDays aria-hidden size={20} strokeWidth={1.75} className="shrink-0 text-ink-2" />
+        {short ? (
+          <span aria-hidden className="min-w-0 flex-1 truncate text-body text-ink @min-[14rem]:hidden">
+            {short}
+          </span>
+        ) : null}
+        <CalendarDays
+          aria-hidden
+          size={20}
+          strokeWidth={1.75}
+          className={cn("shrink-0 text-ink-2", short && "hidden @min-[14rem]:block")}
+        />
       </button>
       {note ? (
         <p id={noteId} className={cn("px-1 text-footnote", error ? "text-danger" : "text-ink-2")}>
