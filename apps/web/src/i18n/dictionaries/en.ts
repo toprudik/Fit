@@ -4016,7 +4016,12 @@ export const en: Dictionary = {
       debtLine: "No pass fits, but your trainer lets you book on debt. The session goes to debt.",
       requestLine: "No pass fits, so this is a request. Your trainer confirms or declines it.",
       dropInPrice: "A single session costs {price}.",
-      pay: "Pay: {title}",
+      payKinds: {
+        sbp: "Pay the trainer (SBP)",
+        self_employed: "Pay the trainer (self-employed)",
+        bank: "Pay the trainer (bank)",
+        other: "Pay the trainer",
+      },
       overlap: "You already have a session with {name} at this time.",
       book: "Book",
       sendRequest: "Send request",
