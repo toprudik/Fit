@@ -4407,6 +4407,7 @@ export const en: Dictionary = {
     placeText: "This QR doesn't change, so you only need to print it once.",
     placeDownload: "Save for printing",
     placeFile: "QR",
+    placeSaveFailed: "Couldn't save the QR. Please try again.",
     placeRenew: "Issue a new QR",
     placeRenewText: "The old QR will stop working. Do this if the printout was taken or photographed by strangers.",
     placeRenewConfirm: "Issue a new one",

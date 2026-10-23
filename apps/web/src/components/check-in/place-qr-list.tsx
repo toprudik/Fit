@@ -8,13 +8,16 @@ import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/sonner";
 import { useI18n } from "@/i18n/client";
-import { loadPlaceQr } from "@/lib/check-in/actions";
+import { loadPlaceQr, placeQrDownload } from "@/lib/check-in/actions";
+import { canDownloadInTelegram, downloadInTelegram } from "@/lib/telegram/mini-app";
 
 type Place = { id: string; name: string; address: string | null };
 
 /**
  * The trainer's locations on /trainer/checkin-qr, each with its printed check-in QR (PRD wave-3 §5 rule 2b): show it,
- * save it as an image for printing, or issue a new one when an old print should stop working.
+ * save it as an image for printing, or issue a new one when an old print should stop working. On the website the
+ * SVG is a plain download link; the Mini App's WebView ignores `download` (QA 23.10), so there the server stores a
+ * PNG and Telegram's own dialog saves it.
  */
 export function PlaceQrList({ places }: { places: Place[] }) {
   const { t } = useI18n();
@@ -24,6 +27,7 @@ export function PlaceQrList({ places }: { places: Place[] }) {
   const [failed, setFailed] = useState(false);
   const [confirmRenew, setConfirmRenew] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [saving, startSaving] = useTransition();
 
   const load = (place: Place, renew: boolean) =>
     startTransition(async () => {
@@ -46,6 +50,12 @@ export function PlaceQrList({ places }: { places: Place[] }) {
   };
 
   const download = qrSvg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrSvg)}` : null;
+
+  const saveInTelegram = (place: Place) =>
+    startSaving(async () => {
+      const result = await placeQrDownload(place.id, `${copy.placeFile} ${place.name}.png`);
+      if (result.status !== "done" || !downloadInTelegram(result.url, `${copy.placeFile} ${place.name}.png`)) toast.error(copy.placeSaveFailed);
+    });
 
   return (
     <>
@@ -72,8 +82,16 @@ export function PlaceQrList({ places }: { places: Place[] }) {
           ) : (
             <>
               {download && open ? (
-                <Button asChild block>
-                  <a href={download} download={`${copy.placeFile} ${open.name}.svg`}>
+                <Button asChild block aria-busy={saving || undefined}>
+                  <a
+                    href={download}
+                    download={`${copy.placeFile} ${open.name}.svg`}
+                    onClick={(event) => {
+                      if (!canDownloadInTelegram()) return;
+                      event.preventDefault();
+                      if (!saving) saveInTelegram(open);
+                    }}
+                  >
                     <Download aria-hidden size={18} />
                     {copy.placeDownload}
                   </a>

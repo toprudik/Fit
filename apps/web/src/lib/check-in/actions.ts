@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import QRCode from "qrcode";
 import { serverEnv } from "@/env/server";
+import { EXPORT_BUCKET } from "@/lib/account/export";
 import { personName } from "@/lib/client-links/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkInTelegram, isCheckInCode, isPlaceCheckInToken, isSessionId, placeCheckInTelegram, sessionMarks } from "./link";
@@ -61,6 +62,48 @@ export async function loadPlaceQr(locationId: string, renew = false): Promise<{ 
   }
   return { status: "done", qrSvg: await qrSvg(placeCheckInTelegram(data, serverEnv().TELEGRAM_BOT_USERNAME)) };
 }
+
+/**
+ * The same QR as a PNG for Telegram's download dialog (QA 23.10: the Mini App's WebView ignores `<a download>`).
+ * Telegram fetches the file without the app's cookies, so a copy goes to exports/<user_id>/qr/ with the trainer's
+ * own session and the answer is a short signed link; the privacy route removes the copy within an hour
+ * (20261023041613_qr_downloads.sql). The code stays the same: saving never renews it.
+ */
+export async function placeQrDownload(locationId: string, fileName: string): Promise<{ status: "done"; url: string } | { status: "error" }> {
+  if (!isSessionId(locationId)) return { status: "error" };
+  const supabase = await createSupabaseServerClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const userId = claims?.claims.sub;
+  if (!userId) return { status: "error" };
+  const { data: token, error } = await supabase.rpc("location_check_in_token", { p_location_id: locationId, p_renew: false });
+  if (error || !token) {
+    if (error) console.error("loading a location QR failed", error.code);
+    return { status: "error" };
+  }
+  const png = await QRCode.toBuffer(placeCheckInTelegram(token, serverEnv().TELEGRAM_BOT_USERNAME), {
+    type: "png",
+    width: 1024,
+    margin: 4,
+    errorCorrectionLevel: "M",
+    color: { dark: "#000000", light: "#ffffff" },
+  });
+  const storage = supabase.storage.from(EXPORT_BUCKET);
+  const path = `${userId}/qr/${crypto.randomUUID()}.png`;
+  const { error: uploadError } = await storage.upload(path, new Blob([new Uint8Array(png)], { type: "image/png" }), { contentType: "image/png" });
+  if (uploadError) {
+    console.error("uploading a QR copy failed", uploadError.name);
+    return { status: "error" };
+  }
+  const { data: signed, error: signError } = await storage.createSignedUrl(path, QR_LINK_TTL_SECONDS, { download: fileName.slice(0, 120) });
+  if (signError || !signed) {
+    console.error("signing a QR copy failed", signError?.name ?? "unknown");
+    return { status: "error" };
+  }
+  return { status: "done", url: signed.signedUrl };
+}
+
+/** Long enough for Telegram to fetch the file after the trainer confirms its dialog. */
+const QR_LINK_TTL_SECONDS = 300;
 
 /** Dark modules on white whatever the theme: that is what scanners read best. */
 function qrSvg(link: string): Promise<string> {
