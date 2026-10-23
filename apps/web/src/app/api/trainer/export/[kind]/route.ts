@@ -5,7 +5,7 @@ import { DEFAULT_TIME_ZONE } from "@/lib/plans/plans";
 import { clientNames } from "@/lib/schedule/load";
 import { addDays, localToUtc, parseDay } from "@/lib/schedule/time";
 import { readAllPages, readByIds } from "@/lib/supabase/paging";
-import { EXPORT_BUCKET } from "@/lib/account/export";
+import { answerWithCsvCopy } from "@/lib/account/csv-copy";
 import { isSameOrigin } from "@/lib/auth/same-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { dayInZone, exportFileName, isExportKind, isoInZone, majorUnits, toCsv, type Cell, type ExportKind } from "@/lib/trainer-analytics/csv";
@@ -188,9 +188,6 @@ async function passes({ supabase, userId, locale, timeZone, range }: Context): P
 
 const BUILDERS: Record<ExportKind, (context: Context) => Promise<[string[], Cell[][]]>> = { clients, sessions, payments, passes };
 
-/** Lifetime of the signed link Telegram downloads the CSV copy by; Telegram fetches it right away. */
-const LINK_TTL_SECONDS = 300;
-
 type Built = { supabase: Supabase; userId: string; csv: string; fileName: string };
 
 /** Checks the request and the plan, then builds the file; a Response is the answer when that fails. */
@@ -242,26 +239,9 @@ export async function GET(request: NextRequest, { params }: RouteContext<"/api/t
   });
 }
 
-/**
- * The same file for Telegram's download dialog, which fetches it without the app's cookies: a copy goes to
- * exports/<user_id>/csv/ with the trainer's own session, and the answer is a short signed link to it. The privacy
- * route removes the copy within an hour (20261023022417_csv_downloads.sql).
- */
+/** The same file for Telegram's download dialog: a short signed link to a copy (lib/account/csv-copy). */
 export async function POST(request: NextRequest, { params }: RouteContext<"/api/trainer/export/[kind]">) {
   const built = await build(request, (await params).kind);
   if (built instanceof NextResponse) return built;
-  const { supabase, userId, csv, fileName } = built;
-  const storage = supabase.storage.from(EXPORT_BUCKET);
-  const path = `${userId}/csv/${crypto.randomUUID()}.csv`;
-  const { error: uploadError } = await storage.upload(path, new Blob([csv], { type: "text/csv" }), { contentType: "text/csv" });
-  if (uploadError) {
-    console.error("uploading a CSV copy failed", uploadError.name);
-    return NextResponse.json({ error: "export_failed" }, { status: 500 });
-  }
-  const { data, error } = await storage.createSignedUrl(path, LINK_TTL_SECONDS, { download: fileName });
-  if (error || !data) {
-    console.error("signing a CSV copy failed", error?.name ?? "unknown");
-    return NextResponse.json({ error: "export_failed" }, { status: 500 });
-  }
-  return NextResponse.json({ url: data.signedUrl, fileName }, { headers: { "cache-control": "private, no-store" } });
+  return answerWithCsvCopy(built.supabase, built.userId, built.csv, built.fileName);
 }

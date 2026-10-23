@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { dictionaries } from "@/i18n/dictionaries";
 
 vi.mock("server-only", () => ({}));
+vi.mock("@/env/client", () => ({ clientEnv: { NEXT_PUBLIC_APP_URL: "https://fit.example" } }));
 
 const summary = {
   users: 120,
@@ -46,10 +47,24 @@ const session = vi.hoisted(() => ({
   failing: null as string | null,
   rpcs: [] as { name: string; args: unknown }[],
   roleQueries: [] as [string, unknown][][],
+  uploads: [] as { bucket: string; path: string; body: Blob }[],
+  signed: [] as { path: string; ttl: number; options: unknown }[],
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({
     auth: { getClaims: async () => ({ data: session.userId ? { claims: { sub: session.userId } } : null }) },
+    storage: {
+      from: (bucket: string) => ({
+        upload: async (path: string, body: Blob) => {
+          session.uploads.push({ bucket, path, body });
+          return { data: { path }, error: null };
+        },
+        createSignedUrl: async (path: string, ttl: number, options: unknown) => {
+          session.signed.push({ path, ttl, options });
+          return { data: { signedUrl: `https://storage.example/sign/${bucket}/${path}?token=t` }, error: null };
+        },
+      }),
+    },
     from: (table: string) => {
       expect(table).toBe("user_roles");
       const filters: [string, unknown][] = [];
@@ -79,7 +94,7 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-const { GET } = await import("./route");
+const { GET, POST } = await import("./route");
 
 const get = (search = "", cookie?: string) =>
   GET(new NextRequest(`https://fit.example/api/admin/stats${search}`, { headers: cookie ? { cookie } : {} }));
@@ -93,6 +108,8 @@ beforeEach(() => {
   session.failing = null;
   session.rpcs = [];
   session.roleQueries = [];
+  session.uploads = [];
+  session.signed = [];
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-18T12:00:00Z"));
 });
@@ -177,4 +194,51 @@ describe("GET /api/admin/stats", () => {
       expect(error).toHaveBeenCalledWith(expect.stringContaining("42501"));
     },
   );
+});
+
+const post = (search = "?weeks=26", origin = "https://fit.example") =>
+  POST(
+    new NextRequest(`https://fit.example/api/admin/stats${search}`, {
+      method: "POST",
+      headers: { origin, "sec-fetch-site": origin === "https://fit.example" ? "same-origin" : "cross-site" },
+    }),
+  );
+
+describe("POST /api/admin/stats (Telegram's download dialog)", () => {
+  it("puts the same file into the admin's own csv folder and answers a short signed link", async () => {
+    const response = await post();
+    const expected = await rawText(await get("?weeks=26"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    const [upload] = session.uploads;
+    expect(upload.bucket).toBe("exports");
+    expect(upload.path).toMatch(/^user-42\/csv\/[0-9a-f-]{36}\.csv$/);
+    expect(new TextDecoder("utf-8", { ignoreBOM: true }).decode(await upload.body.arrayBuffer())).toBe(expected);
+    expect(session.rpcs).toContainEqual({ name: "admin_owner_weekly", args: { p_weeks: 26 } });
+    const fileName = "dafit-stats-2026-10-18.csv";
+    expect(session.signed).toEqual([{ path: upload.path, ttl: 300, options: { download: fileName } }]);
+    expect(await response.json()).toEqual({ url: `https://storage.example/sign/exports/${upload.path}?token=t`, fileName });
+  });
+
+  it.each([
+    ["a signed-out visitor", () => (session.userId = null)],
+    ["a user who is not an admin", () => (session.admin = false)],
+  ])("answers %s the same 404 and stores nothing", async (_who, arrange) => {
+    arrange();
+    const response = await post();
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "not_found" });
+    expect(session.rpcs).toEqual([]);
+    expect(session.uploads).toEqual([]);
+  });
+
+  it("answers another site the same 404 before reading the session (ADR 0004)", async () => {
+    const response = await post("?weeks=26", "https://evil.example");
+
+    expect(response.status).toBe(404);
+    expect(session.roleQueries).toEqual([]);
+    expect(session.uploads).toEqual([]);
+  });
 });
