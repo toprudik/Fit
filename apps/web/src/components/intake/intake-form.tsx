@@ -2,13 +2,14 @@
 
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ChipCheckbox } from "@/components/ui/chip";
+import { toast } from "@/components/ui/sonner";
 import { TextArea } from "@/components/ui/text-area";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
-import { submitIntake, type SubmitIntakeState } from "@/lib/intake/actions";
+import { setIntakeShare, submitIntake, type SubmitIntakeState } from "@/lib/intake/actions";
 import {
   INTAKE_GOALS,
   INTAKE_STEPS,
@@ -73,16 +74,19 @@ function YesNo({ question, label, defaultValue, error, onAnswer }: {
 
 /**
  * The intake step by step (screens.md "Анкета клиента"): goals, health, PAR-Q. All steps sit in one form,
- * so "Отправить тренеру" sends every answer; hidden steps keep what was typed. Any "да" in PAR-Q shows the
+ * so the last button sends every answer ("Отправить тренеру", or "Сохранить" while the trainer may not see it); hidden steps keep what was typed. Any "да" in PAR-Q shows the
  * doctor recommendation at once (INTK-3).
  */
 export function IntakeForm({
   coachingId,
   initial,
   goalHref = null,
+  share = null,
 }: {
   coachingId: string;
   initial: IntakeValues | null;
+  /** This pair's trainer and whether they see the intake; null once the pair has ended. */
+  share?: { shared: boolean; trainerName: string } | null;
   /** The goal step that follows a sent intake while the client has no goal (wave-2 §1 rule 4). */
   goalHref?: string | null;
 }) {
@@ -96,6 +100,9 @@ export function IntakeForm({
     () => new Set(PARQ_QUESTIONS.filter((question) => initial?.[question] === "yes")),
   );
   const top = useRef<HTMLDivElement>(null);
+  // Without access the button only saves, and the panel after it asks whether to show the trainer (QA 23.10).
+  const sends = share?.shared === true;
+  const [showing, startShowing] = useTransition();
 
   // A rejected form opens on the earliest step with a problem, and the yes set follows the answers sent back.
   const [handled, setHandled] = useState(state);
@@ -119,13 +126,26 @@ export function IntakeForm({
   }, [step]);
 
   if (state.status === "sent") {
+    const ask = share !== null && !share.shared;
+    const show = () =>
+      startShowing(async () => {
+        const { failed } = await setIntakeShare(coachingId, true);
+        if (failed) toast.error(copy.shareFailed);
+      });
     return (
       <div className="flex flex-col items-center gap-4 py-10 text-center">
         <CheckCircle2 aria-hidden size={40} strokeWidth={1.75} className="text-success" />
-        <h2 className="text-title-3">{copy.sentTitle}</h2>
-        <p className="max-w-[300px] text-subhead text-ink-2">{copy.sentText}</p>
+        <h2 className="text-title-3">{sends ? copy.sentTitle : copy.savedTitle}</h2>
+        <p className="max-w-[300px] text-subhead text-ink-2">
+          {ask ? interpolate(copy.savedText, { name: share.trainerName }) : copy.sentText}
+        </p>
         {state.flagged ? <p className="max-w-[320px] rounded-lg bg-danger-soft p-4 text-subhead">{copy.doctor}</p> : null}
-        <Button asChild size="lg" block className="max-w-sm">
+        {ask ? (
+          <Button type="button" size="lg" block className="max-w-sm" loading={showing} onClick={show}>
+            {interpolate(copy.showTo, { name: share.trainerName })}
+          </Button>
+        ) : null}
+        <Button asChild size="lg" block variant={ask ? "secondary" : undefined} className="max-w-sm">
           {goalHref ? <Link href={goalHref}>{copy.next}</Link> : <Link href={clientPairPath(coachingId)}>{copy.backToTrainer}</Link>}
         </Button>
       </div>
@@ -223,7 +243,7 @@ export function IntakeForm({
         {/* Separate keys: one reused <button> turning into submit mid-click would send the form. */}
         {last ? (
           <Button key="submit" type="submit" size="lg" block loading={pending}>
-            {copy.submit}
+            {sends ? copy.submit : copy.save}
           </Button>
         ) : (
           <Button key="next" type="button" size="lg" block onClick={() => setStep(step + 1)}>
