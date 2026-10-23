@@ -57,3 +57,24 @@ describe("BookPicker waitlist for slots", () => {
     expect(screen.getByText(/ты в очереди/).closest("a")?.getAttribute("href")).toBe("/client/waitlist/e2");
   });
 });
+
+describe("BookPicker payment links", () => {
+  it("names a request's payment link by its kind, not by the trainer's own title", async () => {
+    actions.previewBooking.mockResolvedValueOnce({ status: "done", confirmed: false, passTitle: null, sessionsLeft: null } as never);
+    renderWithProviders(
+      <BookPicker
+        timeZone="UTC"
+        days={["2026-11-02"]}
+        slots={[{ id: SLOT, startsAt: "2026-11-02T10:00:00Z", endsAt: "2026-11-02T11:00:00Z", ...base }]}
+        groups={[]}
+        queueSlots={[]}
+        busy={[]}
+        dropInText={null}
+        paymentLinks={[{ url: "https://pay.example/sbp", kind: "sbp" }]}
+      />,
+    );
+    fireEvent.click(screen.getByText(/10:00/));
+    const link = await screen.findByRole("link", { name: "Оплатить тренеру (СБП)" });
+    expect(link.getAttribute("href")).toBe("https://pay.example/sbp");
+  });
+});
