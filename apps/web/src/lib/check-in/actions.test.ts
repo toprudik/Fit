@@ -26,6 +26,16 @@ const db = vi.hoisted(() => ({
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({
+    from: (table: string) => ({
+      select: (columns: string) => ({
+        eq: (column: string, value: string) => ({
+          maybeSingle: async () => {
+            db.calls.push(["from", table, columns, column, value]);
+            return db.answer;
+          },
+        }),
+      }),
+    }),
     rpc: (fn: string, args: unknown) => {
       db.calls.push(["rpc", fn, args]);
       return Promise.resolve(db.answer);
@@ -46,7 +56,7 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-const { checkIn, checkInByPlace, loadCheckInQr, loadPlaceQr, placeQrDownload } = await import("./actions");
+const { checkIn, checkInByPlace, checkedInSessionStart, loadCheckInQr, loadPlaceQr, placeQrDownload } = await import("./actions");
 
 const SESSION = "00000000-0000-4000-8000-000000000001";
 const BOOKING = "00000000-0000-4000-8000-000000000002";
@@ -236,5 +246,18 @@ describe("placeQrDownload", () => {
     db.uploadError = null;
     db.signError = { name: "StorageApiError" };
     expect(await placeQrDownload(LOCATION, "QR.png")).toEqual({ status: "error" });
+  });
+});
+
+describe("checkedInSessionStart", () => {
+  it("reads the session start of the client's own booking, and nothing for a bad id or an error", async () => {
+    db.answer = { data: { sessions: { starts_at: "2026-10-23T05:45:00Z" } }, error: null };
+    expect(await checkedInSessionStart(BOOKING)).toBe("2026-10-23T05:45:00Z");
+    expect(db.calls).toEqual([["from", "bookings", "sessions(starts_at)", "id", BOOKING]]);
+    db.calls = [];
+    expect(await checkedInSessionStart("nope")).toBeNull();
+    expect(db.calls).toEqual([]);
+    db.answer = fail("denied", "42501");
+    expect(await checkedInSessionStart(BOOKING)).toBeNull();
   });
 });
