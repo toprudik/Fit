@@ -3299,7 +3299,7 @@ export const ru = {
       columns: {
         client: "Клиент",
         status: "Статус",
-        startedAt: "Начало пары",
+        startedAt: "Клиент с",
         attended: "Проведено",
         noShows: "Неявки",
         availableSessions: "Осталось занятий",

@@ -50,6 +50,14 @@ export function isoInZone(instant: string | Date, timeZone: string): string {
   return `${day}T${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}:${pad(seconds)}${sign}${pad(Math.floor(Math.abs(offset) / 60))}:${pad(Math.abs(offset) % 60)}`;
 }
 
+/** "22.10.2026" in Russian (what Excel there reads as a date), "2026-10-22" in English: the local day of an instant. */
+export function dayInZone(instant: string | Date, timeZone: string, locale: Locale): string {
+  const { day } = localParts(typeof instant === "string" ? new Date(instant) : instant, timeZone);
+  if (locale !== "ru") return day;
+  const [year, month, date] = day.split("-");
+  return `${date}.${month}.${year}`;
+}
+
 /** "dafit-payments-2026-10-01-2026-10-31.csv": the period's last day is inclusive in the name. */
 export function exportFileName(kind: ExportKind, from: string, lastDay: string): string {
   return `dafit-${kind}-${from}-${lastDay}.csv`;

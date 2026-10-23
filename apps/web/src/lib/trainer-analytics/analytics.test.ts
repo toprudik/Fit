@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isoInZone, majorUnits, toCsv } from "./csv";
+import { dayInZone, isoInZone, majorUnits, toCsv } from "./csv";
 import { change, periodKind, periodOffset, periodRange, previousPeriod, simulatorBase } from "./period";
 import { breakEvenChurn, forecast } from "./simulator";
 
@@ -63,5 +63,11 @@ describe("csv", () => {
   it("writes instants in the trainer's zone with the offset", () => {
     expect(isoInZone("2026-10-31T20:30:00Z", "Europe/Moscow")).toBe("2026-10-31T23:30:00+03:00");
     expect(isoInZone("2026-07-01T12:00:05Z", "America/New_York")).toBe("2026-07-01T08:00:05-04:00");
+  });
+
+  it("writes a day as Excel reads it in the language: 22.10.2026 in Russian, 2026-10-22 in English", () => {
+    // 21:30 UTC is already the next day in Moscow.
+    expect(dayInZone("2026-10-21T21:30:00Z", "Europe/Moscow", "ru")).toBe("22.10.2026");
+    expect(dayInZone("2026-10-21T21:30:00Z", "Europe/Moscow", "en")).toBe("2026-10-22");
   });
 });
