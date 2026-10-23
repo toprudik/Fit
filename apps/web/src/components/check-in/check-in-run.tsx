@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useI18n } from "@/i18n/client";
 import { INTL_LOCALE } from "@/i18n/config";
 import { interpolate } from "@/i18n/format";
-import { checkIn, checkInByPlace, type CheckInResult } from "@/lib/check-in/actions";
+import { checkIn, checkInByPlace, checkedInSessionStart, type CheckInResult } from "@/lib/check-in/actions";
 import { hapticError, hapticSuccess } from "@/lib/telegram/mini-app";
 
 /**
@@ -23,6 +23,7 @@ export function CheckInRun({ target, timeZone }: { target: CheckInTarget; timeZo
   const { t, locale } = useI18n();
   const copy = t.checkIn;
   const [result, setResult] = useState<CheckInResult | null>(null);
+  const [startsAt, setStartsAt] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const started = useRef(false);
 
@@ -30,6 +31,8 @@ export function CheckInRun({ target, timeZone }: { target: CheckInTarget; timeZo
     () =>
       startTransition(async () => {
         const next = "place" in target ? await checkInByPlace(target.place) : await checkIn(target.sessionId, target.code);
+        // A second scan names the session it is already marked on.
+        if (next.status === "done" && next.outcome === "already" && next.bookingId) setStartsAt(await checkedInSessionStart(next.bookingId));
         setResult(next);
         // A check-in vibrates with the Da-ring; a request is a success too, everything else an error.
         if (next.status === "done" && next.outcome === "requested") hapticSuccess();
@@ -53,6 +56,9 @@ export function CheckInRun({ target, timeZone }: { target: CheckInTarget; timeZo
     );
   }
 
+  const clock = (at: string) =>
+    new Intl.DateTimeFormat(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit", timeZone }).format(new Date(at));
+
   const back = (
     <Button asChild variant="secondary">
       <Link href="/client/sessions">{copy.toSessions}</Link>
@@ -63,17 +69,18 @@ export function CheckInRun({ target, timeZone }: { target: CheckInTarget; timeZo
     return (
       <div className="flex flex-col items-center gap-4 py-12 text-center">
         <DaRing state="done" size={96} animate={result.outcome === "checked_in"} label={copy.title} />
-        <p className="text-title-3">{copy.outcomes[result.outcome]}</p>
+        <p className="text-title-3">
+          {result.outcome === "already" && startsAt ? interpolate(copy.alreadyAt, { time: clock(startsAt) }) : copy.outcomes[result.outcome]}
+        </p>
         {back}
       </div>
     );
   }
 
   if (result.status === "done" && result.outcome === "too_early" && result.opensAt) {
-    const time = new Intl.DateTimeFormat(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit", timeZone }).format(
-      new Date(result.opensAt),
+    return (
+      <EmptyState icon={Clock} title={copy.title} description={interpolate(copy.outcomes.too_early, { time: clock(result.opensAt) })} action={back} />
     );
-    return <EmptyState icon={Clock} title={copy.title} description={interpolate(copy.outcomes.too_early, { time })} action={back} />;
   }
 
   const text =

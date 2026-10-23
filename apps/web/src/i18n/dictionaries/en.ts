@@ -4419,6 +4419,7 @@ export const en: Dictionary = {
     keepPlaceQr: "Keep it",
     placeRenewed: "The new QR is ready, the old one no longer works.",
     noBookingPlace: "You don't have a booking at this place coming up.",
+    alreadyAt: "You're already checked in for the {time} session, no need to scan again.",
     title: "Session check-in",
     checking: "Checking you in…",
     outcomes: {

@@ -51,6 +51,18 @@ export async function checkInByPlace(token: string): Promise<CheckInResult> {
   return { status: "done", outcome, bookingId: row.booking_id, opensAt: row.opens_at };
 }
 
+/**
+ * When the session of a booking starts, for «Отметка на занятие в 08:45 уже есть» on a second scan (QA 23.10).
+ * Read as the client, so RLS keeps it to their own bookings; null when it cannot be read.
+ */
+export async function checkedInSessionStart(bookingId: string): Promise<string | null> {
+  if (!isSessionId(bookingId)) return null;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.from("bookings").select("sessions(starts_at)").eq("id", bookingId).maybeSingle();
+  if (error) console.error("loading a checked-in session failed", error.code);
+  return data?.sessions?.starts_at ?? null;
+}
+
 /** The printed QR of a trainer's location as an SVG; `renew` issues a new code and the old print stops working. */
 export async function loadPlaceQr(locationId: string, renew = false): Promise<{ status: "done"; qrSvg: string } | { status: "error" }> {
   if (!isSessionId(locationId)) return { status: "error" };
