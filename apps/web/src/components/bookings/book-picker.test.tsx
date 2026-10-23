@@ -78,3 +78,31 @@ describe("BookPicker payment links", () => {
     expect(link.getAttribute("href")).toBe("https://pay.example/sbp");
   });
 });
+
+describe("BookPicker unpaid pass", () => {
+  it("books on an unpaid pass but says so, with the trainer's payment buttons", async () => {
+    actions.previewBooking.mockResolvedValueOnce({
+      status: "done",
+      confirmed: true,
+      passTitle: "5 занятий",
+      sessionsLeft: 4,
+      passUnpaid: true,
+    } as never);
+    renderWithProviders(
+      <BookPicker
+        timeZone="UTC"
+        days={["2026-11-02"]}
+        slots={[{ id: SLOT, startsAt: "2026-11-02T10:00:00Z", endsAt: "2026-11-02T11:00:00Z", ...base }]}
+        groups={[]}
+        queueSlots={[]}
+        busy={[]}
+        dropInText={null}
+        paymentLinks={[{ url: "https://pay.example/sbp", kind: "sbp" }]}
+      />,
+    );
+    fireEvent.click(screen.getByText(/10:00/));
+    expect(await screen.findByText(/Абонемент ещё не оплачен/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Оплатить тренеру (СБП)" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Записаться" })).toBeTruthy();
+  });
+});

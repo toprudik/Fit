@@ -105,6 +105,23 @@ export function BookPicker({
   };
   const where = (item: BookableSlot) => (item.mode === "online" ? copy.online : (item.place ?? copy.offline));
 
+  // The link's own title is the trainer's note to self («Тест-оплата QA»), so the client sees its kind (QA 23.10).
+  const payButtons = paymentLinks.map((link) => (
+    <a
+      key={link.url}
+      href={link.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(event) => {
+        if (openExternalLink(link.url)) event.preventDefault();
+      }}
+      className={cn(buttonVariants({ variant: "secondary", block: true }))}
+    >
+      <ExternalLink aria-hidden size={18} strokeWidth={1.75} />
+      {copy.payKinds[link.kind]}
+    </a>
+  ));
+
   const open = (next: Exclude<Item, { type: "queue" }>) => {
     setSlot(next);
     setPreview(null);
@@ -284,31 +301,25 @@ export function BookPicker({
                   ]}
             </p>
           ) : preview.confirmed ? (
-            <p>
-              {preview.passTitle
-                ? interpolate(copy.passLine, { title: preview.passTitle, count: preview.sessionsLeft ?? 0 })
-                : copy.debtLine}
-            </p>
+            <>
+              <p>
+                {preview.passTitle
+                  ? interpolate(copy.passLine, { title: preview.passTitle, count: preview.sessionsLeft ?? 0 })
+                  : copy.debtLine}
+              </p>
+              {/* Booking on an unpaid pass is allowed (Q22), but the client should know to pay (QA 23.10). */}
+              {preview.passTitle && preview.passUnpaid ? (
+                <>
+                  <p className="rounded-sm bg-warning-soft p-3 text-subhead text-ink">{copy.unpaidPass}</p>
+                  {payButtons}
+                </>
+              ) : null}
+            </>
           ) : (
             <>
               <p>{copy.requestLine}</p>
               {dropInText ? <p className="text-ink-2">{dropInText}</p> : null}
-              {/* The link's own title is the trainer's note to self («Тест-оплата QA»), so the client sees its kind (QA 23.10). */}
-              {paymentLinks.map((link) => (
-                <a
-                  key={link.url}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(event) => {
-                    if (openExternalLink(link.url)) event.preventDefault();
-                  }}
-                  className={cn(buttonVariants({ variant: "secondary", block: true }))}
-                >
-                  <ExternalLink aria-hidden size={18} strokeWidth={1.75} />
-                  {copy.payKinds[link.kind]}
-                </a>
-              ))}
+              {payButtons}
             </>
           )}
           {overlap ? (
