@@ -237,6 +237,20 @@ test.describe("booking a slot", () => {
   });
 });
 
+test("a day chip answers the keyboard and a plain click once the page is ready (QA 23.10)", async ({ trainer, client }) => {
+  await openWindow(trainer, 3, 10, 12);
+  const page = client.page;
+  await gotoReady(page, `/client/book?coaching=${client.coachingId}`);
+  const days = page.getByRole("navigation", { name: "Дни" }).getByRole("button");
+  await tap(days.first());
+  const last = days.last();
+  await last.focus();
+  await page.keyboard.press("Enter");
+  await expect(last).toHaveAttribute("aria-pressed", "true");
+  await days.first().evaluate((element: HTMLElement) => element.click());
+  await expect(days.first()).toHaveAttribute("aria-pressed", "true");
+});
+
 test.describe("moving and cancelling a booking", () => {
   test("the client moves a booking to another free slot in time", async ({ trainer, client }) => {
     await openWindow(trainer, 3, 10, 12);
@@ -264,6 +278,9 @@ test.describe("moving and cancelling a booking", () => {
 
     const rows = ok(await client.db.from("bookings").select("status").eq("client_id", client.userId), "bookings");
     expect(rows.map((row) => row.status).sort()).toEqual(["confirmed", "rescheduled"]);
+    // The new booking's history starts with the one it was moved from (QA 23.10).
+    await page.reload();
+    await expect(page.getByText("Запись перенесена")).toBeVisible();
 
     // The old move link (system "Back") says the booking was moved and leads to the new one (QA B6).
     const moved = page.url();
