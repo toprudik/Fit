@@ -213,6 +213,11 @@ export function openExternalLink(url: string): boolean {
   }) ?? false;
 }
 
+/** Whether downloadInTelegram can work here, for a link that has to make its file first. */
+export function canDownloadInTelegram(): boolean {
+  return ready && safely(() => downloadFile.isAvailable()) === true;
+}
+
 /**
  * Saves a file through Telegram's own download dialog (Bot API 8.0). The Mini App's WebView ignores
  * `<a download>` on Android (QA 22.10), so a file link calls this first. Telegram fetches `url` itself,
@@ -220,7 +225,7 @@ export function openExternalLink(url: string): boolean {
  * storage link. Returns false outside Telegram and in a Telegram too old for it, where the link goes on.
  */
 export function downloadInTelegram(url: string, fileName: string): boolean {
-  if (!ready || safely(() => downloadFile.isAvailable()) !== true) return false;
+  if (!canDownloadInTelegram()) return false;
   void safelyAsync(() => downloadFile(url, fileName));
   return true;
 }

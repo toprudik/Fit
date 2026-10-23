@@ -5025,6 +5025,9 @@ isOneToOne: false
 "shared_monthly_report":
 { Args: { "p_coaching": string,"p_month": string }; Returns: Json
                            },
+"stale_csv_downloads":
+{ Args: { "p_limit": number }; Returns: string[]
+                           },
 "stop_referral_offer":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },

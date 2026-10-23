@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { TierLock } from "@/components/plans/tier-lock";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
+import { CsvLink } from "@/components/trainer-analytics/csv-link";
 import { DismissChurn } from "@/components/trainer-analytics/dismiss-churn";
 import { TrainerStoryCards } from "@/components/trainer-stories/trainer-story-cards";
 import { PriceSimulatorSection } from "@/components/trainer-analytics/price-simulator-section";
@@ -262,7 +263,7 @@ function Exports({ copy, analytics }: { copy: Copy; analytics: TrainerAnalytics 
         <ListRow
           key={kind}
           icon={FileDown}
-          title={<a href={`/api/trainer/export/${kind}?${query}`} download className="after:absolute after:inset-0">{copy.csv[kind]}</a>}
+          title={<CsvLink href={`/api/trainer/export/${kind}?${query}`}>{copy.csv[kind]}</CsvLink>}
           className="relative"
         />
       ))}

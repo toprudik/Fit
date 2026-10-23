@@ -5,6 +5,7 @@ import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  canDownloadInTelegram,
   downloadInTelegram,
   hapticImpact,
   markMiniAppReady,
@@ -73,8 +74,10 @@ describe("downloadInTelegram", () => {
   });
 
   it("leaves the link to the browser outside Telegram and in a Telegram without the method", () => {
+    expect(canDownloadInTelegram()).toBe(false);
     expect(downloadInTelegram(url, "dafit-export.zip")).toBe(false);
     goLive();
+    expect(canDownloadInTelegram()).toBe(true);
     sdk.downloadFile.isAvailable.mockReturnValueOnce(false);
     expect(downloadInTelegram(url, "dafit-export.zip")).toBe(false);
     expect(sdk.downloadFile).not.toHaveBeenCalled();

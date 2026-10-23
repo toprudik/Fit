@@ -11,7 +11,15 @@ type Admin = ReturnType<typeof createSupabaseAdminClient>;
 /** Buckets whose objects sit in a folder named by the owner's id. */
 const OWNER_BUCKETS = [PHOTO_BUCKET, "avatars", "certificates", "feedback", EXPORT_BUCKET] as const;
 
-export type PrivacySummary = { expired: number; built: number; failed: number; purged: number; healthErased: number; retained: number };
+export type PrivacySummary = {
+  expired: number;
+  built: number;
+  failed: number;
+  purged: number;
+  healthErased: number;
+  retained: number;
+  csvRemoved: number;
+};
 
 /** Sends one Telegram message (lib/notifications/telegram); the route binds the bot token. */
 export type SendTelegram = (message: OutgoingMessage) => Promise<SendResult>;
@@ -137,6 +145,19 @@ async function forgetRetainedFiles(admin: Admin, summary: PrivacySummary, hasTim
 }
 
 /**
+ * CSV copies made for Telegram's download dialog (20261023022417_csv_downloads.sql): 30 minutes after upload,
+ * so none outlives an hour with the route every 5 minutes.
+ */
+async function removeStaleCsv(admin: Admin, summary: PrivacySummary) {
+  const { data, error } = await admin.rpc("stale_csv_downloads", { p_limit: 100 });
+  if (error) throw new Error(`stale_csv_downloads failed: ${error.code}`);
+  if (data.length === 0) return;
+  const { error: removeError } = await admin.storage.from(EXPORT_BUCKET).remove(data);
+  if (removeError) throw new Error(`removing CSV copies failed: ${removeError.name}`);
+  summary.csvRemoved += data.length;
+}
+
+/**
  * С5 "удаление выполнено". It cannot go through the outbox: the outbox row belongs to the user, who is gone by
  * now. One attempt, after the account is really deleted; a failure is logged by kind and changes nothing.
  */
@@ -152,7 +173,7 @@ async function sayDeleted(send: SendTelegram, chatId: number, locale: Locale) {
 
 /**
  * One run of the privacy route: expired archives, due deletions and health data erasures, files past their
- * retention, waiting exports, within the time budget. send tells each deleted user that the deletion is done (С5).
+ * retention, stale CSV copies, waiting exports, within the time budget. send tells each deleted user that the deletion is done (С5).
  */
 export async function runPrivacyJob(
   admin: Admin,
@@ -162,8 +183,9 @@ export async function runPrivacyJob(
 ): Promise<PrivacySummary> {
   const started = now();
   const hasTime = () => now() - started < budgetMs;
-  const summary: PrivacySummary = { expired: 0, built: 0, failed: 0, purged: 0, healthErased: 0, retained: 0 };
+  const summary: PrivacySummary = { expired: 0, built: 0, failed: 0, purged: 0, healthErased: 0, retained: 0, csvRemoved: 0 };
   await expireExports(admin, summary);
+  await removeStaleCsv(admin, summary);
   await purgeAccounts(admin, summary, hasTime, send);
   await eraseHealthData(admin, summary, hasTime);
   await forgetRetainedFiles(admin, summary, hasTime);

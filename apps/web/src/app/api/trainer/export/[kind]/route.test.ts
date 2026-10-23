@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { dictionaries } from "@/i18n/dictionaries";
 
 vi.mock("server-only", () => ({}));
+vi.mock("@/env/client", () => ({ clientEnv: { NEXT_PUBLIC_APP_URL: "https://fit.example" } }));
 
 type Query = { table: string; calls: [string, ...unknown[]][] };
 
@@ -19,10 +20,25 @@ const db = vi.hoisted(() => ({
   failing: null as string | null,
   queries: [] as Query[],
   rpcs: [] as { name: string; args: unknown }[],
+  uploads: [] as { bucket: string; path: string; body: Blob; options: unknown }[],
+  uploadFails: false,
+  signed: [] as { path: string; ttl: number; options: unknown }[],
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({
     auth: { getClaims: async () => ({ data: db.userId ? { claims: { sub: db.userId } } : null }) },
+    storage: {
+      from: (bucket: string) => ({
+        upload: async (path: string, body: Blob, options: unknown) => {
+          db.uploads.push({ bucket, path, body, options });
+          return db.uploadFails ? { data: null, error: { name: "StorageApiError" } } : { data: { path }, error: null };
+        },
+        createSignedUrl: async (path: string, ttl: number, options: unknown) => {
+          db.signed.push({ path, ttl, options });
+          return { data: { signedUrl: `https://storage.example/sign/${bucket}/${path}?token=t` }, error: null };
+        },
+      }),
+    },
     rpc: async (name: string, args: unknown) => {
       db.rpcs.push({ name, args });
       return db.entitlementError ? { data: null, error: { code: "XX000" } } : { data: db.entitled, error: null };
@@ -46,7 +62,7 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-const { GET } = await import("./route");
+const { GET, POST } = await import("./route");
 
 const en = dictionaries.en;
 
@@ -90,6 +106,9 @@ const FROM_AT = "2026-09-30T21:00:00.000Z";
 const TO_AT = "2026-10-31T21:00:00.000Z";
 
 beforeEach(() => {
+  db.uploads = [];
+  db.uploadFails = false;
+  db.signed = [];
   db.userId = "user-42";
   db.entitled = true;
   db.entitlementError = false;
@@ -302,5 +321,55 @@ describe("GET /api/trainer/export/[kind]", () => {
     expect(await response.json()).toEqual({ error: "export_failed" });
     expect(response.headers.get("content-disposition")).toBeNull();
     expect(error).toHaveBeenCalledWith(expect.stringContaining("42501"));
+  });
+});
+
+function post(kind: string, origin = "https://fit.example") {
+  const headers = { cookie: "dafit-locale=en", origin, "sec-fetch-site": origin === "https://fit.example" ? "same-origin" : "cross-site" };
+  return POST(new NextRequest(`https://fit.example/api/trainer/export/${kind}?from=2026-10-01&to=2026-11-01`, { method: "POST", headers }), {
+    params: Promise.resolve({ kind }),
+  });
+}
+
+describe("POST /api/trainer/export/[kind] (Telegram's download dialog)", () => {
+  it("puts the same CSV into the trainer's csv folder and answers a short signed link with the file name", async () => {
+    const response = await post("payments");
+    const expected = await rawText(await get("payments"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    const [upload] = db.uploads;
+    expect(upload.bucket).toBe("exports");
+    expect(upload.path).toMatch(/^user-42\/csv\/[0-9a-f-]{36}\.csv$/);
+    expect(upload.options).toEqual({ contentType: "text/csv" });
+    expect(new TextDecoder("utf-8", { ignoreBOM: true }).decode(await upload.body.arrayBuffer())).toBe(expected);
+    const fileName = "dafit-payments-2026-10-01-2026-10-31.csv";
+    expect(db.signed).toEqual([{ path: upload.path, ttl: 300, options: { download: fileName } }]);
+    expect(await response.json()).toEqual({ url: `https://storage.example/sign/exports/${upload.path}?token=t`, fileName });
+  });
+
+  it("uploads nothing for a signed-out visitor or without the Pro export", async () => {
+    db.userId = null;
+    expect((await post("payments")).status).toBe(401);
+    db.userId = "user-42";
+    db.entitled = false;
+    expect((await post("payments")).status).toBe(403);
+    expect(db.uploads).toEqual([]);
+  });
+
+  it("answers 403 to another site and stores nothing (ADR 0004)", async () => {
+    expect((await post("payments", "https://evil.example")).status).toBe(403);
+    expect(db.uploads).toEqual([]);
+    expect(queriesOf("payments")).toEqual([]);
+  });
+
+  it("answers 500 without a link when the copy can't be stored", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    db.uploadFails = true;
+    const response = await post("payments");
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "export_failed" });
+    expect(db.signed).toEqual([]);
+    error.mockRestore();
   });
 });

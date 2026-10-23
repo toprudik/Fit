@@ -3,7 +3,7 @@
 -- two delegation lists the Team screens read.
 begin;
 \ir _helpers.psql
-select plan(29);
+select plan(34);
 
 select tests.create_trainer('owner_a');
 select tests.create_trainer('sub_s');
@@ -177,6 +177,25 @@ select is(
   'https://fit.example/api/cron/privacy Bearer ' || repeat('s', 40),
   'dispatch_privacy: the request goes to the privacy route with the bearer secret'
 );
+
+-- public.stale_csv_downloads and its dispatch (20261023022417_csv_downloads.sql)
+
+delete from public.account_deletions;
+insert into storage.objects (bucket_id, name, created_at) values
+  ('exports', tests.user_id('client_c')::text || '/csv/old.csv', now() - interval '31 minutes'),
+  ('exports', tests.user_id('client_c')::text || '/csv/new.csv', now() - interval '5 minutes'),
+  ('exports', tests.user_id('client_c')::text || '/old.zip', now() - interval '2 days');
+select tests.authenticate_as('client_c');
+select throws_ok($$ select public.stale_csv_downloads(10) $$, '42501', null, 'stale_csv_downloads: a user cannot call it');
+select tests.authenticate_as_service_role();
+select results_eq($$ select public.stale_csv_downloads(10) $$, array[tests.user_id('client_c')::text || '/csv/old.csv'],
+  'stale_csv_downloads: only CSV copies older than 30 minutes, no archives');
+select tests.clear_authentication();
+select isnt(private.dispatch_privacy(), null, 'dispatch_privacy: a stale CSV copy queues a request');
+select set_config('storage.allow_delete_query', 'true', true);
+delete from storage.objects where bucket_id = 'exports' and name like '%/csv/old.csv';
+select is(private.dispatch_privacy(), null, 'dispatch_privacy: a fresh CSV copy queues nothing');
+select is_empty($$ select public.stale_csv_downloads(10) $$, 'stale_csv_downloads: nothing once the old copy is gone');
 
 select * from finish();
 rollback;

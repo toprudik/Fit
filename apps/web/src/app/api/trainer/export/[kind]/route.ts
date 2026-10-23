@@ -5,6 +5,8 @@ import { DEFAULT_TIME_ZONE } from "@/lib/plans/plans";
 import { clientNames } from "@/lib/schedule/load";
 import { addDays, localToUtc, parseDay } from "@/lib/schedule/time";
 import { readAllPages, readByIds } from "@/lib/supabase/paging";
+import { EXPORT_BUCKET } from "@/lib/account/export";
+import { isSameOrigin } from "@/lib/auth/same-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { exportFileName, isExportKind, isoInZone, majorUnits, toCsv, type Cell, type ExportKind } from "@/lib/trainer-analytics/csv";
 
@@ -177,12 +179,15 @@ async function passes({ supabase, userId, locale, timeZone, range }: Context): P
 
 const BUILDERS: Record<ExportKind, (context: Context) => Promise<[string[], Cell[][]]>> = { clients, sessions, payments, passes };
 
-/**
- * «Выгрузка в CSV» of «Аналитика» (PRD wave-2 §7 rule 10): one file per kind for local days [from, to) of the
- * trainer's zone. Reads through the trainer's own session, so RLS limits it to their pairs; Pro (trainer.export).
- */
-export async function GET(request: NextRequest, { params }: RouteContext<"/api/trainer/export/[kind]">) {
-  const { kind } = await params;
+/** Lifetime of the signed link Telegram downloads the CSV copy by; Telegram fetches it right away. */
+const LINK_TTL_SECONDS = 300;
+
+type Built = { supabase: Supabase; userId: string; csv: string; fileName: string };
+
+/** Checks the request and the plan, then builds the file; a Response is the answer when that fails. */
+async function build(request: NextRequest, kind: string): Promise<Built | NextResponse> {
+  // POST stores a file, so it comes from the app's own pages only (ADR 0004).
+  if (request.method === "POST" && !isSameOrigin(request)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const from = parseDay(request.nextUrl.searchParams.get("from"));
   const to = parseDay(request.nextUrl.searchParams.get("to"));
   if (!isExportKind(kind) || !from || !to || to <= from || to > addDays(from, 400)) {
@@ -205,15 +210,49 @@ export async function GET(request: NextRequest, { params }: RouteContext<"/api/t
   const range = { from, to, fromAt: localToUtc(from, 0, timeZone).toISOString(), toAt: localToUtc(to, 0, timeZone).toISOString() };
   try {
     const [header, rows] = await BUILDERS[kind]({ supabase, userId, timeZone, locale, range });
-    return new NextResponse(toCsv(header, rows, locale), {
-      headers: {
-        "content-type": "text/csv; charset=utf-8",
-        "content-disposition": `attachment; filename="${exportFileName(kind, from, addDays(to, -1))}"`,
-        "cache-control": "private, no-store",
-      },
-    });
+    return { supabase, userId, csv: toCsv(header, rows, locale), fileName: exportFileName(kind, from, addDays(to, -1)) };
   } catch (error) {
     console.error(error instanceof Error ? error.message : "exporting failed");
     return NextResponse.json({ error: "export_failed" }, { status: 500 });
   }
+}
+
+/**
+ * «Выгрузка в CSV» of «Аналитика» (PRD wave-2 §7 rule 10): one file per kind for local days [from, to) of the
+ * trainer's zone. Reads through the trainer's own session, so RLS limits it to their pairs; Pro (trainer.export).
+ */
+export async function GET(request: NextRequest, { params }: RouteContext<"/api/trainer/export/[kind]">) {
+  const built = await build(request, (await params).kind);
+  if (built instanceof NextResponse) return built;
+  return new NextResponse(built.csv, {
+    headers: {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": `attachment; filename="${built.fileName}"`,
+      "cache-control": "private, no-store",
+    },
+  });
+}
+
+/**
+ * The same file for Telegram's download dialog, which fetches it without the app's cookies: a copy goes to
+ * exports/<user_id>/csv/ with the trainer's own session, and the answer is a short signed link to it. The privacy
+ * route removes the copy within an hour (20261023022417_csv_downloads.sql).
+ */
+export async function POST(request: NextRequest, { params }: RouteContext<"/api/trainer/export/[kind]">) {
+  const built = await build(request, (await params).kind);
+  if (built instanceof NextResponse) return built;
+  const { supabase, userId, csv, fileName } = built;
+  const storage = supabase.storage.from(EXPORT_BUCKET);
+  const path = `${userId}/csv/${crypto.randomUUID()}.csv`;
+  const { error: uploadError } = await storage.upload(path, new Blob([csv], { type: "text/csv" }), { contentType: "text/csv" });
+  if (uploadError) {
+    console.error("uploading a CSV copy failed", uploadError.name);
+    return NextResponse.json({ error: "export_failed" }, { status: 500 });
+  }
+  const { data, error } = await storage.createSignedUrl(path, LINK_TTL_SECONDS, { download: fileName });
+  if (error || !data) {
+    console.error("signing a CSV copy failed", error?.name ?? "unknown");
+    return NextResponse.json({ error: "export_failed" }, { status: 500 });
+  }
+  return NextResponse.json({ url: data.signedUrl, fileName }, { headers: { "cache-control": "private, no-store" } });
 }

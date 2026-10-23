@@ -25,6 +25,7 @@ function fakeAdmin(options: {
   erased?: boolean;
   due?: DueFile[];
   removeFails?: boolean;
+  staleCsv?: string[];
 }) {
   const tables: Record<string, unknown> = {
     account_deletions: options.purged === undefined ? [] : [{ user_id: USER }],
@@ -59,6 +60,7 @@ function fakeAdmin(options: {
       if (fn === "purge_account") return { data: options.purged, error: null };
       if (fn === "purge_health_data") return { data: options.erased ?? true, error: null };
       if (fn === "retention_due_files") return { data: options.due ?? [], error: null };
+      if (fn === "stale_csv_downloads") return { data: options.staleCsv ?? [], error: null };
       if (fn === "retention_forget") {
         forgotten.push(`${args?.p_kind}:${args?.p_id}`);
         return { data: true, error: null };
@@ -162,5 +164,20 @@ describe("runPrivacyJob, files past their retention", () => {
     const { admin, forgotten } = fakeAdmin({ purged: null, due, removeFails: true });
     await expect(runPrivacyJob(admin, 10_000)).rejects.toThrow("removing from feedback failed");
     expect(forgotten).toEqual([]);
+  });
+});
+
+describe("runPrivacyJob, CSV copies for Telegram's download dialog", () => {
+  it("removes the stale copies from the exports bucket", async () => {
+    const { admin, removed } = fakeAdmin({ staleCsv: [`${USER}/csv/a.csv`, `${USER}/csv/b.csv`] });
+    const summary = await runPrivacyJob(admin, 10_000);
+    expect(removed).toEqual([`exports/${USER}/csv/a.csv`, `exports/${USER}/csv/b.csv`]);
+    expect(summary.csvRemoved).toBe(2);
+  });
+
+  it("calls nothing in Storage while no copy is stale", async () => {
+    const { admin, removed } = fakeAdmin({});
+    expect((await runPrivacyJob(admin, 10_000)).csvRemoved).toBe(0);
+    expect(removed).toEqual([]);
   });
 });
