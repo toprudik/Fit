@@ -54,6 +54,7 @@ async function Intake({ params }: { params: Params }) {
           coachingId={intake.coachingId}
           initial={intake.latest ? toValues(intake.latest) : null}
           goalHref={goal ? null : clientGoalPath(intake.coachingId)}
+          share={intake.live ? { shared: intake.shared, trainerName: intake.trainerName } : null}
         />
       ) : (
         <HealthNotice />

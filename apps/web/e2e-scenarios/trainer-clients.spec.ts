@@ -527,6 +527,29 @@ test.describe("clients", () => {
     expect(errors()).toEqual([]);
   });
 
+  test("with the intake hidden the client saves it, then is asked whether to show it", async ({ client }) => {
+    const { page } = client;
+    const errors = collectErrors(page);
+    await page.goto(`/client/trainers/${client.coachingId}/intake`);
+    await expect(page.getByText(/сейчас не видит твою анкету/)).toBeVisible();
+    await page.getByRole("checkbox", { name: "Стать сильнее" }).check();
+    await page.getByRole("button", { name: "Дальше" }).click();
+    await page.getByRole("button", { name: "Дальше" }).click();
+    const questions = page.locator("fieldset").filter({ has: page.getByRole("radio", { name: "Нет" }) });
+    const count = await questions.count();
+    for (let index = 0; index < count; index += 1) await questions.nth(index).getByRole("radio", { name: "Нет" }).check();
+    await expect(page.getByRole("button", { name: "Отправить тренеру" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Сохранить" }).click();
+
+    await expect(page.getByRole("heading", { name: "Анкета сохранена" })).toBeVisible();
+    await expect(page.getByText(/её пока не видит\. Показать\?/)).toBeVisible();
+    await expectAccessible(page);
+    await page.getByRole("button", { name: /^Показать тренеру / }).click();
+    await expect(page.getByRole("heading", { name: "Анкета отправлена" })).toBeVisible();
+    await expect(page.getByText(/видит твою анкету\./).first()).toBeVisible();
+    expect(errors()).toEqual([]);
+  });
+
   test("a client who already trains with the trainer is told so on the link", async ({
     trainer,
     client,
