@@ -1,9 +1,9 @@
 "use client";
 
-import { CalendarX, Clock, Hourglass, Users } from "lucide-react";
+import { CalendarX, Clock, ExternalLink, Hourglass, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Chip, ChipRow } from "@/components/ui/chip";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { Sheet } from "@/components/ui/sheet";
@@ -28,6 +28,9 @@ import type { BookableGroup, BookableSlot, BusyTime } from "@/lib/bookings/load"
 import type { QueueSlot } from "@/lib/bookings/slot-waitlist";
 import { localToUtc } from "@/lib/schedule/time";
 import { trainerClock } from "@/lib/schedule/trainer-clock";
+import { openExternalLink } from "@/lib/telegram/mini-app";
+import type { PaymentLinkKind } from "@/lib/trainer-wizard/options";
+import { cn } from "@/lib/utils";
 
 type BookPickerProps = {
   timeZone: string;
@@ -43,7 +46,7 @@ type BookPickerProps = {
   busy: BusyTime[];
   /** "Разовое занятие стоит 2 000 ₽.", or null without a drop-in price. */
   dropInText: string | null;
-  paymentLinks: { title: string; url: string }[];
+  paymentLinks: { url: string; kind: PaymentLinkKind }[];
   /** Set on /client/bookings/[bookingId]/reschedule: the chosen slot replaces this booking (PRD 2.6.5). */
   moveBookingId?: string;
 };
@@ -290,9 +293,20 @@ export function BookPicker({
             <>
               <p>{copy.requestLine}</p>
               {dropInText ? <p className="text-ink-2">{dropInText}</p> : null}
+              {/* The link's own title is the trainer's note to self («Тест-оплата QA»), so the client sees its kind (QA 23.10). */}
               {paymentLinks.map((link) => (
-                <a key={link.url} href={link.url} target="_blank" rel="noreferrer" className="text-accent-ink underline">
-                  {interpolate(copy.pay, { title: link.title })}
+                <a
+                  key={link.url}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(event) => {
+                    if (openExternalLink(link.url)) event.preventDefault();
+                  }}
+                  className={cn(buttonVariants({ variant: "secondary", block: true }))}
+                >
+                  <ExternalLink aria-hidden size={18} strokeWidth={1.75} />
+                  {copy.payKinds[link.kind]}
                 </a>
               ))}
             </>

@@ -4,6 +4,7 @@ import type { ScheduleOwner } from "@/lib/schedule/load";
 import { clientNames } from "@/lib/schedule/load";
 import type { Database } from "@/lib/supabase/database.types";
 import { readAllPages, readByIds } from "@/lib/supabase/paging";
+import type { PaymentLinkKind } from "@/lib/trainer-wizard/options";
 
 export type BookingStatus = Database["public"]["Enums"]["booking_status"];
 type Supabase = ScheduleOwner["supabase"];
@@ -73,7 +74,7 @@ export type BookingPage = {
   groups: BookableGroup[];
   busy: BusyTime[];
   dropIn: { priceMinor: number; currency: string } | null;
-  paymentLinks: { title: string; url: string }[];
+  paymentLinks: { url: string; kind: PaymentLinkKind }[];
 };
 
 /** What /client/book shows for one trainer: free slots for two weeks past the booking notice, and prices. */
@@ -111,7 +112,7 @@ export async function loadBookingPage(owner: ScheduleOwner, trainer: BookingTrai
       .is("archived_at", null)
       .order("applies_to", { ascending: false })
       .limit(1),
-    supabase.from("payment_links").select("title, url").eq("trainer_id", trainer.trainerId).is("archived_at", null).order("sort_order"),
+    supabase.from("payment_links").select("url, kind").eq("trainer_id", trainer.trainerId).is("archived_at", null).order("sort_order"),
     loadBusy(owner, now),
   ]);
   if (slots.error) fail("slots", slots.error);

@@ -73,7 +73,7 @@ This Data Processing Addendum ("DPA") forms part of the agreement between [OPERA
 
 | Subprocessor | Service | Location | Transfer safeguard |
 |---|---|---|---|
-| Supabase, Inc. | Database, sign-in, file storage | United States (us-east-1) | EU SCCs (2021/914) in Supabase's DPA; UK Addendum [to confirm] |
+| Supabase Pte. Ltd. | Database, sign-in, file storage | United States (us-east-1) | EU SCCs (2021/914) in Supabase's DPA; UK Addendum [to confirm] |
 | Vercel Inc. | Hosting of the web app and the bot | United States | EU-U.S. Data Privacy Framework (with UK Extension and Swiss framework); EU SCCs and UK Addendum in Vercel's DPA |
 | GitHub, Inc. | Encrypted nightly database backups, kept 7 days | United States | EU-U.S. Data Privacy Framework; EU SCCs in GitHub's Data Protection Agreement [to confirm] |
 | Functional Software, Inc. (Sentry), only if error reporting is on | Error reports, with user details, request bodies, cookies, headers and query strings removed | United States | [to confirm] |
