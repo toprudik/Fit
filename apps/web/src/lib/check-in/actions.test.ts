@@ -6,7 +6,12 @@ const next = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock("next/cache", () => ({ refresh: next.refresh }));
 vi.mock("@/env/server", () => ({ serverEnv: () => ({ TELEGRAM_BOT_USERNAME: "dafit_test_bot" }) }));
 // The SVG carries the link it encodes, so the tests can read what the QR points to.
-vi.mock("qrcode", () => ({ default: { toString: async (link: string) => `<svg data-link="${link}"/>` } }));
+vi.mock("qrcode", () => ({
+  default: {
+    toString: async (link: string) => `<svg data-link="${link}"/>`,
+    toBuffer: async (link: string) => Buffer.from(`png:${link}`),
+  },
+}));
 
 type Answer = { data: unknown; error: { message: string; code: string } | null };
 
@@ -14,6 +19,9 @@ type Answer = { data: unknown; error: { message: string; code: string } | null }
 const db = vi.hoisted(() => ({
   calls: [] as unknown[][],
   answer: { data: null, error: null } as Answer,
+  user: "00000000-0000-4000-8000-0000000000aa" as string | null,
+  uploadError: null as { name: string } | null,
+  signError: null as { name: string } | null,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -22,10 +30,23 @@ vi.mock("@/lib/supabase/server", () => ({
       db.calls.push(["rpc", fn, args]);
       return Promise.resolve(db.answer);
     },
+    auth: { getClaims: async () => ({ data: db.user ? { claims: { sub: db.user } } : null }) },
+    storage: {
+      from: (bucket: string) => ({
+        upload: async (path: string, file: Blob, options: unknown) => {
+          db.calls.push(["upload", bucket, path, await file.text(), options]);
+          return { error: db.uploadError };
+        },
+        createSignedUrl: async (path: string, ttl: number, options: unknown) => {
+          db.calls.push(["sign", path, ttl, options]);
+          return db.signError ? { data: null, error: db.signError } : { data: { signedUrl: `https://storage.test/${path}?token=t` }, error: null };
+        },
+      }),
+    },
   }),
 }));
 
-const { checkIn, checkInByPlace, loadCheckInQr, loadPlaceQr } = await import("./actions");
+const { checkIn, checkInByPlace, loadCheckInQr, loadPlaceQr, placeQrDownload } = await import("./actions");
 
 const SESSION = "00000000-0000-4000-8000-000000000001";
 const BOOKING = "00000000-0000-4000-8000-000000000002";
@@ -38,6 +59,9 @@ const fail = (message: string, code = "P0001") => ({ data: null, error: { messag
 beforeEach(() => {
   vi.clearAllMocks();
   db.calls = [];
+  db.user = "00000000-0000-4000-8000-0000000000aa";
+  db.uploadError = null;
+  db.signError = null;
   db.answer = { data: null, error: null };
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -181,5 +205,36 @@ describe("loadCheckInQr", () => {
     expect(await loadCheckInQr(SESSION)).toEqual({ status: "error" });
     db.answer = { data: [], error: null };
     expect(await loadCheckInQr(SESSION)).toEqual({ status: "error" });
+  });
+});
+
+describe("placeQrDownload", () => {
+  it("stores the same code as a PNG in the trainer's qr folder and answers a short signed link", async () => {
+    db.answer = { data: PLACE, error: null };
+    const result = await placeQrDownload(LOCATION, "QR Зал.png");
+    expect(db.calls[0]).toEqual(["rpc", "location_check_in_token", { p_location_id: LOCATION, p_renew: false }]);
+    const [, bucket, path, body, options] = db.calls[1] as [string, string, string, string, unknown];
+    expect(bucket).toBe("exports");
+    expect(path).toMatch(/^00000000-0000-4000-8000-0000000000aa\/qr\/[0-9a-f-]{36}\.png$/);
+    expect(body).toBe(`png:https://t.me/dafit_test_bot?startapp=cl_${PLACE}`);
+    expect(options).toEqual({ contentType: "image/png" });
+    expect(db.calls[2]).toEqual(["sign", path, 300, { download: "QR Зал.png" }]);
+    expect(result).toEqual({ status: "done", url: `https://storage.test/${path}?token=t` });
+  });
+
+  it("fails without a call for a bad id or a signed-out user, and on each failed step", async () => {
+    expect(await placeQrDownload("nope", "QR.png")).toEqual({ status: "error" });
+    db.user = null;
+    expect(await placeQrDownload(LOCATION, "QR.png")).toEqual({ status: "error" });
+    expect(db.calls).toEqual([]);
+    db.user = "00000000-0000-4000-8000-0000000000aa";
+    db.answer = fail("not_owner", "42501");
+    expect(await placeQrDownload(LOCATION, "QR.png")).toEqual({ status: "error" });
+    db.answer = { data: PLACE, error: null };
+    db.uploadError = { name: "StorageApiError" };
+    expect(await placeQrDownload(LOCATION, "QR.png")).toEqual({ status: "error" });
+    db.uploadError = null;
+    db.signError = { name: "StorageApiError" };
+    expect(await placeQrDownload(LOCATION, "QR.png")).toEqual({ status: "error" });
   });
 });

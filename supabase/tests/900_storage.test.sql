@@ -88,7 +88,7 @@ select results_eq(
        ('avatars',         true,  2097152::bigint,  array['image/webp', 'image/jpeg', 'image/png']),
        ('certificates',    false, 10485760::bigint, array['image/jpeg', 'image/png', 'application/pdf']),
        ('exercise-media',  true,  2097152::bigint,  array['image/webp', 'image/jpeg', 'image/png']),
-       ('exports',         false, 52428800::bigint, array['application/zip', 'text/csv']),
+       ('exports',         false, 52428800::bigint, array['application/zip', 'text/csv', 'image/png']),
        ('feedback',        false, 5242880::bigint,  array['image/webp', 'image/jpeg', 'image/png']),
        ('progress-photos', false, 5242880::bigint,  array['image/webp', 'image/jpeg']) $$,
   'the six buckets have the expected visibility, size limit and MIME types'
