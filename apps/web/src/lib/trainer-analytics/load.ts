@@ -97,7 +97,10 @@ export async function loadTrainerAnalytics(kind: PeriodKind, offset: number) {
   const base = { timeZone: owner.timeZone, access, period, previous, isCurrent: offset === 0 };
   if (!access.analytics) return { ...base, data: null };
 
-  const [current, before, endingPasses, atRisk, clientsProgress, money] = await Promise.all([
+  // «Мой месяц в DaFit» is the finished month before this one; without held sessions there is no card to make.
+  const lastMonth = periodRange("month", day, -1);
+  const sameAs = (other: Period) => other.from === lastMonth.from && other.to === lastMonth.to;
+  const [current, before, endingPasses, atRisk, clientsProgress, money, storyMonth] = await Promise.all([
     summary(owner, period),
     summary(owner, previous),
     ending(owner),
@@ -106,7 +109,9 @@ export async function loadTrainerAnalytics(kind: PeriodKind, offset: number) {
     access.finance
       ? Promise.all([finance(owner, period), finance(owner, previous), finance(owner, simulatorBase(day)), hints(owner)])
       : null,
+    sameAs(period) || sameAs(previous) ? null : summary(owner, lastMonth),
   ]);
+  const lastMonthSummary = storyMonth ?? (sameAs(period) ? current : before);
   return {
     ...base,
     data: {
@@ -116,6 +121,7 @@ export async function loadTrainerAnalytics(kind: PeriodKind, offset: number) {
       churn: atRisk,
       progress: clientsProgress,
       finance: money ? { current: money[0], before: money[1], base: money[2], hints: money[3] } : null,
+      storyMonthHeld: lastMonthSummary.held_sessions ?? 0,
     },
   };
 }
