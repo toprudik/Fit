@@ -135,13 +135,13 @@ describe.each(simple)("$name: shared rules", ({ run, rpc, arg, refreshes }) => {
 
 describe("previewBooking", () => {
   it("says what covers the slot", async () => {
-    db.answer = { data: [{ confirmed: true, pass_title: "10 занятий", sessions_left: 4 }], error: null };
-    expect(await previewBooking(ID)).toEqual({ status: "done", confirmed: true, passTitle: "10 занятий", sessionsLeft: 4 });
+    db.answer = { data: [{ confirmed: true, pass_title: "10 занятий", sessions_left: 4, pass_unpaid: true }], error: null };
+    expect(await previewBooking(ID)).toEqual({ status: "done", confirmed: true, passTitle: "10 занятий", sessionsLeft: 4, passUnpaid: true });
   });
 
   it("reads an empty answer as a request with no pass", async () => {
     db.answer = { data: [], error: null };
-    expect(await previewBooking(ID)).toEqual({ status: "done", confirmed: false, passTitle: null, sessionsLeft: null });
+    expect(await previewBooking(ID)).toEqual({ status: "done", confirmed: false, passTitle: null, sessionsLeft: null, passUnpaid: false });
   });
 });
 

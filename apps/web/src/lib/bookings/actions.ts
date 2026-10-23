@@ -59,7 +59,7 @@ async function ownSlotBooking(supabase: ServerClient, slotId: string): Promise<{
 }
 
 export type PreviewResult =
-  | { status: "done"; confirmed: boolean; passTitle: string | null; sessionsLeft: number | null }
+  | { status: "done"; confirmed: boolean; passTitle: string | null; sessionsLeft: number | null; passUnpaid?: boolean }
   | { status: "error"; error: BookingError };
 
 /** The confirm sheet of /client/book: whether a pass or allowed debt covers the slot (data-model §3.5). */
@@ -78,6 +78,7 @@ export async function previewBooking(slotId: string): Promise<PreviewResult> {
     confirmed: Boolean(row?.confirmed),
     passTitle: row?.pass_title ?? null,
     sessionsLeft: row?.sessions_left ?? null,
+    passUnpaid: Boolean(row?.pass_unpaid),
   };
 }
 

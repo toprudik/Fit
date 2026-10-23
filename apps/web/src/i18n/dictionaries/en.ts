@@ -4018,6 +4018,7 @@ export const en: Dictionary = {
       checking: "Checking your pass",
       passLine: "Paid with your pass “{title}”, sessions left after booking: {count}.",
       debtLine: "No pass fits, but your trainer lets you book on debt. The session goes to debt.",
+      unpaidPass: "This pass isn't paid yet. You can still book, and pay the trainer with the link below.",
       requestLine: "No pass fits, so this is a request. Your trainer confirms or declines it.",
       dropInPrice: "A single session costs {price}.",
       payKinds: {

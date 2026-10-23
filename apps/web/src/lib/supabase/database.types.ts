@@ -4325,7 +4325,7 @@ isOneToOne: false
                            },
 "booking_preview":
 { Args: { "p_slot_id": string }; Returns: {
-              "confirmed": boolean,"pass_title": string,"sessions_left": number
+              "confirmed": boolean,"pass_title": string,"pass_unpaid": boolean,"sessions_left": number
             }[]
                            },
 "bot_messages_blocked":
