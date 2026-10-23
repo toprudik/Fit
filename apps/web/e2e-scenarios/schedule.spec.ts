@@ -291,6 +291,11 @@ test.describe("sessions", () => {
     await page.getByRole("link", { name: "Занятие", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/trainer/sessions/new\\?date=${day}`));
     await expect(dateField(page, "Дата")).toContainText(ruDate(day));
+    // The half-width field keeps the year in view on a phone: «22 окт. 2026», not «22 октября 2…».
+    const shown = dateField(page, "Дата").locator("span:visible").first();
+    const fits = await shown.evaluate((span) => span.scrollWidth <= span.clientWidth);
+    expect(fits).toBe(true);
+    await expect(shown).toContainText(day.slice(0, 4));
     await expect(page.getByRole("radiogroup", { name: "Как прошло" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Дозаписать" })).toBeVisible();
     void client; // the fixture pairs the trainer with a client, so the form has someone to book

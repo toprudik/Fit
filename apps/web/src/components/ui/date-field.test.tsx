@@ -25,7 +25,9 @@ function form(props: Partial<React.ComponentProps<typeof DateField>> = {}) {
 describe("DateField", () => {
   it("shows the date in words and posts it as YYYY-MM-DD", () => {
     form({ defaultValue: "2026-10-22" });
-    expect(screen.getByRole("button", { name: /^Дата рождения/ }).textContent).toBe("22 октября 2026 г.");
+    expect(screen.getByRole("button", { name: "Дата рождения 22 октября 2026 г." })).toBeTruthy();
+    // A half-width field on a phone shows the short form, so the year stays in view.
+    expect(screen.getByText("22 окт. 2026").getAttribute("aria-hidden")).toBe("true");
     expect(new FormData(screen.getByRole<HTMLFormElement>("form")).get("birthDate")).toBe("2026-10-22");
   });
 
@@ -38,7 +40,7 @@ describe("DateField", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "Месяц" }), { target: { value: "05" } });
     fireEvent.click(screen.getByRole("button", { name: "14 мая 1992 г." }));
 
-    await waitFor(() => expect(screen.getByRole("button", { name: /^Дата рождения/ }).textContent).toBe("14 мая 1992 г."));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Дата рождения 14 мая 1992 г." })).toBeTruthy());
     expect(new FormData(screen.getByRole<HTMLFormElement>("form")).get("birthDate")).toBe("1992-05-14");
   });
 
