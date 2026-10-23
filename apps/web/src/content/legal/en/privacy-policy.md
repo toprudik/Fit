@@ -138,7 +138,7 @@ We share personal data only as described here.
 
 | Recipient | Role | What they receive | Where |
 |---|---|---|---|
-| Supabase, Inc. | Processor: database, sign-in, file storage | All data stored in DaFit | United States (us-east-1) |
+| Supabase Pte. Ltd. | Processor: database, sign-in, file storage | All data stored in DaFit | United States (us-east-1) |
 | Vercel Inc. | Processor: hosting of the web app and the bot | Requests passing through, request logs (IP address, browser, URL) | United States |
 | GitHub, Inc. | Processor: stores encrypted nightly backups of the database for 7 days | An encrypted copy of the database (files such as photos are not included) | United States |
 | Telegram (Telegram FZ-LLC, UAE, and Telegram Messenger Inc.) | Independent controller | Sign-in data it gives us, bot messages we send you (which may include names, times and places of sessions and, for contact requests, a phone number), the Mini App platform, profile photos at t.me | United Arab Emirates and Telegram's other locations |

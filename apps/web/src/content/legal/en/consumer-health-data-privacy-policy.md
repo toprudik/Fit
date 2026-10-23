@@ -74,7 +74,7 @@ This policy is written for the Washington My Health My Data Act (RCW 19.373), Ne
 |---|---|
 | Your trainer, for the categories you allow | To coach you. The trainer is responsible for how they use it |
 | A trainer's assistants (including substitutes) | Only within what the trainer delegated; never money amounts |
-| Supabase, Inc. (United States) | Our processor: database and file storage |
+| Supabase Pte. Ltd. (Singapore; data stored in the United States) | Our processor: database and file storage |
 | Vercel Inc. (United States) | Our processor: hosting; data passes through its servers |
 | GitHub, Inc. (United States) | Our processor: stores encrypted database backups for 7 days. Photos are not in the backups |
 | Telegram (Telegram FZ-LLC, United Arab Emirates, and Telegram Messenger Inc.) | Delivers the bot messages you turned on. A reminder can mention, for example, a session or a homework task |
