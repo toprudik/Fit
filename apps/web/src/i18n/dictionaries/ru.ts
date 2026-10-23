@@ -3888,6 +3888,8 @@ export const ru = {
     trial: "Пробное",
     group: "Группа",
     groupSeats: "{taken} из {capacity}",
+    attendedOne: "отмечен приход",
+    attendedMany: "пришли: {count}",
     online: "онлайн",
     days: "Дни недели",
     emptyDay: "В этот день ничего нет",

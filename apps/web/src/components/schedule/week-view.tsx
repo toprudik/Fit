@@ -43,12 +43,17 @@ export function scheduleHref(day: string, trainer?: string): string {
   return trainer ? `/trainer/schedule?date=${day}&trainer=${trainer}` : `/trainer/schedule?date=${day}`;
 }
 
-/** "18:30–19:30, онлайн, 5 из 8". */
-function itemDetail(item: DayItem, copy: Copy): string {
+/** Session id → how many of its clients are marked as come (check-in by QR or the trainer's mark). */
+export type SessionAttended = ReadonlyMap<string, number>;
+
+/** "18:30–19:30, онлайн, 5 из 8, пришли: 4". */
+function itemDetail(item: DayItem, copy: Copy, attended: SessionAttended): string {
   const parts = [`${formatMinutes(item.startMin)}–${formatMinutes(item.endMin)}`];
   if (item.type === "session") {
+    const came = attended.get(item.session.id) ?? 0;
     if (item.session.mode === "online") parts.push(copy.online);
     if (item.session.kind === "group") parts.push(interpolate(copy.groupSeats, { taken: item.taken, capacity: item.session.capacity }));
+    if (came > 0) parts.push(item.session.kind === "group" ? interpolate(copy.attendedMany, { count: came }) : copy.attendedOne);
   } else if (item.mode === "online") {
     parts.push(copy.online);
   }
@@ -64,6 +69,8 @@ function itemClass(item: DayItem) {
       : "bg-surface-2 text-ink";
 }
 
+const EMPTY: SessionAttended = new Map();
+
 export type DayLabel = { day: string; weekday: string; date: string; long: string };
 
 /** Phone: the day chips of the week and the chosen day as a list. */
@@ -74,6 +81,7 @@ export function DayList({
   today,
   copy,
   names,
+  attended = EMPTY,
   trainer,
 }: {
   week: readonly WeekDay[];
@@ -82,6 +90,7 @@ export function DayList({
   today: string;
   copy: Copy;
   names: SessionNames;
+  attended?: SessionAttended;
   /** The assisted trainer whose week this is; items are then not links. */
   trainer?: string;
 }) {
@@ -127,7 +136,7 @@ export function DayList({
                 className={cn("flex flex-col gap-0.5 rounded-md px-4 py-3 outline-offset-2", itemClass(item))}
               >
                 <span className="text-headline">{itemTitle(item, copy, names)}</span>
-                <span className="text-subhead tabular-nums text-ink-2">{itemDetail(item, copy)}</span>
+                <span className="text-subhead tabular-nums text-ink-2">{itemDetail(item, copy, attended)}</span>
               </ItemBox>
             </li>
           ))}
@@ -146,6 +155,7 @@ export function WeekGrid({
   today,
   copy,
   names,
+  attended = EMPTY,
   trainer,
 }: {
   week: readonly WeekDay[];
@@ -153,6 +163,7 @@ export function WeekGrid({
   today: string;
   copy: Copy;
   names: SessionNames;
+  attended?: SessionAttended;
   /** The assisted trainer whose week this is; items are then not links. */
   trainer?: string;
 }) {
@@ -212,7 +223,7 @@ export function WeekGrid({
                     className={cn("flex size-full flex-col overflow-hidden rounded-sm px-2 py-1", itemClass(item))}
                   >
                     <span className="truncate text-footnote font-semibold">{itemTitle(item, copy, names)}</span>
-                    <span className="truncate text-caption tabular-nums text-ink-2">{itemDetail(item, copy)}</span>
+                    <span className="truncate text-caption tabular-nums text-ink-2">{itemDetail(item, copy, attended)}</span>
                   </ItemBox>
                 </li>
               ))}

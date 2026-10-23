@@ -484,6 +484,14 @@ test.describe("check-in by QR", () => {
     await expectAccessible(client.page);
     await expect(sheet.getByText("Анна Клиентова")).toBeVisible({ timeout: 15_000 });
 
+    // The schedule shows that the client has come (QA 23.10).
+    const startsAt = (await trainer.db.from("sessions").select("starts_at").eq("id", sessionId).single()).data?.starts_at ?? "";
+    const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Moscow" }).format(new Date(startsAt));
+    const schedule = await page.context().newPage();
+    await gotoReady(schedule, `/trainer/schedule?date=${day}`);
+    await expect(schedule.getByText(/отмечен приход/).filter({ visible: true }).first()).toBeVisible();
+    await schedule.close();
+
     // A second scan of a fresh code is no new check-in.
     const [again] = ok(await trainer.db.rpc("session_check_in_qr", { p_session_id: sessionId }), "check-in code");
     await gotoReady(client.page, `/client/checkin/${sessionId}?c=${encodeURIComponent(again.code)}`);

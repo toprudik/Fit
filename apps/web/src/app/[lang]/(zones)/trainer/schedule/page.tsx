@@ -127,13 +127,14 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
     throw new Error("loading the schedule failed");
   }
 
-  // Group seats taken, and the client of each personal session or trial for its card.
+  // Group seats taken, the client of each personal session or trial for its card, and who has come (QA 23.10).
   const taken = new Map<string, number>();
+  const attended = new Map<string, number>();
   const pairOf = new Map<string, string>();
   if (sessions.data.length > 0) {
     const { data } = await supabase
       .from("bookings")
-      .select("session_id, coaching_id")
+      .select("session_id, coaching_id, status")
       .in(
         "session_id",
         sessions.data.map((session) => session.id),
@@ -141,6 +142,7 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
       .in("status", ["requested", ...TAKEN]);
     const kind = new Map(sessions.data.map((session) => [session.id, session.kind]));
     for (const booking of data ?? []) {
+      if (booking.status === "attended") attended.set(booking.session_id, (attended.get(booking.session_id) ?? 0) + 1);
       if (kind.get(booking.session_id) === "group") taken.set(booking.session_id, (taken.get(booking.session_id) ?? 0) + 1);
       else pairOf.set(booking.session_id, booking.coaching_id);
     }
@@ -224,8 +226,8 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
         />
       ) : (
         <>
-          <DayList week={week} labels={labels} selected={selected} today={today} copy={copy} names={names} trainer={assisted?.ownerId} />
-          <WeekGrid week={week} labels={labels} today={today} copy={copy} names={names} trainer={assisted?.ownerId} />
+          <DayList week={week} labels={labels} selected={selected} today={today} copy={copy} names={names} attended={attended} trainer={assisted?.ownerId} />
+          <WeekGrid week={week} labels={labels} today={today} copy={copy} names={names} attended={attended} trainer={assisted?.ownerId} />
         </>
       )}
     </div>

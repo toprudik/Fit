@@ -3855,6 +3855,8 @@ export const en: Dictionary = {
     trial: "Trial",
     group: "Group",
     groupSeats: "{taken} of {capacity}",
+    attendedOne: "checked in",
+    attendedMany: "came: {count}",
     online: "online",
     days: "Days of the week",
     emptyDay: "Nothing on this day",
