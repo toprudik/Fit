@@ -487,7 +487,7 @@ test.describe("check-in by QR", () => {
     // A second scan of a fresh code is no new check-in.
     const [again] = ok(await trainer.db.rpc("session_check_in_qr", { p_session_id: sessionId }), "check-in code");
     await gotoReady(client.page, `/client/checkin/${sessionId}?c=${encodeURIComponent(again.code)}`);
-    await expect(client.page.getByText("Отметка уже есть, ещё раз сканировать не нужно.")).toBeVisible();
+    await expect(client.page.getByText(/^Отметка на занятие в \d\d:\d\d уже есть/)).toBeVisible();
     expect(errors()).toEqual([]);
   });
 
@@ -532,6 +532,10 @@ test.describe("check-in by QR", () => {
     await gotoReady(client.page, `/client/checkin?place=${encodeURIComponent(token)}`);
     await expect(client.page.getByText("Готово, ты на занятии. Тренер видит отметку.")).toBeVisible();
     await expectAccessible(client.page);
+    // Scanning again names the session the client is already marked on (QA 23.10).
+    await gotoReady(client.page, `/client/checkin?place=${encodeURIComponent(token)}`);
+    await expect(client.page.getByText(/^Отметка на занятие в \d\d:\d\d уже есть/)).toBeVisible();
+    await expect(client.page.getByRole("link", { name: "Мои занятия" })).toBeVisible();
   });
 });
 
