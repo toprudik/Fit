@@ -796,3 +796,28 @@ async function acceptTrainerAgreement(page: Page) {
   await page.mouse.move(0, 0);
   await expect(page.locator("[data-sonner-toast]")).toHaveCount(0);
 }
+
+test.describe("a card claimed by the person", () => {
+  test("«Объединить» merges the card into the person who came by the link", async ({ trainer, persona }) => {
+    const { page } = trainer;
+    const errors = collectErrors(page);
+    ok(await trainer.db.from("consents").insert({ user_id: trainer.userId, kind: "trainer_dpa", version: "2026-10-18" }).select("id"), "agreement");
+    const cardPair = ok(await trainer.db.rpc("create_managed_client", { p_display_name: "Тоня" }), "card");
+    const person = await persona({ firstName: "Тоня", lastName: "Карточкина" });
+    const invite = ok(await trainer.db.rpc("my_client_invite"), "client invite");
+    ok(await person.db.rpc("join_by_invite", { p_token: invite[0].token }), "join");
+
+    await page.goto("/trainer/clients");
+    await page.getByRole("link", { name: /Тоня Карточкина теперь твой клиент/ }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Это тот же клиент?" })).toBeVisible();
+    await page.getByRole("button", { name: /^Тоня/ }).click();
+    await page.getByRole("button", { name: "Объединить" }).click();
+    await expectPath(page, `/trainer/clients/${cardPair}`);
+    await expect(page.getByText("Готово, история карточки перенесена")).toBeVisible();
+
+    await page.goto("/trainer/clients");
+    await expect(page.getByRole("link", { name: /теперь твой клиент/ })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Тоня/ })).toHaveCount(1);
+    expect(errors()).toEqual([]);
+  });
+});

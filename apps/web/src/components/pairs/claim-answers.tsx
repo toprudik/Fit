@@ -37,11 +37,15 @@ export function ClaimAnswers({ claimId, cards, newClientNote }: ClaimAnswersProp
   const router = useRouter();
   const [picked, setPicked] = useState<ClaimCardRow | null>(null);
   const [pending, startTransition] = useTransition();
+  // Shown in the sheet too: a toast can sit under it in the Mini App, and a failed merge must not look like nothing.
+  const [failed, setFailed] = useState(false);
 
   function answer(cardId: string | null) {
+    setFailed(false);
     startTransition(async () => {
       const result = await resolveClaim({ claimId, cardId });
       if (!result.ok) {
+        setFailed(true);
         toast.error(t.pairs.failed);
         if (result.reason !== "failed") router.refresh();
         return;
@@ -73,7 +77,11 @@ export function ClaimAnswers({ claimId, cards, newClientNote }: ClaimAnswersProp
             title={card.name}
             subtitle={card.since}
             trailing={card.match ? <Badge tone="accent">{copy.match}</Badge> : null}
-            onClick={() => !pending && setPicked(card)}
+            onClick={() => {
+              if (pending) return;
+              setFailed(false);
+              setPicked(card);
+            }}
           />
         ))}
       </ListGroup>
@@ -97,6 +105,11 @@ export function ClaimAnswers({ claimId, cards, newClientNote }: ClaimAnswersProp
               <ListRow key={key} title={label} value={String(picked?.carries[key] ?? 0)} />
             ))}
           </ListGroup>
+          {failed ? (
+            <p role="alert" className="px-1 text-footnote text-danger">
+              {t.pairs.failed}
+            </p>
+          ) : null}
           <div className="flex flex-col gap-2">
             <Button size="lg" block loading={pending} onClick={() => picked && answer(picked.id)}>
               {copy.merge}
