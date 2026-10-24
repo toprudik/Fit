@@ -776,6 +776,7 @@ export const en: Dictionary = {
     },
     badges: {
       debt: "Debt: {count}",
+      unpaid: "Unpaid",
       left: "{count} left",
       noPass: "No pass",
       card: "No account",

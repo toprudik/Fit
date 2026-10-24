@@ -327,10 +327,13 @@ export function TrainerPayments({ money, symbol, startOpen }: { money: PairMoney
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-1 px-4 py-3">
-        <span className="text-body">{copy.debt}</span>
-        <span className="text-body text-ink-2 tabular-nums">{debtText(t, locale, money.debt)}</span>
-      </div>
+      {/* No "Долга нет" over an unpaid sum (QA 24.10). */}
+      {money.debt.sessions > 0 || !Object.keys(unpaid).length ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-1 px-4 py-3">
+          <span className="text-body">{copy.debt}</span>
+          <span className="text-body text-ink-2 tabular-nums">{debtText(t, locale, money.debt)}</span>
+        </div>
+      ) : null}
       {Object.keys(unpaid).length ? (
         <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-1 px-4 py-3">
           <span className="text-body">{t.money.overview.unpaid}</span>

@@ -118,12 +118,15 @@ function Overview({ t, locale, pair }: { t: Dictionary; locale: Locale; pair: Pa
           title={pair.nextSessionAt ? formatSessionTime(locale, pair.nextSessionAt, pair.timeZone) : t.pairs.noNextSession}
           subtitle={pair.nextSessionAt ? t.pairs.nextSession : undefined}
         />
-        <ListRow
-          icon={Wallet}
-          title={t.pairs.debt}
-          value={pair.debtSessions > 0 ? plural(locale, pair.debtSessions, t.pairs.debtSessions) : t.pairs.noDebt}
-          href={`${base}/payments`}
-        />
+        {/* "Долга нет" over "Не доплачено 9 000 ₽" read as two answers (QA 24.10): the unpaid sum stands alone. */}
+        {pair.debtSessions > 0 || !Object.keys(pair.unpaid).length ? (
+          <ListRow
+            icon={Wallet}
+            title={t.pairs.debt}
+            value={pair.debtSessions > 0 ? plural(locale, pair.debtSessions, t.pairs.debtSessions) : t.pairs.noDebt}
+            href={`${base}/payments`}
+          />
+        ) : null}
         <UnpaidRow t={t} locale={locale} pair={pair} href={`${base}/payments`} />
       </ListGroup>
 

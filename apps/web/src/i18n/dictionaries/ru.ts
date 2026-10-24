@@ -780,6 +780,7 @@ export const ru = {
     },
     badges: {
       debt: "Долг: {count}",
+      unpaid: "Не доплачено",
       left: "Осталось {count}",
       noPass: "Без абонемента",
       card: "Без аккаунта",
