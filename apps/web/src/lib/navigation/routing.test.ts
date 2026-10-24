@@ -171,6 +171,7 @@ describe("trainerZoneRedirect", () => {
     expect(trainerZoneRedirect("/trainer")).toBe("/client");
     expect(trainerZoneRedirect("/trainer/clients/42")).toBe("/client");
     expect(trainerZoneRedirect("/trainer/verification")).toBe("/client");
+    expect(trainerZoneRedirect("/trainer/team/accept")).toBe("/client/trainer-invite");
   });
 
   it("leaves every other screen alone, including the trainer onboarding and showcases", () => {

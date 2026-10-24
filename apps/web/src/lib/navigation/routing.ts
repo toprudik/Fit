@@ -90,5 +90,10 @@ export function consentRedirect(pathname: string, search: string): string | null
  * §2.5 rule 5, PAIR-3): the client zone, which is the only zone they have. Null outside the trainer zone.
  */
 export function trainerZoneRedirect(pathname: string): string | null {
+  // A helper or substitute invite opened by a client says it is for a trainer instead of dropping them on the home screen.
+  if (pathname === "/trainer/team/accept") return TRAINER_INVITE_FOR_CLIENT_PATH;
   return zoneFromPath(pathname) === "trainer" ? "/client" : null;
 }
+
+/** Where a signed-in user without a trainer profile lands from a team invite link (QA bug 14). */
+export const TRAINER_INVITE_FOR_CLIENT_PATH = "/client/trainer-invite";
