@@ -3,6 +3,7 @@
 import { Copy, KeyRound } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/sonner";
 import { useI18n } from "@/i18n/client";
 import { interpolate } from "@/i18n/format";
@@ -10,13 +11,14 @@ import { issueShortcutToken, revokeShortcutToken } from "@/lib/activity/actions"
 
 /**
  * The iOS Shortcuts token (wave-2 §4.3): create, reissue or revoke it. A new token is shown once, here, until the
- * page is left; the database keeps only its hash.
+ * page is left; the database keeps only its hash. Revoking asks first: the shortcut stops working for good.
  */
 export function ShortcutToken({ token: saved }: { token: { created: string; lastUsed: string | null } | null }) {
   const { t } = useI18n();
   const copy = t.activity.shortcut;
   const [fresh, setFresh] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [confirming, setConfirming] = useState(false);
 
   function issue() {
     const reissue = Boolean(saved || fresh);
@@ -39,6 +41,7 @@ export function ShortcutToken({ token: saved }: { token: { created: string; last
         return;
       }
       setFresh(null);
+      setConfirming(false);
       toast.success(copy.revoked);
     });
   }
@@ -78,7 +81,7 @@ export function ShortcutToken({ token: saved }: { token: { created: string; last
             <Button variant="secondary" loading={pending} onClick={issue}>
               {copy.reissue}
             </Button>
-            <Button variant="destructive" disabled={pending} onClick={revoke}>
+            <Button variant="destructive" disabled={pending} onClick={() => setConfirming(true)}>
               {copy.revoke}
             </Button>
           </>
@@ -88,6 +91,22 @@ export function ShortcutToken({ token: saved }: { token: { created: string; last
           </Button>
         )}
       </div>
+      <Sheet
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={copy.revokeTitle}
+        description={copy.revokeText}
+        actions={
+          <>
+            <Button type="button" variant="destructive" block loading={pending} onClick={revoke}>
+              {copy.revoke}
+            </Button>
+            <Button type="button" variant="secondary" block onClick={() => setConfirming(false)}>
+              {copy.keep}
+            </Button>
+          </>
+        }
+      />
     </section>
   );
 }
