@@ -631,6 +631,12 @@ test.describe("activity", () => {
     });
     expect(old.status()).toBe(401);
     await card.getByRole("button", { name: "Отозвать" }).click();
+    const confirm = page.getByRole("dialog", { name: "Отозвать токен?" });
+    await confirm.getByRole("button", { name: "Оставить" }).click();
+    await expect(confirm).toBeHidden();
+    await expect(card.locator("code")).toBeVisible();
+    await card.getByRole("button", { name: "Отозвать" }).click();
+    await confirm.getByRole("button", { name: "Отозвать" }).click();
     await expect(page.getByText("Токен отозван, команда больше не сможет отправлять шаги")).toBeVisible();
     await expect(card).toContainText("Токена пока нет");
   });
