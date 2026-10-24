@@ -367,12 +367,12 @@ test.describe("moving and cancelling a booking", () => {
     await expectAccessible(page);
   });
 
-  test("a past session shows under Прошедшие with its status", async ({ trainer, client }) => {
+  test("a past session shows under История with its status", async ({ trainer, client }) => {
     const { bookingId } = await pastSession(trainer, client.coachingId);
     const page = client.page;
     await gotoReady(page, "/client/sessions");
     await expect(page.getByRole("heading", { name: "Записей нет" })).toBeVisible();
-    await tap(page.getByRole("radio", { name: "Прошедшие" }));
+    await tap(page.getByRole("radio", { name: "История" }));
     const row = page.getByRole("link", { name: /Тренер Иван Тренеров/ });
     await expect(row).toBeVisible();
     await expectAccessible(page);

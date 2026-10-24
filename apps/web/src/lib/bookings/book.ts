@@ -28,7 +28,7 @@ export function findOverlap<T extends { startsAt: string; endsAt: string }>(
 type Segmentable = { status: string; sessionStatus: string; startsAt: string };
 
 /**
- * "Предстоящие / Прошедшие / Запросы" (screens.md /client/sessions): open requests apart, confirmed bookings of
+ * "Предстоящие / История / Запросы" (screens.md /client/sessions): open requests apart, confirmed bookings of
  * sessions still ahead as upcoming (soonest first), everything else as past (newest first).
  */
 export function segmentBookings<T extends Segmentable>(bookings: readonly T[], now: Date): { upcoming: T[]; past: T[]; requests: T[] } {
