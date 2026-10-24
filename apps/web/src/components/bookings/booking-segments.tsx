@@ -6,7 +6,7 @@ import { useI18n } from "@/i18n/client";
 
 type Segment = "upcoming" | "past" | "requests";
 
-/** "Предстоящие / Прошедшие / Запросы" of /client/sessions; the lists are rendered on the server. */
+/** "Предстоящие / История / Запросы" of /client/sessions; the lists are rendered on the server. */
 export function BookingSegments({ panels, initial }: { panels: Record<Segment, React.ReactNode>; initial: Segment }) {
   const { t } = useI18n();
   const copy = t.schedule.clientSessions;
