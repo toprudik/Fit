@@ -16,29 +16,25 @@ export async function PairList({ empty, after }: { empty: React.ReactNode; after
   const userId = session?.claims.sub;
   if (!userId) return empty;
 
-  const [{ data: pairs, error }, { data: settings }] = await Promise.all([
-    supabase
-      .from("coachings")
-      .select("id, trainer_id, started_at")
-      .eq("client_id", userId)
-      .in("status", ["trial", "active"])
-      .order("started_at", { ascending: false }),
-    supabase.from("user_settings").select("time_zone").eq("user_id", userId).maybeSingle(),
-  ]);
+  const { data: pairs, error } = await supabase
+    .from("coachings")
+    .select("id, trainer_id, started_at")
+    .eq("client_id", userId)
+    .in("status", ["trial", "active"])
+    .order("started_at", { ascending: false });
   if (error) throw new Error(`loading pairs failed: ${error.code}`);
   if (!pairs.length) return empty;
 
   // telegram_id is not granted, so the columns are listed.
   const { data: people, error: peopleError } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, display_name, username, photo_url")
+    .select("id, first_name, last_name, display_name, username, photo_url, time_zone")
     .in(
       "id",
       pairs.map((pair) => pair.trainer_id),
     );
   if (peopleError) throw new Error(`loading pair partners failed: ${peopleError.code}`);
   const byId = new Map(people.map((person) => [person.id, person]));
-  const timeZone = settings?.time_zone ?? "Europe/Moscow";
 
   return (
     <>
@@ -46,13 +42,15 @@ export async function PairList({ empty, after }: { empty: React.ReactNode; after
         {pairs.map((pair) => {
           const person = byId.get(pair.trainer_id);
           const name = displayName(person) || t.botMessages.unnamedTrainer;
+          // The day the pair started in the trainer's zone, the same day the trainer sees.
+          const since = formatDay(locale, pair.started_at, person?.time_zone ?? "Europe/Moscow");
           return (
             <ListRow
               key={pair.id}
               href={`/client/trainers/${pair.id}`}
               avatar={{ name, src: person?.photo_url }}
               title={name}
-              subtitle={interpolate(t.clientLinks.since, { date: formatDay(locale, pair.started_at, timeZone) })}
+              subtitle={interpolate(t.clientLinks.since, { date: since })}
             />
           );
         })}

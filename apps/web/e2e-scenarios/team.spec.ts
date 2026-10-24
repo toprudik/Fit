@@ -228,6 +228,24 @@ test.describe("team and delegation", () => {
     await expect(owner.page.getByText("Отклонено").first()).toBeVisible();
   });
 
+  test("a client who opens a helper invite is told it is for a trainer", async ({ persona }) => {
+    const admin = await namedAdmin(persona);
+    const owner = await namedTrainer(persona, "Марина");
+    await grantPro(owner, admin);
+    const client = await persona({ firstName: "Полина" });
+    const invite = ok(
+      await owner.db.rpc("create_delegation", { p_kind: "assistant", p_scopes: ["schedule"], p_all_clients: true }),
+      "assistant invite",
+    );
+    const { page } = client;
+    await page.goto(`/trainer/team/accept?token=${invite[0].token}`);
+    await expect(page).toHaveURL(/\/client\/trainer-invite$/);
+    await expect(page.getByRole("heading", { name: "Это приглашение для тренера" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Ввести код тренера" })).toHaveAttribute("href", "/onboarding/trainer");
+    await expect(page.getByRole("link", { name: "На главную" })).toHaveAttribute("href", "/client");
+    await expectAccessible(page);
+  });
+
   test("an owner hands one session to a substitute, who sees the participants and can log the workout", async ({ persona }) => {
     const { owner, colleague, coachingId } = await team(persona);
     const ownerName = `Марина ${owner.lastName}`;
