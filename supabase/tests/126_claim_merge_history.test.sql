@@ -1,9 +1,11 @@
 -- «Объединить» with a history on both sides (migration 20261023054219_claim_merge_keys.sql, PRD 2.5-3a): the card
 -- has two passes and a past session, the person late-cancelled a booking and the trainer waived the charge. The
--- merge used to fail on the ledger row that points at its booking by (id, coaching_id).
+-- merge used to fail on the ledger row that points at its booking by (id, coaching_id). The person had opened
+-- measurements, nutrition, steps and the intake on their own pair; the merge used to close them all
+-- (20261024015847_claim_merge_keeps_shares.sql).
 begin;
 \ir _helpers.psql
-select plan(4);
+select plan(5);
 select tests.create_trainer('trainer_a');
 insert into public.consents (user_id, kind, version) values (tests.user_id('trainer_a'), 'trainer_dpa', '2026-10-18');
 select tests.create_user('client_t');
@@ -21,6 +23,9 @@ insert into tests.tok select token from public.my_client_invite();
 select tests.authenticate_as('client_t');
 insert into tests.kv values ('new_pair', public.join_by_invite((select token from tests.tok)));
 select tests.clear_authentication();
+update public.data_shares
+set measurements = true, nutrition = true, steps = true, intake = true, intake_decided_at = now()
+where coaching_id = (select id from tests.kv where name='new_pair');
 insert into tests.kv values ('s3', tests.create_session('trainer_a', now() + interval '2 hours'));
 insert into tests.kv values ('b3', tests.create_booking((select id from tests.kv where name='s3'), 'trainer_a', 'client_t', 'confirmed'));
 select tests.authenticate_as('client_t');
@@ -43,6 +48,12 @@ select is(
   (select count(*)::int from public.ledger_entries
    where coaching_id = (select id from tests.kv where name='card_pair') and client_id <> tests.user_id('client_t')),
   0, 'every ledger row of the pair now belongs to the person'
+);
+select results_eq(
+  $$ select measurements, nutrition, steps, intake, intake_decided_at is not null, photos, workouts
+     from public.data_shares where coaching_id = (select id from tests.kv where name='card_pair') $$,
+  $$ values (true, true, true, true, true, false, false) $$,
+  'what the person shared on their own pair carries over to the merged pair'
 );
 select * from finish();
 rollback;

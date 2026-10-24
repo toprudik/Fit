@@ -224,7 +224,7 @@ select results_eq(
 select ok(
   (select not (nutrition or measurements or photos or steps or intake or workouts) and intake_decided_at is null
    from public.data_shares where coaching_id = tests.id('anya_pair')),
-  'merge: nothing is shared until the person answers the sharing step'
+  'merge: the person had not answered the sharing step, so nothing is shared yet'
 );
 select tests.authenticate_as('client_c');
 select is(
