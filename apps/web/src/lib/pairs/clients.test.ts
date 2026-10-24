@@ -13,6 +13,7 @@ const base: ClientItem = {
   nextSessionAt: null,
   availableSessions: 0,
   debtSessions: 0,
+  unpaid: {},
   hasPass: false,
   passEnding: false,
   parqFlagged: false,
@@ -41,6 +42,11 @@ describe("client filters", () => {
     expect(ids(filterClients(items, "debt", ""))).toEqual(["debt"]);
     expect(ids(filterClients(items, "ending", ""))).toEqual(["ending"]);
     expect(ids(filterClients(items, "noPass", ""))).toEqual(["plain"]);
+  });
+
+  it("counts money left on a pass as a debt, as «Деньги → Долги» does (QA 24.10)", () => {
+    const unpaid = { ...base, coachingId: "unpaid", hasPass: true, unpaid: { RUB: 900_000 } };
+    expect(ids(filterClients([...items, unpaid], "debt", ""))).toEqual(["debt", "unpaid"]);
   });
 
   it("keeps archived and ended pairs in the archive only (PAIR-6)", () => {

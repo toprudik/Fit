@@ -84,11 +84,16 @@ test.describe("Money tab", () => {
     const left = page.locator("div", { has: page.locator("span", { hasText: "Не доплачено за абонементы" }) }).last();
     await expect(left).toContainText(rub(9000));
 
-    // The client card says the same next to "Долг", which stays "Долга нет" (Q22).
+    // The client card shows the unpaid sum alone, without "Долга нет" over it (QA 24.10, bug 16).
     await page.goto(`/trainer/clients/${client.coachingId}`);
     const owed = page.getByRole("link", { name: /Не доплачено за абонементы/ });
     await expect(owed).toContainText(rub(9000));
+    await expect(page.getByText("Долга нет")).toHaveCount(0);
     await expectAccessible(page);
+    // «С долгом» in «Клиенты» counts the unpaid pass as «Деньги → Долги» does.
+    await page.goto("/trainer/clients?filter=debt");
+    await expect(page.getByRole("link", { name: /Анна/ })).toContainText("Не доплачено");
+    await expect(page.getByText("Долгов нет")).toHaveCount(0);
     await client.page.goto(`/client/trainers/${client.coachingId}`);
     await expect(client.page.getByText("Не доплачено за абонементы")).toBeVisible();
   });

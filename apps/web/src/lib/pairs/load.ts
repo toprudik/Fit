@@ -68,7 +68,7 @@ export async function loadTrainerClients(): Promise<{ items: ClientItem[]; timeZ
     supabase.from("coaching_stats").select("coaching_id, attended_count, next_session_at").eq("trainer_id", userId),
     supabase
       .from("pass_balances")
-      .select("coaching_id, status, available, effective_expires_at")
+      .select("coaching_id, status, available, effective_expires_at, unpaid_minor, currency")
       .eq("trainer_id", userId)
       .in("status", ["active", "frozen"]),
     // RLS returns a client's intakes only while they show them to this trainer (can_view, INTK-2).
@@ -129,6 +129,9 @@ export async function loadTrainerClients(): Promise<{ items: ClientItem[]; timeZ
       nextSessionAt: statsById.get(pair.id)?.next_session_at ?? null,
       availableSessions: balanceById.get(pair.id)?.available_sessions ?? 0,
       debtSessions: balanceById.get(pair.id)?.debt_sessions ?? 0,
+      unpaid: unpaidByCurrency(
+        pairPasses.map((pass) => ({ unpaidMinor: pass.unpaid_minor ?? 0, currency: pass.currency, status: pass.status ?? "" })),
+      ),
       hasPass: pairPasses.length > 0,
       passEnding: passIsEnding(pairPasses, now),
       parqFlagged: pair.status !== "ended" && (latestIntake.get(pair.client_id) ?? false),

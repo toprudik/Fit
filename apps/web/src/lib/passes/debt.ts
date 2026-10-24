@@ -28,6 +28,14 @@ export function unpaidByCurrency(passes: { unpaidMinor: number; currency: string
   return amounts;
 }
 
+/**
+ * Whether the client owes the trainer anything: sessions in debt or money left on a live pass. "С долгом" in
+ * «Клиенты» and "Деньги → Долги" both count this way (QA 24.10, bug 16).
+ */
+export function owesTrainer(debtSessions: number, unpaid: Record<string, number>): boolean {
+  return debtSessions > 0 || Object.keys(unpaid).length > 0;
+}
+
 /** "4 000 ₽, 50 $": money per currency, never added across currencies (R38). */
 export function amountsText(locale: Locale, amounts: Record<string, number>): string {
   return Object.entries(amounts)

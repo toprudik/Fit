@@ -1,3 +1,4 @@
+import { owesTrainer } from "@/lib/passes/debt";
 import type { Database } from "@/lib/supabase/database.types";
 
 export type CoachingStatus = Database["public"]["Enums"]["coaching_status"];
@@ -57,6 +58,8 @@ export type ClientItem = {
   nextSessionAt: string | null;
   availableSessions: number;
   debtSessions: number;
+  /** What is left to pay on live passes, by currency (unpaidByCurrency). */
+  unpaid: Record<string, number>;
   hasPass: boolean;
   passEnding: boolean;
   /** The latest intake the client shows this trainer has a "yes" in PAR-Q (INTK-3). */
@@ -92,7 +95,7 @@ export function matchesFilter(item: ClientItem, filter: ClientFilter): boolean {
     case "all":
       return listed;
     case "debt":
-      return listed && item.debtSessions > 0;
+      return listed && owesTrainer(item.debtSessions, item.unpaid);
     case "ending":
       return listed && item.passEnding;
     case "noPass":

@@ -76,6 +76,7 @@ function rowBadge(t: Dictionary, item: ClientItem) {
   // Health first: a "yes" in PAR-Q asks the trainer to decide before the next session (INTK-3).
   if (item.parqFlagged) return <Badge tone="danger">{copy.parq}</Badge>;
   if (item.debtSessions > 0) return <Badge tone="danger">{interpolate(copy.debt, { count: item.debtSessions })}</Badge>;
+  if (Object.keys(item.unpaid).length) return <Badge tone="warning">{copy.unpaid}</Badge>;
   if (item.status === "trial") return <Badge tone="accent">{copy.trial}</Badge>;
   if (item.passEnding) return <Badge tone="warning">{interpolate(copy.left, { count: item.availableSessions })}</Badge>;
   if (item.isCard) return <Badge>{copy.card}</Badge>;
