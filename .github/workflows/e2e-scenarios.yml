@@ -1,12 +1,12 @@
 name: E2E scenarios
 
-# Sign-in scenarios for every role against a local stand (apps/web/scripts/e2e-scenarios.sh). Nightly and by hand,
-# never a PR check, so the merge queue does not wait on it. Free while the repository is public.
+# Sign-in scenarios for every role against a local stand (apps/web/scripts/e2e-scenarios.sh). Weekly and by hand,
+# never a PR check, so the merge queue does not wait on it. About 40 billed minutes a run (private repository).
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 2 * * *" # nightly, 05:00 MSK
+    - cron: "0 2 * * 1" # Mondays, 05:00 MSK
 
 permissions:
   contents: read

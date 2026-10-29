@@ -1,0 +1,54 @@
+name: CI database
+
+# Starts Postgres, applies every migration from scratch and runs the database checks, only when a PR touches the
+# schema, its tests or the generated types (Actions minutes are billed, see ci.yml).
+
+on:
+  pull_request:
+    paths:
+      - "supabase/**"
+      - "apps/web/src/lib/supabase/database.types.ts"
+      - ".github/workflows/ci-database.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-database-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  db:
+    name: database
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
+        with:
+          version: 2.121.0 # the action's default is 2.20.3; bump on purpose, never "latest"
+      - name: Start Postgres and apply every migration from scratch
+        id: db
+        run: supabase db start
+      - name: pgTAP tests (RLS matrix, triggers, constraints)
+        if: ${{ !cancelled() && steps.db.outcome == 'success' }}
+        run: supabase test db
+      - name: plpgsql_check
+        if: ${{ !cancelled() && steps.db.outcome == 'success' }}
+        run: supabase db lint --local --schema public,private --fail-on error
+      - name: Security advisors
+        if: ${{ !cancelled() && steps.db.outcome == 'success' }}
+        run: supabase db advisors --local --type security --fail-on warn
+      # One permissive policy per action (contract R88), so no warning is filtered out here.
+      - name: Performance advisors
+        if: ${{ !cancelled() && steps.db.outcome == 'success' }}
+        run: supabase db advisors --local --type performance --fail-on warn
+      - name: Generated database types are committed and current
+        if: ${{ !cancelled() && steps.db.outcome == 'success' }}
+        run: |
+          supabase gen types typescript --local > "$RUNNER_TEMP/database.types.ts"
+          if ! diff -u apps/web/src/lib/supabase/database.types.ts "$RUNNER_TEMP/database.types.ts"; then
+            echo "::error file=apps/web/src/lib/supabase/database.types.ts::Out of date. Run: supabase gen types typescript --local > apps/web/src/lib/supabase/database.types.ts"
+            exit 1
+          fi
