@@ -78,7 +78,7 @@ This policy is written for the Washington My Health My Data Act (RCW 19.373), Ne
 | Vercel Inc. (United States) | Our processor: hosting; data passes through its servers |
 | GitHub, Inc. (United States) | Our processor: stores encrypted database backups for 7 days. Photos are not in the backups |
 | Telegram (Telegram FZ-LLC, United Arab Emirates, and Telegram Messenger Inc.) | Delivers the bot messages you turned on. A reminder can mention, for example, a session or a homework task |
-| Functional Software, Inc. (Sentry, United States), only if error reporting is on | Our processor: error reports, with user details, request bodies, cookies, headers and query strings removed |
+| Functional Software, Inc. (Sentry, United States) | Our processor: error reports, with user details, request bodies, cookies, headers and query strings removed |
 | Authorities | Only when the law requires |
 
 6.1. We have no affiliates that receive consumer health data. Open Food Facts receives only food search words and barcodes from our server, never data about you.

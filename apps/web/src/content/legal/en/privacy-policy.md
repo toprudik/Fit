@@ -71,7 +71,7 @@ UK representative (UK GDPR Art. 27): [UK REPRESENTATIVE].
 | Feedback and reports | Your message, the screen you were on, platform and app version, up to 3 screenshots; reports about content or users | You |
 | App usage | Records that you opened the app: who, when, and from which bot button | Your device, when the app loads |
 | Admin audit log | Records of admin actions such as granting plans, bans, decisions on reports, emergency access and opening a trainer's analytics | Our team's actions |
-| Technical data | IP address, browser and device type, request logs kept by our hosting provider; error reports if error reporting is on (section 7) | Your device |
+| Technical data | IP address, browser and device type, request logs kept by our hosting provider; error reports (section 7) | Your device |
 
 4.1. We do not collect your Telegram messages, contacts or chats. We do not collect precise location from your device. Trainers enter addresses of their places of work themselves.
 
@@ -142,7 +142,7 @@ We share personal data only as described here.
 | Vercel Inc. | Processor: hosting of the web app and the bot | Requests passing through, request logs (IP address, browser, URL) | United States |
 | GitHub, Inc. | Processor: stores encrypted nightly backups of the database for 7 days | An encrypted copy of the database (files such as photos are not included) | United States |
 | Telegram (Telegram FZ-LLC, UAE, and Telegram Messenger Inc.) | Independent controller | Sign-in data it gives us, bot messages we send you (which may include names, times and places of sessions and, for contact requests, a phone number), the Mini App platform, profile photos at t.me | United Arab Emirates and Telegram's other locations |
-| Functional Software, Inc. (Sentry), only if we turn error reporting on | Processor: error reports | Error type and message, technical context. We switch off user details, request bodies, cookies, headers and query strings | United States |
+| Functional Software, Inc. (Sentry) | Processor: error reports from the web app and the bot | Error type and message, where in the code it happened, and the page address with ids and tokens masked. Sentry sees the IP address the report comes from. We send no user details, request bodies, cookies, headers, query strings, variable values or the steps before the error | United States |
 | Open Food Facts | Food database | Search words and barcodes, sent from our server. No personal data | France |
 | Your trainer | Independent controller | The categories you allow (section 6) | Wherever the trainer is |
 | Calendar apps you subscribe with | Independent controllers, chosen by you | Your calendar feed | Their own locations |
@@ -157,13 +157,13 @@ We share personal data only as described here.
 
 ## 8. International transfers
 
-8.1. We store DaFit data in the United States with Supabase and Vercel, and encrypted backups with GitHub. If you are in the EEA, the UK or Switzerland, your data travels outside your country.
+8.1. We store DaFit data in the United States with Supabase and Vercel, encrypted backups with GitHub and error reports with Sentry. If you are in the EEA, the UK or Switzerland, your data travels outside your country.
 
 8.2. Safeguards:
 - **Vercel** states that it is certified under the EU-U.S. Data Privacy Framework, including the UK Extension and the Swiss-U.S. framework, and its Data Processing Addendum also includes the EU Standard Contractual Clauses and the UK Addendum.
 - **Supabase** transfers data under the EU Standard Contractual Clauses (Commission Implementing Decision (EU) 2021/914) included in its Data Processing Addendum, with the UK Addendum for UK data. [Counsel to confirm.]
 - **GitHub** states that it is certified under the EU-U.S. Data Privacy Framework, and its Data Protection Agreement includes the EU Standard Contractual Clauses. [Counsel to confirm.]
-- **Sentry**, if enabled: [DPF certification or SCCs, to be confirmed].
+- **Sentry** states that Functional Software, Inc. is certified under the EU-U.S. Data Privacy Framework, including the UK Extension and the Swiss-U.S. framework, and its Data Processing Addendum includes the EU Standard Contractual Clauses (Commission Implementing Decision (EU) 2021/914).
 - We have assessed the laws of the United States for these transfers, including the measures in the Data Privacy Framework that also benefit transfers under the SCCs.
 
 8.3. You can ask us for a copy of the safeguards at [CONTACT EMAIL].
