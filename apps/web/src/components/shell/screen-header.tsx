@@ -71,32 +71,42 @@ const TELEGRAM_BUTTONS = { "--tg-buttons-left": "7.25rem", "--tg-buttons-right":
 /**
  * Gives both side columns of the bar the width of the wider one, so the title stays in the middle of
  * the screen even when the actions and the avatar on the right take more room than "Back" on the left.
- * Returns the refs for the content of the left and the right column.
+ * Also marks the bar `data-long` when the title in one line is wider than the middle leaves it, so the
+ * title wraps to two smaller lines instead of losing its end (night run 29.10: «Добавить клиента
+ * вручную» in 188px). Returns the refs for the content of the left and the right column and for a
+ * hidden one-line copy of the title.
  */
 function useEqualSides() {
   const left = useRef<HTMLDivElement>(null);
   const right = useRef<HTMLDivElement>(null);
+  const oneLine = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
-    const [start, end] = [left.current, right.current];
+    const [start, end, title] = [left.current, right.current, oneLine.current];
     const bar = start?.closest<HTMLElement>("[data-slot=screen-bar]");
-    if (!start || !end || !bar || typeof ResizeObserver === "undefined") return;
-    // The right column reaches 10px into the bar's padding (-mr-2.5), so its track is that much narrower.
-    const measure = () => bar.style.setProperty("--bar-side", `${Math.max(start.offsetWidth, end.offsetWidth - 10)}px`);
+    if (!start || !end || !title || !bar || typeof ResizeObserver === "undefined") return;
+    const measure = () => {
+      // The right column reaches 10px into the bar's padding (-mr-2.5), so its track is that much narrower.
+      const side = Math.max(start.offsetWidth, end.offsetWidth - 10);
+      bar.style.setProperty("--bar-side", `${side}px`);
+      // What the middle column gets: the bar less both sides and the two 8px gaps.
+      const middle = bar.clientWidth - 2 * side - 16;
+      bar.toggleAttribute("data-long", title.offsetWidth > middle);
+    };
     const observer = new ResizeObserver(measure);
-    observer.observe(start);
-    observer.observe(end);
+    for (const element of [start, end, title, bar]) observer.observe(element);
     measure();
     return () => observer.disconnect();
   }, []);
-  return [left, right] as const;
+  return [left, right, oneLine] as const;
 }
 
 /**
  * Screen header (docs/design/components/LargeTitle, .df-header). On a phone it is one bar on an
  * edge-to-edge `material` band that stays put while the page scrolls: the title and the subtitle in
  * the middle, "Back" on the left of a pushed screen, the actions and the avatar on the right. A title
- * or subtitle too long for the bar is cut with an ellipsis. From 768px on there is no bar: the side
- * menu holds the avatar, and the title is a plain `title-1` row on `bg` with the actions.
+ * too long for one line takes two smaller ones; with a subtitle, or past two lines, it is cut with an
+ * ellipsis. From 768px on there is no bar: the side menu holds the avatar, and the title is a plain
+ * `title-1` row on `bg` with the actions.
  *
  * In the Telegram Mini App at fullscreen Telegram draws «Закрыть» and «⌄ ⋯» over the top of the app,
  * and the bar is that row: the title and the subtitle sit between Telegram's buttons, and the actions
@@ -120,7 +130,7 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
   const avatar = !underTelegramButtons && !back && shell ? <ProfileButton onOpen={shell.openProfile} /> : null;
   // Under Telegram's buttons the actions have no room in the bar and get a row of their own.
   const actionsRow = underTelegramButtons && Boolean(actions);
-  const [leftSide, rightSide] = useEqualSides();
+  const [leftSide, rightSide, oneLineTitle] = useEqualSides();
 
   return (
     <>
@@ -144,7 +154,7 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
           className={cn(
             // The side columns share what the title leaves, so a short title stays in the middle; they never
             // shrink below Back or the avatar, so a long title is cut instead of sliding under them.
-            "grid grid-cols-[minmax(max-content,1fr)_minmax(0,auto)_minmax(max-content,1fr)] items-center gap-2",
+            "group/bar grid grid-cols-[minmax(max-content,1fr)_minmax(0,auto)_minmax(max-content,1fr)] items-center gap-2",
             underTelegramButtons ? "h-[var(--tg-viewport-content-safe-area-inset-top)]" : "min-h-11",
           )}
         >
@@ -153,8 +163,20 @@ export function ScreenHeader({ title, subtitle, actions, back }: ScreenHeaderPro
               {showBack ? <BackButton onBack={goBack} /> : null}
             </div>
           </div>
-          <div className="min-w-0 text-center">
-            <h1 className="truncate text-headline">{barTitle}</h1>
+          <div className="relative min-w-0 overflow-hidden text-center">
+            {/* The title as one line, for useEqualSides to measure; never seen or read. */}
+            <span ref={oneLineTitle} aria-hidden className="invisible absolute top-0 left-0 text-headline whitespace-nowrap">
+              {barTitle}
+            </span>
+            <h1
+              className={cn(
+                "truncate text-headline",
+                // A title too long for one line takes two smaller ones; with a subtitle there is room for one only.
+                !subtitle && "group-data-long/bar:line-clamp-2 group-data-long/bar:text-subhead group-data-long/bar:font-semibold group-data-long/bar:text-balance group-data-long/bar:whitespace-normal",
+              )}
+            >
+              {barTitle}
+            </h1>
             {subtitle ? <div className="truncate text-footnote text-ink-2">{subtitle}</div> : null}
           </div>
           <div className="-mr-2.5 flex min-w-[calc(var(--bar-side,0px)+0.625rem)] items-center justify-end">
