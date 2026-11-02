@@ -36,6 +36,12 @@ const schema = z.object({
    */
   GITHUB_FEEDBACK_TOKEN: optional(z.string().regex(/^[A-Za-z0-9_]{20,255}$/, "must be a GitHub token")),
   GITHUB_FEEDBACK_REPO: optional(z.string().regex(/^[\w.-]+\/[\w.-]+$/, "must be owner/name")),
+  /**
+   * Error alerts in the team chat (ADR 0017), only when both are set: a Sentry personal token with read scopes only
+   * (event:read, project:read) and the organization slug. Without them POST /api/cron/errors does nothing.
+   */
+  SENTRY_API_TOKEN: optional(z.string().regex(/^[A-Za-z0-9_]{20,255}$/, "must be a Sentry token")),
+  SENTRY_ORG: optional(z.string().regex(/^[a-z0-9][a-z0-9-]{0,49}$/, "must be a Sentry organization slug")),
   /** Set by Vercel; the feedback form records it as the app version. */
   VERCEL_GIT_COMMIT_SHA: optional(z.string().max(64)),
 });
