@@ -23,7 +23,8 @@ jobs:
   checks:
     # Another label is not a reason to run everything again.
     if: github.event.action != 'labeled' || github.event.label.name == 'e2e'
-    runs-on: ubuntu-latest
+    # Playwright 1.56 cannot install Chromium on ubuntu-latest (now 26.04), so the browser tests stay on 24.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
