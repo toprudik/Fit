@@ -309,6 +309,9 @@ test.describe("Trial links", () => {
     await expect(link).toContainText("45 мин");
     await expect(link).toContainText("Бесплатно");
     await expect(link).toContainText("Пришли: 0");
+    // axe reads the toast's colors while it fades in or out and reports low contrast (night run 29.10, phone),
+    // so the check waits for it to leave.
+    await expect(page.getByText("Ссылка готова")).toBeHidden();
     await expectAccessible(page);
     const url = (await link.getByText(/\/trial\//).textContent()) ?? "";
     const path = new URL(url).pathname;
