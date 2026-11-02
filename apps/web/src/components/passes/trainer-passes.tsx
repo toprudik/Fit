@@ -343,7 +343,7 @@ export function TrainerPasses({ money, symbol }: { money: PairMoney; symbol: str
         ) : action?.kind === "waive" ? (
           <WaiveForm key={action.target.chargeId} target={action.target} onDone={close} />
         ) : action?.kind === "past" ? (
-          <PastSessionForm coachingId={money.coachingId} today={money.today} onDone={close} />
+          <PastSessionForm coachingId={money.coachingId} today={money.today} timeZone={money.timeZone} onDone={close} />
         ) : null}
       </Sheet>
 

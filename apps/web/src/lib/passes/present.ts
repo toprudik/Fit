@@ -63,6 +63,27 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((at(to) - at(from)) / DAY_MS);
 }
 
+/** The local day and "HH:MM" of an instant in a time zone. */
+function localMinute(at: Date, timeZone: string): { day: string; time: string } {
+  const time = new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(at);
+  return { day: localDay(at, timeZone), time };
+}
+
+/**
+ * Where "Дозаписать занятие" starts: the last full hour that is at least an hour ago, in the trainer's zone, so the
+ * session it records has already ended with the default length.
+ */
+export function pastSessionStart(timeZone: string, now: Date = new Date()): { day: string; time: string } {
+  const { day, time } = localMinute(new Date(now.getTime() - 60 * 60 * 1000), timeZone);
+  return { day, time: `${time.slice(0, 2)}:00` };
+}
+
+/** Whether a session starting at day and "HH:MM" in the time zone has not begun yet. */
+export function startsLater(day: string, time: string, timeZone: string, now: Date = new Date()): boolean {
+  const current = localMinute(now, timeZone);
+  return day > current.day || (day === current.day && time > current.time);
+}
+
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** A form date: "YYYY-MM-DD" that is a real calendar day. */
