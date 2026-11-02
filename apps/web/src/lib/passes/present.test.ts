@@ -10,6 +10,8 @@ import {
   localDay,
   parseFreezePeriod,
   passStatus,
+  pastSessionStart,
+  startsLater,
   paidAtFor,
   paymentState,
   localInstant,
@@ -57,6 +59,24 @@ describe("dates", () => {
   it("formats a local date in the viewer's language", () => {
     expect(formatLocalDay("ru", "2026-11-30")).toBe("30 ноября 2026 г.");
     expect(formatLocalDay("en", "2026-11-30")).toBe("November 30, 2026");
+  });
+});
+
+describe("Дозаписать занятие", () => {
+  // 14:20 in Moscow.
+  const now = new Date("2026-11-02T11:20:00Z");
+
+  it("starts at the last full hour an hour ago, in the trainer's zone", () => {
+    expect(pastSessionStart("Europe/Moscow", now)).toEqual({ day: "2026-11-02", time: "13:00" });
+    expect(pastSessionStart("Europe/Moscow", new Date("2026-11-01T21:30:00Z"))).toEqual({ day: "2026-11-01", time: "23:00" });
+  });
+
+  it("tells a start that has not come yet", () => {
+    expect(startsLater("2026-11-02", "15:00", "Europe/Moscow", now)).toBe(true);
+    expect(startsLater("2026-11-03", "08:00", "Europe/Moscow", now)).toBe(true);
+    expect(startsLater("2026-11-02", "14:20", "Europe/Moscow", now)).toBe(false);
+    expect(startsLater("2026-11-02", "10:00", "Europe/Moscow", now)).toBe(false);
+    expect(startsLater("2026-11-01", "23:00", "Europe/Moscow", now)).toBe(false);
   });
 });
 

@@ -207,7 +207,7 @@ export function SessionForm(props: Props) {
         toast.success(pastCopy.done);
         router.push(`/trainer/schedule?date=${values.day}`);
       } else if (result.status === "refused") {
-        setError(result.reason === "ended" ? pastCopy.ended : pastCopy.notPast);
+        setError(result.reason === "ended" ? pastCopy.ended : result.reason === "too-old" ? pastCopy.tooOld : pastCopy.notPast);
       } else {
         setError(copy.errors.failed);
       }

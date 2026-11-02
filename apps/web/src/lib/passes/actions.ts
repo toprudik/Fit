@@ -42,7 +42,7 @@ export type MoneyResult =
   /** The row changed or is gone since the screen loaded (a client edited the report, a freeze started). */
   | { status: "stale" }
   /** A reason in the database's words: ended pair, overlapping freeze, pass in use ... */
-  | { status: "refused"; reason: "ended" | "overlap" | "in-use" | "cancelled" | "range" | "waived" | "overdrawn" | "not-past" }
+  | { status: "refused"; reason: "ended" | "overlap" | "in-use" | "cancelled" | "range" | "waived" | "overdrawn" | "not-past" | "too-old" }
   | { status: "failed" };
 
 export type SellResult = { status: "sold"; passId: string; settled: number } | Exclude<MoneyResult, { status: "done" }>;
@@ -406,7 +406,8 @@ export async function recordPastSession(input: PastSessionInput): Promise<MoneyR
     p_mode: "offline",
     p_status: parsed.data.status,
   });
-  if (error?.message === "not_past" || error?.message === "too_old") return { status: "refused", reason: "not-past" };
+  if (error?.message === "not_past") return { status: "refused", reason: "not-past" };
+  if (error?.message === "too_old") return { status: "refused", reason: "too-old" };
   if (error?.message === "not_your_client") return { status: "refused", reason: "ended" };
   if (error) return failed("recording a past session", error);
   refresh();
