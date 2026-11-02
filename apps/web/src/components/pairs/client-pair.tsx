@@ -43,7 +43,7 @@ export async function ClientPair({ coachingId }: { coachingId: string }) {
           <PairNotice>
             {pair.endedForLimit
               ? interpolate(t.pairs.end.endedForLimit, { name })
-              : interpolate(t.pairs.end.endedClient, { date: formatDay(locale, pair.endedAt ?? pair.startedAt, pair.timeZone) })}
+              : interpolate(t.pairs.end.endedClient, { date: formatDay(locale, pair.endedAt ?? pair.startedAt, pair.pairTimeZone) })}
           </PairNotice>
         )}
         {live && pair.partnerDeletingOn ? (
