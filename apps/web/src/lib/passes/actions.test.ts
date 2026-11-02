@@ -685,7 +685,7 @@ describe("recordPastSession", () => {
       { error: UNKNOWN },
     ];
     expect(await actions.recordPastSession(input)).toEqual({ status: "refused", reason: "not-past" });
-    expect(await actions.recordPastSession(input)).toEqual({ status: "refused", reason: "not-past" });
+    expect(await actions.recordPastSession(input)).toEqual({ status: "refused", reason: "too-old" });
     expect(await actions.recordPastSession(input)).toEqual({ status: "refused", reason: "ended" });
     expect(await actions.recordPastSession(input)).toEqual({ status: "failed" });
   });

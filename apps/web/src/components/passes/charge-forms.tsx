@@ -12,6 +12,7 @@ import { formatMoney } from "@/lib/money/format";
 import { adjustPass, recordPastSession, waiveCharge } from "@/lib/passes/actions";
 import type { DebtCharge, PassView } from "@/lib/passes/load";
 import { formatNoteTime } from "@/lib/pairs/format";
+import { pastSessionStart, startsLater } from "@/lib/passes/present";
 import { useReport } from "./use-report";
 
 /** What "Простить" was pressed on: a charge, and the pass it returns to (null for a debt). */
@@ -108,13 +109,30 @@ export function AdjustForm({ pass, onDone }: { pass: PassView; onDone: () => voi
   );
 }
 
-/** "Дозаписать занятие" (PRD 2.6.2-7): day, start, length and whether it took place. */
-export function PastSessionForm({ coachingId, today, onDone }: { coachingId: string; today: string; onDone: () => void }) {
+/**
+ * "Дозаписать занятие" (PRD 2.6.2-7): day, start, length and whether it took place. It opens on a start an hour ago
+ * and says right in the form when the chosen time has not come yet.
+ */
+export function PastSessionForm({
+  coachingId,
+  today,
+  timeZone,
+  onDone,
+}: {
+  coachingId: string;
+  today: string;
+  timeZone: string;
+  onDone: () => void;
+}) {
   const { t } = useI18n();
   const copy = t.money.passes.pastForm;
   const report = useReport();
-  const [values, setValues] = useState({ day: today, time: "", duration: "60", status: "attended" as "attended" | "no_show" });
+  const [values, setValues] = useState(() => {
+    const start = pastSessionStart(timeZone);
+    return { day: start.day > today ? today : start.day, time: start.time, duration: "60", status: "attended" as "attended" | "no_show" };
+  });
   const [errors, setErrors] = useState<string[]>([]);
+  const [refusal, setRefusal] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   return (
     <form
@@ -122,6 +140,11 @@ export function PastSessionForm({ coachingId, today, onDone }: { coachingId: str
       className="flex flex-col gap-4"
       onSubmit={(event) => {
         event.preventDefault();
+        if (values.time && startsLater(values.day, values.time, timeZone)) {
+          setErrors([]);
+          setRefusal(copy.notPast);
+          return;
+        }
         startTransition(async () => {
           const result = await recordPastSession({
             coachingId,
@@ -131,18 +154,34 @@ export function PastSessionForm({ coachingId, today, onDone }: { coachingId: str
             status: values.status,
           });
           setErrors(result.status === "invalid" ? result.fields : []);
-          const refused = result.status === "refused" && result.reason === "ended" ? copy.ended : copy.notPast;
-          if (report(result, copy.done, refused)) onDone();
+          if (result.status === "refused") {
+            setRefusal(result.reason === "ended" ? copy.ended : result.reason === "too-old" ? copy.tooOld : copy.notPast);
+            return;
+          }
+          setRefusal(null);
+          if (report(result, copy.done)) onDone();
         });
       }}
     >
       <p className="text-subhead text-ink-2">{copy.text}</p>
-      <DateField label={copy.day} required max={today} value={values.day} onChange={(day) => setValues({ ...values, day })} />
+      <DateField
+        label={copy.day}
+        required
+        max={today}
+        value={values.day}
+        onChange={(day) => {
+          setValues({ ...values, day });
+          setRefusal(null);
+        }}
+      />
       <TimeField
         label={copy.time}
         required
         value={values.time}
-        onChange={(time) => setValues({ ...values, time })}
+        onChange={(time) => {
+          setValues({ ...values, time });
+          setRefusal(null);
+        }}
         error={errors.includes("time") ? copy.timeError : undefined}
       />
       <TextField
@@ -167,6 +206,11 @@ export function PastSessionForm({ coachingId, today, onDone }: { coachingId: str
           ]}
         />
       </div>
+      {refusal ? (
+        <p role="alert" className="px-1 text-footnote text-danger">
+          {refusal}
+        </p>
+      ) : null}
       <Button type="submit" size="lg" block loading={pending}>
         {copy.submit}
       </Button>

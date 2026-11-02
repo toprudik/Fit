@@ -1524,7 +1524,8 @@ export const en: Dictionary = {
         noShow: "No-show",
         submit: "Add",
         done: "Session added",
-        notPast: "That time hasn't passed yet, or it was more than a year ago.",
+        notPast: "That time hasn't come yet.",
+        tooOld: "You can only add a session from the past year.",
         ended: "This client has stopped training with you, so you can't add a session.",
       },
       debt: {
