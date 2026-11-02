@@ -646,15 +646,22 @@ test.describe("focus and the bars", () => {
     const clientsTitle = await page.getByRole("heading", { level: 1, name: "Клиенты" }).first().boundingBox();
     expect(clientsTitle && Math.abs(clientsTitle.x + clientsTitle.width / 2 - width / 2)).toBeLessThan(2);
 
-    // A long title gives way to Back: it is cut, never drawn under the button.
+    // A title too long for one line gives way to Back and takes two lines, whole and still in the middle.
     await page.goto("/trainer/clients/new", { waitUntil: "networkidle" });
     const backButton = await page.getByRole("button", { name: "Назад" }).boundingBox();
-    const longTitle = await page.getByRole("heading", { level: 1, name: "Добавить клиента вручную" }).first().boundingBox();
+    const longHeading = page.getByRole("heading", { level: 1, name: "Добавить клиента вручную" }).first();
+    const longTitle = await longHeading.boundingBox();
     expect(backButton && longTitle).toBeTruthy();
     if (backButton && longTitle) {
       expect(backButton.x + backButton.width).toBeLessThanOrEqual(longTitle.x);
       expect(longTitle.x + longTitle.width).toBeLessThanOrEqual(width);
+      expect(Math.abs(longTitle.x + longTitle.width / 2 - width / 2)).toBeLessThan(2);
     }
+    const { cut, lines } = await longHeading.evaluate((h1) => ({
+      cut: h1.scrollWidth > h1.clientWidth + 1 || h1.scrollHeight > h1.clientHeight + 1,
+      lines: Math.round(h1.clientHeight / parseFloat(getComputedStyle(h1).lineHeight)),
+    }));
+    expect({ cut, lines }).toEqual({ cut: false, lines: 2 });
   });
 
   test("focusing the header bar's own buttons doesn't scroll the page", async ({ page }) => {
