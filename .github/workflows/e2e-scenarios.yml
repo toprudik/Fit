@@ -17,7 +17,8 @@ concurrency:
 
 jobs:
   scenarios:
-    runs-on: ubuntu-latest
+    # Playwright 1.56 cannot install Chromium on ubuntu-latest (now 26.04): stay on 24.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
