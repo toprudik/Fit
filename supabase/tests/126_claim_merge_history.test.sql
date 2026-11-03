@@ -6,7 +6,7 @@
 -- merged pair kept the card's date (QA bug 27).
 begin;
 \ir _helpers.psql
-select plan(8);
+select plan(9);
 select tests.create_trainer('trainer_a');
 insert into public.consents (user_id, kind, version) values (tests.user_id('trainer_a'), 'trainer_dpa', '2026-10-18');
 select tests.create_user('client_t');
@@ -29,6 +29,9 @@ set measurements = true, nutrition = true, steps = true, intake = true, intake_d
 where coaching_id = (select id from tests.kv where name='new_pair');
 -- The person has hidden progress and nutrition from the trainer's assistants (QA 38).
 insert into public.assistant_progress_blocks (coaching_id) values ((select id from tests.kv where name='new_pair'));
+-- The trainer set a nutrition target on the card (QA 42).
+insert into public.nutrition_targets (source, client_id, coaching_id, kcal, effective_from)
+select 'trainer', c.client_id, c.id, 2000, current_date from public.coachings c where c.id = (select id from tests.kv where name='card_pair');
 -- The person chose «Без напоминаний» on their own pair (QA 39).
 update public.coachings set client_reminder_offsets = '{}' where id = (select id from tests.kv where name='new_pair');
 -- The person has trained with the trainer for a month already (QA bug 27).
@@ -75,6 +78,11 @@ select is(
   (select client_reminder_offsets from public.coachings where id = (select id from tests.kv where name='card_pair')),
   '{}'::smallint[],
   'the person''s reminder choice carries over to the merged pair'
+);
+select is(
+  (select client_id from public.nutrition_targets where coaching_id = (select id from tests.kv where name='card_pair') and kcal = 2000),
+  tests.user_id('client_t'),
+  'the trainer''s nutrition target on the card moves to the person'
 );
 select * from finish();
 rollback;
