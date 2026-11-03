@@ -4,6 +4,7 @@ import { ImageResponse } from "next/og";
 import { NextResponse } from "next/server";
 import QRCode from "qrcode";
 import { clientEnv } from "@/env/client";
+import { serverEnv } from "@/env/server";
 import { isLocale } from "@/i18n/config";
 import { dictionaries } from "@/i18n/dictionaries";
 import { cardText } from "@/lib/monthly-report/card-text";
@@ -103,8 +104,12 @@ export async function GET(request: Request, context: RouteContext<"/api/story/[i
             </div>
           </div>
         ) : (
-          <div style={{ fontSize: 40, fontWeight: 500, color: colors.ink2 }}>
-            {isMomentKind(card.kind) ? t.monthlyReport.card.momentText : t.monthlyReport.stories.storyText}
+          // Without a showcase the card still says where to find DaFit: the bot, which anyone can look up in Telegram.
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ fontSize: 40, fontWeight: 500, color: colors.ink2 }}>
+              {isMomentKind(card.kind) ? t.monthlyReport.card.momentText : t.monthlyReport.stories.storyText}
+            </div>
+            <div style={{ fontSize: 44, fontWeight: 700, color: colors.accentInk }}>{`@${serverEnv().TELEGRAM_BOT_USERNAME}`}</div>
           </div>
         )}
       </div>

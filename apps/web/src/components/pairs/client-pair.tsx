@@ -73,12 +73,15 @@ export async function ClientPair({ coachingId }: { coachingId: string }) {
             title={pair.nextSessionAt ? formatSessionTime(locale, pair.nextSessionAt, pair.timeZone) : t.pairs.noNextSession}
             subtitle={pair.nextSessionAt ? t.pairs.nextSession : undefined}
           />
-          <ListRow
-            icon={Wallet}
-            title={t.pairs.debt}
-            value={pair.debtSessions > 0 ? plural(locale, pair.debtSessions, t.pairs.debtSessions) : t.pairs.noDebt}
-            href={pair.debtSessions > 0 ? "/client/passes" : undefined}
-          />
+          {/* No "Долга нет" over an unpaid sum, as on the trainer's card (QA 02.11, bug 21). */}
+          {pair.debtSessions > 0 || !Object.keys(pair.unpaid).length ? (
+            <ListRow
+              icon={Wallet}
+              title={t.pairs.debt}
+              value={pair.debtSessions > 0 ? plural(locale, pair.debtSessions, t.pairs.debtSessions) : t.pairs.noDebt}
+              href={pair.debtSessions > 0 ? "/client/passes" : undefined}
+            />
+          ) : null}
           <UnpaidRow t={t} locale={locale} pair={pair} href="/client/passes" />
         </ListGroup>
 

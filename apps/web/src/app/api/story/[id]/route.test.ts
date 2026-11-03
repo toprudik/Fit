@@ -5,6 +5,7 @@ const APP_URL = "https://fit.example";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/env/client", () => ({ clientEnv: { NEXT_PUBLIC_APP_URL: APP_URL } }));
+vi.mock("@/env/server", () => ({ serverEnv: () => ({ TELEGRAM_BOT_USERNAME: "fitconnection_bot" }) }));
 
 /**
  * The PNG renderer is replaced: the test keeps the element and the options it got and answers with their
@@ -120,6 +121,8 @@ describe("GET /api/story/[id]", () => {
 
     expect(response.status).toBe(200);
     expect(qr.urls).toEqual([]);
+    // Without a showcase the card names DaFit's bot instead.
+    expect(texts(rendered.element).join("")).toContain("@fitconnection_bot");
   });
 
   it.each(["not-a-uuid", "0B9D6C1E-1F2A-4C3B-8D4E-5F6A7B8C9D0E", `${ID}x`, "' or 1=1 --"])("answers 404 to the id %j before reaching the database", async (id) => {
