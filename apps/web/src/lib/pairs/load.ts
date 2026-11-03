@@ -229,6 +229,9 @@ export type PairDetail = {
 export async function mergedPairId(coachingId: string): Promise<string | null> {
   if (!isPairId(coachingId)) return null;
   const supabase = await createSupabaseServerClient();
+  // Without a session the function is not granted (42501) and there is no merge to follow: «Такой страницы нет».
+  const { data: session } = await supabase.auth.getClaims();
+  if (!session?.claims.sub) return null;
   const { data, error } = await supabase.rpc("merged_pair_id", { p_coaching_id: coachingId });
   if (error) fail("merged pair", error);
   return data ?? null;

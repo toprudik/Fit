@@ -1,7 +1,7 @@
 "use client";
 
 import { BellRing } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { toast } from "@/components/ui/sonner";
 import { Switch } from "@/components/ui/switch";
@@ -29,6 +29,12 @@ export function NotificationSettings({ data }: { data: NotificationSettingsData 
   const [editing, setEditing] = useState<Editing | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [quiet, setQuiet] = useState(data.quietHours);
+  // QA 49: each change builds on the latest value, not on the one from the last render, and a failed save rolls
+  // back only when no later change has gone out since; the fields remount only after a rollback.
+  const quietRef = useRef(data.quietHours);
+  const savedQuietRef = useRef(data.quietHours);
+  const quietRequest = useRef(0);
+  const [quietRevision, setQuietRevision] = useState(0);
   const [quietError, setQuietError] = useState<string | null>(null);
   const [disabled, setDisabled] = useState<ToggleType[]>(data.disabled);
   const [digestTime, setDigestTimeState] = useState(data.digestTime);
@@ -65,15 +71,27 @@ export function NotificationSettings({ data }: { data: NotificationSettingsData 
       return;
     }
     setQuietError(null);
-    const previous = quiet;
+    quietRef.current = next;
     setQuiet(next);
+    const request = ++quietRequest.current;
     startTransition(async () => {
       const result = await setQuietHours(next);
-      if (!result.ok) {
-        setQuiet(previous);
-        toast.error(copy.failed);
+      if (result.ok) {
+        savedQuietRef.current = next;
+        return;
       }
+      if (request !== quietRequest.current) return;
+      quietRef.current = savedQuietRef.current;
+      setQuiet(savedQuietRef.current);
+      setQuietRevision((revision) => revision + 1);
+      toast.error(copy.failed);
     });
+  }
+
+  function changeQuiet(part: "start" | "end", time: string) {
+    const current = quietRef.current;
+    if (!time || !current || current[part] === time) return;
+    saveQuiet({ ...current, [part]: time });
   }
 
   function saveDigestTime(next: string) {
@@ -184,17 +202,17 @@ export function NotificationSettings({ data }: { data: NotificationSettingsData 
           {quiet ? (
             <div className="flex gap-3">
               <TimeField
-                key={`start-${quiet.start}`}
+                key={`start-${quietRevision}`}
                 label={copy.quiet.from}
                 defaultValue={quiet.start}
-                onChange={(start) => start && start !== quiet.start && saveQuiet({ ...quiet, start })}
+                onChange={(start) => changeQuiet("start", start)}
                 className="flex-1"
               />
               <TimeField
-                key={`end-${quiet.end}`}
+                key={`end-${quietRevision}`}
                 label={copy.quiet.to}
                 defaultValue={quiet.end}
-                onChange={(end) => end && end !== quiet.end && saveQuiet({ ...quiet, end })}
+                onChange={(end) => changeQuiet("end", end)}
                 className="flex-1"
               />
             </div>
