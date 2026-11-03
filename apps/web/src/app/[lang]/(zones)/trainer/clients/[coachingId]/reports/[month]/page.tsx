@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { SharedReportView } from "@/components/monthly-report/shared-report-view";
 import { Screen } from "@/components/shell/screen";
@@ -8,6 +8,7 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { getDictionary } from "@/i18n/server";
 import { monthFromParam } from "@/lib/monthly-report/report";
 import { isPairId } from "@/lib/pairs/clients";
+import { mergedPairId } from "@/lib/pairs/load";
 
 // A pair id and a month are known only at request time.
 export const instant = false;
@@ -23,6 +24,9 @@ async function Report({ params }: { params: Params }) {
   const { coachingId, month: param } = await params;
   const month = monthFromParam(param);
   if (!month || !isPairId(coachingId)) notFound();
+  // An old bot button after «Объединить» deleted this pair (QA bug 45): the same month of the merged pair.
+  const merged = await mergedPairId(coachingId);
+  if (merged) redirect(`/trainer/clients/${merged}/reports/${param}`);
   return <SharedReportView coachingId={coachingId} month={month} />;
 }
 
