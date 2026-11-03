@@ -61,12 +61,13 @@ select tests.create_booking(tests.id('s_q'), 'trainer_q', 'client_c', 'requested
 -- =========================================================================================================
 
 select is(private.queue_daily_digests(tests.at('06:55')), 0, 'digest: nothing before the digest time');
--- Quiet hours: a 07:00 digest waits for their end, like any message that is not a reminder (ADR 0006).
+-- Quiet hours: the digest goes out at the time the trainer picked, silently, like a session reminder (ADR 0006,
+-- QA 37: a 22:00 digest held until morning told about the day before as «сегодня»).
 select is(private.queue_daily_digests(tests.at('07:01')), 1, 'quiet hours: the 07:00 digest is queued on time');
 select is(
   (select deliver_after from public.notification_outbox where type = 'daily_digest' and user_id = tests.user_id('trainer_q')),
-  tests.at('08:00'),
-  'quiet hours: it is delivered when they end'
+  tests.at('07:01'),
+  'quiet hours: it is not held until they end'
 );
 select is(private.queue_daily_digests(tests.at('08:03')), 1, 'digest: queued at the trainer''s time (NOTIF-5)');
 select is(tests.digest('trainer_b'), null, 'digest: an empty day sends nothing');
