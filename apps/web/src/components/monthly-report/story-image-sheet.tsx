@@ -2,9 +2,12 @@
 
 import { downloadFile, shareStory } from "@tma.js/sdk-react";
 import { Download, Share2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { useI18n } from "@/i18n/client";
+import { loadStoryLink } from "@/lib/stories/actions";
+import type { StoryLink } from "@/lib/stories/link";
 import { safely, safelyAsync, useInTelegram } from "@/lib/telegram/mini-app";
 
 const FILE_NAME = "dafit-story.png";
@@ -20,10 +23,24 @@ export function storyImageUrl(id: string, theme: string, locale: string): string
  * trainer's cards (backlog 5) all open it; `text` goes with the story or the share, «Мой месяц в DaFit» by default.
  */
 export function StoryImageSheet({ image, text: shareText, onClose }: { image: string | null; text?: string; onClose: () => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const copy = t.monthlyReport.stories;
   const text = shareText ?? copy.storyText;
   const inTelegram = useInTelegram();
+  // The link posted with the story (Premium users only), read once the card is made: the showcase or DaFit's bot.
+  const [link, setLink] = useState<{ image: string; value: StoryLink } | null>(null);
+  const cardId = image ? (new URL(image).pathname.split("/").at(-1) ?? null) : null;
+  useEffect(() => {
+    if (!image || !cardId || !inTelegram) return;
+    let live = true;
+    void loadStoryLink(cardId, locale).then((value) => {
+      if (live && value) setLink({ image, value });
+    });
+    return () => {
+      live = false;
+    };
+  }, [image, cardId, inTelegram, locale]);
+  const widgetLink = link && link.image === image ? link.value : undefined;
 
   async function share(url: string) {
     try {
@@ -52,7 +69,7 @@ export function StoryImageSheet({ image, text: shareText, onClose }: { image: st
         image ? (
           <>
             {storyAvailable ? (
-              <Button block icon={Share2} onClick={() => safely(() => shareStory(image, { text }))}>
+              <Button block icon={Share2} onClick={() => safely(() => shareStory(image, { text, widgetLink }))}>
                 {copy.shareStory}
               </Button>
             ) : typeof navigator !== "undefined" && typeof navigator.share === "function" ? (
