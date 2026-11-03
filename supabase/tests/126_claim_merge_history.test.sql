@@ -4,10 +4,10 @@
 -- measurements, nutrition, steps and the intake on their own pair; the merge used to close them all
 -- (20261024015847_claim_merge_keeps_shares.sql). The person's pair was a month older than the card, and the
 -- merged pair kept the card's date (QA bug 27). Homework, groups and other rows of the person's pair went with it
--- by cascade (QA 45).
+-- by cascade (QA 45), and so did the card's groups with the card's user (QA 46).
 begin;
 \ir _helpers.psql
-select plan(18);
+select plan(19);
 select tests.create_trainer('trainer_a');
 insert into public.consents (user_id, kind, version) values (tests.user_id('trainer_a'), 'trainer_dpa', '2026-10-18');
 select tests.create_user('client_t');
@@ -39,6 +39,11 @@ values ((select id from tests.kv where name='new_pair'), 'Планка', current
 insert into public.groups (trainer_id, name) values (tests.user_id('trainer_a'), 'Утро');
 insert into public.group_members (group_id, coaching_id, client_id)
 select g.id, (select id from tests.kv where name='new_pair'), tests.user_id('client_t') from public.groups g where g.name = 'Утро';
+-- The trainer had put the card in the same group and in one more (QA 46).
+insert into public.groups (trainer_id, name) values (tests.user_id('trainer_a'), 'Вечер');
+insert into public.group_members (group_id, coaching_id, client_id)
+select g.id, c.id, c.client_id from public.groups g, public.coachings c
+where g.name in ('Утро', 'Вечер') and c.id = (select id from tests.kv where name='card_pair');
 insert into public.food_day_comments (client_id, coaching_id, author_id, local_date, body)
 values (tests.user_id('client_t'), (select id from tests.kv where name='new_pair'), tests.user_id('trainer_a'), current_date, 'Мало белка');
 update public.nutrition_targets set created_at = now() - interval '1 day' where kcal = 2000;
@@ -70,6 +75,10 @@ from r;
 update public.coachings set client_reminder_offsets = '{}' where id = (select id from tests.kv where name='new_pair');
 -- The person has trained with the trainer for a month already (QA bug 27).
 update public.coachings set started_at = now() - interval '30 days' where id = (select id from tests.kv where name='new_pair');
+-- The person picked this pair's target as the one to follow (QA 46).
+insert into public.body_profiles (user_id, preferred_target_coaching_id)
+values (tests.user_id('client_t'), (select id from tests.kv where name='new_pair'))
+on conflict (user_id) do update set preferred_target_coaching_id = excluded.preferred_target_coaching_id;
 insert into tests.kv values ('s3', tests.create_session('trainer_a', now() + interval '2 hours'));
 insert into tests.kv values ('b3', tests.create_booking((select id from tests.kv where name='s3'), 'trainer_a', 'client_t', 'confirmed'));
 select tests.authenticate_as('client_t');
@@ -123,8 +132,9 @@ select is(
   1, 'the person''s homework moves to the merged pair'
 );
 select is(
-  (select count(*)::int from public.group_members where coaching_id = (select id from tests.kv where name='card_pair')),
-  1, 'the person stays in their group'
+  (select count(*)::int from public.group_members
+   where coaching_id = (select id from tests.kv where name='card_pair') and client_id = tests.user_id('client_t')),
+  2, 'the person stays in their group and in the card''s groups'
 );
 select is(
   (select count(*)::int from public.food_day_comments where coaching_id = (select id from tests.kv where name='card_pair')),
@@ -159,6 +169,10 @@ select is(
 select isnt(
   (select pass_id from public.bonuses where beneficiary_id = tests.user_id('client_t')),
   null, 'and keeps its bonus pass'
+);
+select is(
+  (select preferred_target_coaching_id from public.body_profiles where user_id = tests.user_id('client_t')),
+  (select id from tests.kv where name='card_pair'), 'the person''s chosen target pair moves to the merged pair'
 );
 select * from finish();
 rollback;
