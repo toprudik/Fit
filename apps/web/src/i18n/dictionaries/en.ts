@@ -4641,7 +4641,7 @@ export const en: Dictionary = {
     listEmpty: "Nobody has come by a client's link yet.",
     invitedBy: "by {name}'s link",
     statuses: { pending: "Waiting for payment", qualified: "Bonus given", void: "Cancelled" },
-    voidReasons: { declined: "Declined", pair_ended: "Coaching ended", payment_voided: "Payment voided" },
+    voidReasons: { declined: "Declined", existing_client: "Already a client", pair_ended: "Coaching ended", payment_voided: "Payment voided" },
     granted: "{name}: {sessions}",
     decline: "Decline",
     declineText: "No bonus for this invitation, even after a payment.",
