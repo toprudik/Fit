@@ -1,4 +1,5 @@
 import "server-only";
+import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PAID_PLAN, requestedPlans } from "@/lib/plans/plans";
 import type { Json } from "@/lib/supabase/database.types";
@@ -231,6 +232,16 @@ export async function mergedPairId(coachingId: string): Promise<string | null> {
   const { data, error } = await supabase.rpc("merged_pair_id", { p_coaching_id: coachingId });
   if (error) fail("merged pair", error);
   return data ?? null;
+}
+
+/**
+ * For a page of a pair the user cannot open: the same page of the merged pair when «Объединить» deleted this one
+ * (QA bug 28), otherwise «Такой страницы нет».
+ */
+export async function redirectToMergedPair(coachingId: string, href: (coachingId: string) => string): Promise<never> {
+  const merged = await mergedPairId(coachingId);
+  if (merged) redirect(href(merged));
+  notFound();
 }
 
 /**
