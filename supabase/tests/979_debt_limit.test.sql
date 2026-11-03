@@ -6,7 +6,7 @@
 -- "set constraints all immediate".
 begin;
 \ir _helpers.psql
-select plan(24);
+select plan(29);
 
 select tests.create_trainer('trainer_a');
 select tests.create_user(h) from unnest(array['client_c', 'client_d', 'client_e', 'client_k', 'client_p', 'client_t',
@@ -58,6 +58,13 @@ select public.decide_booking(:'booking_c', true);
 select tests.authenticate_as('client_c');
 select throws_ok(format($$ select * from public.book_slot(%L) $$, tests.slot(9)), 'P0001', 'debt_limit',
   'no permission: a confirmed debt session still counts');
+-- The booking sheet says so before the button (QA 03.11, finding 50): the previews refuse the same way.
+select throws_ok(format($$ select * from public.booking_preview(%L) $$, tests.slot(9)), 'P0001', 'debt_limit',
+  'no permission: the preview of a second slot in debt is refused');
+select throws_ok(format($$ select * from public.group_booking_preview(%L) $$, :'group5'), 'P0001', 'debt_limit',
+  'no permission: so is the preview of a group session');
+select is((select row(confirmed, pass_title)::text from public.reschedule_preview(:'booking_c', tests.slot(10))),
+  row(false, null::text)::text, 'no permission: the preview of moving the debt session itself is a request');
 select is((select status::text from public.reschedule_my_booking(:'booking_c', tests.slot(10))), 'requested',
   'no permission: the debt session can be moved, and the move comes as a request');
 select tests.clear_authentication();
@@ -67,10 +74,13 @@ select tests.clear_authentication();
 
 update public.coachings set self_book_on_debt = true, debt_limit_sessions = 2 where id = tests.pair_id('trainer_a', 'client_d');
 select tests.authenticate_as('client_d');
+select is((select confirmed from public.booking_preview(tests.slot(11))), true, 'permission: the preview below the limit is a booking');
 select is((select status::text from public.book_slot(tests.slot(11))), 'confirmed', 'permission: the first debt session is confirmed');
 select is((select status::text from public.book_slot(tests.slot(12))), 'confirmed', 'permission: so is the second of 2');
 select throws_ok(format($$ select * from public.book_slot(%L) $$, tests.slot(13)), 'P0001', 'debt_limit',
   'permission: the third is refused');
+select throws_ok(format($$ select * from public.booking_preview(%L) $$, tests.slot(13)), 'P0001', 'debt_limit',
+  'permission: the preview of the third is refused too');
 select throws_ok(format($$ select * from public.book_group_session(%L) $$, :'group5'), 'P0001', 'debt_limit',
   'permission: group sessions count toward the same number');
 select tests.clear_authentication();
