@@ -19,7 +19,7 @@ export type ReferralOffer = {
 export type TrainerReferral = {
   id: string;
   status: ReferralStatus;
-  voidReason: "declined" | "pair_ended" | "payment_voided" | null;
+  voidReason: "declined" | "existing_client" | "pair_ended" | "payment_voided" | null;
   createdAt: string;
   referrerName: string;
   referrerCoachingId: string | null;

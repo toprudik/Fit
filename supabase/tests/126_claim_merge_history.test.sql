@@ -7,7 +7,7 @@
 -- by cascade (QA 45), and so did the card's groups with the card's user (QA 46).
 begin;
 \ir _helpers.psql
-select plan(19);
+select plan(21);
 select tests.create_trainer('trainer_a');
 insert into public.consents (user_id, kind, version) values (tests.user_id('trainer_a'), 'trainer_dpa', '2026-10-18');
 select tests.create_user('client_t');
@@ -61,6 +61,10 @@ values ((select id from tests.kv where name='new_pair'), tests.user_id('client_t
 insert into public.monthly_report_shares (coaching_id, month, client_id, report)
 values ((select id from tests.kv where name='new_pair'), date_trunc('month', current_date)::date, tests.user_id('client_t'), '{}');
 insert into public.referral_codes (coaching_id, code) values ((select id from tests.kv where name='new_pair'), 'tonru12345');
+-- The person themselves came by client_f's «Приведи друга» link (QA 45, Rudik 03.11: not a new client).
+insert into public.referrals (trainer_id, referrer_id, referee_id, coaching_id, referrer_coaching_id)
+values (tests.user_id('trainer_a'), tests.user_id('client_f'), tests.user_id('client_t'),
+  (select id from tests.kv where name='new_pair'), tests.pair_id('trainer_a', 'client_f'));
 with r as (
   insert into public.referrals (trainer_id, referrer_id, referee_id, coaching_id, referrer_coaching_id)
   values (tests.user_id('trainer_a'), tests.user_id('client_t'), tests.user_id('client_f'),
@@ -173,6 +177,14 @@ select isnt(
 select is(
   (select preferred_target_coaching_id from public.body_profiles where user_id = tests.user_id('client_t')),
   (select id from tests.kv where name='card_pair'), 'the person''s chosen target pair moves to the merged pair'
+);
+select is(
+  (select coaching_id from public.referrals where referee_id = tests.user_id('client_t')),
+  (select id from tests.kv where name='card_pair'), 'the invite that brought the person moves to the merged pair'
+);
+select is(
+  (select status::text || ':' || void_reason::text from public.referrals where referee_id = tests.user_id('client_t')),
+  'void:existing_client', 'and is void: the person was the trainer''s client already, no bonus'
 );
 select * from finish();
 rollback;
