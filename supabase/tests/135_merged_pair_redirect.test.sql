@@ -1,4 +1,4 @@
--- Old links of a merged-away pair (migration 20261103072824_merged_pair_redirect.sql, QA bug 28): the merged claim
+-- Old links of a merged-away pair (migration 20261103073642_merged_pair_redirect.sql, QA bug 28): the merged claim
 -- keeps the deleted pair's id in merged_from_coaching_id, and merged_pair_id() gives the merged pair to its trainer and person only.
 begin;
 \ir _helpers.psql
