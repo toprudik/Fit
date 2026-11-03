@@ -129,12 +129,12 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
 
   // Group seats taken, the client of each personal session or trial for its card, and who has come (QA 23.10).
   const taken = new Map<string, number>();
-  const attended = new Map<string, number>();
+  const attended = new Map<string, { came: number; auto: number }>();
   const pairOf = new Map<string, string>();
   if (sessions.data.length > 0) {
     const { data } = await supabase
       .from("bookings")
-      .select("session_id, coaching_id, status")
+      .select("session_id, coaching_id, status, attendance_marked_by")
       .in(
         "session_id",
         sessions.data.map((session) => session.id),
@@ -142,7 +142,13 @@ async function Week({ searchParams }: { searchParams: PageProps<"/[lang]/trainer
       .in("status", ["requested", ...TAKEN]);
     const kind = new Map(sessions.data.map((session) => [session.id, session.kind]));
     for (const booking of data ?? []) {
-      if (booking.status === "attended") attended.set(booking.session_id, (attended.get(booking.session_id) ?? 0) + 1);
+      if (booking.status === "attended") {
+        // No one marked it: the automatic close after the end, not a check-in (QA bug 29).
+        const counts = attended.get(booking.session_id) ?? { came: 0, auto: 0 };
+        if (booking.attendance_marked_by) counts.came += 1;
+        else counts.auto += 1;
+        attended.set(booking.session_id, counts);
+      }
       if (kind.get(booking.session_id) === "group") taken.set(booking.session_id, (taken.get(booking.session_id) ?? 0) + 1);
       else pairOf.set(booking.session_id, booking.coaching_id);
     }
