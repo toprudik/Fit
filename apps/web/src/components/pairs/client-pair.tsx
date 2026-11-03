@@ -1,5 +1,5 @@
 import { CalendarDays, CalendarPlus, ShieldCheck, Wallet } from "lucide-react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Screen } from "@/components/shell/screen";
 import { ClientIntakeRows } from "@/components/intake/intake-rows";
 import { ClientReferralRow } from "@/components/referrals/client-referral-row";
@@ -9,7 +9,7 @@ import { ListGroup, ListRow } from "@/components/ui/list";
 import { interpolate, plural } from "@/i18n/format";
 import { getDictionary, getLocale } from "@/i18n/server";
 import { formatDay, formatNoteTime, formatSessionTime } from "@/lib/pairs/format";
-import { loadPair } from "@/lib/pairs/load";
+import { loadPair, mergedPairId } from "@/lib/pairs/load";
 import { sharingPath } from "@/lib/sharing/categories";
 import { PairMilestones } from "./milestones";
 import { EndPairRow } from "./pair-controls";
@@ -24,7 +24,11 @@ import { WriteRow } from "./write-row";
  */
 export async function ClientPair({ coachingId }: { coachingId: string }) {
   const [t, locale, pair] = await Promise.all([getDictionary(), getLocale(), loadPair(coachingId, "client")]);
-  if (!pair) notFound();
+  if (!pair) {
+    const merged = await mergedPairId(coachingId);
+    if (merged) redirect(`/client/trainers/${merged}`);
+    notFound();
+  }
   const live = pair.status !== "ended";
   const name = pair.partner.name || t.botMessages.unnamedTrainer;
 

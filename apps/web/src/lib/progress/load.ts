@@ -123,6 +123,7 @@ export type PairMilestones = {
   attended: number;
   /** Reached milestones, oldest first; recorded by the bookings trigger and never taken back. */
   milestones: Milestone[];
+  /** The trainer's zone, as on the pair's card: a milestone near midnight reads the same day on both screens. */
   timeZone: string;
 };
 
@@ -145,7 +146,7 @@ export async function loadMyMilestones(): Promise<PairMilestones[]> {
     supabase.from("milestones").select("id, coaching_id, kind, achieved_at").in("coaching_id", ids).order("achieved_at"),
     supabase
       .from("profiles")
-      .select("id, first_name, last_name, display_name")
+      .select("id, first_name, last_name, display_name, time_zone")
       .in(
         "id",
         pairs.map((pair) => pair.trainer_id),
@@ -162,6 +163,6 @@ export async function loadMyMilestones(): Promise<PairMilestones[]> {
     milestones: milestones.data
       .filter((row) => row.coaching_id === pair.id)
       .map((row) => ({ id: row.id, kind: row.kind, achievedAt: row.achieved_at })),
-    timeZone: me.timeZone,
+    timeZone: byId.get(pair.trainer_id)?.time_zone ?? me.timeZone,
   }));
 }

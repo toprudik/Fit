@@ -6,7 +6,7 @@
 -- merged pair kept the card's date (QA bug 27).
 begin;
 \ir _helpers.psql
-select plan(6);
+select plan(7);
 select tests.create_trainer('trainer_a');
 insert into public.consents (user_id, kind, version) values (tests.user_id('trainer_a'), 'trainer_dpa', '2026-10-18');
 select tests.create_user('client_t');
@@ -27,6 +27,8 @@ select tests.clear_authentication();
 update public.data_shares
 set measurements = true, nutrition = true, steps = true, intake = true, intake_decided_at = now()
 where coaching_id = (select id from tests.kv where name='new_pair');
+-- The person has hidden progress and nutrition from the trainer's assistants (QA 38).
+insert into public.assistant_progress_blocks (coaching_id) values ((select id from tests.kv where name='new_pair'));
 -- The person has trained with the trainer for a month already (QA bug 27).
 update public.coachings set started_at = now() - interval '30 days' where id = (select id from tests.kv where name='new_pair');
 insert into tests.kv values ('s3', tests.create_session('trainer_a', now() + interval '2 hours'));
@@ -62,6 +64,10 @@ select is(
   (select started_at from public.coachings where id = (select id from tests.kv where name='card_pair')),
   now() - interval '30 days',
   'the merged pair starts on the earlier of the two dates'
+);
+select ok(
+  exists (select 1 from public.assistant_progress_blocks where coaching_id = (select id from tests.kv where name='card_pair')),
+  'the person''s block on assistants carries over to the merged pair'
 );
 select * from finish();
 rollback;
