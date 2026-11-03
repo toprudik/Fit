@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardMatchesPerson, displayName, filterClients, matchesSearch, parseClientFilter, passIsEnding, type ClientItem } from "./clients";
+import { cardMatchesPerson, displayName, filterClients, matchesSearch, movedPairHref, parseClientFilter, passIsEnding, type ClientItem } from "./clients";
 
 const base: ClientItem = {
   coachingId: "p",
@@ -109,5 +109,16 @@ describe("cardMatchesPerson", () => {
     expect(cardMatchesPerson("Борис", { first_name: "Анна" })).toBe(false);
     expect(cardMatchesPerson("", { first_name: "Анна" })).toBe(false);
     expect(cardMatchesPerson("Анна", {})).toBe(false);
+  });
+});
+
+describe("movedPairHref", () => {
+  const PAIR = "11111111-1111-4111-8111-111111111111";
+  it("opens the merged pair's overview", () => {
+    expect(movedPairHref(PAIR, "", {})).toBe(`/trainer/clients/${PAIR}`);
+  });
+  it("keeps the section and the query of the old link", () => {
+    expect(movedPairHref(PAIR, "payments", { action: "new" })).toBe(`/trainer/clients/${PAIR}/payments?action=new`);
+    expect(movedPairHref(PAIR, "nutrition", { day: "2026-11-03" })).toBe(`/trainer/clients/${PAIR}/nutrition?day=2026-11-03`);
   });
 });

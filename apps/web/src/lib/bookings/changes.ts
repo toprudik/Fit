@@ -77,6 +77,7 @@ export async function previewReschedule(bookingId: string, slotId: string): Prom
     confirmed: Boolean(row?.confirmed),
     passTitle: row?.pass_title ?? null,
     sessionsLeft: row?.sessions_left ?? null,
+    passUnpaid: Boolean(row?.pass_unpaid),
   };
 }
 

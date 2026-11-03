@@ -147,8 +147,13 @@ describe("previewBooking", () => {
 
 describe("previewGroupBooking", () => {
   it("says what covers the seat", async () => {
-    db.answer = { data: [{ confirmed: false, pass_title: null, sessions_left: null }], error: null };
-    expect(await previewGroupBooking(ID)).toEqual({ status: "done", confirmed: false, passTitle: null, sessionsLeft: null });
+    db.answer = { data: [{ confirmed: false, pass_title: null, sessions_left: null, pass_unpaid: false }], error: null };
+    expect(await previewGroupBooking(ID)).toEqual({ status: "done", confirmed: false, passTitle: null, sessionsLeft: null, passUnpaid: false });
+  });
+
+  it("says when the pass is not paid yet (QA 03.11)", async () => {
+    db.answer = { data: [{ confirmed: true, pass_title: "10 занятий", sessions_left: 4, pass_unpaid: true }], error: null };
+    expect(await previewGroupBooking(ID)).toEqual({ status: "done", confirmed: true, passTitle: "10 занятий", sessionsLeft: 4, passUnpaid: true });
   });
 });
 
