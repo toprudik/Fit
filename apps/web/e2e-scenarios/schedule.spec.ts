@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { collectErrors, expectAccessible as axe, settle } from "../e2e/support";
 import { dateField, pickDate, pickTime, ruDate, timeField } from "./support/date-field";
 import { expect, test } from "./support/fixtures";
-import { ok } from "./support/personas";
+import { adminDb, ok } from "./support/personas";
 import {
   createGroup,
   createPass,
@@ -430,6 +430,21 @@ test.describe("attendance and waivers", () => {
     await expect(page.getByText("Списание прощено").first()).toBeVisible();
     expect(await ledgerTypes(trainer, client.coachingId)).toContain("waiver");
     expect(errors()).toEqual([]);
+  });
+
+  test("the schedule tells a marked visit from a session closed automatically", async ({ trainer, client }) => {
+    const page = trainer.page;
+    const { sessionId, bookingId } = await pastSession(trainer, client.coachingId);
+    const startsAt = (await trainer.db.from("sessions").select("starts_at").eq("id", sessionId).single()).data?.starts_at ?? "";
+    const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Moscow" }).format(new Date(startsAt));
+    await gotoReady(page, `/trainer/schedule?date=${day}`);
+    await expect(page.getByText(/отмечен приход/).filter({ visible: true }).first()).toBeVisible();
+
+    // The automatic close after the end marks the booking attended with no one behind it (QA bug 29).
+    ok(await adminDb().from("bookings").update({ attendance_marked_by: null }).eq("id", bookingId).select("id"), "automatic close");
+    await gotoReady(page, `/trainer/schedule?date=${day}`);
+    await expect(page.getByText(/проведено/).filter({ visible: true }).first()).toBeVisible();
+    await expect(page.getByText(/отмечен приход/).filter({ visible: true })).toHaveCount(0);
   });
 
   test("a session recorded after the fact says in its history that the client came", async ({ trainer, client }) => {

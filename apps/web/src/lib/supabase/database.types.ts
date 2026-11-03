@@ -1797,14 +1797,14 @@ isOneToOne: false
                   ]
                 },"managed_client_claims": {
                   Row: {
-                    "claimant_id": string,"created_at": string,"decided_at": string | null,"id": string,"managed_client_id": string | null,"new_coaching_id": string | null,"status": Database["public"]['Enums']["managed_client_claim_status"],"trainer_id": string
+                    "claimant_id": string,"created_at": string,"decided_at": string | null,"id": string,"managed_client_id": string | null,"merged_from_coaching_id": string | null,"new_coaching_id": string | null,"status": Database["public"]['Enums']["managed_client_claim_status"],"trainer_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "claimant_id": string,"created_at"?: string,"decided_at"?: string | null,"id"?: string,"managed_client_id"?: string | null,"new_coaching_id"?: string | null,"status"?: Database["public"]['Enums']["managed_client_claim_status"],"trainer_id": string
+                    "claimant_id": string,"created_at"?: string,"decided_at"?: string | null,"id"?: string,"managed_client_id"?: string | null,"merged_from_coaching_id"?: string | null,"new_coaching_id"?: string | null,"status"?: Database["public"]['Enums']["managed_client_claim_status"],"trainer_id": string
                   }
                   Update: {
-                    "claimant_id"?: string,"created_at"?: string,"decided_at"?: string | null,"id"?: string,"managed_client_id"?: string | null,"new_coaching_id"?: string | null,"status"?: Database["public"]['Enums']["managed_client_claim_status"],"trainer_id"?: string
+                    "claimant_id"?: string,"created_at"?: string,"decided_at"?: string | null,"id"?: string,"managed_client_id"?: string | null,"merged_from_coaching_id"?: string | null,"new_coaching_id"?: string | null,"status"?: Database["public"]['Enums']["managed_client_claim_status"],"trainer_id"?: string
                   }
                   Relationships: [
                     {
@@ -4598,7 +4598,7 @@ isOneToOne: false
                            },
 "group_booking_preview":
 { Args: { "p_session_id": string }; Returns: {
-              "confirmed": boolean,"pass_title": string,"sessions_left": number
+              "confirmed": boolean,"pass_title": string,"pass_unpaid": boolean,"sessions_left": number
             }[]
                            },
 "group_target_impact":
@@ -4681,6 +4681,9 @@ isOneToOne: false
                            },
 "mark_homework_done":
 { Args: { "p_comment"?: string,"p_log"?: string,"p_occurrence": string }; Returns: string
+                           },
+"merged_pair_id":
+{ Args: { "p_coaching_id": string }; Returns: string
                            },
 "my_app_opens_counted":
 { Args: Record<PropertyKey, never>; Returns: boolean
@@ -4853,7 +4856,7 @@ isOneToOne: false
                            },
 "reschedule_preview":
 { Args: { "p_booking_id": string,"p_slot_id": string }; Returns: {
-              "confirmed": boolean,"pass_title": string,"sessions_left": number
+              "confirmed": boolean,"pass_title": string,"pass_unpaid": boolean,"sessions_left": number
             }[]
                            },
 "resolve_client_invite":
