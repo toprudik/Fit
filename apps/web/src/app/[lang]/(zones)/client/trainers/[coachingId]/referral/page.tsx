@@ -1,9 +1,12 @@
+import { Gift } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { ReferralShare } from "@/components/referrals/referral-share";
-import { SharingSignedOut } from "@/components/sharing/sharing-signed-out";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getDictionary, getLocale } from "@/i18n/server";
@@ -28,7 +31,21 @@ type Params = PageProps<"/[lang]/client/trainers/[coachingId]/referral">["params
 async function Referral({ params }: { params: Params }) {
   const { coachingId } = await params;
   const [t, locale, pair] = await Promise.all([getDictionary(), getLocale(), loadClientSharing(coachingId)]);
-  if (pair === SIGNED_OUT) return <SharingSignedOut t={t} next={clientReferralPath(coachingId)} />;
+  if (pair === SIGNED_OUT) {
+    // Its own words: the sharing screen's text speaks of what the trainer sees (QA 03.11, finding 51).
+    return (
+      <EmptyState
+        icon={Gift}
+        title={t.sharing.signedOut}
+        description={t.referrals.client.signedOutText}
+        action={
+          <Button asChild size="lg">
+            <Link href={`/login?next=${encodeURIComponent(clientReferralPath(coachingId))}`}>{t.intake.signIn}</Link>
+          </Button>
+        }
+      />
+    );
+  }
   if (!pair) return redirectToMergedPair(coachingId, clientReferralPath);
   const copy = t.referrals.client;
   const referral = pair.live ? await loadClientReferral(pair.coachingId) : null;

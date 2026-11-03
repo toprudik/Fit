@@ -4669,6 +4669,7 @@ export const en: Dictionary = {
       friends: "Friends",
       noFriends: "Nobody has come by your link yet.",
       statuses: { pending: "Waiting for payment", qualified: "Bonus given", void: "Cancelled" },
+      signedOutText: "Sign in with Telegram to invite a friend.",
       none: "Your trainer has no “Bring a friend” offer right now.",
     },
     landing: {
