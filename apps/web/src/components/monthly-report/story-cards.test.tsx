@@ -9,6 +9,7 @@ import { StoryCards } from "./story-cards";
 vi.mock("@/lib/monthly-report/actions", () => ({ createStoryCard: vi.fn(), shareMonthlyReport: vi.fn() }));
 vi.mock("@/lib/public-data/actions", () => ({ givePublicConsent: vi.fn(), revokePublicConsent: vi.fn() }));
 vi.mock("@/components/ui/sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("@/lib/stories/actions", () => ({ loadStoryLink: vi.fn(async () => null) }));
 
 const CARD = "00000000-0000-4000-8000-000000000002";
 

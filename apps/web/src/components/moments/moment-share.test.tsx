@@ -9,6 +9,7 @@ import { MomentShare } from "./moment-share";
 
 vi.mock("@/lib/moments/actions", () => ({ createMomentCard: vi.fn() }));
 vi.mock("@/lib/public-data/actions", () => ({ givePublicConsent: vi.fn(), revokePublicConsent: vi.fn() }));
+vi.mock("@/lib/stories/actions", () => ({ loadStoryLink: vi.fn(async () => null) }));
 vi.mock("@/components/ui/sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const MILESTONE = "00000000-0000-4000-8000-000000000001";

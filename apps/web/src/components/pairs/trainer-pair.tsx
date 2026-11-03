@@ -39,7 +39,7 @@ export type PairTab = "overview" | "workouts" | "progress" | "nutrition" | "note
 
 /** "34 занятия вместе, с 3 марта" under the name. */
 export function pairSubtitle(t: Dictionary, locale: Locale, pair: PairDetail): string {
-  const since = interpolate(t.pairs.since, { date: formatDay(locale, pair.startedAt, pair.timeZone) });
+  const since = interpolate(t.pairs.since, { date: formatDay(locale, pair.startedAt, pair.pairTimeZone) });
   return pair.attended > 0 ? `${plural(locale, pair.attended, t.pairs.together)}, ${since}` : since;
 }
 
@@ -226,7 +226,7 @@ export async function TrainerPair({ coachingId, tab, action, day }: { coachingId
       <div className="flex flex-col gap-4 pt-3 md:pt-0">
         {pair.status === "ended" ? (
           <PairNotice>
-            {interpolate(t.pairs.end.endedTrainer, { date: formatDay(locale, pair.endedAt ?? pair.startedAt, pair.timeZone) })}
+            {interpolate(t.pairs.end.endedTrainer, { date: formatDay(locale, pair.endedAt ?? pair.startedAt, pair.pairTimeZone) })}
           </PairNotice>
         ) : pair.archived ? (
           <PairNotice>{t.pairs.archivedText}</PairNotice>
