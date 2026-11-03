@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { HealthNotice } from "@/components/health/health-notice";
 import { formatIntakeDate } from "@/components/intake/format";
@@ -16,6 +15,7 @@ import { toValues } from "@/lib/intake/form";
 import { loadClientIntake, SIGNED_OUT } from "@/lib/intake/load";
 import { clientIntakePath, clientPairPath } from "@/lib/intake/paths";
 import { clientGoalPath, loadOwnGoal } from "@/lib/onboarding/goal";
+import { redirectToMergedPair } from "@/lib/pairs/load";
 
 // A pair id is known only at request time.
 export const instant = false;
@@ -37,7 +37,7 @@ async function Intake({ params }: { params: Params }) {
     hasSeenHealthNotice(),
   ]);
   if (intake === SIGNED_OUT) return <IntakeSignedOut t={t} next={clientIntakePath(coachingId)} />;
-  if (!intake) notFound();
+  if (!intake) return redirectToMergedPair(coachingId, clientIntakePath);
   const copy = t.intake.form;
   return (
     <div className="flex flex-1 flex-col gap-6">

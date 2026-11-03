@@ -3,7 +3,7 @@
 -- or while the booking still waited for an answer.
 begin;
 \ir _helpers.psql
-select plan(3);
+select plan(4);
 
 select tests.create_trainer('trainer_a');
 select tests.create_user('client_c');
@@ -30,7 +30,7 @@ select tests.create_booking((select id from tests.ids where name = 's_requested'
 select tests.create_booking((select id from tests.ids where name = 's_confirmed'), 'trainer_a', 'client_e');
 
 create table tests.digest as
-select e ->> 'name' as name, (e ->> 'starts_at')::timestamptz as starts_at
+select e ->> 'name' as name, (e ->> 'starts_at')::timestamptz as starts_at, (e ->> 'booked')::int as booked
 from pg_catalog.jsonb_array_elements(
   private.daily_digest_payload(tests.user_id('trainer_a'), (pg_catalog.now() at time zone 'Europe/Moscow')::date + 1)
     -> 'sessions') e;
@@ -38,6 +38,9 @@ from pg_catalog.jsonb_array_elements(
 select is((select name from tests.digest where starts_at = tests.at('08:45')), 'Катя', 'a client who already checked in is named');
 select is((select name from tests.digest where starts_at = tests.at('10:00')), 'Дима', 'a booking waiting for an answer is named');
 select is((select name from tests.digest where starts_at = tests.at('12:00')), 'Ева', 'a confirmed booking is named');
+
+select is((select booked from tests.digest where starts_at = tests.at('08:45')), 1,
+  'a checked-in booking counts as booked (20261103084159_digest_counts_checked_in.sql, QA 36)');
 
 select * from finish();
 rollback;
