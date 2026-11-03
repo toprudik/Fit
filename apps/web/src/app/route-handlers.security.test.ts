@@ -26,6 +26,7 @@ const routes = files.filter((path) => /\/route\.tsx?$/.test(path));
  */
 const MACHINE_CALLERS: Record<string, RegExp> = {
   // pg_cron through pg_net, with CRON_SECRET from Supabase Vault.
+  "app/api/cron/errors/route.ts": /hasBearer\(request\.headers\.get\("authorization"\), env\.CRON_SECRET\)/,
   "app/api/cron/notifications/route.ts": /hasBearer\(request\.headers\.get\("authorization"\), env\.CRON_SECRET\)/,
   "app/api/cron/privacy/route.ts": /hasBearer\(request\.headers\.get\("authorization"\), env\.CRON_SECRET\)/,
   // The bot, with a secret derived from the bot token.
@@ -74,6 +75,7 @@ describe("route handlers", () => {
     const admin = routes.filter((path) => source(path).includes("createSupabaseAdminClient")).map(rel).sort();
     expect(admin).toEqual([
       "app/api/calendar/[token]/route.ts",
+      "app/api/cron/errors/route.ts",
       "app/api/cron/notifications/route.ts",
       "app/api/cron/privacy/route.ts",
       "app/api/ingest/steps/route.ts",

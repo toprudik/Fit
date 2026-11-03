@@ -140,6 +140,7 @@ describe("data access", () => {
     const users = files.filter((file) => specifiers(file).some((spec) => /^@\/lib\/supabase\/admin$|\/supabase\/admin$|^\.\/admin$/.test(spec)));
     expect(users.map(rel).sort()).toEqual([
       "app/api/calendar/[token]/route.ts",
+      "app/api/cron/errors/route.ts",
       "app/api/cron/notifications/route.ts",
       "app/api/cron/privacy/route.ts",
       "app/api/ingest/steps/route.ts",

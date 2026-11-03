@@ -16,6 +16,9 @@ The plan for week 5 asks for error monitoring before the beta: today a server er
 - `lib/monitoring/sentry.ts` strips every event before it leaves: `sendDefaultPii: false`, no user, no request body, cookies, headers or query string, no `extra`. In the route, uuids, numbers and long tokens are replaced with `:id`, so `/api/calendar/<token>.ics` becomes `/api/calendar/:id.ics`.
 - Source maps are not uploaded for now (`withSentryConfig` and an auth token are not used), so stacks of client errors point into minified code. Uploading them is a later step that needs a server-only `SENTRY_AUTH_TOKEN`.
 
+- The bot reports too (`sentry-sdk`, on only with `SENTRY_DSN` in Vercel dafit-bot): only its own ERROR log lines, which name the update and the error type; exception messages, local variables, breadcrumbs and request data are dropped.
+- Alerts go to the team's Telegram chat, not by email. The free plan has no webhooks or chat integrations, so every five minutes pg_cron calls `POST /api/cron/errors`, which reads the unresolved issues Sentry first saw in the last day (`SENTRY_API_TOKEN`, a personal token with read scopes only, and `SENTRY_ORG`) and posts each new one once to `TELEGRAM_ADMIN_CHAT_ID`: error type, place in the code, count and the issue link, never the error's text. `private.error_alerts` keeps the posted issue ids for 90 days; a burst sends at most five messages and one line for the rest.
+
 ## Consequences
 
 - An owner creates a Sentry project and sets the DSN in Vercel for Production (and Preview if wanted); until then the app behaves exactly as before.

@@ -4399,6 +4399,9 @@ isOneToOne: false
               "id": string,"user_id": string
             }[]
                            },
+"claim_error_alerts":
+{ Args: { "p_issue_ids": (string)[] }; Returns: string[]
+                           },
 "claim_outbox":
 { Args: { "p_limit"?: number }; Returns: {
               "attempt": number,"chat_id": number,"chat_target": string,"kind": Database["public"]['Enums']["notification_type"],"locale": Database["public"]['Enums']["app_locale"],"outbox_id": number,"payload": Json,"silent": boolean,"time_zone": string
