@@ -45,6 +45,7 @@ export async function loadBookingHistory(owner: ScheduleOwner, bookingIds: strin
       from: row.from_status,
       to: row.to_status,
       payload: row.payload && typeof row.payload === "object" && !Array.isArray(row.payload) ? row.payload : {},
+      role: row.actor_role,
     }),
     role: row.actor_role,
     actor: (row.actor_id && names.get(row.actor_id)) || null,
