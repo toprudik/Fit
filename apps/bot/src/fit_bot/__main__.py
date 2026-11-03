@@ -10,6 +10,7 @@ from collections.abc import Sequence
 
 from fit_bot.bot_setup import run_setup
 from fit_bot.config import PRODUCTION_BOT_USERNAME, SettingsError, load_settings
+from fit_bot.monitoring import init_monitoring
 from fit_bot.polling import PollingRefusedError, run_polling
 
 log = logging.getLogger("fit_bot")
@@ -36,6 +37,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 def _run() -> int:
     logging.basicConfig(level=logging.INFO, format=_LOG_FORMAT)
+    init_monitoring()
     try:
         settings = load_settings()
         if settings.bot_mode == "webhook":

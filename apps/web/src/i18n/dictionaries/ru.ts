@@ -5893,6 +5893,8 @@ export const ru = {
     openDocuments: "Документы",
     /** Т7: someone became the trainer's client by link or code. */
     newClient: "Новый клиент: {name}",
+    /** Т7, QA bug 24: a client came back by link or code and the ended pair started again. */
+    clientReturned: "{name} снова занимается у тебя",
     /** Marketing 16: a trainer the user invited became a trainer by the user's link. */
     invitedTrainerJoined: "{name} теперь в DaFit по твоему приглашению. Открой приглашения, чтобы начать заниматься в приложении.",
     openInvitedTrainers: "Начать занятия",

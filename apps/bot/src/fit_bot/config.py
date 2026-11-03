@@ -149,6 +149,11 @@ def vercel_env() -> str | None:
     return _env("VERCEL_ENV")
 
 
+def sentry_dsn() -> str | None:
+    """SENTRY_DSN of the dafit-bot Sentry project. Unset: error reporting is off (monitoring.py)."""
+    return _env("SENTRY_DSN")
+
+
 def in_github_actions() -> bool:
     return os.environ.get("GITHUB_ACTIONS") == "true"
 

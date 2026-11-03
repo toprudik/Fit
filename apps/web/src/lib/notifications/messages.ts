@@ -97,9 +97,12 @@ const templates: Partial<Record<NotificationType, Template>> = {
       buttons: [{ text: t.open, path: "/" }],
     };
   },
-  // Т7 and Т7a: payload { coaching_id, claim_id?, first_name, last_name } from the join RPCs.
+  // Т7 and Т7a: payload { coaching_id, claim_id?, returning?, first_name, last_name } from the join RPCs;
+  // returning is true when an ended pair started again with its history (QA bug 24).
   coaching_created: ({ t, payload }) => ({
-    text: interpolateEscaped(t.newClient, { name: personName(payload) || t.unnamedClient }),
+    text: interpolateEscaped(payload.returning === true ? t.clientReturned : t.newClient, {
+      name: personName(payload) || t.unnamedClient,
+    }),
     buttons: [{ text: t.openClient, path: pairPath("/trainer/clients", payload) }],
   }),
   managed_client_claim: ({ t, payload }) => ({

@@ -106,6 +106,16 @@ describe("renderMessage", () => {
     });
   });
 
+  it("tells the trainer a client is back when the ended pair started again", () => {
+    const payload = { coaching_id: PAIR, returning: true, first_name: "Анна" };
+    expect(renderMessage({ ...row, kind: "coaching_created", payload }, { appUrl: "https://fit.example", group: false })?.text).toBe(
+      "Анна снова занимается у тебя",
+    );
+    expect(
+      renderMessage({ ...row, kind: "coaching_created", locale: "en", payload }, { appUrl: "https://fit.example", group: false })?.text,
+    ).toBe("Анна is training with you again");
+  });
+
   it("opens the client list when the pair id is not a uuid", () => {
     const message = renderMessage(
       { ...row, kind: "coaching_created", payload: { coaching_id: "../admin", first_name: "Анна" } },

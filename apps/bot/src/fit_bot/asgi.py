@@ -23,6 +23,7 @@ from fit_bot.config import (
     vercel_env,
 )
 from fit_bot.dispatcher import build_dispatcher
+from fit_bot.monitoring import init_monitoring
 from fit_bot.webhook import (
     MAX_BODY_BYTES,
     SECRET_HEADER,
@@ -69,6 +70,7 @@ class WebhookApp:
         """Loads once per instance and caches success and failure: Vercel applies env changes to new deployments."""
         if not self._loaded:
             self._loaded = True
+            init_monitoring()  # first, so a settings error below is reported too
             try:
                 settings = self._load()
             except SettingsError as error:
