@@ -76,7 +76,7 @@ This Data Processing Addendum ("DPA") forms part of the agreement between [OPERA
 | Supabase Pte. Ltd. | Database, sign-in, file storage | United States (us-east-1) | EU SCCs (2021/914) in Supabase's DPA; UK Addendum [to confirm] |
 | Vercel Inc. | Hosting of the web app and the bot | United States | EU-U.S. Data Privacy Framework (with UK Extension and Swiss framework); EU SCCs and UK Addendum in Vercel's DPA |
 | GitHub, Inc. | Encrypted nightly database backups, kept 7 days | United States | EU-U.S. Data Privacy Framework; EU SCCs in GitHub's Data Protection Agreement [to confirm] |
-| Functional Software, Inc. (Sentry), only if error reporting is on | Error reports, with user details, request bodies, cookies, headers and query strings removed | United States | [to confirm] |
+| Functional Software, Inc. (Sentry) | Error reports, with user details, request bodies, cookies, headers and query strings removed | United States | EU-U.S. Data Privacy Framework (with UK Extension); EU SCCs (2021/914) in Sentry's DPA |
 
 6.2. Telegram (Telegram FZ-LLC, United Arab Emirates, and Telegram Messenger Inc.) delivers bot messages and is an independent controller for its platform, not our subprocessor. Open Food Facts (France) receives only food search words and barcodes from our server; it receives no Trainer Data.
 
@@ -178,7 +178,7 @@ This Data Processing Addendum ("DPA") forms part of the agreement between [OPERA
 
 **Secrets and environments**
 - Secrets live only on the server and are validated at start-up; error messages name the variable, never its value. Separate keys for local, preview and production.
-- Error reporting, if enabled, strips user details, request bodies, cookies, headers and query strings.
+- Error reporting strips user details, request bodies, cookies, headers and query strings.
 
 **Development and operations**
 - Database changes only through reviewed migrations with automated tests; database lint and security advisors run in CI.
