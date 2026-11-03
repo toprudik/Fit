@@ -4281,6 +4281,7 @@ export const ru = {
           lateCancelled: "Поздняя отмена",
           rescheduled: "Запись перенесена",
           attended: "Отмечен приход",
+          held: "Занятие проведено",
           noShow: "Отмечен неприход",
           remarked: "Отметка исправлена",
           forgiven: "Списание прощено",
