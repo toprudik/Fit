@@ -4247,6 +4247,7 @@ export const en: Dictionary = {
           lateCancelled: "Late cancellation",
           rescheduled: "Booking moved",
           attended: "Marked as attended",
+          held: "Session held",
           noShow: "Marked as no-show",
           remarked: "Attendance corrected",
           forgiven: "Charge forgiven",
