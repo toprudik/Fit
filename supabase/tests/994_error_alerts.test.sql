@@ -1,4 +1,4 @@
--- Error alerts of migration 20261102233059_error_alerts.sql: pg_cron asks POST /api/cron/errors every five
+-- Error alerts of migration 20261103031324_error_alerts.sql: pg_cron asks POST /api/cron/errors every five
 -- minutes, and public.claim_error_alerts returns each Sentry issue id once, to the service role only.
 begin;
 \ir _helpers.psql
