@@ -14,6 +14,7 @@ export type BookingChange =
   | "lateCancelled"
   | "rescheduled"
   | "attended"
+  | "held"
   | "noShow"
   | "remarked"
   | "forgiven"
@@ -23,13 +24,16 @@ export type BookingEventRow = {
   from: BookingStatus | null;
   to: BookingStatus;
   payload: Record<string, unknown>;
+  /** Who made the change; a session the database closed by itself was held, nobody marked anyone (QA 48). */
+  role?: ActorRole;
 };
 
 const MARKS: ReadonlySet<BookingStatus> = new Set(["attended", "no_show", "late_cancelled"]);
 
 /** Names the change of a booking_events row; a waiver keeps the status and only forgives the charge. */
-export function bookingChange({ from, to, payload }: BookingEventRow): BookingChange {
+export function bookingChange({ from, to, payload, role }: BookingEventRow): BookingChange {
   if (payload.waiver_id) return "forgiven";
+  if (role === "system" && to === "attended" && from !== "attended") return "held";
   // A session recorded after the fact starts as a mark, not as a booking.
   if (from === null) return to === "requested" ? "requested" : to === "attended" ? "attended" : to === "no_show" ? "noShow" : "booked";
   if (from === to) return "changed";

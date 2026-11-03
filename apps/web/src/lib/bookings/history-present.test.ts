@@ -21,6 +21,12 @@ describe("bookingChange", () => {
     expect(bookingChange({ from: "no_show", to: "attended", payload: {} })).toBe("remarked");
   });
 
+  it("calls a session the database closed by itself held, not a mark (QA 48)", () => {
+    expect(bookingChange({ from: "confirmed", to: "attended", payload: {}, role: "system" })).toBe("held");
+    expect(bookingChange({ from: "confirmed", to: "attended", payload: {}, role: "trainer" })).toBe("attended");
+    expect(bookingChange({ from: "confirmed", to: "no_show", payload: {}, role: "system" })).toBe("noShow");
+  });
+
   it("names a forgiven charge, whatever the status", () => {
     expect(bookingChange({ from: "late_cancelled", to: "late_cancelled", payload: { waiver_id: "w" } })).toBe("forgiven");
   });
