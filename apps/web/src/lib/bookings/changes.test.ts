@@ -118,15 +118,21 @@ describe("previewCancel", () => {
 
 describe("previewReschedule", () => {
   it("says what pays for the new time", async () => {
-    db.answer = { data: [{ confirmed: true, pass_title: "10 занятий", sessions_left: 5 }], error: null };
-    expect(await previewReschedule(BOOKING, SLOT)).toEqual({ status: "done", confirmed: true, passTitle: "10 занятий", sessionsLeft: 5 });
+    db.answer = { data: [{ confirmed: true, pass_title: "10 занятий", sessions_left: 5, pass_unpaid: true }], error: null };
+    expect(await previewReschedule(BOOKING, SLOT)).toEqual({
+      status: "done",
+      confirmed: true,
+      passTitle: "10 занятий",
+      sessionsLeft: 5,
+      passUnpaid: true,
+    });
     expect(db.calls).toEqual([["rpc", "reschedule_preview", { p_booking_id: BOOKING, p_slot_id: SLOT }]]);
     expect(next.refresh).not.toHaveBeenCalled();
   });
 
   it("reads an empty answer as a request with no pass", async () => {
     db.answer = { data: [], error: null };
-    expect(await previewReschedule(BOOKING, SLOT)).toEqual({ status: "done", confirmed: false, passTitle: null, sessionsLeft: null });
+    expect(await previewReschedule(BOOKING, SLOT)).toEqual({ status: "done", confirmed: false, passTitle: null, sessionsLeft: null, passUnpaid: false });
   });
 
   it("refuses a bad booking or slot id without a call", async () => {

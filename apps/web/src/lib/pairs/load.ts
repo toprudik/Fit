@@ -222,6 +222,18 @@ export type PairDetail = {
 };
 
 /**
+ * Where a pair id went after «Объединить» deleted it (QA bug 28): the merged pair's id for the trainer or the
+ * person of that merge, so old links and bot buttons still open the right card; null otherwise.
+ */
+export async function mergedPairId(coachingId: string): Promise<string | null> {
+  if (!isPairId(coachingId)) return null;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("merged_pair_id", { p_coaching_id: coachingId });
+  if (error) fail("merged pair", error);
+  return data ?? null;
+}
+
+/**
  * The pair with this id when the signed-in user is its trainer (side "trainer") or its client (side
  * "client"); null when there is no session, no such pair, or it belongs to someone else. RLS shows the
  * client only the notes the trainer made visible (PAIR-2).
