@@ -1,4 +1,5 @@
 import { ClipboardCheck, PlayCircle } from "lucide-react";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Screen } from "@/components/shell/screen";
 import { ScreenHeader } from "@/components/shell/screen-header";
@@ -12,6 +13,7 @@ import { getDictionary, getLocale } from "@/i18n/server";
 import { formatHomeworkDay, homeworkSchedule } from "@/lib/homework/format";
 import { draftFromHomework, occurrenceState, type HomeworkDraft } from "@/lib/homework/homework";
 import { loadHomework, loadHomeworkPair, loadPairHomework, visibleLogIds } from "@/lib/homework/load";
+import { mergedPairId } from "@/lib/pairs/load";
 import { ArchiveHomework, HomeworkForm } from "./homework-form";
 import { STATE_TONE } from "./trainer-homework";
 
@@ -55,6 +57,12 @@ async function Detail({
 }) {
   const [pairId, id] = await Promise.all([coachingId, homeworkId]);
   const [pair, loaded] = await Promise.all([loadHomeworkPair(pairId), loadHomework(id, locale)]);
+  // «Открыть задание» in an old bot message names the person's pair, gone since «Объединить» (QA 45): the
+  // homework moved with its id to the merged pair.
+  if (!pair) {
+    const merged = await mergedPairId(pairId);
+    if (merged) redirect(`${workoutsHref(merged)}/homework/${id}`);
+  }
   if (!pair?.viewerIsTrainer || !loaded || loaded.homework.coachingId !== pairId) {
     return (
       <Screen header={<ScreenHeader title={t.homework.editTitle} back={{ fallbackHref: workoutsHref(pairId) }} />}>
