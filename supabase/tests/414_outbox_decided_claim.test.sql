@@ -1,5 +1,5 @@
 -- «Это <Имя>?» held back by quiet hours goes out only while the claim still waits for the trainer's answer
--- (QA 41, 20261103123710_outbox_skip_decided_claim.sql).
+-- (QA 41, 20261103125344_outbox_skip_decided_claim.sql).
 begin;
 \ir _helpers.psql
 select plan(2);
