@@ -4676,7 +4676,7 @@ export const ru = {
     listEmpty: "Приглашений пока нет.",
     invitedBy: "по ссылке {name}",
     statuses: { pending: "Ждёт оплаты", qualified: "Бонус начислен", void: "Отменено" },
-    voidReasons: { declined: "Отклонено", pair_ended: "Пара завершена", payment_voided: "Оплата аннулирована" },
+    voidReasons: { declined: "Отклонено", existing_client: "Уже был клиентом", pair_ended: "Пара завершена", payment_voided: "Оплата аннулирована" },
     granted: "{name}: {sessions}",
     decline: "Отклонить",
     declineText: "Бонус по этому приглашению не начислится, даже после оплаты.",
