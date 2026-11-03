@@ -4703,6 +4703,7 @@ export const ru = {
       friends: "Друзья",
       noFriends: "По твоей ссылке пока никого нет.",
       statuses: { pending: "Ждём оплаты", qualified: "Бонус начислен", void: "Отменено" },
+      signedOutText: "Войди через Telegram, чтобы пригласить друга.",
       none: "Сейчас у тренера нет акции «Приведи друга».",
     },
     landing: {
