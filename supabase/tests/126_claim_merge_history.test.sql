@@ -3,10 +3,11 @@
 -- merge used to fail on the ledger row that points at its booking by (id, coaching_id). The person had opened
 -- measurements, nutrition, steps and the intake on their own pair; the merge used to close them all
 -- (20261024015847_claim_merge_keeps_shares.sql). The person's pair was a month older than the card, and the
--- merged pair kept the card's date (QA bug 27).
+-- merged pair kept the card's date (QA bug 27). Homework, groups and other rows of the person's pair went with it
+-- by cascade (QA 45).
 begin;
 \ir _helpers.psql
-select plan(9);
+select plan(13);
 select tests.create_trainer('trainer_a');
 insert into public.consents (user_id, kind, version) values (tests.user_id('trainer_a'), 'trainer_dpa', '2026-10-18');
 select tests.create_user('client_t');
@@ -32,6 +33,17 @@ insert into public.assistant_progress_blocks (coaching_id) values ((select id fr
 -- The trainer set a nutrition target on the card (QA 42).
 insert into public.nutrition_targets (source, client_id, coaching_id, kcal, effective_from)
 select 'trainer', c.client_id, c.id, 2000, current_date from public.coachings c where c.id = (select id from tests.kv where name='card_pair');
+-- The person's own pair has homework, a group, a food diary comment and a newer trainer target (QA 45).
+insert into public.homework (coaching_id, title, due_date)
+values ((select id from tests.kv where name='new_pair'), 'Планка', current_date + 3);
+insert into public.groups (trainer_id, name) values (tests.user_id('trainer_a'), 'Утро');
+insert into public.group_members (group_id, coaching_id, client_id)
+select g.id, (select id from tests.kv where name='new_pair'), tests.user_id('client_t') from public.groups g where g.name = 'Утро';
+insert into public.food_day_comments (client_id, coaching_id, author_id, local_date, body)
+values (tests.user_id('client_t'), (select id from tests.kv where name='new_pair'), tests.user_id('trainer_a'), current_date, 'Мало белка');
+update public.nutrition_targets set created_at = now() - interval '1 day' where kcal = 2000;
+insert into public.nutrition_targets (source, client_id, coaching_id, kcal, effective_from)
+values ('trainer', tests.user_id('client_t'), (select id from tests.kv where name='new_pair'), 2500, current_date - 1);
 -- The person chose «Без напоминаний» on their own pair (QA 39).
 update public.coachings set client_reminder_offsets = '{}' where id = (select id from tests.kv where name='new_pair');
 -- The person has trained with the trainer for a month already (QA bug 27).
@@ -83,6 +95,24 @@ select is(
   (select client_id from public.nutrition_targets where coaching_id = (select id from tests.kv where name='card_pair') and kcal = 2000),
   tests.user_id('client_t'),
   'the trainer''s nutrition target on the card moves to the person'
+);
+select is(
+  (select count(*)::int from public.homework where coaching_id = (select id from tests.kv where name='card_pair')),
+  1, 'the person''s homework moves to the merged pair'
+);
+select is(
+  (select count(*)::int from public.group_members where coaching_id = (select id from tests.kv where name='card_pair')),
+  1, 'the person stays in their group'
+);
+select is(
+  (select count(*)::int from public.food_day_comments where coaching_id = (select id from tests.kv where name='card_pair')),
+  1, 'the trainer''s food diary comment stays'
+);
+select results_eq(
+  $$ select kcal::int, effective_to is null from public.nutrition_targets
+     where coaching_id = (select id from tests.kv where name='card_pair') and source = 'trainer' order by kcal $$,
+  $$ values (2000, false), (2500, true) $$,
+  'of two open trainer targets the newer stays open and the older closes'
 );
 select * from finish();
 rollback;
