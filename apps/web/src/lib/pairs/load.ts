@@ -197,6 +197,8 @@ export type PairDetail = {
   /** Set when the pair ended for the plan limit (К12, Q65), not for a reason someone typed. */
   endedForLimit: boolean;
   timeZone: string;
+  /** The trainer's zone: the pair's own dates (start, end, milestones) read the same for both sides. */
+  pairTimeZone: string;
   /** `deleted`: the client's account is gone and the pair points to the «Удалённый клиент» stub. */
   partner: { name: string; photoUrl: string | null; username: string | null; isCard: boolean; deleted: boolean };
   /** When the viewer last asked the partner to get in touch ("Попросить связаться"), or null. */
@@ -241,7 +243,7 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
 
   const partnerId = side === "trainer" ? pair.client_id : pair.trainer_id;
   const [person, meta, balance, stats, passes, notes, milestones, contact, deletion] = await Promise.all([
-    supabase.from("profiles").select(PERSON_COLUMNS).eq("id", partnerId).maybeSingle(),
+    supabase.from("profiles").select(`${PERSON_COLUMNS}, time_zone`).eq("id", partnerId).maybeSingle(),
     side === "trainer"
       ? supabase.from("coaching_trainer_meta").select("client_alias, archived_at").eq("coaching_id", pair.id).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
@@ -282,6 +284,7 @@ export async function loadPair(coachingId: string, side: "trainer" | "client"): 
     endedByMe: pair.ended_by === userId,
     endedForLimit: pair.status === "ended" && pair.ended_by === pair.trainer_id && pair.end_reason === "plan_limit_reached",
     timeZone: me.timeZone,
+    pairTimeZone: side === "trainer" ? me.timeZone : (person.data?.time_zone ?? me.timeZone),
     partner: {
       name: displayName(person.data ?? undefined, meta.data?.client_alias),
       photoUrl: person.data?.photo_url ?? null,

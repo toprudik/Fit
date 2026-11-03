@@ -96,6 +96,7 @@ test.describe("Money tab", () => {
     await expect(page.getByText("Долгов нет")).toHaveCount(0);
     await client.page.goto(`/client/trainers/${client.coachingId}`);
     await expect(client.page.getByText("Не доплачено за абонементы")).toBeVisible();
+    await expect(client.page.getByText("Долга нет")).toHaveCount(0);
   });
 });
 

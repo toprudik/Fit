@@ -5803,6 +5803,8 @@ export const en: Dictionary = {
     documentsUpdate: "New editions of the DaFit documents take effect on {date}. Read what changes ahead of time. On that day the app will ask you to accept them. If you don't agree, you can download your data or delete your account.",
     openDocuments: "Documents",
     newClient: "New client: {name}",
+    /** Т7, QA bug 24: a client came back by link or code and the ended pair started again. */
+    clientReturned: "{name} is training with you again",
     /** Marketing 16: a trainer the user invited became a trainer by the user's link. */
     invitedTrainerJoined: "{name} joined DaFit by your invitation. Open your invitations to start training in the app.",
     openInvitedTrainers: "Start training",
