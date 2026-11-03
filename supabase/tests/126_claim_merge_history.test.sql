@@ -4,7 +4,7 @@
 -- measurements, nutrition, steps and the intake on their own pair; the merge used to close them all
 -- (20261024015847_claim_merge_keeps_shares.sql). The person's pair was a month older than the card, and the
 -- merged pair kept the card's date (QA bug 27). Homework, groups and other rows of the person's pair went with it
--- by cascade (QA 45).
+-- by cascade (QA 45), and so did the card's groups with the card's user (QA 46).
 begin;
 \ir _helpers.psql
 select plan(18);
@@ -39,6 +39,11 @@ values ((select id from tests.kv where name='new_pair'), 'Планка', current
 insert into public.groups (trainer_id, name) values (tests.user_id('trainer_a'), 'Утро');
 insert into public.group_members (group_id, coaching_id, client_id)
 select g.id, (select id from tests.kv where name='new_pair'), tests.user_id('client_t') from public.groups g where g.name = 'Утро';
+-- The trainer had put the card in the same group and in one more (QA 46).
+insert into public.groups (trainer_id, name) values (tests.user_id('trainer_a'), 'Вечер');
+insert into public.group_members (group_id, coaching_id, client_id)
+select g.id, c.id, c.client_id from public.groups g, public.coachings c
+where g.name in ('Утро', 'Вечер') and c.id = (select id from tests.kv where name='card_pair');
 insert into public.food_day_comments (client_id, coaching_id, author_id, local_date, body)
 values (tests.user_id('client_t'), (select id from tests.kv where name='new_pair'), tests.user_id('trainer_a'), current_date, 'Мало белка');
 update public.nutrition_targets set created_at = now() - interval '1 day' where kcal = 2000;
@@ -123,8 +128,9 @@ select is(
   1, 'the person''s homework moves to the merged pair'
 );
 select is(
-  (select count(*)::int from public.group_members where coaching_id = (select id from tests.kv where name='card_pair')),
-  1, 'the person stays in their group'
+  (select count(*)::int from public.group_members
+   where coaching_id = (select id from tests.kv where name='card_pair') and client_id = tests.user_id('client_t')),
+  2, 'the person stays in their group and in the card''s groups'
 );
 select is(
   (select count(*)::int from public.food_day_comments where coaching_id = (select id from tests.kv where name='card_pair')),
