@@ -7,7 +7,7 @@
 -- by cascade (QA 45), and so did the card's groups with the card's user (QA 46).
 begin;
 \ir _helpers.psql
-select plan(18);
+select plan(19);
 select tests.create_trainer('trainer_a');
 insert into public.consents (user_id, kind, version) values (tests.user_id('trainer_a'), 'trainer_dpa', '2026-10-18');
 select tests.create_user('client_t');
@@ -75,6 +75,10 @@ from r;
 update public.coachings set client_reminder_offsets = '{}' where id = (select id from tests.kv where name='new_pair');
 -- The person has trained with the trainer for a month already (QA bug 27).
 update public.coachings set started_at = now() - interval '30 days' where id = (select id from tests.kv where name='new_pair');
+-- The person picked this pair's target as the one to follow (QA 46).
+insert into public.body_profiles (user_id, preferred_target_coaching_id)
+values (tests.user_id('client_t'), (select id from tests.kv where name='new_pair'))
+on conflict (user_id) do update set preferred_target_coaching_id = excluded.preferred_target_coaching_id;
 insert into tests.kv values ('s3', tests.create_session('trainer_a', now() + interval '2 hours'));
 insert into tests.kv values ('b3', tests.create_booking((select id from tests.kv where name='s3'), 'trainer_a', 'client_t', 'confirmed'));
 select tests.authenticate_as('client_t');
@@ -165,6 +169,10 @@ select is(
 select isnt(
   (select pass_id from public.bonuses where beneficiary_id = tests.user_id('client_t')),
   null, 'and keeps its bonus pass'
+);
+select is(
+  (select preferred_target_coaching_id from public.body_profiles where user_id = tests.user_id('client_t')),
+  (select id from tests.kv where name='card_pair'), 'the person''s chosen target pair moves to the merged pair'
 );
 select * from finish();
 rollback;

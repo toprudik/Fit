@@ -2,7 +2,9 @@
 -- group_members rows name the card's user, and deleting that user at the end of the merge took them along. When
 -- the card and the person were in the same group, the person's own row had been left behind as a duplicate, so
 -- the person ended up in no group at all. Such rows of the card pair now name the person before the card's user
--- goes. Body of 20261103130639_claim_merge_keeps_reviews_referrals.sql, only these updates added.
+-- goes. The person's chosen nutrition target pair (body_profiles.preferred_target_coaching_id) also moves to the
+-- merged pair instead of being nulled with the deleted one. Body of
+-- 20261103130639_claim_merge_keeps_reviews_referrals.sql, only these updates added.
 
 create or replace function public.resolve_managed_client_claim(p_claim_id uuid, p_managed_client_id uuid default null)
 returns uuid
@@ -121,6 +123,8 @@ begin
     and x.coaching_id in (v_new.id, v_card_pair.id) and y.coaching_id in (v_new.id, v_card_pair.id)
     and x.coaching_id <> y.coaching_id and (x.created_at, x.id) < (y.created_at, y.id);
   update public.nutrition_targets x set coaching_id = v_card_pair.id where x.coaching_id = v_new.id;
+  update public.body_profiles b set preferred_target_coaching_id = v_card_pair.id
+  where b.preferred_target_coaching_id = v_new.id;
   update public.delegation_clients d set coaching_id = v_card_pair.id
   where d.coaching_id = v_new.id
     and not exists (select 1 from public.delegation_clients o
