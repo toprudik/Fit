@@ -21,13 +21,16 @@ export type BookingHistoryItem = {
 export async function loadBookingHistory(owner: ScheduleOwner, bookingIds: string[]): Promise<BookingHistoryItem[]> {
   const { supabase } = owner;
   if (bookingIds.length === 0) return [];
-  const ids = await withEarlierBookings(owner, bookingIds);
-  const { data, error } = await supabase
+  const { ids, moved } = await withEarlierBookings(owner, bookingIds);
+  const { data: rows, error } = await supabase
     .from("booking_events")
     .select("id, booking_id, from_status, to_status, actor_id, actor_role, reason, created_at, payload")
     .in("booking_id", ids)
     .order("id");
   if (error) throw new Error(`loading the booking history failed: ${error.code}`);
+  // The move already says «Перенесена», so a booking made by it does not repeat «Запись создана» (QA 23.10, #330);
+  // a move that waits for the trainer's yes keeps its «Заявка».
+  const data = rows.filter((row) => !(moved.has(row.booking_id) && row.from_status === null && row.to_status === "confirmed"));
 
   const actorIds = [...new Set(data.map((row) => row.actor_id).filter((id): id is string => Boolean(id)))];
   const people = actorIds.length
@@ -55,16 +58,19 @@ const MAX_MOVES = 10;
 
 /**
  * A move makes a new booking and leaves the old one «rescheduled» with rescheduled_to_id (reschedule_my_booking),
- * so the history of the new one starts with the bookings it was moved from (QA 23.10).
+ * so the history of the new one starts with the bookings it was moved from (QA 23.10). `moved` holds the bookings
+ * a move made.
  */
-async function withEarlierBookings(owner: ScheduleOwner, bookingIds: string[]): Promise<string[]> {
+async function withEarlierBookings(owner: ScheduleOwner, bookingIds: string[]): Promise<{ ids: string[]; moved: Set<string> }> {
   const seen = new Set(bookingIds);
+  const moved = new Set<string>();
   let next = bookingIds;
   for (let step = 0; step < MAX_MOVES && next.length > 0; step += 1) {
-    const { data, error } = await owner.supabase.from("bookings").select("id").in("rescheduled_to_id", next);
+    const { data, error } = await owner.supabase.from("bookings").select("id, rescheduled_to_id").in("rescheduled_to_id", next);
     if (error) throw new Error(`loading the earlier bookings failed: ${error.code}`);
+    data.forEach((row) => row.rescheduled_to_id && moved.add(row.rescheduled_to_id));
     next = data.map((row) => row.id).filter((id) => !seen.has(id));
     next.forEach((id) => seen.add(id));
   }
-  return [...seen];
+  return { ids: [...seen], moved };
 }

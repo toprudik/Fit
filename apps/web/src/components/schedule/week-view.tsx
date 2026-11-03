@@ -43,17 +43,21 @@ export function scheduleHref(day: string, trainer?: string): string {
   return trainer ? `/trainer/schedule?date=${day}&trainer=${trainer}` : `/trainer/schedule?date=${day}`;
 }
 
-/** Session id → how many of its clients are marked as come (check-in by QR or the trainer's mark). */
-export type SessionAttended = ReadonlyMap<string, number>;
+/**
+ * Session id → its attended bookings: `came` marked by a person (check-in by QR or the trainer's mark), `auto` set
+ * by the automatic close after the end, which knows nothing of who came (QA bug 29).
+ */
+export type SessionAttended = ReadonlyMap<string, { came: number; auto: number }>;
 
-/** "18:30–19:30, онлайн, 5 из 8, пришли: 4". */
+/** "18:30–19:30, онлайн, 5 из 8, пришли: 4"; an automatically closed session with no marks says «проведено». */
 function itemDetail(item: DayItem, copy: Copy, attended: SessionAttended): string {
   const parts = [`${formatMinutes(item.startMin)}–${formatMinutes(item.endMin)}`];
   if (item.type === "session") {
-    const came = attended.get(item.session.id) ?? 0;
+    const { came, auto } = attended.get(item.session.id) ?? { came: 0, auto: 0 };
     if (item.session.mode === "online") parts.push(copy.online);
     if (item.session.kind === "group") parts.push(interpolate(copy.groupSeats, { taken: item.taken, capacity: item.session.capacity }));
     if (came > 0) parts.push(item.session.kind === "group" ? interpolate(copy.attendedMany, { count: came }) : copy.attendedOne);
+    else if (auto > 0) parts.push(copy.completed);
   } else if (item.mode === "online") {
     parts.push(copy.online);
   }
