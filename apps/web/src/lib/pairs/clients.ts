@@ -19,6 +19,17 @@ export function isPairId(value: unknown): value is string {
   return typeof value === "string" && UUID.test(value);
 }
 
+/**
+ * The trainer's card of the merged pair at the same section, keeping "?action=" and "?day=", for a link to a
+ * pair that «Объединить» deleted (QA bug 28).
+ */
+export function movedPairHref(coachingId: string, section: string, search: { action?: string; day?: string }): string {
+  const query = new URLSearchParams();
+  if (search.action) query.set("action", search.action);
+  if (search.day) query.set("day", search.day);
+  return `/trainer/clients/${coachingId}${section ? `/${section}` : ""}${query.size ? `?${query}` : ""}`;
+}
+
 /** Limits of the database checks on coaching_notes.body and coachings.end_reason. */
 export const NOTE_MAX_LENGTH = 5000;
 export const END_REASON_MAX_LENGTH = 500;

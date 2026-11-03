@@ -3863,6 +3863,7 @@ export const en: Dictionary = {
     groupSeats: "{taken} of {capacity}",
     attendedOne: "checked in",
     attendedMany: "came: {count}",
+    completed: "held",
     online: "online",
     days: "Days of the week",
     emptyDay: "Nothing on this day",

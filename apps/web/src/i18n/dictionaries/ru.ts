@@ -3896,6 +3896,7 @@ export const ru = {
     groupSeats: "{taken} из {capacity}",
     attendedOne: "отмечен приход",
     attendedMany: "пришли: {count}",
+    completed: "проведено",
     online: "онлайн",
     days: "Дни недели",
     emptyDay: "В этот день ничего нет",
