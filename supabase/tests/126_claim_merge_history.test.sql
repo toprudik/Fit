@@ -7,7 +7,7 @@
 -- by cascade (QA 45).
 begin;
 \ir _helpers.psql
-select plan(13);
+select plan(18);
 select tests.create_trainer('trainer_a');
 insert into public.consents (user_id, kind, version) values (tests.user_id('trainer_a'), 'trainer_dpa', '2026-10-18');
 select tests.create_user('client_t');
@@ -44,6 +44,28 @@ values (tests.user_id('client_t'), (select id from tests.kv where name='new_pair
 update public.nutrition_targets set created_at = now() - interval '1 day' where kcal = 2000;
 insert into public.nutrition_targets (source, client_id, coaching_id, kcal, effective_from)
 values ('trainer', tests.user_id('client_t'), (select id from tests.kv where name='new_pair'), 2500, current_date - 1);
+-- The beta area's rows of the person's pair (QA 45): a review, a monthly report, their own «Приведи друга» link
+-- and a friend they invited, with a bonus pass waiting for that friend's payment.
+select tests.create_user('client_f');
+select tests.create_pair('trainer_a', 'client_f');
+select tests.authenticate_as('trainer_a');
+select public.create_pass((select id from tests.kv where name='new_pair'), null, 'Бонус', 1, 100000, 'RUB', 30, null, current_date, null, 100000, 'cash', now(), gen_random_uuid());
+select tests.clear_authentication();
+insert into public.reviews (coaching_id, client_id, trainer_id, rating)
+values ((select id from tests.kv where name='new_pair'), tests.user_id('client_t'), tests.user_id('trainer_a'), 5);
+insert into public.monthly_report_shares (coaching_id, month, client_id, report)
+values ((select id from tests.kv where name='new_pair'), date_trunc('month', current_date)::date, tests.user_id('client_t'), '{}');
+insert into public.referral_codes (coaching_id, code) values ((select id from tests.kv where name='new_pair'), 'tonru12345');
+with r as (
+  insert into public.referrals (trainer_id, referrer_id, referee_id, coaching_id, referrer_coaching_id)
+  values (tests.user_id('trainer_a'), tests.user_id('client_t'), tests.user_id('client_f'),
+    tests.pair_id('trainer_a', 'client_f'), (select id from tests.kv where name='new_pair'))
+  returning id)
+insert into public.bonuses (referral_id, beneficiary_id, kind, sessions, pass_id, coaching_id)
+select r.id, tests.user_id('client_t'), 'sessions', 1,
+  (select id from public.passes where coaching_id = (select id from tests.kv where name='new_pair') order by created_at desc limit 1),
+  (select id from tests.kv where name='new_pair')
+from r;
 -- The person chose «Без напоминаний» on their own pair (QA 39).
 update public.coachings set client_reminder_offsets = '{}' where id = (select id from tests.kv where name='new_pair');
 -- The person has trained with the trainer for a month already (QA bug 27).
@@ -113,6 +135,30 @@ select results_eq(
      where coaching_id = (select id from tests.kv where name='card_pair') and source = 'trainer' order by kcal $$,
   $$ values (2000, false), (2500, true) $$,
   'of two open trainer targets the newer stays open and the older closes'
+);
+select results_eq(
+  $$ select (select count(*)::int from public.reviews where coaching_id = k.id),
+            (select count(*)::int from public.monthly_report_shares where coaching_id = k.id),
+            (select code from public.referral_codes where coaching_id = k.id)
+     from tests.kv k where k.name = 'card_pair' $$,
+  $$ values (1, 1, 'tonru12345') $$,
+  'the person''s review, monthly report and r/<код> link move to the merged pair'
+);
+select is(
+  (select status::text from public.referrals where referee_id = tests.user_id('client_f')),
+  'pending', 'a friend the person invited stays pending'
+);
+select is(
+  (select referrer_coaching_id from public.referrals where referee_id = tests.user_id('client_f')),
+  (select id from tests.kv where name='card_pair'), 'and points at the merged pair'
+);
+select is(
+  (select coaching_id from public.bonuses where beneficiary_id = tests.user_id('client_t')),
+  (select id from tests.kv where name='card_pair'), 'the person''s bonus moves to the merged pair'
+);
+select isnt(
+  (select pass_id from public.bonuses where beneficiary_id = tests.user_id('client_t')),
+  null, 'and keeps its bonus pass'
 );
 select * from finish();
 rollback;
