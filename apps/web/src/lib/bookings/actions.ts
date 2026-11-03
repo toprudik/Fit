@@ -124,6 +124,7 @@ export async function previewGroupBooking(sessionId: string): Promise<PreviewRes
     confirmed: Boolean(row?.confirmed),
     passTitle: row?.pass_title ?? null,
     sessionsLeft: row?.sessions_left ?? null,
+    passUnpaid: Boolean(row?.pass_unpaid),
   };
 }
 

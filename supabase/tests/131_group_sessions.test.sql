@@ -3,7 +3,7 @@
 -- a declined request keeping the session, and cancelling a group without a charge.
 begin;
 \ir _helpers.psql
-select plan(43);
+select plan(45);
 
 select tests.create_trainer('trainer_a');
 select tests.create_trainer('trainer_b');
@@ -135,6 +135,16 @@ select tests.authenticate_as('client_c');
 select is(
   (select row(p.confirmed, p.sessions_left)::text from public.group_booking_preview(:'group1') p),
   row(true, 4)::text, 'preview: a pass confirms it, one session less');
+select is((select p.pass_unpaid from public.group_booking_preview(:'group1') p), false,
+  'preview: a free pass is not unpaid');
+select tests.clear_authentication();
+update public.passes set price_minor = 900000 where coaching_id = tests.pair_id('trainer_a', 'client_c');
+select tests.authenticate_as('client_c');
+select is((select row(p.confirmed, p.pass_unpaid)::text from public.group_booking_preview(:'group1') p),
+  row(true, true)::text, 'preview: a pass with nothing paid is unpaid, and the booking still goes through (QA 03.11)');
+select tests.clear_authentication();
+update public.passes set price_minor = 0 where coaching_id = tests.pair_id('trainer_a', 'client_c');
+select tests.authenticate_as('client_c');
 select is(
   (select row(b.status)::text from public.book_group_session(:'group1') b),
   row('confirmed'::public.booking_status)::text, 'book: a client with a pass is confirmed');

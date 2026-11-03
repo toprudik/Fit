@@ -2,7 +2,7 @@
 -- (PRD wave-1 §2.6.5, §2.6.6-2, §2.3-6; data-model §3.3 "Правило дедлайна", §2.1 pair statuses rule 8).
 begin;
 \ir _helpers.psql
-select plan(42);
+select plan(43);
 
 select tests.create_trainer('trainer_a');
 select tests.create_trainer('trainer_b');
@@ -157,6 +157,10 @@ select results_eq(
   $$ select confirmed, pass_title, sessions_left from public.reschedule_preview(tests.id('b_move'), tests.id('slot_5d')) $$,
   $$ values (true, '1 sessions'::text, 0) $$,
   'preview: moving counts the old booking as moved, so the pass covers it'
+);
+select is(
+  (select pass_unpaid from public.reschedule_preview(tests.id('b_move'), tests.id('slot_5d'))), true,
+  'preview: moving says the pass is not paid yet (QA 03.11)'
 );
 select is((select status::text from public.bookings where id = tests.id('b_move')), 'confirmed',
   'preview: the booking is unchanged');

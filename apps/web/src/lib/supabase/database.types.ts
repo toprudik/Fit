@@ -4598,7 +4598,7 @@ isOneToOne: false
                            },
 "group_booking_preview":
 { Args: { "p_session_id": string }; Returns: {
-              "confirmed": boolean,"pass_title": string,"sessions_left": number
+              "confirmed": boolean,"pass_title": string,"pass_unpaid": boolean,"sessions_left": number
             }[]
                            },
 "group_target_impact":
@@ -4853,7 +4853,7 @@ isOneToOne: false
                            },
 "reschedule_preview":
 { Args: { "p_booking_id": string,"p_slot_id": string }; Returns: {
-              "confirmed": boolean,"pass_title": string,"sessions_left": number
+              "confirmed": boolean,"pass_title": string,"pass_unpaid": boolean,"sessions_left": number
             }[]
                            },
 "resolve_client_invite":
