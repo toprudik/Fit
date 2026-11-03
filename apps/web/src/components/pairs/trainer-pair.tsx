@@ -1,6 +1,6 @@
 import { CalendarDays, MessageCircle, Plus, Ticket, Wallet } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { TrainerIntakeRow } from "@/components/intake/intake-rows";
 import { TrainerIntake } from "@/components/intake/trainer-intake";
 import { Screen } from "@/components/shell/screen";
@@ -15,7 +15,8 @@ import { formatDay, formatNoteTime, formatSessionTime } from "@/lib/pairs/format
 import { TrainerPasses } from "@/components/passes/trainer-passes";
 import { TrainerPayments } from "@/components/passes/trainer-payments";
 import { currencySymbol } from "@/lib/money/format";
-import { loadPair, loadTrainerDpaAccepted, type PairDetail } from "@/lib/pairs/load";
+import { movedPairHref } from "@/lib/pairs/clients";
+import { loadPair, loadTrainerDpaAccepted, mergedPairId, type PairDetail } from "@/lib/pairs/load";
 import { loadPairMoney } from "@/lib/passes/load";
 import { formatLocalDay, lastValidDay } from "@/lib/passes/present";
 import { amountsText } from "@/lib/passes/debt";
@@ -208,7 +209,11 @@ export async function TrainerPair({ coachingId, tab, action, day }: { coachingId
     tab === "passes" || tab === "payments" ? loadPairMoney(coachingId) : null,
     tab === "notes" ? loadTrainerDpaAccepted() : true,
   ]);
-  if (!pair) notFound();
+  if (!pair) {
+    const merged = await mergedPairId(coachingId);
+    if (merged) redirect(movedPairHref(merged, tab === "overview" ? "" : tab, { action, day }));
+    notFound();
+  }
   const base = `/trainer/clients/${pair.coachingId}`;
   const name = pair.partner.deleted ? t.pairs.deletedClient : pair.partner.name || t.botMessages.unnamedClient;
 
