@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { IntakeSignedOut } from "@/components/intake/intake-signed-out";
 import { GoalStep } from "@/components/onboarding/goal-step";
@@ -10,6 +9,7 @@ import { getDictionary } from "@/i18n/server";
 import { loadClientIntake, SIGNED_OUT } from "@/lib/intake/load";
 import { clientPairPath } from "@/lib/intake/paths";
 import { clientGoalPath, loadOwnGoal } from "@/lib/onboarding/goal";
+import { redirectToMergedPair } from "@/lib/pairs/load";
 
 // A pair id is known only at request time.
 export const instant = false;
@@ -25,7 +25,7 @@ async function Goal({ params }: { params: Params }) {
   const { coachingId } = await params;
   const [t, intake, goal] = await Promise.all([getDictionary(), loadClientIntake(coachingId), loadOwnGoal()]);
   if (intake === SIGNED_OUT) return <IntakeSignedOut t={t} next={clientGoalPath(coachingId)} />;
-  if (!intake || !intake.live) notFound();
+  if (!intake || !intake.live) return redirectToMergedPair(coachingId, clientGoalPath);
   return (
     <div className="flex flex-col gap-6">
       <p className="px-4 text-body">{t.goalStep.text}</p>

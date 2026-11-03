@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { IntakeSignedOut } from "@/components/intake/intake-signed-out";
 import { Screen } from "@/components/shell/screen";
@@ -10,6 +10,7 @@ import { interpolate } from "@/i18n/format";
 import { getDictionary } from "@/i18n/server";
 import { loadClientIntake, SIGNED_OUT } from "@/lib/intake/load";
 import { clientPairPath, intakeConsentPath } from "@/lib/intake/paths";
+import { redirectToMergedPair } from "@/lib/pairs/load";
 
 // A pair id is known only at request time.
 export const instant = false;
@@ -23,7 +24,7 @@ async function Consent({ params }: { params: PageProps<"/[lang]/client/trainers/
   const { coachingId } = await params;
   const [t, intake] = await Promise.all([getDictionary(), loadClientIntake(coachingId)]);
   if (intake === SIGNED_OUT) return <IntakeSignedOut t={t} next={intakeConsentPath(coachingId)} />;
-  if (!intake || !intake.live) notFound();
+  if (!intake || !intake.live) return redirectToMergedPair(coachingId, intakeConsentPath);
   // The step is answered once; later changes happen on the intake page.
   if (intake.decided) redirect(clientPairPath(intake.coachingId));
   const copy = t.intake.consent;

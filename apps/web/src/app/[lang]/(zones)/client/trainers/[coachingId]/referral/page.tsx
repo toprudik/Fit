@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ReferralShare } from "@/components/referrals/referral-share";
 import { SharingSignedOut } from "@/components/sharing/sharing-signed-out";
@@ -14,6 +13,7 @@ import { loadClientReferral } from "@/lib/referrals/load";
 import { clientTermLines } from "@/lib/referrals/present";
 import { loadClientSharing, SIGNED_OUT } from "@/lib/sharing/load";
 import { clientEnv } from "@/env/client";
+import { redirectToMergedPair } from "@/lib/pairs/load";
 
 // A pair id is known only at request time.
 export const instant = false;
@@ -29,7 +29,7 @@ async function Referral({ params }: { params: Params }) {
   const { coachingId } = await params;
   const [t, locale, pair] = await Promise.all([getDictionary(), getLocale(), loadClientSharing(coachingId)]);
   if (pair === SIGNED_OUT) return <SharingSignedOut t={t} next={clientReferralPath(coachingId)} />;
-  if (!pair) notFound();
+  if (!pair) return redirectToMergedPair(coachingId, clientReferralPath);
   const copy = t.referrals.client;
   const referral = pair.live ? await loadClientReferral(pair.coachingId) : null;
   if (!referral) return <p className="rounded-lg bg-surface-1 p-4 text-callout text-ink-2">{copy.none}</p>;

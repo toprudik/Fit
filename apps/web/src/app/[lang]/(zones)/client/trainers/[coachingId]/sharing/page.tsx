@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { EndPairRow } from "@/components/pairs/pair-controls";
 import { SharingSignedOut } from "@/components/sharing/sharing-signed-out";
@@ -16,6 +15,7 @@ import { loadPairDelegates } from "@/lib/delegations/load";
 import { clientPairPath } from "@/lib/intake/paths";
 import { sharingPath } from "@/lib/sharing/categories";
 import { loadClientSharing, SIGNED_OUT } from "@/lib/sharing/load";
+import { redirectToMergedPair } from "@/lib/pairs/load";
 
 // A pair id is known only at request time.
 export const instant = false;
@@ -31,7 +31,7 @@ async function Sharing({ params }: { params: Params }) {
   const { coachingId } = await params;
   const [t, sharing] = await Promise.all([getDictionary(), loadClientSharing(coachingId)]);
   if (sharing === SIGNED_OUT) return <SharingSignedOut t={t} next={sharingPath(coachingId)} />;
-  if (!sharing) notFound();
+  if (!sharing) return redirectToMergedPair(coachingId, sharingPath);
   const copy = t.sharing;
   const name = sharing.trainerName || t.botMessages.unnamedTrainer;
   if (!sharing.live) {
