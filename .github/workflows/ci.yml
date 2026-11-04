@@ -122,18 +122,20 @@ jobs:
             apps/web/playwright-report
           retention-days: 7
       # Lighthouse mobile on public pages (lighthouserc.json); help and the zones need a signed-in user.
-      # Warns only for now: once it has run quietly for two weeks, drop continue-on-error and set the
-      # assertions to "error". The is-crawlable audit is skipped: public/robots.txt closes the whole site
-      # during the beta. `next start` checks server secrets at boot, so it gets obvious fakes.
+      # A score under 90 or a first paint over 1.5 s fails the check. The is-crawlable audit is skipped:
+      # public/robots.txt closes the whole site during the beta. `next start` checks server secrets at boot,
+      # so it gets obvious fakes.
       - name: Lighthouse (docs/prd/quality.md)
         if: ${{ !cancelled() && steps.e2e.outcome == 'success' }}
         working-directory: apps/web
-        continue-on-error: true
         env:
           SUPABASE_SECRET_KEY: ci-placeholder
           TELEGRAM_BOT_TOKEN: "1:ci-placeholder"
           TELEGRAM_LOGIN_CLIENT_ID: ci-placeholder
           TELEGRAM_LOGIN_CLIENT_SECRET: ci-placeholder
         run: |
-          npx --yes @lhci/cli@0.15.1 autorun
+          # The summary table is written even when an assertion fails, so the failing page shows up in it.
+          status=0
+          npx --yes @lhci/cli@0.15.1 autorun || status=$?
           node scripts/lighthouse-summary.mjs >>"$GITHUB_STEP_SUMMARY"
+          exit "$status"

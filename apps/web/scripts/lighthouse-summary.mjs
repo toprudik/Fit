@@ -27,6 +27,6 @@ for (const run of runs) {
 }
 lines.push(
   "",
-  `Target (docs/prd/quality.md): at least ${MIN} in each category and first paint under 1.5 s. A warning for now, not a failed check.`,
+  `Target (docs/prd/quality.md): at least ${MIN} in each category and first paint under 1.5 s. Missing it fails the check.`,
 );
 console.log(lines.join("\n"));
