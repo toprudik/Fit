@@ -90,7 +90,20 @@ export async function expectAccessible(page: Page) {
   // After a navigation or a server action the streamed metadata may put <title> back a moment later;
   // a page that never gets one still fails on document-title below.
   await page.waitForFunction(() => document.title !== "", undefined, { timeout: 5_000 }).catch(() => undefined);
-  const { violations } = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+  // A toast that pops up after a server action fades in over ~0.4 s; measured mid-fade its text fails
+  // color-contrast (the flaky `div[data-title=""]` of the weekly runs). Wait until every toast has stopped
+  // moving, and leave out one that is already fading away.
+  await page
+    .waitForFunction(
+      () =>
+        [...document.querySelectorAll("[data-sonner-toast]")].every(
+          (toast) => toast.getAttribute("data-removed") === "true" || toast.getAnimations({ subtree: true }).length === 0,
+        ),
+      undefined,
+      { timeout: 3_000 },
+    )
+    .catch(() => undefined);
+  const { violations } = await new AxeBuilder({ page }).withTags(WCAG_TAGS).exclude('[data-sonner-toast][data-removed="true"]').analyze();
   const report = violations.map(
     (violation) => `${violation.id} (${violation.impact}): ${violation.help} at ${violation.nodes.map((node) => node.target.join(" ")).join(", ")}`,
   );
