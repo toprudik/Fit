@@ -71,6 +71,8 @@ describe("monthly report", () => {
     const still = reportFrom({ ...report, measurements: [{ kind: "weight", from: 80, to: 80 }] })!;
     expect(weightChange(still)).toBeNull();
     expect(storyOptions(still).map((option) => option.kind)).not.toContain("weight");
+    const none = reportFrom({ ...report, sessions: { total: 0, trainers: [] } })!;
+    expect(storyOptions(none).map((option) => option.kind)).not.toContain("sessions");
   });
 
   it("offers a card per running streak and one for the new badges", () => {

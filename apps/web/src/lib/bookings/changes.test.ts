@@ -53,6 +53,11 @@ describe("cancelBooking", () => {
     expect(db.calls).toEqual([["rpc", "cancel_my_booking", { p_booking_id: BOOKING, p_late: true, p_reason: "Заболела" }]]);
   });
 
+  it("trusts the server, not the request, on whether it was late", async () => {
+    db.answer = { data: "cancelled", error: null };
+    expect(await cancelBooking({ bookingId: BOOKING, reason: "", late: true })).toEqual({ status: "done", late: false });
+  });
+
   it("takes a 500-character reason and reads a longer one as invalid_reason, without a call", async () => {
     expect(await cancelBooking({ bookingId: BOOKING, reason: "x".repeat(500), late: false })).toMatchObject({ status: "done" });
     db.calls = [];
@@ -62,6 +67,7 @@ describe("cancelBooking", () => {
 
   it("refuses a bad id or a missing late flag as failed, without a call", async () => {
     expect(await cancelBooking({ bookingId: "nope", reason: "", late: false })).toEqual(FAILED);
+    expect(await cancelBooking({ bookingId: "nope", reason: "x".repeat(500), late: false })).toEqual(FAILED);
     expect(await cancelBooking({ bookingId: BOOKING, reason: "", late: "no" as unknown as boolean })).toEqual(FAILED);
     expect(await cancelBooking({ bookingId: BOOKING, late: false } as unknown as { bookingId: string; reason: string; late: boolean })).toEqual(FAILED);
     expect(db.calls).toEqual([]);
