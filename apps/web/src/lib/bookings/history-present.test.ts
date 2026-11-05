@@ -19,12 +19,15 @@ describe("bookingChange", () => {
     expect(bookingChange({ from: "confirmed", to: "attended", payload: { method: "qr" } })).toBe("attended");
     expect(bookingChange({ from: "confirmed", to: "no_show", payload: {} })).toBe("noShow");
     expect(bookingChange({ from: "no_show", to: "attended", payload: {} })).toBe("remarked");
+    expect(bookingChange({ from: "attended", to: "no_show", payload: {} })).toBe("remarked");
   });
 
   it("calls a session the database closed by itself held, not a mark (QA 48)", () => {
     expect(bookingChange({ from: "confirmed", to: "attended", payload: {}, role: "system" })).toBe("held");
     expect(bookingChange({ from: "confirmed", to: "attended", payload: {}, role: "trainer" })).toBe("attended");
     expect(bookingChange({ from: "confirmed", to: "no_show", payload: {}, role: "system" })).toBe("noShow");
+    // Saving an attended session again is a change, not a second hold.
+    expect(bookingChange({ from: "attended", to: "attended", payload: {}, role: "system" })).toBe("changed");
   });
 
   it("names a forgiven charge, whatever the status", () => {

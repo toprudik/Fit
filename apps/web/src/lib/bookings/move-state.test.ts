@@ -17,5 +17,10 @@ describe("moveBlock", () => {
     expect(moveBlock({ ...booking, kind: "group" }, at)).toBe("fixed");
     expect(moveBlock({ ...booking, source: "trial" }, at)).toBe("fixed");
     expect(moveBlock({ ...booking, freeCancelUntil: "2026-10-20T09:00:00Z" }, at)).toBe("late");
+    expect(moveBlock({ ...booking, freeCancelUntil: null }, at)).toBe("late");
+  });
+
+  it("still moves at the very moment of the deadline", () => {
+    expect(moveBlock({ ...booking, freeCancelUntil: at.toISOString() }, at)).toBeNull();
   });
 });

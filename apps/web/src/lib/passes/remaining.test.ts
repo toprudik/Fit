@@ -19,6 +19,8 @@ describe("passLeftText", () => {
     expect(passLeftText(ru, { remaining: 3, available: 3, sessionsTotal: 10, status: "expired" })).toBe(
       "Истёк, не использовано 3",
     );
+    // Nothing left to waste: the plain count stays, «не использовано 0» would read as a loss.
+    expect(passLeftText(ru, { remaining: 0, available: 0, sessionsTotal: 10, status: "expired" })).toBe("Осталось 0 из 10");
   });
 });
 
