@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ErrorEvent } from "@sentry/nextjs";
-import { scrubEvent, scrubUrl, sentryOptions } from "./sentry";
+import { isForeignRejection, scrubEvent, scrubUrl, sentryOptions } from "./sentry";
 
 describe("sentryOptions", () => {
   it("sends no personal information, traces or breadcrumbs", () => {
@@ -46,5 +46,34 @@ describe("scrubEvent", () => {
       request: { method: "POST", url: "/client/diary/food" },
       transaction: "GET /client/trainers/:id",
     });
+  });
+});
+
+describe("isForeignRejection", () => {
+  it("matches a wallet extension's bare { code, message } rejection", () => {
+    expect(isForeignRejection({ code: 4001, message: "User rejected the request." })).toBe(true);
+    expect(isForeignRejection({ code: -32603, message: "Internal error", data: {} })).toBe(true);
+    expect(isForeignRejection({ code: "ACTION_REJECTED", message: "no" })).toBe(true);
+  });
+
+  it("keeps errors and any other shape", () => {
+    expect(isForeignRejection(Object.assign(new Error("boom"), { code: 1 }))).toBe(false);
+    expect(isForeignRejection({ message: "no code" })).toBe(false);
+    expect(isForeignRejection({ code: 1 })).toBe(false);
+    expect(isForeignRejection({ code: 1, message: "x", details: "", hint: "" })).toBe(false);
+    expect(isForeignRejection(undefined)).toBe(false);
+    expect(isForeignRejection("timeout")).toBe(false);
+    class Custom {
+      code = 1;
+      message = "x";
+    }
+    expect(isForeignRejection(new Custom())).toBe(false);
+  });
+
+  it("drops such an event and keeps the rest", () => {
+    const event = { type: undefined, transaction: "/trainer" } as ErrorEvent;
+    expect(scrubEvent({ ...event }, { originalException: { code: 4001, message: "User rejected the request." } })).toBeNull();
+    expect(scrubEvent({ ...event }, { originalException: new Error("boom") })).not.toBeNull();
+    expect(scrubEvent({ ...event })).not.toBeNull();
   });
 });

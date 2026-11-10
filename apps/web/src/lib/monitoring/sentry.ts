@@ -40,8 +40,27 @@ function maskPath(path: string): string {
     .join("/");
 }
 
+/**
+ * A promise rejected with a bare `{ code, message }` object and caught by nobody. DaFit's code and its libraries
+ * reject only with Error objects; this shape is what wallet extensions (MetaMask, TronLink and the like) reject with
+ * inside every page they inject into (EIP-1193 provider errors, such as code 4001 "User rejected the request").
+ * It has no stack, so Sentry can't tell it apart by file, and an alert about it says nothing about DaFit.
+ */
+export function isForeignRejection(reason: unknown): boolean {
+  if (typeof reason !== "object" || reason === null || reason instanceof Error) return false;
+  const proto: unknown = Object.getPrototypeOf(reason);
+  if (proto !== Object.prototype && proto !== null) return false;
+  const keys = Object.keys(reason);
+  const { code, message } = reason as { code?: unknown; message?: unknown };
+  return (
+    keys.every((key) => key === "code" || key === "message" || key === "data" || key === "stack") &&
+    (typeof code === "number" || typeof code === "string") &&
+    typeof message === "string"
+  );
+}
+
 export function scrubEvent(event: ErrorEvent, hint?: EventHint): ErrorEvent | null {
-  void hint;
+  if (isForeignRejection(hint?.originalException)) return null;
   delete event.user;
   delete event.breadcrumbs;
   delete event.extra;
